@@ -72,9 +72,9 @@ const entity_codes = useMemo(() => {
 
   const erpPayload = {
     entity_codes: entity_codes.map(String),
-    id_cart: '635861',         // Replace with actual cart ID
-    customer_code: '19842',     // Replace with actual customer code
-    address_code: '1',         // Replace with actual address code
+    id_cart: '0',         // Replace with actual cart ID
+    customer_code: '026269',// TODO: inject actual customer code
+    address_code: '000000',     // TODO: inject actual address code
   };
 
   const { data: erpPricesData, isLoading: isLoadingErpPrices } = useQuery({

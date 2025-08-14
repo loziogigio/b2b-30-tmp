@@ -9,8 +9,10 @@ import useWindowSize from '@utils/use-window-size';
 import ProductCardLoader from '@components/ui/loaders/product-card-loader';
 import cn from 'classnames';
 import { getDirection } from '@utils/get-direction';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import ProductCardB2B from './product-cards/product-card-b2b';
+import { fetchErpPrices } from '@framework/erp/prices';
+import { useQuery } from '@tanstack/react-query';
 
 interface ProductsCarouselProps {
   sectionHeading: string;
@@ -68,6 +70,33 @@ const ProductsCarousel: React.FC<ProductsCarouselProps> = ({
   const dir = getDirection(lang);
   const [sliderEnd, setSliderEnd] = useState(false);
 
+  // ---- ERP: collect entity_codes from the *effective* product id ----
+  const entity_codes = useMemo<string[]>(() => {
+    if (!Array.isArray(products)) return [];
+    return products
+      .map((p: any) => {
+        const variations = Array.isArray(p?.variations) ? p.variations : [];
+        if (variations.length === 1) return String(variations[0]?.id ?? '');
+        if (variations.length > 1) return ''; // skip multi-variation items for ERP lookup
+        return String(p?.id ?? '');
+      })
+      .filter((v) => v && v !== '');
+  }, [products]);
+
+  const erpEnabled = entity_codes.length > 0;
+
+  const erpPayload = {
+    entity_codes,
+    id_cart: '0',     // TODO: inject actual cart ID
+    customer_code: '026269',// TODO: inject actual customer code
+    address_code: '000000',     // TODO: inject actual address code
+  };
+
+  const { data: erpPricesData, isLoading: isLoadingErpPrices } = useQuery({
+    queryKey: ['erp-prices', erpPayload],
+    queryFn: () => fetchErpPrices(erpPayload),
+    enabled: erpEnabled,
+  });
   // console.log('sliderEnd', sliderEnd)
 
   return (
@@ -119,19 +148,55 @@ const ProductsCarousel: React.FC<ProductsCarouselProps> = ({
               ))
             ) : (
               <>
-                {products?.map((product: any, idx) => (
-                  <SwiperSlide
-                    key={`${uniqueKey}-${idx}`}
-                    className="px-1.5 md:px-2 xl:px-2.5 py-4"
-                  >
-                    <ProductCardB2B product={product} lang={lang} />
-                  </SwiperSlide>
-                ))}
-                <SwiperSlide className="p-2.5 flex items-center justify-center">
+                {Array.isArray(products) &&
+                  products.map((p: any) => {
+                    // Normalize: if exactly one variation, treat it as the product
+                    const variations = Array.isArray(p?.variations) ? p.variations : [];
+                    const isSingleVariation = variations.length === 1;
+
+                    // Merge the single variation over the parent so we keep any missing fields (image, brand, etc.)
+                    const targetProduct = isSingleVariation
+                      ? {
+                        ...p,
+                        ...variations[0],
+                        id_parent: p.id_parent ?? p.id,
+                        parent_sku: p.parent_sku ?? p.sku,
+                        image: variations[0]?.image ?? p.image,
+                        gallery:
+                          (variations[0]?.gallery?.length ? variations[0].gallery : p.gallery) ?? [],
+                        variations: [], // flattened after normalization
+                      }
+                      : p;
+
+                    // Effective key for ERP lookup + React key
+                    const erpKey = String(targetProduct?.id ?? p?.id ?? '');
+                    const priceData = erpPricesData?.[erpKey];
+
+                    return (
+                      <SwiperSlide
+                        key={`slide-${erpKey}`}
+                        className="px-1.5 md:px-2 xl:px-2.5 py-4"
+                      >
+                        <ProductCardB2B
+                          product={targetProduct}
+                          lang={lang}
+                          priceData={priceData}
+                        />
+                      </SwiperSlide>
+                    );
+                  })}
+
+                {/* See all */}
+                <SwiperSlide key="see-all" className="p-2.5 flex items-center justify-center">
                   <SeeAll href={categorySlug} lang={lang} />
                 </SwiperSlide>
-                {width! > 1024 && width! < 1921 && <SwiperSlide />}
+
+                {/* Optional spacer for certain desktop widths */}
+                {typeof width === 'number' && width > 1024 && width < 1921 ? (
+                  <SwiperSlide key="spacer" aria-hidden="true" />
+                ) : null}
               </>
+
             )}
           </Carousel>
         </div>
