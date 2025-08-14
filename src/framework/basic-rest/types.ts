@@ -78,6 +78,7 @@ export type Tag = {
 };
 export type Product = {
   id: number | string;
+  id_parent?: number | string;
   name: string;
   slug: string;
   price: number;
@@ -88,14 +89,16 @@ export type Product = {
   min_price?: number;
   max_price?: number;
   image: Attachment;
-  sku?: string;
+  sku: string;
+  parent_sku?: string;
   gallery?: Attachment[];
   category?: Category;
   tag?: Tag[];
   meta?: any[];
   brand?: Brand;
+  model?:string
   description?: string;
-  variations?: object;
+  variations: Product[];
   [key: string]: unknown;
 };
 export type OrderItem = {

@@ -11,7 +11,7 @@ import { useActiveScroll } from '@utils/use-active-scroll';
 import Container from '@components/ui/container';
 import Logo from '@components/ui/logo';
 import HeaderMenu from '@layouts/header/header-menu';
-import Search from '@components/common/search';
+import SearchB2B from '@components/common/search-b2b';
 import LanguageSwitcher from '@components/ui/language-switcher';
 import UserIcon from '@components/icons/user-icon';
 import SearchIcon from '@components/icons/search-icon';
@@ -57,7 +57,7 @@ function Header({ lang }: { lang: string }) {
       )}
     >
       <div className="z-20 transition-all duration-200 ease-in-out innerSticky lg:w-full body-font bg-fill-secondary">
-        <Search
+        <SearchB2B
           searchId="mobile-search"
           className="top-bar-search hidden lg:max-w-[600px] absolute z-30 px-4 md:px-6 top-1"
           lang={lang}
@@ -67,7 +67,7 @@ function Header({ lang }: { lang: string }) {
           <Logo className="logo -mt-1.5 md:-mt-1 " />
           {/* End of logo */}
 
-          <Search
+          <SearchB2B
             searchId="top-bar-search"
             className="hidden lg:flex lg:max-w-[650px] 2xl:max-w-[800px] lg:ltr:ml-7 lg:rtl:mr-7 lg:ltr:mr-5 lg:rtl:ml-5"
             lang={lang}
@@ -114,7 +114,7 @@ function Header({ lang }: { lang: string }) {
 
             {displaySearch && (
               <div className="absolute top-0 left-0 flex items-center justify-center w-full h-full px-4 sticky-search">
-                <Search
+                <SearchB2B
                   ref={siteSearchRef}
                   className="max-w-[780px] xl:max-w-[830px] 2xl:max-w-[1000px]"
                   lang={lang}

@@ -15,8 +15,10 @@ import 'swiper/css/autoplay';
 import 'swiper/css/grid';
 import 'swiper/css/pagination';
 import { Swiper as SwiperTypes } from 'swiper/types';
+import type { SwiperOptions } from 'swiper/types'; // << add this
 
-type CarouselPropsType = {
+
+type CarouselPropsType =  Partial<SwiperOptions> & { 
   lang: string;
   className?: string;
   buttonGroupClassName?: string;
@@ -34,6 +36,7 @@ type CarouselPropsType = {
   autoplay?: {} | any;
   grid?: {} | any;
   onSlideChange?: (swiper: SwiperTypes) => void;
+  onSwiper?: (swiper: SwiperTypes) => void;
 };
 
 export default function Carousel({
@@ -53,6 +56,7 @@ export default function Carousel({
   grid,
   autoplay,
   onSlideChange,
+  onSwiper,
   ...props
 }: React.PropsWithChildren<CarouselPropsType>) {
   const dir = getDirection(lang);
@@ -94,30 +98,32 @@ export default function Carousel({
             : {}
         }
         onSlideChange={onSlideChange}
+        onSwiper={onSwiper}
         {...props}
       >
         {children}
       </Swiper>
       {Boolean(navigation) && (
         <div
-          className={`flex items-center w-full absolute top-2/4 z-10 bg-brand ${buttonGroupClassName}`}
+          className={`flex items-center w-full absolute top-2/4 z-10 bg-transparent pointer-events-none ${buttonGroupClassName}`}
         >
+
           {prevActivateId.length > 0 ? (
-            <div className={prevButtonClasses} id={prevActivateId}>
+            <div className={`${prevButtonClasses} pointer-events-auto`}  id={prevActivateId}>
               {dir === 'rtl' ? <IoIosArrowForward /> : <IoIosArrowBack />}
             </div>
           ) : (
-            <div ref={prevRef} className={prevButtonClasses}>
+            <div ref={prevRef} className={`${prevButtonClasses} pointer-events-auto`} >
               {dir === 'rtl' ? <IoIosArrowForward /> : <IoIosArrowBack />}
             </div>
           )}
 
           {nextActivateId.length > 0 ? (
-            <div className={nextButtonClasses} id={nextActivateId}>
+            <div className={`${nextButtonClasses} pointer-events-auto`} id={nextActivateId}>
               {dir === 'rtl' ? <IoIosArrowBack /> : <IoIosArrowForward />}
             </div>
           ) : (
-            <div ref={nextRef} className={nextButtonClasses}>
+            <div ref={nextRef} className={`${nextButtonClasses} pointer-events-auto`}>
               {dir === 'rtl' ? <IoIosArrowBack /> : <IoIosArrowForward />}
             </div>
           )}

@@ -109,6 +109,42 @@ export const bannerGridTwo = [
     },
   },
 ];
+export const hidrosBannerTwo = [
+  {
+    id: 10,
+    title: 'Discover Dek Collection',
+    slug: '/products/dek',
+    image: {
+      mobile: {
+        url: 'https://hidros.s3.eu-de.cloud-object-storage.appdomain.cloud/hidros/eshop/home_slider/dek-desk.jpg',
+        width: 475,
+        height: 250,
+      },
+      desktop: {
+        url: 'https://hidros.s3.eu-de.cloud-object-storage.appdomain.cloud/hidros/eshop/home_slider/dek-desk.jpg',
+        width: 1200,
+        height: 600,
+      },
+    },
+  },
+  {
+    id: 11,
+    title: 'Summer Promo',
+    slug: '/promo/summer',
+    image: {
+      mobile: {
+        url: 'https://hidros.s3.eu-de.cloud-object-storage.appdomain.cloud/hidros/eshop/promo_banner/promo.jpg',
+        width: 475,
+        height: 250,
+      },
+      desktop: {
+        url: 'https://hidros.s3.eu-de.cloud-object-storage.appdomain.cloud/hidros/eshop/promo_banner/promo.jpg',
+        width: 1200,
+        height: 600,
+      },
+    },
+  },
+];
 
 export const elegantBannerGrid = [
   {
@@ -452,6 +488,195 @@ export const bannerDiscount = [
         url: '/assets/images/banner/discount/banner-5.png',
         width: 475,
         height: 250,
+      },
+    },
+  },
+];
+export const bannerDiscountHidros = [
+  {
+    id: 1,
+    title: 'Promo: WhatsApp us for help!',
+    slug: '/contact',
+    image: {
+      mobile: {
+        url: 'https://hidros.s3.eu-de.cloud-object-storage.appdomain.cloud/hidros/eshop/promo_banner/whatsapp.jpg',
+        width: 475,
+        height: 250,
+      },
+      desktop: {
+        url: 'https://hidros.s3.eu-de.cloud-object-storage.appdomain.cloud/hidros/eshop/promo_banner/whatsapp.jpg',
+        width: 1200,
+        height: 600,
+      },
+    },
+  },
+  {
+    id: 2,
+    title: 'Exclusive: Discover SCHEMA 08',
+    slug: '/promo/schema-08',
+    image: {
+      mobile: {
+        url: 'https://hidros.s3.eu-de.cloud-object-storage.appdomain.cloud/hidros/eshop/promo_banner/SCHEMA-08.jpg',
+        width: 475,
+        height: 250,
+      },
+      desktop: {
+        url: 'https://hidros.s3.eu-de.cloud-object-storage.appdomain.cloud/hidros/eshop/promo_banner/SCHEMA-08.jpg',
+        width: 1200,
+        height: 600,
+      },
+    },
+  },
+  {
+    id: 3,
+    title: 'Promo: SCHEMA 09 Innovation',
+    slug: '/promo/schema-09',
+    image: {
+      mobile: {
+        url: 'https://hidros.s3.eu-de.cloud-object-storage.appdomain.cloud/hidros/eshop/promo_banner/SCHEMA-09.jpg',
+        width: 475,
+        height: 250,
+      },
+      desktop: {
+        url: 'https://hidros.s3.eu-de.cloud-object-storage.appdomain.cloud/hidros/eshop/promo_banner/SCHEMA-09.jpg',
+        width: 1200,
+        height: 600,
+      },
+    },
+  },
+  {
+    id: 4,
+    title: 'SCHEMA 10: Power Performance',
+    slug: '/promo/schema-10',
+    image: {
+      mobile: {
+        url: 'https://hidros.s3.eu-de.cloud-object-storage.appdomain.cloud/hidros/eshop/promo_banner/SCHEMA-10.jpg',
+        width: 475,
+        height: 250,
+      },
+      desktop: {
+        url: 'https://hidros.s3.eu-de.cloud-object-storage.appdomain.cloud/hidros/eshop/promo_banner/SCHEMA-10.jpg',
+        width: 1200,
+        height: 600,
+      },
+    },
+  },
+  {
+    id: 5,
+    title: 'SCHEMA 11: Next-Gen Tech',
+    slug: '/promo/schema-11',
+    image: {
+      mobile: {
+        url: 'https://hidros.s3.eu-de.cloud-object-storage.appdomain.cloud/hidros/eshop/promo_banner/SCHEMA-11.jpg',
+        width: 475,
+        height: 250,
+      },
+      desktop: {
+        url: 'https://hidros.s3.eu-de.cloud-object-storage.appdomain.cloud/hidros/eshop/promo_banner/SCHEMA-11.jpg',
+        width: 1200,
+        height: 600,
+      },
+    },
+  },
+  {
+    id: 6,
+    title: 'Discover TRIO',
+    slug: '/products/trio',
+    image: {
+      mobile: {
+        url: 'https://hidros.s3.eu-de.cloud-object-storage.appdomain.cloud/hidros/eshop/home_slider/trio-dsk.jpg',
+        width: 475,
+        height: 250,
+      },
+      desktop: {
+        url: 'https://hidros.s3.eu-de.cloud-object-storage.appdomain.cloud/hidros/eshop/home_slider/trio-dsk.jpg',
+        width: 1200,
+        height: 600,
+      },
+    },
+  },
+  {
+    id: 7,
+    title: 'Promo: RIVA Desk',
+    slug: '/products/riva',
+    image: {
+      mobile: {
+        url: 'https://hidros.s3.eu-de.cloud-object-storage.appdomain.cloud/hidros/eshop/home_slider/RIVA-desk.jpg',
+        width: 475,
+        height: 250,
+      },
+      desktop: {
+        url: 'https://hidros.s3.eu-de.cloud-object-storage.appdomain.cloud/hidros/eshop/home_slider/RIVA-desk.jpg',
+        width: 1200,
+        height: 600,
+      },
+    },
+  },
+  {
+    id: 8,
+    title: 'Explore VALSIR Innovation',
+    slug: '/products/valsir',
+    image: {
+      mobile: {
+        url: 'https://hidros.s3.eu-de.cloud-object-storage.appdomain.cloud/hidros/eshop/home_slider/valsir-desk.jpg',
+        width: 475,
+        height: 250,
+      },
+      desktop: {
+        url: 'https://hidros.s3.eu-de.cloud-object-storage.appdomain.cloud/hidros/eshop/home_slider/valsir-desk.jpg',
+        width: 1200,
+        height: 600,
+      },
+    },
+  },
+  {
+    id: 9,
+    title: 'APE Air Purifiers',
+    slug: '/products/ape',
+    image: {
+      mobile: {
+        url: 'https://hidros.s3.eu-de.cloud-object-storage.appdomain.cloud/hidros/eshop/home_slider/desktop-ape.jpg',
+        width: 475,
+        height: 250,
+      },
+      desktop: {
+        url: 'https://hidros.s3.eu-de.cloud-object-storage.appdomain.cloud/hidros/eshop/home_slider/desktop-ape.jpg',
+        width: 1200,
+        height: 600,
+      },
+    },
+  },
+  {
+    id: 10,
+    title: 'Discover Dek Collection',
+    slug: '/products/dek',
+    image: {
+      mobile: {
+        url: 'https://hidros.s3.eu-de.cloud-object-storage.appdomain.cloud/hidros/eshop/home_slider/dek-desk.jpg',
+        width: 475,
+        height: 250,
+      },
+      desktop: {
+        url: 'https://hidros.s3.eu-de.cloud-object-storage.appdomain.cloud/hidros/eshop/home_slider/dek-desk.jpg',
+        width: 1200,
+        height: 600,
+      },
+    },
+  },
+  {
+    id: 11,
+    title: 'Summer Promo',
+    slug: '/promo/summer',
+    image: {
+      mobile: {
+        url: 'https://hidros.s3.eu-de.cloud-object-storage.appdomain.cloud/hidros/eshop/promo_banner/promo.jpg',
+        width: 475,
+        height: 250,
+      },
+      desktop: {
+        url: 'https://hidros.s3.eu-de.cloud-object-storage.appdomain.cloud/hidros/eshop/promo_banner/promo.jpg',
+        width: 1200,
+        height: 600,
       },
     },
   },

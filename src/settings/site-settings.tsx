@@ -4,10 +4,10 @@ import { CNFlag } from '@components/icons/language/CNFlag';
 import { USFlag } from '@components/icons/language/USFlag';
 import { DEFlag } from '@components/icons/language/DEFlag';
 import { ESFlag } from '@components/icons/language/ESFlag';
-import siteLogo from 'public/assets/images/logo.svg';
+const siteLogo = 'https://hidros.s3.eu-de.cloud-object-storage.appdomain.cloud/hidros/eshop/mymb_settings/logoHidrosPoint.png';
 
 export const siteSettings = {
-  name: 'BoroBazar',
+  name: 'Hidros B2B',
   description:
     'Fastest E-commerce template built with React, NextJS, TypeScript, TanStack-React-Query and Tailwind CSS.',
   author: {
@@ -17,8 +17,8 @@ export const siteSettings = {
   },
   logo: {
     url: siteLogo,
-    alt: 'BoroBazar',
-    href: '/en',
+    alt: 'Hidros B2B',
+    href: '/en/hidros',
     width: 128,
     height: 30,
   },
@@ -28,7 +28,7 @@ export const siteSettings = {
     menu: [
       {
         id: 1,
-        path: '/',
+        path: '/hidros',
         label: 'menu-demos',
         subMenu: [
           {
@@ -218,18 +218,18 @@ export const siteSettings = {
       },
     ],
     languageMenu: [
-      {
-        id: 'ar',
-        name: 'عربى - AR',
-        value: 'ar',
-        icon: <SAFlag />,
-      },
-      {
-        id: 'zh',
-        name: '中国人 - ZH',
-        value: 'zh',
-        icon: <CNFlag />,
-      },
+      // {
+      //   id: 'ar',
+      //   name: 'عربى - AR',
+      //   value: 'ar',
+      //   icon: <SAFlag />,
+      // },
+      // {
+      //   id: 'zh',
+      //   name: '中国人 - ZH',
+      //   value: 'zh',
+      //   icon: <CNFlag />,
+      // },
       {
         id: 'en',
         name: 'English - EN',
@@ -242,12 +242,12 @@ export const siteSettings = {
         value: 'de',
         icon: <DEFlag />,
       },
-      {
-        id: 'he',
-        name: 'rעברית - HE',
-        value: 'he',
-        icon: <ILFlag />,
-      },
+      // {
+      //   id: 'he',
+      //   name: 'rעברית - HE',
+      //   value: 'he',
+      //   icon: <ILFlag />,
+      // },
       {
         id: 'es',
         name: 'Español - ES',
@@ -258,7 +258,7 @@ export const siteSettings = {
     pagesMenu: [
       {
         id: 1,
-        path: '/search',
+        path: '/hidros/search',
         label: 'menu-best-deals',
       },
       {

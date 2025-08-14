@@ -10,7 +10,7 @@ const data = {
   title: 'app-heading',
   description: 'app-description',
   appBG: '/assets/images/app-bg.png',
-  appImage: '/assets/images/delivery-man.png',
+  appImage: '/assets/images/app-bg.png',
 };
 
 interface Props {
@@ -44,13 +44,13 @@ const CallToActionMoscow: React.FC<Props> = ({
           </div>
         </div>
         <figure className="flex -mt-14 md:mt-0 lg:absolute ltr:lg:right-0 rtl:lg:left-0 rtl:2xl:left-20 ltr:2xl:right-20 lg:bottom-0 lg:max-w-lg 3xl:max-w-none">
-          <Image
+          {/* <Image
             src={appImage}
             alt={t('text-app-thumbnail')}
             width={620}
             height={565}
             quality={100}
-          />
+          /> */}
         </figure>
       </div>
     </section>

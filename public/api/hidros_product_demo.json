@@ -1,0 +1,89 @@
+{
+    "id": "vesuvio7bo",
+    "name": "Stufa a Pellet ad Aria Modello Vesuvio",
+    "slug": "stufa-a-pellet-vesuvio",
+    "description": "Stufa a pellet ad aria da 7KW. Questa stufa è stata progettata per essere posizionata in ambienti piccoli: le dimensioni ridotte la rendono perfetta per tutti i tipi di abitazione. Il rivestimento in acciaio inox copre la struttura compatta della stufa, che si adatta perfettamente a qualsiasi stile di casa. Braciere in ghisa. Camera di combustione in acciaio. Capacità serbatoio pellet 11kg. Diametro uscita fumi Ø80mm. Telecomando (optional - disponibile su ordinazione). Possibilità di controllo remoto tramite Wi-Fi (optional - disponibile su ordinazione).",
+    "image": {
+      "id": 1,
+      "thumbnail": "https://drupal-hidros.omnicommerce.cloud/sites/default/files//product_images/F24540/main_stufa-a-pellet-ad-aria-modello-vesuvio.jpg",
+      "original": "https://drupal-hidros.omnicommerce.cloud/sites/default/files//product_images/F24540/main_stufa-a-pellet-ad-aria-modello-vesuvio.jpg"
+    },
+    "gallery": [
+      {
+        "id": 1,
+        "thumbnail": "https://drupal-hidros.omnicommerce.cloud/sites/default/files//product_images/F24540/main_stufa-a-pellet-ad-aria-modello-vesuvio.jpg",
+        "original": "https://drupal-hidros.omnicommerce.cloud/sites/default/files//product_images/F24540/main_stufa-a-pellet-ad-aria-modello-vesuvio.jpg"
+      },
+      {
+        "id": 2,
+        "thumbnail": "https://drupal-hidros.omnicommerce.cloud/sites/default/files//product_images/F24540/main_stufa-a-pellet-ad-aria-modello-vesuvio_2.jpg",
+        "original": "https://drupal-hidros.omnicommerce.cloud/sites/default/files//product_images/F24540/main_stufa-a-pellet-ad-aria-modello-vesuvio_2.jpg"
+      },
+      {
+        "id": 3,
+        "thumbnail": "https://drupal-hidros.omnicommerce.cloud/sites/default/files//product_images/F24540/main_stufa-a-pellet-ad-aria-modello-vesuvio_3.jpg",
+        "original": "https://drupal-hidros.omnicommerce.cloud/sites/default/files//product_images/F24540/main_stufa-a-pellet-ad-aria-modello-vesuvio_3.jpg"
+      }
+    ],
+    "quantity": 1,
+    "price": 439.11,
+    "sale_price": null,
+    "unit": "1 PZ",
+    "tag": [
+      {
+        "id": 1,
+        "name": "Riscaldamento",
+        "slug": "riscaldamento"
+      },
+      {
+        "id": 2,
+        "name": "Stufe a Pellet",
+        "slug": "stufe-a-pellet"
+      },
+      {
+        "id": 3,
+        "name": "Acciaio Inox",
+        "slug": "acciaio-inox"
+      }
+    ],
+    "product_type": "variable",
+    "max_price": 439.11,
+    "min_price": 439.11,
+    "variations": [
+      {
+        "id": 1,
+        "attribute_id": 1,
+        "value": "7KW Bordeaux A+",
+        "attribute": {
+          "id": 1,
+          "slug": "modello",
+          "name": "Modello",
+          "values": [
+            {
+              "id": 1,
+              "attribute_id": 1,
+              "value": "7KW Bordeaux A+"
+            }
+          ]
+        }
+      }
+    ],
+    "variation_options": [
+      {
+        "id": 1,
+        "title": "7KW Bordeaux A+",
+        "price": 439.11,
+        "sale_price": null,
+        "quantity": "1",
+        "is_disable": 0,
+        "sku": "VESUVIO7BO",
+        "options": [
+          {
+            "name": "Modello",
+            "value": "7KW Bordeaux A+"
+          }
+        ]
+      }
+    ]
+  }
+  

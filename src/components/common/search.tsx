@@ -55,6 +55,12 @@ const Search = forwardRef<HTMLDivElement, Props>(
     function enableInputFocus() {
       setInputFocus(true);
     }
+    function disableInputFocus() {
+      setInputFocus(false);          // ✅ hides overlay
+      closeMobileSearch();           // ✅ closes mobile overlay if open
+      closeSearch();                 // ✅ closes desktop overlay if open
+    }
+    
 
     return (
       <div
@@ -73,7 +79,7 @@ const Search = forwardRef<HTMLDivElement, Props>(
               'open-search-overlay': displaySearch,
             },
           )}
-          onClick={() => clear()}
+          onClick={() => disableInputFocus()}
         />
         {/* End of overlay */}
 
@@ -87,6 +93,7 @@ const Search = forwardRef<HTMLDivElement, Props>(
               onChange={handleAutoSearch}
               onClear={clear}
               onFocus={() => enableInputFocus()}
+              onSubmitSuccess={disableInputFocus}
               variant={variant}
               lang={lang}
             />

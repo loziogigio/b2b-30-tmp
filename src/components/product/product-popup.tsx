@@ -18,7 +18,7 @@ import Text from '@components/ui/text';
 import TagLabel from '@components/ui/tag-label';
 import LabelIcon from '@components/icons/label-icon';
 import { IoArrowRedoOutline } from 'react-icons/io5';
-import RelatedProductFeed from '@components/product/feeds/related-product-feed';
+import HidrosDemoProducts from '@components/product/feeds/hidros-demo-products';
 import SocialShareBox from '@components/ui/social-share-box';
 import { IoIosHeart, IoIosHeartEmpty } from 'react-icons/io';
 import { toast } from 'react-toastify';
@@ -34,13 +34,13 @@ import { productGalleryPlaceholder } from '@assets/placeholders';
 
 const breakpoints = {
   '1536': {
-    slidesPerView: 6,
-  },
-  '1280': {
     slidesPerView: 5,
   },
-  '1024': {
+  '1280': {
     slidesPerView: 4,
+  },
+  '1024': {
+    slidesPerView: 3,
   },
   '640': {
     slidesPerView: 3,
@@ -70,7 +70,7 @@ export default function ProductPopup({ lang }: { lang: string }) {
   const { price, basePrice, discount } = usePrice({
     amount: data.sale_price ? data.sale_price : data.price,
     baseAmount: data.price,
-    currencyCode: 'USD',
+    currencyCode: 'EUR',
   });
   const variations = getVariations(data.variations);
   const { slug, image, name, unit, description, gallery, tag, quantity } = data;
@@ -348,10 +348,9 @@ export default function ProductPopup({ lang }: { lang: string }) {
             </div>
           </div>
         </div>
-        <RelatedProductFeed
-          carouselBreakpoint={breakpoints}
-          className="mb-0.5 md:mb-2 lg:mb-3.5 xl:mb-4 2xl:mb-6"
+        <HidrosDemoProducts
           lang={lang}
+          carouselBreakpoint={breakpoints}
         />
       </div>
     </div>

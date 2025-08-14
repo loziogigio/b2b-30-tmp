@@ -21,6 +21,8 @@ const Logo: React.FC<React.AnchorHTMLAttributes<{}>> = ({
         src={siteSettings.logo.url}
         alt={siteSettings.logo.alt}
         loading="eager"
+        width={siteSettings.logo.width}
+        height={siteSettings.logo.height}
       />
     </Link>
   );

@@ -75,13 +75,13 @@ const DownloadApps: React.FC<Props> = ({
           </div>
         </div>
         <div className="hidden md:flex items-end ltr:pl-4 rtl:pr-4 2xl:ltr:pl-0 2xl:rtl:pr-0 md:max-w-[480px] lg:max-w-[540px] xl:max-w-auto ltr:-mr-16 rtl:-ml-16 lg:ltr:-mr-8 lg:rtl:-ml-8 3xl:ltr:mr-24 3xl:rtl:ml-24">
-          <Image
+          {/* <Image
             src={appImage}
             alt={t('text-app-thumbnail')}
             width={597}
             height={500}
             priority
-          />
+          /> */}
         </div>
       </div>
     </div>

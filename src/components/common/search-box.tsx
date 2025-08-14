@@ -3,6 +3,8 @@ import SearchIcon from '@components/icons/search-icon';
 import CloseIcon from '@components/icons/close-icon';
 import cn from 'classnames';
 import { useTranslation } from 'src/app/i18n/client';
+import { useRouter } from 'next/navigation';
+
 
 type SearchProps = {
   lang: string;
@@ -12,6 +14,7 @@ type SearchProps = {
   onClear: (e: React.SyntheticEvent) => void;
   onFocus?: (e: React.SyntheticEvent) => void;
   onChange: (e: React.FormEvent<HTMLInputElement>) => void;
+  onSubmitSuccess?: () => void;
   name: string;
   value: string;
   variant?: 'border' | 'fill';
@@ -25,55 +28,83 @@ const SearchBox = React.forwardRef<HTMLInputElement, SearchProps>(
       searchId = 'search',
       variant = 'border',
       value,
-      onSubmit,
       onClear,
       onFocus,
+      onSubmitSuccess,
       ...rest
     },
     ref,
   ) => {
     const { t } = useTranslation(lang, 'forms');
+    const router = useRouter();
+    const handleSubmit = (e: React.SyntheticEvent) => {
+      e.preventDefault(); // ✅ prevent normal form reload
+      if (!value.trim()) return; // ✅ ignore empty search
+
+      // ✅ Redirect to /lang/search?text=value
+      router.push(`/${lang}/search?text=${encodeURIComponent(value.trim())}`);
+      // ✅ Tell parent to close overlay (but NOT clear input)
+      onSubmitSuccess?.();
+
+    };
     return (
       <form
-        className="relative flex w-full rounded-md"
+        className={cn(
+          'relative flex w-full rounded-full bg-white shadow-sm',
+          className,
+        )}
         noValidate
         role="search"
-        onSubmit={onSubmit}
+        onSubmit={handleSubmit}
       >
-        <label htmlFor={searchId} className="flex flex-1 items-center py-0.5">
-          <input
-            id={searchId}
-            className={cn(
-              'text-heading outline-none w-full h-[52px] ltr:pl-5 rtl:pr-5 md:ltr:pl-6 md:rtl:pr-6 ltr:pr-14 rtl:pl-14 md:ltr:pr-16 md:rtl:pl-16 bg-brand-light text-brand-dark text-sm lg:text-15px rounded-md transition-all duration-200 focus:border-brand focus:ring-0 placeholder:text-brand-dark/50',
-              {
-                'border border-border-base': variant === 'border',
-                'bg-fill-one': variant === 'fill',
-              },
-            )}
-            placeholder={t('placeholder-search') as string}
-            aria-label={searchId}
-            autoComplete="off"
-            value={value}
-            onFocus={onFocus}
-            ref={ref}
-            {...rest}
-          />
-        </label>
-        {value ? (
+        <input
+          id={searchId}
+          className={cn(
+            'pl-4 pr-20 text-heading outline-none w-full h-[48px] rounded-full bg-brand-light text-brand-dark text-sm lg:text-15px transition-all duration-200 focus:border-brand focus:ring-0 placeholder:text-brand-dark/50',
+            {
+              'border border-border-base': variant === 'border',
+              'bg-fill-one': variant === 'fill',
+            },
+          )}
+          placeholder={t('placeholder-search') as string}
+          aria-label={searchId}
+          autoComplete="off"
+          value={value}
+          onFocus={onFocus}
+          ref={ref}
+          {...rest}
+        />
+
+        {/* Right-side container */}
+        <div className="absolute top-0 right-0 flex items-center h-full pr-2">
+          {/* Show clear X only if there's value */}
+          {value && (
+            <>
+              <button
+                type="button"
+                onClick={onClear}
+                title="Clear search"
+                className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600"
+              >
+                <CloseIcon className="w-4 h-4" />
+              </button>
+
+              {/* Divider after X */}
+              <div className="h-5 w-px bg-gray-300 mx-2" />
+            </>
+          )}
+
+          {/* Always show lens (submit) */}
           <button
-            type="button"
-            onClick={onClear}
-            title="Clear search"
-            className="absolute top-0 flex items-center justify-center h-full transition duration-200 ease-in-out outline-none ltr:right-0 rtl:left-0 w-14 md:w-16 hover:text-heading focus:outline-none"
+            type="submit"
+            title="Search"
+            className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600"
           >
-            <CloseIcon className="w-[17px] h-[17px] text-brand-dark text-opacity-40" />
+            <SearchIcon className="w-5 h-5" />
           </button>
-        ) : (
-          <span className="absolute top-0 flex items-center justify-center h-full w-14 md:w-16 ltr:right-0 rtl:left-0 shrink-0 focus:outline-none">
-            <SearchIcon className="w-5 h-5 text-brand-dark text-opacity-40" />
-          </span>
-        )}
+        </div>
       </form>
+
     );
   },
 );

@@ -10,6 +10,7 @@ import ProductCardLoader from '@components/ui/loaders/product-card-loader';
 import cn from 'classnames';
 import { getDirection } from '@utils/get-direction';
 import { useState } from 'react';
+import ProductCardB2B from './product-cards/product-card-b2b';
 
 interface ProductsCarouselProps {
   sectionHeading: string;
@@ -26,16 +27,16 @@ interface ProductsCarouselProps {
 
 const breakpoints = {
   '1921': {
-    slidesPerView: 7,
+    slidesPerView: 6,
   },
   '1780': {
-    slidesPerView: 8,
+    slidesPerView: 6,
   },
   '1536': {
-    slidesPerView: 7,
+    slidesPerView: 5,
   },
   '1280': {
-    slidesPerView: 6,
+    slidesPerView: 5,
   },
   '1024': {
     slidesPerView: 4,
@@ -123,7 +124,7 @@ const ProductsCarousel: React.FC<ProductsCarouselProps> = ({
                     key={`${uniqueKey}-${idx}`}
                     className="px-1.5 md:px-2 xl:px-2.5 py-4"
                   >
-                    <ProductCardAlpine product={product} lang={lang} />
+                    <ProductCardB2B product={product} lang={lang} />
                   </SwiperSlide>
                 ))}
                 <SwiperSlide className="p-2.5 flex items-center justify-center">
