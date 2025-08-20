@@ -34,8 +34,8 @@ export const ProductB2BGrid: FC<ProductGridProps> = ({ className = '', lang }) =
   const mergedParams = {
     ...urlParams,
     per_page: LIMITS.PRODUCTS_LIMITS,
-    address_code: "1",
-    customer_code: "19842"
+    customer_code: '026269',// TODO: inject actual customer code
+    address_code: '000000'
 
   };
 

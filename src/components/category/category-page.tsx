@@ -10,7 +10,7 @@ import { useTranslation } from 'src/app/i18n/client';
 import ProductsCarousel from '@components/product/products-carousel';
 import { useProductListQuery } from '@framework/product/get-b2b-product';
 
-const NUM_ITEM = 4;      // products per carousel
+const NUM_ITEM = 6;      // products per carousel
 const MAX_ROWS = 5;      // max category rows initially
 
 const breakpoints = {

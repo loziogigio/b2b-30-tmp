@@ -18,8 +18,9 @@ export const SearchFiltersB2B: React.FC<{ lang: string }> = ({ lang }) => {
 
   const mergedParams = {
     ...urlParams,
-    address_code: '1',
-    customer_code: '19842',
+    id_cart: '0',     // TODO: inject actual cart ID
+    customer_code: '026269',// TODO: inject actual customer code
+    address_code: '000000',     // TODO: inject actual address code
   };
 
   const {

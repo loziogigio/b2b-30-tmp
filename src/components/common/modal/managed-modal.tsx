@@ -27,6 +27,9 @@ const DeliveryAddresses = dynamic(
 const CategoryPopup = dynamic(
   () => import('@components/category/category-popup'),
 );
+const B2BProductVariantsQuickView = dynamic(
+  () => import('@components/product/b2b-product-variants-quick-view')
+);
 
 export default function ManagedModal({ lang }: { lang: string }) {
   const { isOpen, view } = useModalState();
@@ -50,6 +53,9 @@ export default function ManagedModal({ lang }: { lang: string }) {
       {view === 'PAYMENT' && <PaymentPopup lang={lang} />}
       {view === 'PHONE_NUMBER' && <PhoneNumberPopup lang={lang} />}
       {view === 'DELIVERY_VIEW' && <DeliveryAddresses lang={lang} />}
+
+      {view === 'B2B_PRODUCT_VARIANTS_QUICK_VIEW' && <B2BProductVariantsQuickView lang={lang} />}
+
     </Modal>
   );
 }

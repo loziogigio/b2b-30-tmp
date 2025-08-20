@@ -66,9 +66,9 @@ function Header({ lang }: { lang: string }) {
 
           {/* Right controls */}
           <div className="flex shrink-0 items-center -mx-2.5 xl:-mx-3.5">
-            <div className="xl:mx-3.5 mx-2.5">
+            {/* <div className="xl:mx-3.5 mx-2.5">
               <LanguageSwitcher lang={lang} />
-            </div>
+            </div> */}
 
             {/* Compact search trigger for small screens / on-demand */}
             <button
@@ -100,7 +100,7 @@ function Header({ lang }: { lang: string }) {
         </Container>
 
         {/* Mobile search (row under top bar) */}
-        <div className="lg:hidden border-t border-gray-100">
+        <div className="hidden border-t border-gray-100">
           <Container>
             <SearchB2B
               searchId="mobile-search"

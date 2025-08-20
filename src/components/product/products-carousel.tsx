@@ -13,6 +13,7 @@ import { useMemo, useState } from 'react';
 import ProductCardB2B from './product-cards/product-card-b2b';
 import { fetchErpPrices } from '@framework/erp/prices';
 import { useQuery } from '@tanstack/react-query';
+import Link from 'next/link';
 
 interface ProductsCarouselProps {
   sectionHeading: string;
@@ -69,6 +70,7 @@ const ProductsCarousel: React.FC<ProductsCarouselProps> = ({
   const { width } = useWindowSize();
   const dir = getDirection(lang);
   const [sliderEnd, setSliderEnd] = useState(false);
+  const normalizedSlug = categorySlug ? `/${lang}/${categorySlug}`:'#'
 
   // ---- ERP: collect entity_codes from the *effective* product id ----
   const entity_codes = useMemo<string[]>(() => {
@@ -106,13 +108,21 @@ const ProductsCarousel: React.FC<ProductsCarouselProps> = ({
         className,
       )}
     >
-      <div className="flex flex-wrap items-center justify-between mb-5 md:mb-6">
-        <SectionHeader
-          sectionHeading={sectionHeading}
-          className="mb-0"
-          lang={lang}
-        />
-      </div>
+      <Link
+        href={normalizedSlug}
+        aria-label={`See all ${sectionHeading}`}
+        className="block"
+      >
+        <div className="flex flex-wrap items-center justify-between mb-5 md:mb-6 cursor-pointer group">
+          <SectionHeader
+            sectionHeading={sectionHeading}
+            className="mb-0 group-hover:underline"
+            lang={lang}
+          />
+        </div>
+      </Link>
+
+
       {error ? (
         <div className="2xl:ltr:pr-10 2xl:rtl:pl-10">
           <Alert message={error} />

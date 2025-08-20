@@ -39,7 +39,7 @@ function RenderPopupOrAddToCart({
   const outOfStock = isInCart(id) && !isInStock(id);
 
   function handlePopupView() {
-    openModal('PRODUCT_VIEW', data);
+    openModal('B2B_PRODUCT_VARIANTS_QUICK_VIEW', data);
   }
 
   if (Number(quantity) < 1 || outOfStock) {
@@ -84,7 +84,7 @@ function formatAvailability(avail: number, uom: string = ''): string {
   return `In Stock  >100 ${uom}`;
 }
 function formatVariation(product: Product): string {
-  if (product.variations.length > 0) return`${product.variations.length} variatios`;
+  if (product.variations.length > 0) return `${product.variations.length} variatios`;
   return ' '
 }
 
@@ -105,8 +105,54 @@ const ProductCardB2B: React.FC<ProductProps> = ({
   });
 
   function handlePopupView() {
-    openModal('PRODUCT_VIEW', product);
+    const variations = Array.isArray(product.variations) ? product.variations : [];
+    const variations_count = variations.length
+    if (variations_count > 1) {
+      openModal('B2B_PRODUCT_VARIANTS_QUICK_VIEW', product);
+    } else {
+      openModal('PRODUCT_VIEW', product);
+    }
+
   }
+
+  function PackagingGrid({ pd }: { pd?: ErpPriceData }) {
+    const options = pd?.packaging_options_all ?? [];
+    if (!options.length) return null;
+
+    const uom = pd?.packaging_option_default?.packaging_uom ?? '—';
+    const cols = options.length + 1; // UM + each code
+
+    return (
+      <div className="rounded-md border border-gray-200 bg-white/60">
+        {/* horizontal scroll only when needed */}
+        <div className="overflow-x-auto">
+          <div
+            className="grid gap-x-2 gap-y-1 px-2 py-1 text-[10px] sm:text-xs min-w-full"
+            style={{ gridTemplateColumns: `repeat(${cols}, minmax(44px,1fr))` }}
+            role="table"
+            aria-label="Packaging options"
+          >
+            {/* header row */}
+            <div className="text-center text-gray-500 font-medium">UM</div>
+            {options.map((o: any) => (
+              <div key={o.packaging_code} className="text-center uppercase text-gray-500 font-medium">
+                {o.packaging_code}
+              </div>
+            ))}
+
+            {/* values row */}
+            <div className="text-center font-semibold">{uom}</div>
+            {options.map((o: any) => (
+              <div key={`${o.packaging_code}-val`} className="text-center font-semibold">
+                {o.qty_x_packaging ?? '1'}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
 
   return (
     <article
@@ -152,18 +198,24 @@ const ProductCardB2B: React.FC<ProductProps> = ({
       {/* Textual Information Section */}
       <div className="flex flex-col px-3 md:px-4 lg:px-[18px] pb-1 lg:pb-1 lg:pt-1.5 h-full space-y-1.5">
 
-        {/* SKU and Brand Row */}
-        <div className="flex justify-between text-xs text-gray-500">
-          <span className="uppercase text-sku border-l-border-base">{sku}</span>
+        {/* SKU + Brand (single line, small gap) */}
+        <div className="flex items-center text-xs text-gray-500 whitespace-nowrap gap-1.5 min-w-0">
+          <span className="uppercase">{sku}</span>
+
           {brand?.name && brand?.id !== '0' && (
-            <Link
-              href={`/${lang}/search?filters-id_brand=${brand.id}`}
-              className="text-brand hover:underline uppercase"
-            >
-              {brand.name}
-            </Link>
+            <>
+              <span className="text-gray-300">•</span>
+              <Link
+                href={`/${lang}/search?filters-id_brand=${brand.id}`}
+                className="text-brand hover:underline uppercase truncate max-w-[55%] sm:max-w-[60%]"
+                title={brand.name}
+              >
+                {brand.name}
+              </Link>
+            </>
           )}
         </div>
+
 
         {/* Product Name */}
         <h3
@@ -188,50 +240,29 @@ const ProductCardB2B: React.FC<ProductProps> = ({
 
       {/* Packaging and Availability Section */}
       <div className="flex flex-col">
-        <div className="flex justify-between items-center gap-4 px-3 md:px-4 lg:px-[18px] w-full py-2">
+        <div className="px-3 md:px-4 lg:px-[18px] w-full py-2">
+          <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:gap-4">
+            {/* Packaging: full width on mobile, shares row on desktop */}
+            <div className="flex-1">
+              {priceData && <PackagingGrid pd={priceData} />}
+            </div>
 
-          {/* Packaging Options */}
-          {priceData?.packaging_options_all?.length > 0 && (
-            <div className="inline-block text-xs text-gray-600 font-medium border border-gray-200 rounded-md px-2 py-1">
-
-              {/* Header Row: Packaging Codes */}
-              <div className="flex gap-2 text-[10px] text-gray-500">
-                <span className="w-10 text-center">UM</span>
-                {priceData.packaging_options_all.map((option: any) => (
-                  <span key={option.packaging_code} className="w-10 text-center uppercase">
-                    {option.packaging_code}
-                  </span>
-                ))}
-              </div>
-
-              {/* Values Row: Packaging Quantities */}
-              <div className="flex gap-2 font-bold">
-                <span className="w-10 text-center">
-                  {priceData?.packaging_option_default?.packaging_uom ?? '—'}
-                </span>
-                {priceData?.packaging_options_all.map((option: any) => (
-                  <span key={option.packaging_code + '-val'} className="w-10 text-center">
-                    {option.qty_x_packaging ?? '1'}
-                  </span>
-                ))}
+            {/* Ordered status: flows under on mobile, right side on desktop */}
+            <div className="lg:w-auto lg:self-start">
+              <div className="flex flex-col items-end text-xs text-gray-600">
+                {priceData?.buy_did && (
+                  <>
+                    <span className="bg-gray-600 text-white px-2 py-0.5 rounded-full font-semibold text-[10px]">
+                      ORDERED
+                    </span>
+                    <span className="text-[13px] mt-1">{priceData?.buy_did_last_date}</span>
+                  </>
+                )}
               </div>
             </div>
-          )}
-
-
-          {/* Ordered Status + Date */}
-          <div className="flex flex-col items-end text-xs text-gray-600">
-            {priceData?.buy_did && (
-              <>
-                <span className="bg-gray-600 text-white px-2 py-0.5 rounded-full font-semibold text-[10px]">
-                  ORDERED
-                </span>
-                <span className="text-[13px] mt-1">{priceData?.buy_did_last_date}</span>
-              </>
-            )}
-
           </div>
         </div>
+
 
         {/* Price and Promo Section */}
         {priceData && (<div

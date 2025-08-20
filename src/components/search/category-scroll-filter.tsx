@@ -1,7 +1,9 @@
+// components/ui/category-scroll-filter.tsx
 'use client';
 
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import Carousel from '@components/ui/carousel/carousel';
+import dynamic from 'next/dynamic';
+import type { Swiper as SwiperType } from 'swiper';
 import { SwiperSlide } from 'swiper/react';
 import {
   buildB2BMenuTree,
@@ -12,25 +14,36 @@ import { useCmsB2BMenuRawQuery } from '@framework/product/get-b2b-cms';
 import CategoryBreadcrumb from '@components/ui/category-breadcrumb';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import type { Swiper as SwiperType } from 'swiper';
+
+// ---- helper: mount gate to keep SSR/first paint identical
+function useMounted() {
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
+  return mounted;
+}
 
 const GAP = 10;
 
+// (optional) If you prefer: import Carousel with ssr:false at its usage site
+const Carousel = dynamic(() => import('@components/ui/carousel/carousel'), {
+  ssr: false,
+});
+
 const CategoryScrollFilter: React.FC<{ lang: string }> = ({ lang }) => {
-  const { data, isLoading, isError } = useCmsB2BMenuRawQuery({
-    staleTime: 5 * 60 * 1000,
-  });
+  const mounted = useMounted(); // ⭐ gate client-only UI
+  const { data } = useCmsB2BMenuRawQuery({ staleTime: 5 * 60 * 1000 });
+
   const [path, setPath] = useState<MenuTreeNode[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const router = useRouter();
   const swiperRef = useRef<SwiperType | null>(null);
 
-  // hooks must always run, even while loading:
+  // Build tree (safe on undefined)
   const tree = useMemo(() => buildB2BMenuTree(data ?? []), [data]);
 
+  // Derive path from URL (run on client; initial render shows empty path which is fine)
   useEffect(() => {
-    if (!searchParams) return;
     const code =
       searchParams.get('filters-category') || searchParams.get('category');
     if (!code) return;
@@ -46,7 +59,6 @@ const CategoryScrollFilter: React.FC<{ lang: string }> = ({ lang }) => {
     setPath(parentPath);
   }, [searchParams, tree]);
 
-  // derive current level safely (empty arrays during loading are fine)
   const currentLevel = useMemo<MenuTreeNode[]>(
     () => (path.length === 0 ? tree : path[path.length - 1]?.children ?? []),
     [tree, path]
@@ -67,7 +79,6 @@ const CategoryScrollFilter: React.FC<{ lang: string }> = ({ lang }) => {
     router.push(isGroup ? toCategoryUrl(category) : toLeafSearchUrl(category));
   };
 
-  // also always run these hooks; they are safe on empty data
   const activeIndex = useMemo(
     () => currentLevel.findIndex((x) => x.id === activeId),
     [currentLevel, activeId]
@@ -75,15 +86,13 @@ const CategoryScrollFilter: React.FC<{ lang: string }> = ({ lang }) => {
 
   useEffect(() => {
     if (swiperRef.current && activeIndex >= 0) {
-      swiperRef.current.slideTo(activeIndex, 0); // set 300 for animation
+      swiperRef.current.slideTo(activeIndex, 0);
     }
   }, [activeIndex]);
 
-  // now it's safe to early-return
-  if (isLoading || isError) return null;
-
+  // ⭐ Always render the same outer structure on SSR & first client render
   return (
-    <div className="relative  py-3 bg-white">
+    <div className="relative py-3 bg-white">
       <CategoryBreadcrumb
         lang={lang}
         categories={path}
@@ -92,46 +101,53 @@ const CategoryScrollFilter: React.FC<{ lang: string }> = ({ lang }) => {
         onCategorySelect={(node) => router.push(toCategoryUrl(node))}
       />
 
-      <Carousel
-        lang={lang}
-        navigation
-        autoplay={false}
-        slidesPerView="auto"
-        spaceBetween={GAP}
-        slidesOffsetBefore={GAP}
-        slidesOffsetAfter={GAP}
-        grabCursor
-        buttonSize="small"
-        prevActivateId="category-carousel-prev"
-        nextActivateId="category-carousel-next"
-        initialSlide={Math.max(activeIndex, 0)}
-        onSwiper={(s) => (swiperRef.current = s)}
-      >
-        {currentLevel.map((cat) => {
-          const isActive = cat.id === activeId;
-          const href =
-            cat.isGroup && cat.children.length > 0
-              ? toCategoryUrl(cat)
-              : toLeafSearchUrl(cat);
+      {/* ⭐ Gate Carousel (Swiper & width-dependent layout) until after mount
+          so the first client render matches the server. */}
+      {mounted && currentLevel.length > 0 ? (
+        <Carousel
+          lang={lang}
+          navigation
+          autoplay={false}
+          slidesPerView="auto"
+          spaceBetween={GAP}
+          slidesOffsetBefore={GAP}
+          slidesOffsetAfter={GAP}
+          grabCursor
+          buttonSize="small"
+          prevActivateId="category-carousel-prev"
+          nextActivateId="category-carousel-next"
+          initialSlide={Math.max(activeIndex, 0)}
+          onSwiper={(s) => (swiperRef.current = s)}
+        >
+          {currentLevel.map((cat) => {
+            const isActive = cat.id === activeId;
+            const href =
+              cat.isGroup && cat.children.length > 0
+                ? toCategoryUrl(cat)
+                : toLeafSearchUrl(cat);
 
-          return (
-            <SwiperSlide key={cat.id} className="!w-auto">
-              <Link
-                href={href}
-                className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm border whitespace-nowrap transition-colors ${
-                  isActive
-                    ? 'bg-blue-600 text-white border-blue-600'
-                    : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
-                }`}
-                title={cat.label}
-                onClick={() => setActiveId(cat.id)}
-              >
-                {cat.label}
-              </Link>
-            </SwiperSlide>
-          );
-        })}
-      </Carousel>
+            return (
+              <SwiperSlide key={cat.id} className="!w-auto">
+                <Link
+                  href={href}
+                  className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm border whitespace-nowrap transition-colors ${
+                    isActive
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                  }`}
+                  title={cat.label}
+                  onClick={() => setActiveId(cat.id)}
+                >
+                  {cat.label}
+                </Link>
+              </SwiperSlide>
+            );
+          })}
+        </Carousel>
+      ) : (
+        // Optional: small skeleton/padder so height doesn't jump on mount
+        <div className="h-9" aria-hidden />
+      )}
     </div>
   );
 };
