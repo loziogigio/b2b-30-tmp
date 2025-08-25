@@ -14,6 +14,7 @@ import ProductCardB2B from './product-cards/product-card-b2b';
 import { fetchErpPrices } from '@framework/erp/prices';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
+import { ERP_STATIC } from '@framework/utils/static';
 
 interface ProductsCarouselProps {
   sectionHeading: string;
@@ -89,9 +90,7 @@ const ProductsCarousel: React.FC<ProductsCarouselProps> = ({
 
   const erpPayload = {
     entity_codes,
-    id_cart: '0',     // TODO: inject actual cart ID
-    customer_code: '026269',// TODO: inject actual customer code
-    address_code: '000000',     // TODO: inject actual address code
+    ...ERP_STATIC
   };
 
   const { data: erpPricesData, isLoading: isLoadingErpPrices } = useQuery({

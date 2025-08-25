@@ -5,6 +5,7 @@ import { useCart } from '@contexts/cart/cart.context';
 import usePrice from '@framework/product/use-price';
 import { ROUTES } from '@utils/routes';
 import Counter from '@components/ui/counter';
+import AddToCart from '@components/product/add-to-cart';
 
 type CartItemProps = {
   item: any;
@@ -15,8 +16,8 @@ const CartItem: React.FC<CartItemProps> = ({ lang, item }) => {
   const { isInStock, addItemToCart, removeItemFromCart, clearItemFromCart } =
     useCart();
   const { price: totalPrice } = usePrice({
-    amount: item?.itemTotal,
-    currencyCode: 'USD',
+    amount: item?.price_discount,
+    currencyCode: 'EUR',
   });
   const outOfStock = !isInStock(item.id);
   return (
@@ -51,17 +52,7 @@ const CartItem: React.FC<CartItemProps> = ({ lang, item }) => {
           >
             {item?.name}
           </Link>
-          <div className="text-13px sm:text-sm text-brand-muted mt-1.5 block mb-2">
-            {item.unit} X {item.quantity}
-          </div>
-          <Counter
-            value={item.quantity}
-            onIncrement={() => addItemToCart(item, 1)}
-            onDecrement={() => removeItemFromCart(item.id)}
-            variant="cart"
-            disabled={outOfStock}
-            lang={lang}
-          />
+          <AddToCart product={item}  variant="venus" lang={lang} />
         </div>
 
         <div className="flex font-semibold text-sm md:text-base text-brand-dark leading-5 shrink-0 min-w-[65px] md:min-w-[80px] justify-end">

@@ -11,6 +11,9 @@ import dynamic from 'next/dynamic';
 import { useTranslation } from 'src/app/i18n/client';
 import Link from 'next/link';
 import { ErpPriceData } from '@utils/transform/erp-prices';
+import { formatAvailability } from '@utils/format-availability';
+import PackagingGrid from '../packaging-grid';
+import PriceAndPromo from '../price-and-promo';
 const AddToCart = dynamic(() => import('@components/product/add-to-cart'), {
   ssr: false,
 });
@@ -25,9 +28,11 @@ interface ProductProps {
 function RenderPopupOrAddToCart({
   lang,
   props,
+  priceData
 }: {
   lang: string;
   props: Object;
+  priceData?: ErpPriceData;
 }) {
   let { data }: any = props;
   const { t } = useTranslation(lang, 'common');
@@ -72,16 +77,7 @@ function RenderPopupOrAddToCart({
     );
   }
 
-  return <AddToCart data={data} variant="venus" lang={lang} />;
-}
-
-function formatAvailability(avail: number, uom: string = ''): string {
-  if (typeof avail !== 'number') return `In Stock 0 ${uom}`;
-
-  if (avail <= 0) return `In Stock 0 ${uom}`;
-  if (avail <= 10) return `In Stock >1 ${uom}`;
-  if (avail <= 100) return `In Stock >10 ${uom}`;
-  return `In Stock  >100 ${uom}`;
+  return <AddToCart product={data} variant="venus" lang={lang} priceData={priceData} />;
 }
 function formatVariation(product: Product): string {
   if (product.variations.length > 0) return `${product.variations.length} variatios`;
@@ -115,43 +111,6 @@ const ProductCardB2B: React.FC<ProductProps> = ({
 
   }
 
-  function PackagingGrid({ pd }: { pd?: ErpPriceData }) {
-    const options = pd?.packaging_options_all ?? [];
-    if (!options.length) return null;
-
-    const uom = pd?.packaging_option_default?.packaging_uom ?? '—';
-    const cols = options.length + 1; // UM + each code
-
-    return (
-      <div className="rounded-md border border-gray-200 bg-white/60">
-        {/* horizontal scroll only when needed */}
-        <div className="overflow-x-auto">
-          <div
-            className="grid gap-x-2 gap-y-1 px-2 py-1 text-[10px] sm:text-xs min-w-full"
-            style={{ gridTemplateColumns: `repeat(${cols}, minmax(44px,1fr))` }}
-            role="table"
-            aria-label="Packaging options"
-          >
-            {/* header row */}
-            <div className="text-center text-gray-500 font-medium">UM</div>
-            {options.map((o: any) => (
-              <div key={o.packaging_code} className="text-center uppercase text-gray-500 font-medium">
-                {o.packaging_code}
-              </div>
-            ))}
-
-            {/* values row */}
-            <div className="text-center font-semibold">{uom}</div>
-            {options.map((o: any) => (
-              <div key={`${o.packaging_code}-val`} className="text-center font-semibold">
-                {o.qty_x_packaging ?? '1'}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
 
 
   return (
@@ -166,7 +125,9 @@ const ProductCardB2B: React.FC<ProductProps> = ({
       <div className="relative shrink-0" onClick={handlePopupView}>
         <div className="overflow-hidden mx-auto w-full sm:w-[180px] h-[180px] md:w-[200px] md:h-[200px] transition duration-200 ease-in-out transform group-hover:scale-105 relative cursor-pointer">
           <Image
-            src={image?.thumbnail ?? productPlaceholder}
+            src={image?.thumbnail && image.thumbnail.trim() !== ''
+              ? image.thumbnail
+              : productPlaceholder}
             alt={name || 'Product Image'}
             quality={100}
             fill
@@ -264,62 +225,24 @@ const ProductCardB2B: React.FC<ProductProps> = ({
         </div>
 
 
-        {/* Price and Promo Section */}
-        {priceData && (<div
-          className="flex items-center justify-center px-3 py-1"
-          itemScope
-          itemType="https://schema.org/Product"
-        >
-          <meta itemProp="name" content={name} />
-          <meta itemProp="sku" content={sku} />
-
-          <div
-            className="text-sm text-gray-800 text-left space-y-0.5"
-            itemProp="offers"
-            itemScope
-            itemType="https://schema.org/Offer"
-          >
-            <meta itemProp="priceCurrency" content="EUR" />
-
-            <div className="grid grid-cols-[auto_auto] gap-x-2 items-center w-fit text-sm text-gray-800">
-
-              {/* Column 1: Original Price + Discount Info (only if promo) */}
-              {priceData?.discount_description && (
-                <div className="flex flex-col items-end text-xs leading-tight text-gray-600">
-                  <span className="line-through">{priceData?.gross_price} €</span>
-                  {priceData?.discount_description && (
-                    <span>{priceData.discount_description}</span>
-                  )}
-                </div>
-              )}
-
-              {/* Column 2: Final Price */}
-              <div
-                className={cn(
-                  'font-bold text-left px-2 py-1 rounded text-[22px] flex items-center gap-2',
-                  priceData?.is_promo ? 'text-red-500' : 'text-black'
-                )}
-              >
-                <span itemProp="price">{priceData?.price_discount}</span> €
-
-                {/* Show promo icon if there are multiple promos */}
-                {priceData?.count_promo > 0 && (
-                  <span
-                    title="View all promotions"
-                    className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-semibold cursor-pointer"
-                  >
-                    +{priceData.count_promo}
-                  </span>
-                )}
-              </div>
-
-            </div>
-          </div>
-        </div>)}
+        {priceData && (
+          <PriceAndPromo
+            name={name}
+            sku={sku}
+            priceData={priceData}
+            currency="EUR"
+            withSchemaOrg={true}
+            // className="px-3 py-1 justify-start" // optional tweaks
+            onPromosClick={() => {
+              // open promo modal, or show toast, etc.
+              // openModal('PROMOS_LIST', priceData)
+            }}
+          />
+        )}
 
         <div className='px-2'>
           {/* CTA Button or Popup Component */}
-          <RenderPopupOrAddToCart props={{ data: product }} lang={lang} />
+          <RenderPopupOrAddToCart props={{ data: product }} lang={lang} priceData={priceData} />
         </div>
 
         <div className="text-sm text-gray-400 whitespace-nowrap min-w-[60px] text-center min-h-[24px] flex items-center justify-center">

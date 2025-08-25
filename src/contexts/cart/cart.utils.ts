@@ -4,6 +4,9 @@ export interface Item {
   quantity?: number;
   stock?: number;
   [key: string]: any;
+  __cartMeta?: any;
+  price_discount?: number;
+  price_gross?: number;
 }
 
 export interface UpdateItemInput extends Partial<Omit<Item, 'id'>> {}

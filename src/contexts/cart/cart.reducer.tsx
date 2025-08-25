@@ -22,7 +22,9 @@ type Action =
   | { type: 'ADD_ITEM'; id: Item['id']; item: Item }
   | { type: 'UPDATE_ITEM'; id: Item['id']; item: UpdateItemInput }
   | { type: 'REMOVE_ITEM'; id: Item['id'] }
-  | { type: 'RESET_CART' };
+  | { type: 'RESET_CART' }
+  | { type: 'SET_ITEM_QUANTITY'; item: Item; quantity: number };
+
 
 export interface State {
   items: Item[];
@@ -42,6 +44,24 @@ export const initialState: State = {
 };
 export function cartReducer(state: State, action: Action): State {
   switch (action.type) {
+    case 'SET_ITEM_QUANTITY': {
+      const { item, quantity } = action;
+    
+      let items: Item[];
+      if (!Number.isFinite(quantity) || quantity <= 0) {
+        items = state.items.filter((i) => i.id !== item.id);
+      } else {
+        const idx = state.items.findIndex((i) => i.id === item.id);
+        if (idx >= 0) {
+          const next = [...state.items];
+          next[idx] = { ...next[idx], quantity };
+          items = next;
+        } else {
+          items = [...state.items, { ...item, quantity }];
+        }
+      }
+      return generateFinalState(state, items); // <-- important
+    }
     case 'ADD_ITEM_WITH_QUANTITY': {
       const items = addItemWithQuantity(
         state.items,

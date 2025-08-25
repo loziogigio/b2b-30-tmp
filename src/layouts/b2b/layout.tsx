@@ -6,7 +6,7 @@ import HighlightedBar from '@components/common/highlighted-bar';
 import Countdown from '@components/common/countdown';
 import Header from './header';
 import Footer from '@layouts/footer/footer';
-import MobileNavigation from '@layouts/mobile-navigation/mobile-navigation';
+import B2BMobileNavigation from '@layouts/mobile-navigation/b2b-mobile-navigation';
 import { useTranslation } from 'src/app/i18n/client';
 import { useIsMounted } from '@utils/use-is-mounted';
 
@@ -66,7 +66,7 @@ export default function DefaultLayout({
         {children}
       </main>
       <Footer lang={lang} />
-      <MobileNavigation lang={lang} />
+      <B2BMobileNavigation lang={lang} />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import React from 'react';
 import { useFilterQuery } from '@framework/product/get-b2b-filters';
 import { FiltersB2BItem } from './filters-b2b-item';
+import { ERP_STATIC } from '@framework/utils/static';
 
 export const SearchFiltersB2B: React.FC<{ lang: string }> = ({ lang }) => {
   const { t } = useTranslation(lang, 'common');
@@ -18,9 +19,7 @@ export const SearchFiltersB2B: React.FC<{ lang: string }> = ({ lang }) => {
 
   const mergedParams = {
     ...urlParams,
-    id_cart: '0',     // TODO: inject actual cart ID
-    customer_code: '026269',// TODO: inject actual customer code
-    address_code: '000000',     // TODO: inject actual address code
+    ...ERP_STATIC
   };
 
   const {

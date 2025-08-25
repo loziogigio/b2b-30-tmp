@@ -1,5 +1,5 @@
 'use client';
-import { ProductB2BGrid } from '@components/product/product-b2b-grid';
+import { ProductB2BSearch } from '@components/product/product-b2b-search';
 import CategoryScrollFilter from '@components/search/category-scroll-filter';
 import { SearchFiltersB2B } from '@components/search/filters-b2b';
 import SearchTopBar from '@components/search/search-top-bar';
@@ -17,8 +17,8 @@ export default function SearchB2BPageContent({ lang }: { lang: string }) {
           <SearchFiltersB2B lang={lang} />
         </div>
         <div className="w-full lg:pt-4 lg:ltr:-ml-4 lg:rtl:-mr-2 xl:ltr:-ml-8 xl:rtl:-mr-8 lg:-mt-1">
-          <SearchTopBar lang={lang} />
-          <ProductB2BGrid lang={lang} />
+          {/* <SearchTopBar lang={lang} /> */}
+          <ProductB2BSearch lang={lang} />
         </div>
       </Element>
     </Container>

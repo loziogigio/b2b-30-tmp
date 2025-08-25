@@ -15,6 +15,7 @@ import cn from 'classnames';
 import Image from '@components/ui/image';
 import { productPlaceholder } from '@assets/placeholders';
 import Link from 'next/link';
+import { ERP_STATIC } from '@framework/utils/static';
 
 type VariantMinimal = {
   id: string | number;
@@ -63,7 +64,7 @@ export default function B2BProductVariantsQuickView({ lang }: { lang: string }) 
 
   const pageSize = LIMITS.PRODUCTS_LIMITS;
 
-  const ERP_STATIC = { id_cart: '0', customer_code: '026269', address_code: '000000' };
+
 
   const {
     data: pages,
@@ -160,16 +161,25 @@ export default function B2BProductVariantsQuickView({ lang }: { lang: string }) 
           </div>
 
           <div className="min-w-0 flex-1">
-            {/* SKU + brand */}
-            <div className="flex items-center justify-between text-xs text-gray-500">
-              <span className="uppercase truncate">{parentSku}</span>
+            {/* SKU + Brand (single line, small gap) */}
+            <div className="flex items-center text-xs text-gray-500 whitespace-nowrap gap-1.5 min-w-0">
+              <span className="uppercase">{sku}</span>
+
               {brand?.name && brand?.id !== '0' && (
-                <Link
-                  href={`/${lang}/search?filters-id_brand=${brand.id}`}
-                  className="text-brand hover:underline uppercase shrink-0 mr-2 sm:mr-5"
-                >
-                  {brand.name}
-                </Link>
+                <>
+                  <span className="text-gray-300">•</span>
+                  <Link
+                    href={`/${lang}/search?filters-id_brand=${brand.id}`}
+                    className="text-brand hover:underline uppercase truncate max-w-[55%] sm:max-w-[60%]"
+                    title={brand.name}
+                    onClick={() => {
+                      // let Next.js Link handle the route first, then close the modal
+                      setTimeout(() => closeModal(), 0);
+                    }}
+                  >
+                    {brand.name}
+                  </Link>
+                </>
               )}
             </div>
 
