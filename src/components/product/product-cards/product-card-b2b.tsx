@@ -47,13 +47,6 @@ function RenderPopupOrAddToCart({
     openModal('B2B_PRODUCT_VARIANTS_QUICK_VIEW', data);
   }
 
-  if (Number(quantity) < 1 || outOfStock) {
-    return (
-      <span className="text-[11px] md:text-xs font-bold text-brand-light uppercase inline-block bg-brand-danger rounded-full px-2.5 pt-1 pb-[3px] mx-0.5 sm:mx-1">
-        {t('text-out-stock')}
-      </span>
-    );
-  }
 
   const variations = Array.isArray(data.variations) ? data.variations : [];
   const variations_count = variations.length

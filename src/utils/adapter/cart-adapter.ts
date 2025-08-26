@@ -1,121 +1,183 @@
 // @utils/adapter/cart-adapter.ts
-import type { Item } from '@contexts/cart/cart.utils';
+import type { CartSummary, Item } from '@contexts/cart/cart.utils';
+import type { Brand } from '@framework/types';
 
+// --- helpers -------------------------------------------------
 const num = (v: any, d = 0) => {
-  const n = typeof v === 'string' ? v.replace(',', '.') : v;
-  const x = Number(n);
-  return Number.isFinite(x) ? x : d;
+  if (v == null || v === '') return d;
+  const s = typeof v === 'string' ? v.replace(',', '.') : v;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : d;
 };
 
-// Safe values() for ES5 target (avoid relying on Object.values polyfill)
-const values = (obj: any) => Object.keys(obj ?? {}).map(k => (obj as any)[k]);
+const val = <T = any>(...candidates: any[]): T | undefined =>
+  candidates.find((x) => x !== undefined && x !== null && x !== '');
 
-/**
- * Map full server cart response -> local Item[] for CartProvider
- * Expects the structure you pasted:
- * {
- *   success: true,
- *   message: {
- *     data: { "10": {...row}, "20": {...row} },
- *     ...cart totals...
- *   }
- * }
- */
-export function mapServerCartToItems(apiResponse: any): Item[] {
-  const rowsDict = apiResponse?.message?.data ?? {};
-  const rows = values(rowsDict);
+// Guard if API returns an object keyed by rowId: { "10": {...}, "20": {...} }
+const values = (obj: any) => Object.keys(obj ?? {}).map((k) => (obj as any)[k]);
 
-  return rows.map((row: any): Item => {
-    // Choose a stable id for the cart item (row id is safest inside a cart)
-    const id =
-      row.row_id ??
-      row.id_riga ??
-      row.id ??              // fallback to product id if needed
-      row.sku ??             // last resort
-      `${row.id_cart || ''}-${row.sku || ''}`;
-
-    const price = num(row.price_discount ?? row.price);
-    const quantity = num(row.quantity, 0);
-
-    return {
-      // ---- local Item shape (required by your reducer) ----
-      id,
-      price,
-      quantity,
-      // optional stock if you have it; not in your example, so leave undefined
-      stock: undefined,
-
-      // keep anything else you want on the item
-      sku: row.sku,
-      name: row.name,
-      model: row.modello,
-      shortDescription: row.short_descr,
-      image: row.image,
-      link: row.link,
-
-      // raw server ids for debugging/links
-      row_id: row.row_id ?? row.id_riga,
-      cart_id: row.id_cart ?? row.id_carrello,
-      product_id: row.id,
-      parent_id: row.id_father,
-      code: row.codice_figura,
-
-      // useful pricing flags
-      price_discount: num(row.price_discount),
-      price_gross: num(row.price),
-      total_gross_row: num(row.totale_no_sconto),
-      total_net_row: num(row.totale_sconto),
-      uom: row.um,
-
-      // discounts
-      discount1: row.sconto1,
-      discount2: row.sconto2,
-      discount3: row.sconto3,
-      listing_type_discounts: row.listing_type_discounts,
-
-      // keep packaging blob as-is (you already consume a similar structure)
-      packaging: row.imballi,
-
-      // meta your UI uses elsewhere
-      __cartMeta: {
-        is_promo: row.is_promo ?? (row.promo === '1' || row.promo_row === '1'),
-        availability: row.availability, // not present in sample; left for parity
-        packaging_option_default: pickDefaultPackaging(row.imballi),
-        packaging_option_smallest: pickSmallestPackaging(row.imballi),
-      },
-    } as Item;
-  });
-}
-
-/** Optional: map cart-level summary/totals for your UI */
-export function mapServerCartToSummary(apiResponse: any) {
-  const msg = apiResponse?.message ?? {};
-  return {
-    idCart: msg.id_cart ?? msg.id_carrello,
-    clientId: msg.client_id,
-    addressCode: msg.address_code,
-    transportCost: num(msg.spese_trasporto),
-    transportFreeAbove: num(msg.importo_spese_zero),
-    totalNet: num(msg.totale_netto),
-    totalGross: num(msg.totale_lordo),
-    vat: num(msg.iva),
-    totalDoc: num(msg.totale_doc),
-    packaging: msg.imballi,
-    showDiscountPrice: !!msg.show_discount_price,
-  };
-}
-
-/** Helpers to extract default/smallest packaging from the server blob */
+// Optional: pick packaging helpers (keep as-is if not needed)
 function pickDefaultPackaging(imballi: any) {
   const opts = imballi?.packaging_options ?? [];
   return opts.find((o: any) => o.IsImballoDiDefaultXVendita) ?? null;
 }
 function pickSmallestPackaging(imballi: any) {
   const opts = imballi?.packaging_options ?? [];
-  // server marks it, but also fall back to smallest QtaXImballo
   return (
     opts.find((o: any) => o.IsImballoPiuPiccolo) ??
     opts.slice().sort((a: any, b: any) => num(a.QtaXImballo) - num(b.QtaXImballo))[0] ??
     null
   );
+}
+
+// --- core mappers --------------------------------------------
+export function mapServerCartToItems(apiResponse: any): Item[] {
+  const rowsDict = apiResponse?.message?.data ?? apiResponse?.data ?? [];
+  const rows = Array.isArray(rowsDict) ? rowsDict : values(rowsDict);
+
+  return rows.map((row: any): Item => {
+    // Stable ids
+    const rowId = String(
+      val(row.row_id, row.id_riga, row.riga, row.riga_id, row.n_riga, row.progressivo, row.id) ?? ''
+    );
+    const id: string | number =
+      val(row.id, row.product_id, row.id_prodotto, row.sku) ??
+      `${val(row.id_cart, row.id_carrello) || 'cart'}-${rowId || Math.random()}`;
+
+    // Pricing
+    const priceDiscount = num(val(row.price_discount, row.prezzo_netto, row.netto, row.price), 0);
+    const priceGross = num(val(row.price_gross, row.gross_price, row.prezzo_lordo, row.price), 0);
+    const vatRate = num(val(row.vat_rate, row.aliquota_iva, row.iva), 0);
+
+    // Quantity & units
+    const quantity = num(val(row.quantity, row.qty, row.qta, row.quantita), 0);
+    const uom = val(row.um, row.uom, row.unita_misura);
+
+    // Flags
+    const isPromo =
+      Boolean(val(row.is_promo, row.promo, row.promo_row)) ||
+      (priceDiscount > 0 && priceGross > 0 && priceDiscount < priceGross);
+
+    // Descriptives
+    const name = val(row.name, row.titolo, row.descrizione_breve, row.descrizione);
+    const model = val(row.modello, row.model);
+    const shortDescription = val(row.short_descr, row.descrizione_breve);
+    const description = val(row.description, row.descrizione);
+    const image = val(row.image, row.image_url, row.thumbnail, row.thumb);
+    const brand: Brand | undefined = row.brand;
+    const slug = val(row.slug, row.permalink, row.link);
+
+    const id_parent = val(row.id_father, row.parent_id, row.id_parent);
+    const parent_sku = val(row.parent_sku, row.sku_parent);
+
+    const promo_code = row.promo_code??0;
+    const promo_row = row.promo_row??0;
+
+    // IMPORTANT: keep legacy fields populated for back-compat
+    // Set `price` to the net/discounted unit so existing total calculators still work
+    const price = priceDiscount || priceGross || 0;
+
+    return {
+      // Identifiers
+      id,
+      rowId,
+      sku: row.sku,
+      slug,
+      id_parent,
+      parent_sku,
+
+      // Descriptive
+      name,
+      model,
+      shortDescription,
+      description,
+      brand,
+      image,
+
+      // Quantities / units
+      quantity,
+      uom,
+      mvQty: val(row.mv, row.min_vendita, row.moq),
+      cfQty: val(row.cf, row.conf, row.pz_confezione),
+
+      // Pricing (canonical)
+      priceDiscount,
+      priceGross,
+      isPromo,
+
+      // Pricing (legacy / snake_case mirrors, some UIs still read these)
+      price,                       // fallback used by older calculators
+      price_discount: priceDiscount,
+      price_gross: priceGross,
+      gross_price: priceGross,
+      vat_rate: vatRate,
+      promo_code:promo_code,
+      promo_row:promo_row,
+
+
+      // Meta / raw passthrough
+      __cartMeta: {
+        price_discount: priceDiscount,
+        gross_price: priceGross,
+        vat_rate: vatRate,
+        is_promo: isPromo,
+        totale_no_sconto: num(row.totale_no_sconto),
+        totale_sconto: num(row.totale_sconto),
+        imballi: row.imballi,
+        packaging_option_default: pickDefaultPackaging(row.imballi),
+        packaging_option_smallest: pickSmallestPackaging(row.imballi),
+        availability: row.availability,
+        id_cart: val(row.id_cart, row.id_carrello),
+        row_raw: row, // keep full row for debugging if needed
+      },
+    } satisfies Item;
+  });
+}
+
+
+
+export function mapServerCartToSummary(apiResponse: any): CartSummary {
+  const msg = apiResponse?.message ?? apiResponse ?? {};
+  const min = msg.min_order ?? {};
+
+  const toBool = (v: any) =>
+    v === true || v === 1 || v === '1' || v === 'true';
+
+  const num = (v: any, d = 0) => {
+    if (v == null || v === '') return d;
+    const s = typeof v === 'string' ? v.replace(',', '.') : v;
+    const n = Number(s);
+    return Number.isFinite(n) ? n : d;
+  };
+
+  const val = <T = any>(...c: any[]): T | undefined =>
+    c.find((x) => x !== undefined && x !== null && x !== '');
+
+  return {
+    idCart: val(msg.id_cart, msg.id_carrello) as any,
+    clientId: msg.client_id,
+    addressCode: msg.address_code,
+    closeEnable: toBool(msg.close_enable),
+    minOrder: {
+      warning: String(min.warning ?? ''),
+      minimumAmount: num(min.minimum_amount, 0),
+      compliant: toBool(min.compliant),
+    },
+    transportCost: num(val(msg.spese_trasporto, msg.shipping_cost), 0),
+    transportFreeAbove: num(val(msg.importo_spese_zero, msg.free_shipping_threshold), 0),
+    totalNet: num(val(msg.totale_netto, msg.total_net), 0),
+    totalGross: num(val(msg.totale_lordo, msg.total_gross), 0),
+    vat: num(val(msg.iva, msg.vat), 0),
+    totalDoc: num(val(msg.totale_doc, msg.total_doc, msg.total), 0),
+    showDiscountPrice: Boolean(msg.show_discount_price),
+    packaging: msg.imballi,
+  };
+}
+
+/** Convenience: everything the cart endpoint returns, normalized */
+export function mapServerCart(apiResponse: any): { items: Item[]; summary: CartSummary } {
+  return {
+    items: mapServerCartToItems(apiResponse),
+    summary: mapServerCartToSummary(apiResponse),
+  };
 }

@@ -1,5 +1,6 @@
 import {
   Item,
+  CartSummary,
   UpdateItemInput,
   addItemWithQuantity,
   removeItemOrQuantity,
@@ -9,7 +10,7 @@ import {
   calculateUniqueItems,
   calculateItemTotals,
   calculateTotalItems,
-  calculateTotal,
+  calculateTotal
 } from './cart.utils';
 
 interface Metadata {
@@ -23,7 +24,10 @@ type Action =
   | { type: 'UPDATE_ITEM'; id: Item['id']; item: UpdateItemInput }
   | { type: 'REMOVE_ITEM'; id: Item['id'] }
   | { type: 'RESET_CART' }
-  | { type: 'SET_ITEM_QUANTITY'; item: Item; quantity: number };
+  | { type: 'SET_ITEM_QUANTITY'; item: Item; quantity: number }
+  | { type: 'SET_META'; meta: CartSummary | null }
+  | { type: 'HYDRATE_REPLACE'; items: Item[] }
+  | { type: 'HYDRATE_MERGE'; items: Item[] };
 
 
 export interface State {
@@ -32,7 +36,7 @@ export interface State {
   totalItems: number;
   totalUniqueItems: number;
   total: number;
-  meta?: Metadata | null;
+  meta?: CartSummary | null;
 }
 export const initialState: State = {
   items: [],
@@ -44,9 +48,19 @@ export const initialState: State = {
 };
 export function cartReducer(state: State, action: Action): State {
   switch (action.type) {
+    case 'HYDRATE_REPLACE': {
+      return generateFinalState(state, action.items);
+    }
+    case 'HYDRATE_MERGE': {
+      const merged = new Map<string | number, Item>();
+      for (const it of state.items) merged.set(it.id, it);
+      for (const it of action.items) merged.set(it.id, { ...(merged.get(it.id) || {}), ...it });
+      return generateFinalState(state, Array.from(merged.values()));
+    }
+    case 'SET_META':
+      return { ...state, meta: action.meta };
     case 'SET_ITEM_QUANTITY': {
       const { item, quantity } = action;
-    
       let items: Item[];
       if (!Number.isFinite(quantity) || quantity <= 0) {
         items = state.items.filter((i) => i.id !== item.id);
@@ -60,7 +74,7 @@ export function cartReducer(state: State, action: Action): State {
           items = [...state.items, { ...item, quantity }];
         }
       }
-      return generateFinalState(state, items); // <-- important
+      return generateFinalState(state, items);
     }
     case 'ADD_ITEM_WITH_QUANTITY': {
       const items = addItemWithQuantity(

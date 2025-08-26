@@ -29,7 +29,7 @@ interface Variation {
   __cartMeta?: any;
 }
 export function generateCartItem(item: Item, variation: Variation) {
-  const { id, name, slug, image, price, sale_price, final_price,  quantity, unit , __cartMeta  , price_discount , price_gross} = item;
+  const { id, name, slug, image, price, sale_price, final_price,  quantity, unit , __cartMeta  , price_discount , price_gross , promo_code , promo_row} = item;
   if (!isEmpty(variation)) {
     return {
       id: `${id}.${variation.id}`,
@@ -43,6 +43,8 @@ export function generateCartItem(item: Item, variation: Variation) {
       variationId: variation.id,
       price_discount: price_discount,
       price_gross: price_gross,
+      promo_code: promo_code,
+      promo_row: promo_row,
       __cartMeta: __cartMeta
     };
   }
@@ -57,6 +59,8 @@ export function generateCartItem(item: Item, variation: Variation) {
     final_price:final_price,
     price_discount: price_discount,
     price_gross: price_gross,
+    promo_code: promo_code,
+    promo_row: promo_row,
     __cartMeta: __cartMeta
   };
 }

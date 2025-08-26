@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
-import { RadioGroup, Radio, Label, Description } from '@headlessui/react';
+import { RadioGroup, Radio, Label, Description, PopoverButton, PopoverPanel } from '@headlessui/react';
 import cn from 'classnames';
 import Button from '@components/ui/button';
 import Heading from '@components/ui/heading';
@@ -179,11 +179,11 @@ export default function CheckoutSendOrder({ lang, addresses = [], onSubmit }: Pr
             {({ open, close }) => (
               <>
                 {/* Readonly input that opens the calendar */}
-                <Popover.Button
+                <PopoverButton
                   className="w-full h-10 rounded-md border border-gray-300 px-3 text-sm text-left focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
                   {date ? fmtDate(date) : (t('text-delivery-date') ?? 'Delivery date')}
-                </Popover.Button>
+                </PopoverButton>
 
                 <Transition
                   as={Fragment}
@@ -195,7 +195,7 @@ export default function CheckoutSendOrder({ lang, addresses = [], onSubmit }: Pr
                   leaveTo="opacity-0 scale-95"
                 >
                   <Portal>
-                    <Popover.Panel
+                    <PopoverPanel
                       anchor="bottom start"                           // position relative to the button
                       className="z-50 mt-2 rounded-md border border-gray-200 bg-white p-2 shadow-lg"
                     >
@@ -230,14 +230,15 @@ export default function CheckoutSendOrder({ lang, addresses = [], onSubmit }: Pr
                         }}
                         disabled={[{ dayOfWeek: [0, 6] }, { before: nextBusinessDay() }]}
                         captionLayout="dropdown"
-                        fromDate={new Date()}
+                        hidden={new Date()}
                         locale={it}
                         showOutsideDays
                         fixedWeeks
                       />
-                    </Popover.Panel>
+                    </PopoverPanel>
                   </Portal>
                 </Transition>
+
 
               </>
             )}

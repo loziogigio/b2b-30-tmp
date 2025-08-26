@@ -9,6 +9,7 @@ import Footer from '@layouts/footer/footer';
 import B2BMobileNavigation from '@layouts/mobile-navigation/b2b-mobile-navigation';
 import { useTranslation } from 'src/app/i18n/client';
 import { useIsMounted } from '@utils/use-is-mounted';
+import CartHydrator from '@framework/cart/b2b-cart';
 
 function ClientRenderedHighLightedBar({ lang }: { lang: string }) {
   const { t } = useTranslation(lang, 'common');
@@ -55,6 +56,7 @@ export default function DefaultLayout({
     <div className="flex flex-col min-h-screen">
       {isMounted && <ClientRenderedHighLightedBar lang={lang} />}
       {/* End of highlighted bar  */}
+      <CartHydrator/>
 
       <Header lang={lang} />
       <main

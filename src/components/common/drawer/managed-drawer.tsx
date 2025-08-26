@@ -38,8 +38,6 @@ export default function ManagedDrawer({ lang }: { lang: string }) {
       contentWrapperStyle={contentWrapperCSS}
       {...motionProps}
     >
-      {/* Invisible: fetches server cart and hydrates local cart state */}
-      <CartHydrator />
 
       {drawerView === 'CART_SIDEBAR' && (
         <>

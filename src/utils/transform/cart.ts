@@ -84,3 +84,31 @@ export function transformCartResponse(apiResponse: any): CartInfo {
     items,
   };
 }
+
+
+export type AddToCartInput = {
+  item_id: string | number;
+  quantity: number;
+
+  // promo info (optional)
+  promo_code?: string | number | null; // example uses "PET/25" or 0
+  promo_row?: string | number | null;  // example uses 162 or 0
+
+  // pricing (optional overrides; we’ll auto-fill from Item if missing)
+  price?: number;            // unit gross
+  price_discount?: number;   // unit net
+  vat_perc?: number | string;
+
+  // discounts (match exact API fields)
+  discount1?: number;
+  discount2?: number;
+  discount3?: number;
+  discount4?: number;
+  discount5?: number;
+  discount6?: number;
+
+  // packaging / list
+  qty_min_packing?: number;  // NOTE: exact field name from your example
+  listino_type?: string | number; // e.g. "1"
+  listino_code?: string;          // e.g. "VEND"
+};
