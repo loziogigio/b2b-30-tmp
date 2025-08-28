@@ -1,62 +1,87 @@
+// cart-item.tsx
 import Link from '@components/ui/link';
 import Image from '@components/ui/image';
 import { IoIosCloseCircle } from 'react-icons/io';
 import { useCart } from '@contexts/cart/cart.context';
 import usePrice from '@framework/product/use-price';
 import { ROUTES } from '@utils/routes';
-import Counter from '@components/ui/counter';
 import AddToCart from '@components/product/add-to-cart';
+import UpdateCart from '@components/product/update-cart';
 
 type CartItemProps = {
   item: any;
   lang: string;
 };
 
+const getUnitNet = (it: any) =>
+  Number(
+    it?.priceDiscount ??
+      it?.price_discount ??
+      it?.__cartMeta?.price_discount ??
+      it?.price ??
+      0
+  );
+
+const getQty = (it: any) => Number(it?.quantity ?? 0);
+
 const CartItem: React.FC<CartItemProps> = ({ lang, item }) => {
-  const { isInStock, addItemToCart, removeItemFromCart, clearItemFromCart } =
-    useCart();
-  const { price: totalPrice } = usePrice({
-    amount: item?.price_discount,
-    currencyCode: 'EUR',
-  });
+  const { isInStock, clearItemFromCart } = useCart();
   const outOfStock = !isInStock(item.id);
+
+  const qty = getQty(item);
+  const unit = getUnitNet(item);
+  const line = unit * qty;
+
+  const { price: unitPrice } = usePrice({ amount: unit, currencyCode: 'EUR' });
+  const { price: linePrice } = usePrice({ amount: line, currencyCode: 'EUR' });
+
   return (
     <div
-      className={`group w-full h-auto flex justify-start items-center text-brand-light py-4 md:py-7 border-b border-border-one border-opacity-70 relative last:border-b-0`}
+      className="group relative flex w-full items-center justify-start gap-3 border-b border-border-one/70 py-3 last:border-b-0 md:py-3.5"
       title={item?.name}
     >
-      <div className="relative flex rounded overflow-hidden shrink-0 cursor-pointer w-[90px] md:w-[100px] h-[90px] md:h-[100px]">
+      {/* image + quick remove */}
+      <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-md ring-1 ring-gray-200">
         <Image
           src={item?.image ?? '/assets/placeholder/cart-item.svg'}
-          width={100}
-          height={100}
+          width={64}
+          height={64}
           loading="eager"
-          alt={item.name || 'Product Image'}
-          style={{ width: 'auto' }}
-          className="object-cover bg-fill-thumbnail"
+          alt={item?.name || 'Product Image'}
+          className="h-full w-full object-cover bg-fill-thumbnail"
         />
-        <div
-          className="absolute top-0 flex items-center justify-center w-full h-full transition duration-200 ease-in-out bg-black ltr:left-0 rtl:right-0 bg-opacity-30 md:bg-opacity-0 md:group-hover:bg-opacity-30"
+        <button
           onClick={() => clearItemFromCart(item.id)}
-          role="button"
+          className="absolute inset-0 hidden items-center justify-center bg-black/20 text-white transition md:flex md:opacity-0 md:group-hover:opacity-100"
+          aria-label="remove-item"
+          title="Remove"
         >
-          <IoIosCloseCircle className="relative text-2xl text-white transition duration-300 ease-in-out transform md:scale-0 md:opacity-0 md:group-hover:scale-100 md:group-hover:opacity-100" />
-        </div>
+          <IoIosCloseCircle className="text-2xl" />
+        </button>
       </div>
 
-      <div className="flex items-start justify-between w-full overflow-hidden">
-        <div className="ltr:pl-3 rtl:pr-3 md:ltr:pl-4 md:rtl:pr-4">
+      {/* content */}
+      <div className="flex w-full items-start justify-between gap-3 overflow-hidden">
+        <div className="min-w-0">
+          <div className="text-xs text-blue-600 font-semibold">{item?.sku}</div>
           <Link
             href={`/${lang}${ROUTES.PRODUCT}/${item?.slug}`}
-            className="block leading-5 transition-all text-brand-dark text-13px sm:text-sm lg:text-15px hover:text-brand"
+            className="block truncate text-[13px] font-medium text-brand-dark transition hover:text-brand md:text-sm"
           >
             {item?.name}
           </Link>
-          <AddToCart product={item}  variant="venus" lang={lang} />
+          {/* qty × unit */}
+          <div className="mt-0.5 text-[11px] text-gray-600">
+            {qty} × {unitPrice}
+          </div>
+
+          {/* compact counter */}
+          <UpdateCart  item={item} lang={''}  />
         </div>
 
-        <div className="flex font-semibold text-sm md:text-base text-brand-dark leading-5 shrink-0 min-w-[65px] md:min-w-[80px] justify-end">
-          {totalPrice}
+        {/* line total */}
+        <div className="shrink-0 text-right text-sm font-semibold text-brand-dark md:text-base">
+          {linePrice}
         </div>
       </div>
     </div>

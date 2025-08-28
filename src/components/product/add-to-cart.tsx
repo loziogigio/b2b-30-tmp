@@ -195,7 +195,7 @@ export default function AddToCart({
       setIsSyncing(true);
       try {
         const payload = buildAddPayload({
-          itemId: item.product_id ?? item.id,
+          itemId: item.id,
           qty: fromUnits(targetU),
           priceData: effectivePriceData,
           promo_code: item.__cartMeta?.promo_code,
@@ -263,9 +263,9 @@ export default function AddToCart({
       onCommit={commit}
       onIncrement={increment}
       onDecrement={decrement}
-      disabled={isSyncing || outOfStock}
+      disabled={isSyncing || disabled}
       disableMinus={isSyncing || currentQty <= 0}
-      disablePlus={isSyncing || outOfStock}
+      disablePlus={isSyncing || disabled}
       variant={variant}
     />
   );

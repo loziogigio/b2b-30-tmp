@@ -1,6 +1,8 @@
 // @contexts/cart/cart.utils
 
 import type { Brand } from '@framework/types';
+import { AddToCartInput } from '@utils/transform/cart';
+import { PackagingOption } from '@utils/transform/erp-prices';
 
 export interface CartSummary {
   idCart: string | number;
@@ -61,6 +63,7 @@ export interface Item {
   vat_rate?: number;             // e.g. 22
   promo_code?: string | number;
   promo_row?: string | number;
+  packaging_options_all: PackagingOption[];
 
   /** ERP/meta passthrough */
   __cartMeta?: {
@@ -154,3 +157,14 @@ export const calculateTotalItems = (items: Item[]) =>
   items.reduce((sum, item) => sum + item.quantity!, 0);
 
 export const calculateUniqueItems = (items: Item[]) => items.length;
+
+//  line matcher (no normalize, direct equality as requested)
+export const sameLine = (item: Item, payload: AddToCartInput) => {
+  return (
+    // product identity
+    (item as any).id == payload.item_id &&
+    // promo identity
+    payload.promo_code == (item as any).promo_code &&
+    payload.promo_row == (item as any).promo_row
+  );
+};

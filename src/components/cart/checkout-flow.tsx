@@ -99,7 +99,7 @@ export default function CheckoutFlow({
 
 
   return (
-    <div className="mx-auto flex max-w-7xl flex-col">
+    <div className="mx-auto flex flex-col">
       {/* Top bar */}
       <div className="mb-4 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -113,7 +113,7 @@ export default function CheckoutFlow({
 
         <div className="flex items-center gap-3">
           <div className="text-right">
-            <div className="text-xs text-gray-500">Totale Documento</div>
+            <div className="text-xs text-gray-500">Totale Netto</div>
             <div className="text-base font-semibold" suppressHydrationWarning>
               {totalDisplay}
             </div>

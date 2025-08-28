@@ -1,3 +1,5 @@
+'use client';
+
 import Scrollbar from '@components/ui/scrollbar';
 import { useCart } from '@contexts/cart/cart.context';
 import { useUI } from '@contexts/ui.context';
@@ -17,41 +19,67 @@ export default function Cart({ lang }: { lang: string }) {
   const { t } = useTranslation(lang, 'common');
   const { closeDrawer } = useUI();
   const { items, total, isEmpty, resetCart } = useCart();
-  const { price: cartTotal } = usePrice({
-    amount: total,
-    currencyCode: 'EUR',
-  });
-  return (
-    <div className="flex flex-col justify-between w-full h-full">
-      <div className="relative flex items-center justify-between w-full border-b ltr:pl-5 rtl:pr-5 md:ltr:pl-7 md:rtl:pr-7 border-border-base">
-        <Heading variant="titleMedium">{t('text-shopping-cart')}</Heading>
-        <div className="flex items-center">
-          {!isEmpty && (
-            // @ts-ignore
-            <button
-              className="flex flex-shrink items-center text-15px transition duration-150 ease-in focus:outline-none text-brand-dark opacity-50 hover:opacity-100 ltr:-mr-1.5 rtl:-ml-1.5"
-              aria-label={t('text-clear-all')}
-              onClick={resetCart}
-            >
-              <DeleteIcon />
-              <span className="ltr:pl-1 lg:rtl:pr-1">
-                {t('text-clear-all')}
-              </span>
-            </button>
-          )}
+  const { price: cartTotal } = usePrice({ amount: total, currencyCode: 'EUR' });
 
+  return (
+    <div className="flex h-full w-full flex-col">
+      {/* header — compact, pill style like screenshot */}
+      <div className="sticky top-0 z-10 bg-white border-b border-border-base px-4 py-2 md:px-5 md:py-2.5">
+        <div className="flex items-center justify-between">
           <button
-            className="flex items-center justify-center px-4 py-6 text-2xl transition-opacity md:px-6 lg:py-7 focus:outline-none text-brand-dark hover:opacity-60"
             onClick={closeDrawer}
+            className={cn(
+              'inline-flex items-center gap-2 rounded-md bg-gray-200 px-2.5 py-1',
+              'text-[11px] font-semibold uppercase tracking-wide text-gray-800 hover:bg-gray-300'
+            )}
             aria-label="close"
+            title={t('text-close') || 'Chiudi'}
           >
-            <IoClose />
+            {t('text-close') || 'Chiudi'}
+            <span className="text-xs leading-none">×</span>
           </button>
+
+          {/* {!isEmpty && (
+            <button
+              onClick={() => resetCart()}
+              className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase text-gray-500 hover:text-gray-700"
+              aria-label={t('text-clear-all')}
+              title={t('text-clear-all')}
+            >
+              <DeleteIcon className="h-3.5 w-3.5" />
+              <span>{t('text-clear-all')}</span>
+            </button>
+          )} */}
+        </div>
+        <div className="flex items-center justify-between flex-col">
+          <div className="mb-3 flex justify-between w-full">
+            <Heading className="mb-0.5 text-[13px]">Subtotale:</Heading>
+            <div className="min-w-[80px] text-right text-base font-semibold text-brand-dark md:text-lg">
+              {cartTotal}
+            </div>
+          </div>
+          <div className="mb-3 w-full items-center justify-center">
+            <Link
+              href={isEmpty === false ? `/${lang}${ROUTES.CHECKOUT}` : `/${lang}`}
+              onClick={closeDrawer}
+              className={cn(
+                'flex w-full items-center justify-center rounded bg-gray-600 px-4 py-2.5',
+                'text-sm font-semibold text-white transition hover:bg-gray-700 md:py-3',
+                { 'cursor-not-allowed !text-white/40 bg-gray-400 hover:bg-gray-400': isEmpty }
+              )}
+            >
+              VAI AL CARRELLO
+            </Link>
+
+          </div>
+
         </div>
       </div>
+
+      {/* list */}
       {!isEmpty ? (
-        <Scrollbar className="flex-grow w-full cart-scrollbar ">
-          <div className="w-full px-5 md:px-7 h-[calc(100vh_-_300px)]">
+        <Scrollbar className="flex-grow w-full">
+          <div className="h-[calc(100vh-210px)] w-full px-4 py-2 md:px-5">
             {items?.map((item) => (
               <CartItem item={item} key={item.id} lang={lang} />
             ))}
@@ -60,33 +88,28 @@ export default function Cart({ lang }: { lang: string }) {
       ) : (
         <EmptyCart lang={lang} />
       )}
-      <div className="px-5 pt-5 pb-5 border-t border-border-base md:px-7 md:pt-6 md:pb-6">
-        <div className="flex pb-5 md:pb-7">
-          <div className="ltr:pr-3 rtl:pl-3">
-            <Heading className="mb-2.5">{t('text-sub-total')}:</Heading>
-            <Text className="leading-6">
-              {t('text-cart-final-price-discount')}
-            </Text>
-          </div>
-          <div className="shrink-0 font-semibold text-base md:text-lg text-brand-dark -mt-0.5 min-w-[80px] ltr:text-right rtl:text-left">
+
+      {/* footer — compact subtotal row + CTA */}
+      {/* <div className="border-t border-border-base px-4 py-4 md:px-5 md:py-5">
+        <div className="mb-3 flex items-center justify-between">
+          <Heading className="mb-0.5 text-[13px]">Subtotale:</Heading>
+          <div className="min-w-[80px] text-right text-base font-semibold text-brand-dark md:text-lg">
             {cartTotal}
           </div>
         </div>
-        <div className="flex flex-col" onClick={closeDrawer}>
-          <Link
-            href={isEmpty === false ? `/${lang}${ROUTES.CHECKOUT}` : `/${lang}`}
-            className={cn(
-              'w-full px-5 py-3 md:py-4 flex items-center justify-center bg-heading rounded font-semibold text-sm sm:text-15px text-brand-light bg-brand focus:outline-none transition duration-300 hover:bg-opacity-90',
-              {
-                'cursor-not-allowed !text-brand-dark !text-opacity-25 bg-fill-four hover:bg-fill-four':
-                  isEmpty,
-              },
-            )}
-          >
-            <span className="py-0.5">{t('text-proceed-to-checkout')}</span>
-          </Link>
-        </div>
-      </div>
+
+        <Link
+          href={isEmpty === false ? `/${lang}${ROUTES.CHECKOUT}` : `/${lang}`}
+          onClick={closeDrawer}
+          className={cn(
+            'flex w-full items-center justify-center rounded bg-gray-600 px-4 py-2.5',
+            'text-sm font-semibold text-white transition hover:bg-gray-700 md:py-3',
+            { 'cursor-not-allowed !text-white/40 bg-gray-400 hover:bg-gray-400': isEmpty }
+          )}
+        >
+          VAI AL CARRELLO
+        </Link>
+      </div> */}
     </div>
   );
 }

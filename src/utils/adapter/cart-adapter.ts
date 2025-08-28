@@ -1,6 +1,7 @@
 // @utils/adapter/cart-adapter.ts
 import type { CartSummary, Item } from '@contexts/cart/cart.utils';
 import type { Brand } from '@framework/types';
+import { PackagingOption, PackagingOptionLegacy } from '@utils/transform/erp-prices';
 
 // --- helpers -------------------------------------------------
 const num = (v: any, d = 0) => {
@@ -72,6 +73,9 @@ export function mapServerCartToItems(apiResponse: any): Item[] {
 
     const promo_code = row.promo_code??0;
     const promo_row = row.promo_row??0;
+    const listing_type_discounts = row.listing_type_discounts??'';
+
+    const packaging_options_all: PackagingOption[] = toPackagingOptions(row.imballi.packaging_options);
 
     // IMPORTANT: keep legacy fields populated for back-compat
     // Set `price` to the net/discounted unit so existing total calculators still work
@@ -113,6 +117,8 @@ export function mapServerCartToItems(apiResponse: any): Item[] {
       vat_rate: vatRate,
       promo_code:promo_code,
       promo_row:promo_row,
+      packaging_options_all:packaging_options_all,
+      listing_type_discounts:listing_type_discounts,
 
 
       // Meta / raw passthrough
@@ -181,3 +187,35 @@ export function mapServerCart(apiResponse: any): { items: Item[]; summary: CartS
     summary: mapServerCartToSummary(apiResponse),
   };
 }
+
+
+// --- Type guard ---
+const isLegacyPackaging = (x: any): x is PackagingOptionLegacy =>
+  x && (typeof x.CodiceImballo1 === 'string' || typeof x.QtaXImballo !== 'undefined');
+
+// --- Single-item mapper ---
+export const mapLegacyPackaging = (p: PackagingOptionLegacy): PackagingOption => ({
+  packaging_uom_description: String(p.DescrizioneUM ?? ''),
+  packaging_code: String(p.CodiceImballo1 ?? p.label ?? ''),
+  packaging_is_default: Boolean(p.IsImballoDiDefaultXVendita || p.IsImballoDiDefaultXVenditaDiretta),
+  packaging_is_smallest: Boolean(p.IsImballoPiuPiccolo),
+  qty_x_packaging: Number(
+    (p.QtaXImballo ?? 1) // fallbacks if needed
+  ),
+  packaging_uom: String(p.UM ??  ''),
+});
+
+// --- Array normalizer (handles mixed arrays just in case) ---
+export const toPackagingOptions = (
+  arr: Array<PackagingOption | PackagingOptionLegacy> | undefined | null
+): PackagingOption[] => {
+  if (!arr || !Array.isArray(arr)) return [];
+  const mapped = arr.map((x) => (isLegacyPackaging(x) ? mapLegacyPackaging(x) : x));
+
+  // optional: trim codes, coerce numbers safely
+  return mapped.map((o) => ({
+    ...o,
+    packaging_code: o.packaging_code.trim(),
+    qty_x_packaging: Number(o.qty_x_packaging ?? 1),
+  }));
+};

@@ -4,7 +4,7 @@ import React, { useCallback } from 'react';
 import { cartReducer, State, initialState } from './cart.reducer';
 import { CartSummary, Item, getItem, inStock } from './cart.utils';
 import { useLocalStorage } from '@utils/use-local-storage';
-import { addOrUpdateCartItem, fetchCartData } from '@framework/cart/b2b-cart';
+import { addOrUpdateCartItem, deleteCart, fetchCartData } from '@framework/cart/b2b-cart';
 import { AddToCartInput } from '@utils/transform/cart';
 
 // Mapped API getter that returns Item[]
@@ -18,7 +18,7 @@ interface CartProviderState extends State {
   isInCart: (id: Item['id']) => boolean;
   isInStock: (id: Item['id']) => boolean;
   setItemQuantity: (item: Item, quantity: number) => void;
-  resetCart: () => void;
+  resetCart: () => Promise<void>;
   hydrateFromServer: (serverItems: Item[], mode?: 'replace' | 'merge') => void;
   getCart: (mode?: 'replace' | 'merge') => Promise<void>;
   setCartSummary: (meta: CartSummary | null) => void;
@@ -88,7 +88,7 @@ export function CartProvider(props: React.PropsWithChildren<any>) {
   const setItemQuantity = (item: Item, quantity: number) =>
     dispatch({ type: 'SET_ITEM_QUANTITY', item, quantity });
 
-  const resetCart = () => dispatch({ type: 'RESET_CART' });
+
 
   // ---- Selectors
   const isInCart = useCallback((id: Item['id']) => !!getItem(state.items, id), [state.items]);
@@ -107,7 +107,7 @@ export function CartProvider(props: React.PropsWithChildren<any>) {
         dispatch({ type: 'HYDRATE_MERGE', items: serverItems });
       }
     },
-    [] 
+    []
   );
 
   const setCartSummary = React.useCallback((meta: CartSummary | null) => {
@@ -134,6 +134,24 @@ export function CartProvider(props: React.PropsWithChildren<any>) {
     [state.items, state.meta, hydrateFromServer, setCartSummary]
   );
 
+  // ---- NEW: resetCart that calls backend DELETE_CART and re-syncs
+  // signature in context type: resetCart: (idCart: number | string) => Promise<void>
+
+  const resetCart = React.useCallback(
+    async (idCart: number | string) => {
+      try {
+        if (idCart != null && idCart !== '') {
+          await deleteCart(idCart);
+        }
+      } finally {
+        const fresh = await fetchCartData();
+        hydrateFromServer(fresh.items, 'replace');
+        setCartSummary(fresh.summary);
+        dispatch({ type: 'RESET_CART' });
+      }
+    },
+    [hydrateFromServer, setCartSummary]
+  );
 
   const value = React.useMemo(
     () => ({
@@ -151,7 +169,7 @@ export function CartProvider(props: React.PropsWithChildren<any>) {
       setCartSummary,
       addToCartServer
     }),
-    [getItemFromCart, isInCart, isInStock, state, getCart, setCartSummary , addToCartServer]
+    [getItemFromCart, isInCart, isInStock, state, getCart, setCartSummary, addToCartServer]
   );
 
   return <cartContext.Provider value={value} {...props} />;

@@ -20,16 +20,17 @@ const unitGross = (r: Item) =>
   Number(r.priceGross ?? r.__cartMeta?.gross_price ?? r.gross_price ?? r.price_gross ?? r.price ?? 0);
 
 export default function CartTableB2B() {
-  const { items, setItemQuantity } = useCart();
+  const { items, setItemQuantity, resetCart, meta } = useCart();
 
   const [query, setQuery] = useState('');
   const [onlyPromo, setOnlyPromo] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>('rowId');
   const [sortAsc, setSortAsc] = useState<boolean>(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const baseRows = useMemo<Item[]>(() => items ?? [], [items]);
 
-  // filter + sort (works even if some fields are missing)
+  // filter + sort
   const rows = useMemo(() => {
     let list = [...baseRows];
 
@@ -42,7 +43,7 @@ export default function CartTableB2B() {
       );
     }
 
-    if (onlyPromo) list = list.filter((r) => Boolean(r.isPromo ?? r.__cartMeta?.is_promo));
+    if (onlyPromo) list = list.filter((r) => Boolean(r.isPromo));
 
     list.sort((a, b) => {
       const lineA = unitNet(a) * Number(a.quantity ?? 0);
@@ -74,8 +75,7 @@ export default function CartTableB2B() {
   const totals = useMemo(() => {
     const net = baseRows.reduce((s, r) => s + unitNet(r) * Number(r.quantity ?? 0), 0);
     const gross = baseRows.reduce((s, r) => s + unitGross(r) * Number(r.quantity ?? 0), 0);
-    // NOTE: using a single 22% VAT for display; replace with per-row if needed
-    const vat = net * 0.22;
+    const vat = net * 0.22; // demo VAT
     return { net, gross, vat, doc: net + vat };
   }, [baseRows]);
 
@@ -89,6 +89,19 @@ export default function CartTableB2B() {
 
   const inc = (r: Item) => setItemQuantity(r, Number(r.quantity ?? 0) + 1);
   const dec = (r: Item) => setItemQuantity(r, Math.max(0, Number(r.quantity ?? 0) - 1));
+
+  const handleDeleteCart = async () => {
+    if (!resetCart) return;
+    if (!confirm('Delete the entire cart?')) return;
+    setIsDeleting(true);
+    try {
+      const idCart = (meta as any)?.idCart ?? (meta as any)?.id_cart;
+      // works if your resetCart takes optional id; if it requires it, we pass the value
+      await resetCart(idCart);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return (
     <section className="w-full">
@@ -136,12 +149,27 @@ export default function CartTableB2B() {
             <option value="lineTotal:desc">Line Total (high→low)</option>
             <option value="lineTotal:asc">Line Total (low→high)</option>
           </select>
+
+          {/* Delete cart button */}
+          <button
+            type="button"
+            onClick={handleDeleteCart}
+            disabled={isDeleting}
+            className={cn(
+              'h-10 rounded-md px-3 font-semibold border',
+              isDeleting
+                ? 'opacity-60 cursor-not-allowed'
+                : 'border-red-600 text-red-600 hover:bg-red-50'
+            )}
+            title="Delete entire cart"
+          >
+            {isDeleting ? 'Deleting…' : 'Delete cart'}
+          </button>
         </div>
       </div>
 
       {/* ===== Mobile cards (< md) ===== */}
       <CartMobileList rows={rows} onInc={inc} onDec={dec} />
-
 
       {/* ===== Desktop table (≥ md) ===== */}
       <CartDesktopTable
@@ -155,7 +183,6 @@ export default function CartTableB2B() {
 
       {/* Totals */}
       <CartTotals totals={totals} />
-
     </section>
   );
 }

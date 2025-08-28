@@ -24,12 +24,22 @@ export interface PackagingOptionLegacy {
   amount: number;
 }
 
+export interface SupplierArrival {
+  article_code: string;            // CodiceInternoArticolo
+  expected_date?: string;          // YYYY-MM-DD (from DataArrivoPrevista)
+  confirmed_date?: string;         // YYYY-MM-DD (from DataArrivoConfermata)
+  week_number?: number;            // NumeroDellaSettimana
+  expected_qty?: number;           // QuantitaArrivoPrevista
+}
 export interface ProductLabelAction {
   LABEL: string;
   ADD_TO_CART: boolean;
   availability: number;
   is_managed_substitutes: boolean;
   is_managed_supplier_order: boolean;
+  substitute_available: boolean;
+  order_supplier_available: SupplierArrival[];
+  case: number;
 }
 
 export interface ImprovingPromo {
@@ -93,9 +103,27 @@ export interface ErpPriceData {
   pricelist_type?: string;
   pricelist_code?: string;
 
-  order_suplier_available?: any[];
+  order_suplier_available?: SupplierArrival[];
   prod_substitution?: any[];
 }
+
+const fmtErpDate = (s?: string): string | undefined => {
+  if (!s) return undefined;
+  const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`; // DD/MM/YYYY -> YYYY-MM-DD
+  return s; // already ISO-ish
+};
+
+const mapSupplierArrivals = (arr: any[]): SupplierArrival[] =>
+  Array.isArray(arr)
+    ? arr.map((r) => ({
+        article_code: String(r?.CodiceInternoArticolo ?? ''),
+        expected_date: fmtErpDate(r?.DataArrivoPrevista),
+        confirmed_date: fmtErpDate(r?.DataArrivoConfermata),
+        week_number: r?.NumeroDellaSettimana != null ? Number(r.NumeroDellaSettimana) : undefined,
+        expected_qty: Number(r?.QuantitaArrivoPrevista ?? 0),
+      }))
+    : [];
 
 
 
@@ -104,8 +132,15 @@ export function transformErpPricesResponse(response: any): Record<string, ErpPri
 
   const transformed: Record<string, ErpPriceData> = {};
 
+  
+
   for (const [entityCode, raw] of Object.entries<any>(response.data)) {
     const promoRaw = raw.improving_promo ?? null;
+    const supplierRaw =
+    raw?.product_label_action?.order_supplier_available ??
+    raw?.order_suplier_available ??
+    [];
+    const supplierArrivals = mapSupplierArrivals(supplierRaw);
 
     transformed[entityCode] = {
       entity_code: entityCode,
@@ -146,8 +181,9 @@ export function transformErpPricesResponse(response: any): Record<string, ErpPri
       pricelist_type: raw.pricelist_type,
       pricelist_code: raw.pricelist_code,
 
-      order_suplier_available: raw.order_suplier_available ?? [],
+      order_suplier_available: supplierArrivals,
       prod_substitution: raw.prod_substitution ?? [],
+      
 
       improving_promo: raw.is_promo && promoRaw
         ? {
@@ -179,6 +215,9 @@ export function transformErpPricesResponse(response: any): Record<string, ErpPri
             availability: raw.product_label_action.quantity_available ?? 0,
             is_managed_substitutes: raw.product_label_action.is_managed_substitutes ?? false,
             is_managed_supplier_order: raw.product_label_action.is_managed_supplier_order ?? false,
+            order_supplier_available: supplierArrivals,
+            case:raw.case?? 0,
+            substitute_available:raw.substitute_available?? false
           }
         : undefined,
     };

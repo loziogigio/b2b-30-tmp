@@ -4,6 +4,10 @@ import React from 'react';
 import Image from 'next/image';
 import cn from 'classnames';
 import { Item } from '@contexts/cart/cart.utils';
+import PackagingGrid from '@components/product/packaging-grid';
+import PriceAndPromo, { PriceSlice } from '@components/product/price-and-promo';
+import AddToCart from '@components/product/add-to-cart';
+import UpdateCart from '@components/product/update-cart';
 
 export type SortKey = 'rowId' | 'sku' | 'name' | 'priceDiscount' | 'quantity' | 'lineTotal';
 
@@ -61,7 +65,7 @@ export default function CartDesktopTable({
           <tr className="[&>th]:px-3 [&>th]:py-3 [&>th]:text-left [&>th]:font-semibold">
             {sortBtn('rowId', 'N', 'w-14')}
             <th className="w-[340px]">Articoli</th>
-            <th className="w-44 lg:w-56">Dettagli</th>
+            <th className="w-44 lg:w-56">Imballi</th>
             <th className="w-16 text-center">Prom.</th>
             {sortBtn('priceDiscount', 'Prezzo Unitario', 'w-40')}
             {sortBtn('quantity', 'Quantità', 'w-40 text-center')}
@@ -73,7 +77,34 @@ export default function CartDesktopTable({
           {rows.map((r) => {
             const qty = Number(r.quantity ?? 0);
             const line = unitNet(r) * qty;
-            const promo = Boolean((r as any).isPromo ?? r.__cartMeta?.is_promo);
+            const isPromo = !!(r?.promo_code && String(r.promo_code) !== '0');
+
+            const priceData: Partial<PriceSlice> = {
+              // final/net price
+              price_discount: Number(
+                r?.price_discount ?? r?.price ?? r?.net_price ?? unitNet(r) ?? 0
+              ),
+            
+              // original/gross price (optional)
+              gross_price:
+                r?.gross_price != null
+                  ? Number(r.gross_price)
+                  : r?.price_gross != null
+                  ? Number(r.price_gross)
+                  : undefined,
+            
+              is_promo: isPromo,
+            
+              // human-readable discount text (optional)
+              discount_description: r?.listing_type_discounts ??  '',
+            
+              // number of promos (optional)
+              count_promo: Number(
+                r?.count_promo ??
+                  (Array.isArray(r?.promos) ? r.promos.length : 0) ??
+                  0
+              ),
+            };
 
             return (
               <tr key={String(r.id)} className="hover:bg-gray-50">
@@ -95,25 +126,12 @@ export default function CartDesktopTable({
                 </td>
 
                 <td className="px-3 py-3">
-                  <div className="grid grid-cols-3 gap-1 text-center">
-                    <div>
-                      <div className="text-[10px] text-gray-500">UM</div>
-                      <div className="font-semibold">{(r as any).uom ?? r.__cartMeta?.um ?? '-'}</div>
-                    </div>
-                    <div className="hidden md:block">
-                      <div className="text-[10px] text-gray-500">MV</div>
-                      <div className="font-semibold">{(r as any).mvQty ?? '-'}</div>
-                    </div>
-                    <div className="hidden lg:block">
-                      <div className="text-[10px] text-gray-500">CF</div>
-                      <div className="font-semibold">{(r as any).cfQty ?? '-'}</div>
-                    </div>
-                  </div>
+                  <PackagingGrid options={r.packaging_options_all}/>
                 </td>
 
                 <td className="px-3 py-3 text-center">
-                  {promo ? (
-                    <span className="rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-semibold text-white">-</span>
+                  {isPromo ? (
+                    <span className="rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-semibold text-white">{r.promo_code}</span>
                   ) : (
                     <span className="text-gray-400">—</span>
                   )}
@@ -121,34 +139,14 @@ export default function CartDesktopTable({
 
                 <td className="px-3 py-3">
                   <div className="flex flex-col">
-                    {promo && <span className="text-xs text-gray-500 line-through">{formatCurrency(unitGross(r))}</span>}
-                    <span className={cn('font-semibold', promo ? 'text-red-600' : 'text-gray-900')}>
-                      {formatCurrency(unitNet(r))}
-                    </span>
+                    <PriceAndPromo priceData={priceData}/>
                   </div>
                 </td>
 
                 <td className="px-3 py-3">
                   <div className="mx-auto flex w-full max-w-[160px] items-center justify-center gap-1">
-                    <button
-                      className="h-8 w-8 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-50"
-                      aria-label="minus"
-                      onClick={() => onDec?.(r)}
-                    >
-                      –
-                    </button>
-                    <input
-                      className="h-8 w-16 rounded-md border border-gray-300 text-center text-sm"
-                      value={qty}
-                      readOnly
-                    />
-                    <button
-                      className="h-8 w-8 rounded-full border border-gray-300 text-gray-700 hover:bg-gray-50"
-                      aria-label="plus"
-                      onClick={() => onInc?.(r)}
-                    >
-                      +
-                    </button>
+                    {/* <AddToCart  priceData={priceData}/> */}
+                    <UpdateCart  item={r} lang={''}  />
                   </div>
                 </td>
 

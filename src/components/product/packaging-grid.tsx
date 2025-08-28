@@ -1,23 +1,28 @@
 'use client';
 import cn from 'classnames';
 import React from 'react';
-import type { ErpPriceData } from '@utils/transform/erp-prices';
-import { getPackagingGridData } from '@utils/packaging';
+import type { ErpPriceData, PackagingOption } from '@utils/transform/erp-prices';
+import { getPackagingGridData  } from '@utils/packaging';
 
 type Props = {
-  pd?: ErpPriceData;
+  pd?: ErpPriceData;              // full ERP price data
+  options?: PackagingOption[];    // OR pass options directly
+  uom?: string;                   // optional unit when using options[]
   className?: string;
-  umLabel?: string;          // default "UM", override for i18n
-  minColWidthPx?: number;    // tweak col width if needed
+  umLabel?: string;               // header label, default "UM"
+  minColWidthPx?: number;         // tweak col width if needed
 };
 
 const PackagingGrid: React.FC<Props> = ({
   pd,
+  options: optsProp,
+  uom,
   className,
   umLabel = 'UM',
   minColWidthPx = 44,
 }) => {
-  const { options, uom, cols } = getPackagingGridData(pd);
+  // Works with either `pd` or `options` (+ optional `uom`)
+  const { options, uom: resolvedUom, cols } = getPackagingGridData(pd ?? optsProp, uom);
   if (!options.length) return null;
 
   return (
@@ -44,7 +49,7 @@ const PackagingGrid: React.FC<Props> = ({
           ))}
 
           {/* values row */}
-          <div className="text-center font-semibold" role="cell">{uom}</div>
+          <div className="text-center font-semibold" role="cell">{resolvedUom}</div>
           {options.map((o) => (
             <div
               key={`val-${o.packaging_code}`}
