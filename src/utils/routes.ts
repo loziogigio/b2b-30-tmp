@@ -8,7 +8,7 @@ export const ROUTES = {
   FAQ: '/faq',
   FORGET_PASSWORD: '/forget-password',
   CHANGE_PASSWORD: '/my-account/change-password',
-  ACCOUNT: '/my-account/account-settings',
+  ACCOUNT: '/account',
   ORDERS: '/my-account/orders',
   ACCOUNT_SETTING: '/my-account/account-settings',
   ADDRESS: '/my-account/address',

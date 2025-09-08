@@ -12,6 +12,15 @@ export const API_ENDPOINTS_B2B = {
   REMOVE_CART_ITEM:'/wrapper/remove_cart_item',
   DELETE_CART:'/wrapper/remove_cart',
   PREPARE_ORDER:'/wrapper/prepare_order',
-  SEND_ORDER:'/wrapper/send_order'
-
+  SEND_ORDER:'/wrapper/send_order',
+  GET_ORDERS:'/account/get_orders',
+  GET_ORDER_DETAIL:'/wrapper/get_order_detail',
+  GET_INVOICES:'/account/get_invoices',
+  GET_DDT:'/account/get_ddt',
+  GET_INVOICE_PDF:'/wrapper/invoice_pdf',
+  GET_BARCODE_PDF:'/wrapper/pdf_barcode_document',
+  GET_INVOICE_CSV:'/account/csv_invoice_document',
+  GET_EXPOSITION:'/account/exposition',
+  GET_PAYMENT_DEADLINE:'/account/payment_deadline',
+  GET_ADDRESSES:'/account/get_addresses',
 };

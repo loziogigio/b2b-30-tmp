@@ -16,6 +16,7 @@ export interface RawProduct {
   quantity?: number;
   sold?: number;
   model?: string;
+  features?:any[];
   images: {
     original: string;
     main: string;
@@ -89,6 +90,7 @@ export function transformProduct(rawProducts: RawProduct[]): Product[] {
       brand,
       tag: item.tag || [],
       variations: variations, // full Product[] as variations
+      features:item.features
     };
   };
 

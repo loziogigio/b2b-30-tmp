@@ -28,10 +28,11 @@ import { fetchErpPrices } from '@framework/erp/prices';
 import PriceAndPromo from './price-and-promo';
 import PackagingGrid from './packaging-grid';
 import { da } from 'date-fns/locale';
+import { formatAvailability } from '@utils/format-availability';
 
 // add inside ProductB2BDetails.tsx (same file, above the component's return)
 
-function B2BInfoBlock({
+export function B2BInfoBlock({
   product,
   priceData,
   lang,
@@ -127,6 +128,15 @@ function B2BInfoBlock({
             >
               {stato}
             </dd>
+            { availability > 0 && priceData  && (
+              <>
+                <dt className="text-gray-500">Disponiblita:</dt>
+                <dd className="text-gray-700">{formatAvailability(
+                  availability,
+                  priceData.packaging_option_default?.packaging_uom
+                )}</dd>
+              </>
+            )}
 
             {buyDid && buyDidLast && (
               <>
@@ -134,7 +144,7 @@ function B2BInfoBlock({
                 <dd className="text-gray-700">{buyDidLast}</dd>
               </>
             )}
-            {earliestDateDmy && availability !> 0 && (
+            {earliestDateDmy && availability <= 0 && (
               <>
                 <dt className="text-gray-500">Arrivo Previsto:</dt>
                 <dd className="font-semibold text-green-600">
@@ -180,8 +190,8 @@ const ProductB2BDetails: React.FC<{ lang: string; search: any }> = ({ lang, sear
   });
 
   const first = data_results?.[0];
-  const data = Array.isArray(first?.children_items) && first.children_items.length > 0
-    ? first.children_items[0]
+  const data = Array.isArray(first?.variations) && first.variations.length > 0
+    ? first.variations[0]
     : first;
 
   // ---- ERP prices (entity_codes must be string[]) ----
@@ -328,7 +338,7 @@ const ProductB2BDetails: React.FC<{ lang: string; search: any }> = ({ lang, sear
         </div>
       </div>
 
-      <ProductB2BDetailsTab lang={lang} />
+      <ProductB2BDetailsTab lang={lang} product={data} />
     </div>
   );
 };

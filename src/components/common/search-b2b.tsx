@@ -100,7 +100,7 @@ const SearchB2B = forwardRef<HTMLDivElement, Props>(
             />
           </div>
           {/* End of searchbox */}
-
+{/* 
           {searchText && (
             <div className="w-full absolute top-[56px] ltr:left-0 rtl:right-0 bg-brand-light rounded-md flex flex-col overflow-hidden shadow-dropDown z-30">
               <Scrollbar className="os-host-flexbox">
@@ -129,7 +129,7 @@ const SearchB2B = forwardRef<HTMLDivElement, Props>(
                 </div>
               </Scrollbar>
             </div>
-          )}
+          )} */}
           {/* End of search result */}
         </div>
       </div>

@@ -99,6 +99,7 @@ export type Product = {
   model?:string
   description?: string;
   variations: Product[];
+  features?:any[];
   [key: string]: unknown;
 };
 export type OrderItem = {

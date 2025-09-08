@@ -14,3 +14,12 @@ export function formatAddress(address: any) {
   }
   return Object.values(formattedAddress).slice(2, 3).reverse().join(', ');
 }
+
+export function formatAddressB2B(address: any) {
+  let formattedAddress = {};
+  if (address) {
+    formattedAddress = removeEmpty(address);
+  }
+  return Object.values(formattedAddress).slice(2, 3).reverse().join(', ');
+}
+

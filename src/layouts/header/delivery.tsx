@@ -11,7 +11,8 @@ interface DeliveryProps {
 }
 const Delivery: React.FC<DeliveryProps> = ({ lang, className }) => {
   const { t } = useTranslation(lang, 'common');
-  const { isAuthorized } = useUI();
+  // const { isAuthorized } = useUI();
+  const isAuthorized = true;
   const { openModal } = useModalAction();
   function handleDeliveryView() {
     !isAuthorized ? openModal('LOGIN_VIEW') : openModal('DELIVERY_VIEW');

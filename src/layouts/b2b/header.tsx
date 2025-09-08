@@ -30,8 +30,9 @@ function Header({ lang }: { lang: string }) {
     displayMobileSearch,
     openSearch,
     closeSearch,
-    isAuthorized,
+    // isAuthorized,
   } = useUI();
+  const isAuthorized = true;
   const { openModal } = useModalAction();
   const siteHeaderRef = useRef<HTMLDivElement>(null);
   const siteSearchRef = useRef<HTMLDivElement>(null);

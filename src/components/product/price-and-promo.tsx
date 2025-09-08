@@ -81,7 +81,7 @@ export default function PriceAndPromo({
             ) : (
               <span className="opacity-0 select-none">—</span>
             )}
-            {discountLines.length > 0 ? (
+            {discountLines.length > 0 && showPrev ? (
               <div className="text-right">
                 {discountLines.map((d, i) => (
                   <div key={i}>{d}</div>

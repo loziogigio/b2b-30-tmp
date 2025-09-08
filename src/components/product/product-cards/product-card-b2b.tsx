@@ -240,14 +240,15 @@ const ProductCardB2B: React.FC<ProductProps> = ({
 
         <div className="text-sm text-gray-400 whitespace-nowrap min-w-[60px] text-center min-h-[24px] flex items-center justify-center">
           {priceData
-            ? formatAvailability(
-              priceData.availability,
-              priceData.packaging_option_default?.packaging_uom
-            )
-            : formatVariation(
-              product
-            )}
+            ? (Number(priceData.availability) > 0
+                ? formatAvailability(
+                    priceData.availability,
+                    priceData.packaging_option_default?.packaging_uom
+                  )
+                : (priceData.product_label_action?.LABEL ?? '—'))
+            : formatVariation(product)}
         </div>
+
 
       </div>
     </article>

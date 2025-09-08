@@ -4,6 +4,7 @@ import React from 'react';
 import { getToken } from '@framework/utils/get-token';
 import { CartProvider } from './cart/cart.context';
 import { ModalProvider } from '@components/common/modal/modal.context';
+import { AddressProvider } from './address/address.context';
 
 export interface State {
   isAuthorized: boolean;
@@ -35,72 +36,72 @@ const initialState = {
 
 type Action =
   | {
-      type: 'SET_AUTHORIZED';
-    }
+    type: 'SET_AUTHORIZED';
+  }
   | {
-      type: 'SET_UNAUTHORIZED';
-    }
+    type: 'SET_UNAUTHORIZED';
+  }
   | {
-      type: 'OPEN_SIDEBAR';
-    }
+    type: 'OPEN_SIDEBAR';
+  }
   | {
-      type: 'CLOSE_SIDEBAR';
-    }
+    type: 'CLOSE_SIDEBAR';
+  }
   | {
-      type: 'OPEN_SHOP';
-    }
+    type: 'OPEN_SHOP';
+  }
   | {
-      type: 'CLOSE_SHOP';
-    }
+    type: 'CLOSE_SHOP';
+  }
   | {
-      type: 'OPEN_CART';
-    }
+    type: 'OPEN_CART';
+  }
   | {
-      type: 'CLOSE_CART';
-    }
+    type: 'CLOSE_CART';
+  }
   | {
-      type: 'OPEN_SEARCH';
-    }
+    type: 'OPEN_SEARCH';
+  }
   | {
-      type: 'CLOSE_SEARCH';
-    }
+    type: 'CLOSE_SEARCH';
+  }
   | {
-      type: 'OPEN_MOBILE_SEARCH';
-    }
+    type: 'OPEN_MOBILE_SEARCH';
+  }
   | {
-      type: 'CLOSE_MOBILE_SEARCH';
-    }
+    type: 'CLOSE_MOBILE_SEARCH';
+  }
   | {
-      type: 'SET_TOAST_TEXT';
-      text: ToastText;
-    }
+    type: 'SET_TOAST_TEXT';
+    text: ToastText;
+  }
   | {
-      type: 'OPEN_FILTER';
-    }
+    type: 'OPEN_FILTER';
+  }
   | {
-      type: 'CLOSE_FILTER';
-    }
+    type: 'CLOSE_FILTER';
+  }
   | {
-      type: 'OPEN_DRAWER';
-      data: null;
-    }
+    type: 'OPEN_DRAWER';
+    data: null;
+  }
   | {
-      type: 'CLOSE_DRAWER';
-    }
+    type: 'CLOSE_DRAWER';
+  }
   | {
-      type: 'SET_DRAWER_VIEW';
-      view: DRAWER_VIEWS;
-    }
+    type: 'SET_DRAWER_VIEW';
+    view: DRAWER_VIEWS;
+  }
   | {
-      type: 'SET_USER_AVATAR';
-      value: string;
-    }
+    type: 'SET_USER_AVATAR';
+    value: string;
+  }
   | {
-      type: 'ENABLE_STICKY_HEADER';
-    }
+    type: 'ENABLE_STICKY_HEADER';
+  }
   | {
-      type: 'DISABLE_STICKY_HEADER';
-    };
+    type: 'DISABLE_STICKY_HEADER';
+  };
 
 type DRAWER_VIEWS = 'CART_SIDEBAR' | 'MOBILE_MENU' | 'ORDER_DETAILS';
 type ToastText = string;
@@ -337,7 +338,9 @@ export function ManagedUIContext({ children }: React.PropsWithChildren<{}>) {
   return (
     <CartProvider>
       <UIProvider>
-        <ModalProvider>{children}</ModalProvider>
+        <AddressProvider>
+          <ModalProvider>{children}</ModalProvider>
+        </AddressProvider>
       </UIProvider>
     </CartProvider>
   );

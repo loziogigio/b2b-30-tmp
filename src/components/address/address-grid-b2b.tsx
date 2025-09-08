@@ -1,0 +1,190 @@
+'use client';
+import * as React from 'react';
+import { Label, Radio, RadioGroup } from '@headlessui/react';
+import { useTranslation } from 'src/app/i18n/client';
+import type { AddressB2B } from '@framework/acccount/types-b2b-account';
+
+type Props = {
+  address?: AddressB2B[];
+  lang: string;
+  onSelect?: (addr?: AddressB2B) => void; // called on Save
+  initialSelectedId?: string | number;
+};
+
+function fmtAddress(a?: AddressB2B['address']) {
+  if (!a) return '—';
+  const row1 = a.street_address;
+  const row2 = [a.zip, a.city].filter(Boolean).join(' ');
+  const row3 = [a.state, a.country].filter(Boolean).join(', ');
+  return [row1, row2, row3].filter(Boolean).join('\n');
+}
+
+const AddressGridB2B: React.FC<Props> = ({
+  address = [],
+  lang,
+  onSelect,
+  initialSelectedId,
+}) => {
+  const { t } = useTranslation(lang, 'common');
+
+  const deriveInitial = React.useCallback((): AddressB2B | undefined => {
+    if (!address.length) return undefined;
+    if (initialSelectedId != null) {
+      const byId = address.find(a => String(a.id) === String(initialSelectedId));
+      if (byId) return byId;
+    }
+    return address.find(a => a.isLegalSeat) ?? address[0];
+  }, [address, initialSelectedId]);
+
+  // tentative selection (changes immediately on click)
+  const [selected, setSelected] = React.useState<AddressB2B | undefined>(deriveInitial);
+  // committed selection (controls order; updated only on Save)
+  const [committedSelected, setCommittedSelected] = React.useState<AddressB2B | undefined>(deriveInitial);
+
+  // keep both in sync with incoming list changes
+  React.useEffect(() => {
+    const initial = deriveInitial();
+    setSelected(prev =>
+      prev && address.some(a => String(a.id) === String(prev.id)) ? prev : initial
+    );
+    setCommittedSelected(prev =>
+      prev && address.some(a => String(a.id) === String(prev.id)) ? prev : initial
+    );
+  }, [address, deriveInitial]);
+
+  // list is ordered by committed selection only
+  const orderedAddresses = React.useMemo(() => {
+    if (!committedSelected) return address;
+    return [committedSelected, ...address.filter(a => String(a.id) !== String(committedSelected.id))];
+  }, [address, committedSelected]);
+
+  const hasPendingChange =
+    (selected?.id ?? null) !== (committedSelected?.id ?? null);
+
+  const handleSave = () => {
+    setCommittedSelected(selected);
+    onSelect?.(selected);
+  };
+  
+  return (
+    <div className="flex h-full flex-col mt-2 text-[13px]">
+      {/* Scroll area so it fits the modal */}
+      <div className="max-h-[52vh] overflow-y-auto pr-1">
+        <RadioGroup
+          value={selected}
+          onChange={setSelected}
+          className="grid grid-cols-1 gap-3 sm:grid-cols-2"
+        >
+          <Label className="sr-only">{t('address')}</Label>
+
+          {orderedAddresses.length ? (
+            orderedAddresses.map((item) => (
+              <Radio
+                key={item.id}
+                value={item}
+                className={({ checked }) =>
+                  `${checked ? 'border-brand ring-1 ring-brand/30' : 'border-border-base'}
+                   border-2 rounded-xl bg-white p-4 focus:outline-none transition-shadow`
+                }
+              >
+                {/* Header row */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <h3 className="truncate text-[14px] font-semibold text-gray-900">
+                      {item.title || 'Delivery address'}
+                    </h3>
+                    {item.isLegalSeat && (
+                      <span className="mt-1 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200">
+                        Registered office
+                      </span>
+                    )}
+                  </div>
+                  <span
+                    className={`mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full ${selected?.id === item.id ? 'bg-teal-600' : 'bg-gray-300'
+                      }`}
+                    aria-hidden
+                  />
+                </div>
+
+                {/* Address */}
+                <div className="mt-2 whitespace-pre-line leading-5 text-[13px] text-gray-800">
+                  {fmtAddress(item.address)}
+                </div>
+
+                {/* Meta in two compact columns */}
+                <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-gray-700">
+                  {/* Contact */}
+                  {(item.contact?.phone || item.contact?.email || item.contact?.mobile) && (
+                    <div className="min-w-0">
+                      <div className="text-[11px] uppercase tracking-wide text-gray-500">
+                        Contact
+                      </div>
+                      <div className="truncate">{item.contact?.phone || item.contact?.mobile || '—'}</div>
+                      {item.contact?.email && (
+                        <div className="truncate" title={item.contact.email}>
+                          {item.contact.email}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Agent */}
+                  {(item.agent?.name || item.agent?.phone || item.agent?.email) && (
+                    <div className="min-w-0">
+                      <div className="text-[11px] uppercase tracking-wide text-gray-500">Agent</div>
+                      <div className="truncate">{item.agent?.name || item.agent?.code || '—'}</div>
+                      <div className="truncate">{item.agent?.phone || item.agent?.email || '—'}</div>
+                    </div>
+                  )}
+
+                  {/* Payment terms */}
+                  {(item.paymentTerms?.label || item.paymentTerms?.code) && (
+                    <div className="min-w-0">
+                      <div className="text-[11px] uppercase tracking-wide text-gray-500">
+                        Payment terms
+                      </div>
+                      <div className="truncate" title={`${item.paymentTerms?.label ?? ''} ${item.paymentTerms?.code ?? ''}`}>
+                        {item.paymentTerms?.label || '—'}
+                        {item.paymentTerms?.code ? ` (${item.paymentTerms.code})` : ''}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Logistics */}
+                  {(item.carrier?.label || item.port?.label) && (
+                    <div className="min-w-0">
+                      <div className="text-[11px] uppercase tracking-wide text-gray-500">Logistics</div>
+                      <div className="truncate" title={item.carrier?.label}>
+                        {item.carrier?.label || '—'}
+                      </div>
+                      <div className="truncate" title={item.port?.label}>
+                        {item.port?.label || '—'}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </Radio>
+            ))
+          ) : (
+            <div className="col-span-full rounded-lg border-2 border-dashed border-border-base p-5 text-center font-semibold text-brand-danger">
+              {t('text-no-address-found')}
+            </div>
+          )}
+        </RadioGroup>
+      </div>
+
+      {/* Footer button pinned at bottom */}
+      <div className="mt-4 flex justify-end">
+        <button
+          type="button"
+          className="inline-flex items-center justify-center rounded-md bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:opacity-90 focus:outline-none"
+          onClick={() => onSelect?.(selected)}
+        >
+          {t('button-save-changes')}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default AddressGridB2B;
