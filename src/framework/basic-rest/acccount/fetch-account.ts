@@ -14,8 +14,11 @@ import type {
   Exposition,
   AddressB2B,
   RawAddressesResponse,
+  CustomerProfile,
+  RawCustomerResponse,
 } from './types-b2b-account';
 import { transformAddresses } from '@utils/transform/b2b-addresses';
+import { transformCustomer } from '@utils/transform/b2b-customer';
 
 // common payload
 const buildPayload = () => ({ ...ERP_STATIC });
@@ -55,7 +58,7 @@ export const usePaymentDeadlineQuery = (enabled = true) =>
     queryFn: fetchPaymentDeadline,
     enabled,
   });
-  
+
 
 export async function fetchAddresses(): Promise<AddressB2B[]> {
   const res = await post<RawAddressesResponse>(
@@ -72,5 +75,25 @@ export const useAddressQuery = (enabled = true) =>
   useQuery<AddressB2B[], Error>({
     queryKey: [API_ENDPOINTS_B2B.GET_ADDRESSES],
     queryFn: fetchAddresses,
+    enabled,
+  });
+
+
+// ===== Customer (OBJECT) =====
+export async function fetchCustomer(): Promise<CustomerProfile> {
+  const res = await post<RawCustomerResponse>(API_ENDPOINTS_B2B.GET_CUSTOMER, buildPayload());
+  if (!res || typeof res !== 'object') {
+    throw new Error('Unexpected ERP response for customer.');
+  }
+  if (typeof res.ReturnCode === 'number' && res.ReturnCode !== 0) {
+    throw new Error(res.Message || 'ERP returned an error for customer.');
+  }
+  return transformCustomer(res);
+}
+
+export const useCustomerQuery = (enabled = true) =>
+  useQuery<CustomerProfile, Error>({
+    queryKey: [API_ENDPOINTS_B2B.GET_CUSTOMER],
+    queryFn: fetchCustomer,
     enabled,
   });

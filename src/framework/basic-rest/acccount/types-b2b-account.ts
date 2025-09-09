@@ -1,8 +1,64 @@
 export type PaymentDeadline = Record<string, any>;
 export type Address = Record<string, any>;
 
-// src/contexts/address/address.types.ts
+export type RawChangePasswordResponse = {
+  ReturnCode: number;   // 0 = ok, otherwise error
+  Message?: string;     // optional message from ERP
+};
 
+export type ChangePasswordPayload = {
+  username: string;       // email/username
+  old_password: string;
+  new_password: string;
+};
+
+export type ChangePasswordResult = {
+  success: boolean;
+  message?: string;
+};
+
+// RAW from ERP (as given)
+export type RawCustomerResponse = {
+  Codice: string;
+  CodiceCategoriaAttivita: string;
+  CodiceFiscale: string;
+  CodiceInterno: string;
+  CodiceScontoCliente: string;
+  CodiceStatoAnagrafico: string;
+  Cognome: string;
+  Descrizione: string;
+  DescrizioneCategoriaAttivita: string;
+  DescrizioneStatoAnangrafico: string;
+  Message: string;
+  Nome: string;
+  PEC: string;
+  PartitaIVA: string;
+  PartitaIVACee: string;
+  RagioneSociale: string;
+  ReturnCode: number;
+  SDI: string;
+  isPersonaFisicaOGiuridica: boolean; // false => legal entity (giuridica), true => natural person (fisica)
+};
+
+// English-friendly, normalized for UI
+export type CustomerProfile = {
+  code: string;                // Codice
+  internalCode?: string;       // CodiceInterno
+  discountCode?: string;       // CodiceScontoCliente
+  statusCode?: string;         // CodiceStatoAnagrafico
+  statusLabel?: string;        // DescrizioneStatoAnangrafico
+  activityCategoryCode?: string;  // CodiceCategoriaAttivita
+  activityCategoryLabel?: string; // DescrizioneCategoriaAttivita
+  businessName?: string;       // RagioneSociale or Descrizione
+  firstName?: string;          // Nome
+  lastName?: string;           // Cognome
+  taxCode?: string;            // CodiceFiscale
+  vatNumber?: string;          // PartitaIVA
+  vatCee?: string;             // PartitaIVACee
+  pec?: string;                // PEC
+  sdi?: string;                // SDI
+  isLegalEntity: boolean;      // derived from isPersonaFisicaOGiuridica
+};
 export type AddressState = {
   selected: AddressB2B | null;
 };

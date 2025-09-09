@@ -16,7 +16,11 @@ export interface RawProduct {
   quantity?: number;
   sold?: number;
   model?: string;
-  features?:any[];
+  features?: any[];
+  docs?: {
+    media_area_id: string;
+    url: string;
+  }[];
   images: {
     original: string;
     main: string;
@@ -68,6 +72,20 @@ export function transformProduct(rawProducts: RawProduct[]): Product[] {
       ? transformProduct(item.children_items)
       : [];
 
+    // 🔹 map docs -> Product.docs
+    const docs =
+      item.docs?.map((d, i) => {
+        const filename = d.url?.split('/').pop() ?? '';
+        const ext = filename.includes('.') ? filename.split('.').pop()?.toLowerCase() : undefined;
+        return {
+          id: i + 1,
+          url: d.url,
+          area: d.media_area_id,
+          filename,
+          ext,
+        };
+      }) || [];
+
     return {
       id: item.id,
       sku: item.sku,
@@ -90,7 +108,8 @@ export function transformProduct(rawProducts: RawProduct[]): Product[] {
       brand,
       tag: item.tag || [],
       variations: variations, // full Product[] as variations
-      features:item.features
+      features: item.features,
+      docs
     };
   };
 

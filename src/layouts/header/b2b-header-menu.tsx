@@ -8,6 +8,20 @@ import { useTranslation } from 'src/app/i18n/client';
 import { useCmsB2BMenuRawQuery } from '@framework/product/get-b2b-cms';
 import { buildB2BMenuTree, type MenuTreeNode } from '@utils/transform/b2b-menu-tree';
 
+function NodeIcon({ src, alt }: { src?: string | null; alt: string }) {
+  if (!src) return null;
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className="h-10 w-10 rounded object-cover"
+      loading="lazy"
+      decoding="async"
+    />
+  );
+}
+
+
 interface MenuProps {
   lang: string;
   className?: string;
@@ -223,10 +237,14 @@ const B2BHeaderMenu: React.FC<MenuProps> = ({ lang, className }) => {
                       aria-expanded="false"
                       title={label}
                     >
-                      <span className="truncate capitalize">{normalizeLabel(label)}</span>
+                      <span className="min-w-0 flex items-center gap-3">
+                        <NodeIcon src={node.category_menu_image} alt={label} />
+                        <span className="truncate capitalize">{normalizeLabel(label)}</span>
+                      </span>
                       <span className="opacity-60">›</span>
                     </button>
                   </li>
+
                 );
               }
 
@@ -243,13 +261,17 @@ const B2BHeaderMenu: React.FC<MenuProps> = ({ lang, className }) => {
                 <li key={node.id}>
                   <Link
                     href={leafHref}
-                    className="block px-4 h-12 leading-[48px] text-[15px] text-gray-900 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 truncate"
+                    className="block px-4 h-12 text-[15px] text-gray-900 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
                     title={label}
                     onClick={close}
                   >
-                    <span className="truncate capitalize">{normalizeLabel(label)}</span>
+                    <span className="min-w-0 flex items-center gap-3 leading-[48px]">
+                      <NodeIcon src={node.category_menu_image} alt={label} />
+                      <span className="truncate capitalize">{normalizeLabel(label)}</span>
+                    </span>
                   </Link>
                 </li>
+
               );
             })}
           </ul>

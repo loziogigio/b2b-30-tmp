@@ -23,4 +23,7 @@ export const API_ENDPOINTS_B2B = {
   GET_EXPOSITION:'/account/exposition',
   GET_PAYMENT_DEADLINE:'/account/payment_deadline',
   GET_ADDRESSES:'/account/get_addresses',
+  GET_CUSTOMER:'/account/get_customer',
+  CHANGE_PASSWORD: '/wrapper/change_password',
+  LOGIN: '/wrapper/login',
 };

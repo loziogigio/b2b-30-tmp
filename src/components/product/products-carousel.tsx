@@ -27,6 +27,8 @@ interface ProductsCarouselProps {
   uniqueKey?: string;
   carouselBreakpoint?: {} | any;
   lang: string;
+  headerImageSrc?: string;
+  headerImageAlt?: string;
 }
 
 const breakpoints = {
@@ -67,11 +69,13 @@ const ProductsCarousel: React.FC<ProductsCarouselProps> = ({
   uniqueKey,
   carouselBreakpoint,
   lang,
+  headerImageSrc,
+  headerImageAlt,
 }) => {
   const { width } = useWindowSize();
   const dir = getDirection(lang);
   const [sliderEnd, setSliderEnd] = useState(false);
-  const normalizedSlug = categorySlug ? `/${lang}/${categorySlug}`:'#'
+  const normalizedSlug = categorySlug ? `/${lang}/${categorySlug}` : '#'
 
   // ---- ERP: collect entity_codes from the *effective* product id ----
   const entity_codes = useMemo<string[]>(() => {
@@ -107,17 +111,26 @@ const ProductsCarousel: React.FC<ProductsCarouselProps> = ({
         className,
       )}
     >
-      <Link
-        href={normalizedSlug}
-        aria-label={`See all ${sectionHeading}`}
-        className="block"
-      >
-        <div className="flex flex-wrap items-center justify-between mb-5 md:mb-6 cursor-pointer group">
-          <SectionHeader
-            sectionHeading={sectionHeading}
-            className="mb-0 group-hover:underline"
-            lang={lang}
-          />
+      <Link href={normalizedSlug} aria-label={`See all ${sectionHeading}`} className="block">
+        <div className="mb-5 flex cursor-pointer flex-wrap items-center justify-between md:mb-6 group">
+          {/* ⬇️ Title row with optional image before the title */}
+          <div className="flex items-center gap-3">
+            {headerImageSrc ? (
+              <img
+                src={headerImageSrc}
+                alt={headerImageAlt || sectionHeading}
+                className="h-10 w-10 rounded object-cover sm:h-10 sm:w-10"
+                loading="lazy"
+                decoding="async"
+              />
+            ) : null}
+
+            <SectionHeader
+              sectionHeading={sectionHeading}
+              className="mb-0 group-hover:underline"
+              lang={lang}
+            />
+          </div>
         </div>
       </Link>
 

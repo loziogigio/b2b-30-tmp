@@ -9,7 +9,11 @@ export type MenuTreeNode = {
   isGroup: boolean;
   order?: number;
   lft?: number;
+  description?: string | null;
   children: MenuTreeNode[];
+  category_menu_image?: string | null;
+  category_banner_image?: string | null;
+  category_banner_image_mobile?: string | null;
 
   // NEW:
   slug: string;       // e.g. "manutenzione-impianto"
@@ -58,6 +62,10 @@ export function buildB2BMenuTree(items: CmsB2BMenuItem[]): MenuTreeNode[] {
     const base: MenuTreeNode = {
       id: uniqueId,
       name: i.name,
+      description: i.description,
+      category_menu_image: i.category_menu_image,
+      category_banner_image:  i.category_banner_image,
+      category_banner_image_mobile:  i.category_banner_image_mobile,
       label: i.label || i.title || i.name,
       url: i.url,
       isGroup: i.is_group === 1,

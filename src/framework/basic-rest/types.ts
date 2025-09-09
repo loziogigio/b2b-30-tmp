@@ -101,6 +101,13 @@ export type Product = {
   variations: Product[];
   features?:any[];
   [key: string]: unknown;
+  docs?: Array<{
+    id: number;
+    url: string;
+    area?: string;
+    filename?: string;
+    ext?: string;
+  }>;
 };
 export type OrderItem = {
   id: number | string;
