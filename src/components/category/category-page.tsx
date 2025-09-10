@@ -10,9 +10,11 @@ import { useTranslation } from 'src/app/i18n/client';
 import ProductsCarousel from '@components/product/products-carousel';
 import { useProductListQuery } from '@framework/product/get-b2b-product';
 import { ERP_STATIC } from '@framework/utils/static';
+import BannerCard from '@components/cards/banner-card';
 
-const NUM_ITEM = 6;      // products per carousel
-const MAX_ROWS = 5;      // max category rows initially
+
+const NUM_ITEM = 6;
+const MAX_ROWS = 5;
 
 const breakpoints = {
   '1921': { slidesPerView: 6 },
@@ -28,60 +30,99 @@ const breakpoints = {
 function hasHero(n?: MenuTreeNode | null) {
   return Boolean(
     n &&
-    (
-      n.category_banner_image ||
-      n.category_banner_image_mobile ||
-      (n.description && n.description.trim().length > 0)
-    )
+      (n.category_banner_image ||
+        n.category_banner_image_mobile ||
+        (n.description && n.description.trim().length > 0))
   );
 }
 
 function pickHeroNode(current: MenuTreeNode | null, pathNodes: MenuTreeNode[]) {
-  // 1) Prefer current if it has any hero content
   if (hasHero(current)) return current;
-
-  // 2) Otherwise walk up ancestors (from parent → root)
   for (let i = pathNodes.length - 2; i >= 0; i--) {
     if (hasHero(pathNodes[i])) return pathNodes[i];
   }
-
-  // 3) Fallback to current (even if empty) or null
   return current ?? null;
 }
 
-
 /* =========================
    TOP HERO (banner + description)
-   - Uses parent node if available, else current
-   - Responsive: mobile banner on small screens
+   - Uses BannerCard for responsive image
 ========================= */
-function CategoryHero({ node }: { node: MenuTreeNode | null }) {
+function CategoryHero({ node, lang }: { node: MenuTreeNode | null; lang: string }) {
   if (!node) return null;
+
+
+// helpers — keep in this file or move to a utils module
+function normalizePath(p?: string) {
+  if (!p) return '';
+  return p.startsWith('/') ? p : `/${p}`;
+}
+
+function hrefFromNode(node: MenuTreeNode, lang: string) {
+  // 1) If CMS already gives a usable url, trust it (and prefix lang if not absolute)
+  if (node.url) {
+    const isAbsolute = /^https?:\/\//i.test(node.url);
+    return isAbsolute ? node.url : `/${lang}${normalizePath(node.url)}`;
+  }
+
+  // 2) If we have a path array, join segments
+  if (node.path && node.path.length) {
+    return `/${lang}/${node.path.map(encodeURIComponent).join('/')}`;
+  }
+
+  // 3) Fallback to slug
+  if (node.slug) {
+    return `/${lang}/${encodeURIComponent(node.slug)}`;
+  }
+
+  // 4) Ultimate fallback
+  return `/${lang}`;
+}
+
+
 
   const desktopSrc = node.category_banner_image || undefined;
   const mobileSrc = node.category_banner_image_mobile || node.category_banner_image || undefined;
+
   const hasImage = Boolean(desktopSrc || mobileSrc);
   const hasDescription = Boolean(node.description && node.description.trim().length > 0);
 
   if (!hasImage && !hasDescription) return null;
 
+  const banner = hasImage
+    ? {
+        slug: hrefFromNode(node, lang), // full href ready to use
+        title: node.label || node.name || 'Category',
+        image: {
+          desktop: {
+            url: desktopSrc!,
+            width: 1920, // fallback if CMS doesn't provide sizes
+            height: 480,
+          },
+          mobile: {
+            url: mobileSrc!,
+            width: 800,
+            height: 600,
+          },
+        },
+      }
+    : null;
+
   return (
     <div className="bg-white">
       <Container className="pt-3">
-        {hasImage && (
-          <figure className="mb-3 overflow-hidden rounded-xl border border-border-base">
-            <picture>
-              {mobileSrc && <source media="(max-width: 640px)" srcSet={mobileSrc} />}
-              <img
-                src={desktopSrc || mobileSrc!}
-                alt={node.label || 'Category banner'}
-                className="h-40 w-full object-cover sm:h-56 md:h-64"
-                loading="lazy"
-                decoding="async"
-              />
-            </picture>
-            <figcaption className="sr-only">{node.label}</figcaption>
-          </figure>
+        {hasImage && banner && (
+          <div className="mb-3">
+            <BannerCard
+              lang={lang}
+              banner={banner}
+              variant="rounded"
+              effectActive
+              className="rounded-xl border border-border-base overflow-hidden"
+              // Use height utility to control banner height responsively
+              classNameInner="h-40 sm:h-56 md:h-64"
+            />
+          </div>
         )}
 
         {hasDescription && (
@@ -94,6 +135,7 @@ function CategoryHero({ node }: { node: MenuTreeNode | null }) {
     </div>
   );
 }
+
 
 export default function CategoryPage({ lang, slug }: { lang: string; slug: string[] }) {
   const { t } = useTranslation(lang, 'common');
