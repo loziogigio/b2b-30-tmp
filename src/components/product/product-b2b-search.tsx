@@ -7,6 +7,7 @@ import cn from 'classnames';
 import { LIMITS } from '@framework/utils/limits';
 import { Product } from '@framework/types';
 import { useTranslation } from 'src/app/i18n/client';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { useProductListInfinitQuery } from '@framework/product/get-b2b-product';
 import ProductCardB2B from './product-cards/product-card-b2b';
 import ProductRowB2B from './product-rows/product-row-b2b';
@@ -14,6 +15,10 @@ import { fetchErpPrices } from '@framework/erp/prices';
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ERP_STATIC } from '@framework/utils/static';
+import { getUserLikes as apiGetUserLikes, getTrendingProducts as apiGetTrending } from '@framework/likes';
+import { post } from '@framework/utils/httpB2B';
+import { API_ENDPOINTS_B2B } from '@framework/utils/api-endpoints-b2b';
+import { transformProduct, RawProduct, transformSearchParams } from '@utils/transform/b2b-product';
 
 interface ProductSearchProps {
   lang: string;
@@ -46,14 +51,57 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({ className = '', lang 
     ...ERP_STATIC
   };
 
-  const {
-    data,
-    error,
-    isFetching: isLoading,
-    fetchNextPage,
-    isFetchingNextPage: loadingMore,
-    hasNextPage,
-  } = useProductListInfinitQuery(mergedParams);
+  const source = (searchParams.get('source') || '').toLowerCase();
+  const period = (searchParams.get('period') || '7d').toLowerCase();
+  const pageSizeParam = Math.min(100, Math.max(1, Number(searchParams.get('page_size') || 24)));
+
+  const likesOrTrending = source === 'likes' || source === 'trending';
+
+  const likesTrendingQuery = useInfiniteQuery({
+    queryKey: ['search-special', source, period, pageSizeParam],
+    queryFn: async ({ pageParam = 1 }) => {
+      if (source === 'likes') {
+        const res = await apiGetUserLikes(pageParam, pageSizeParam);
+        const skus = (res?.likes || []).map((l: any) => l.sku).filter(Boolean);
+        if (!skus.length) {
+          return { items: [], nextPage: null };
+        }
+        const searchParams = transformSearchParams({
+          start: 0,
+          rows: skus.length,
+          search: { sku: skus.join(';') },
+        } as any);
+        const resp = await post<{ results: RawProduct[]; numFound: number }>(API_ENDPOINTS_B2B.SEARCH, searchParams);
+        const items = transformProduct(resp?.results || []);
+        const nextPage = res?.has_next ? pageParam + 1 : null;
+        return { items, nextPage };
+      }
+      // trending: fetch once; pagination not supported (single page)
+      const trending = await apiGetTrending(period, pageSizeParam, false);
+      const skus = (trending || []).map((x: any) => x.sku).filter(Boolean);
+      if (!skus.length) return { items: [], nextPage: null };
+      const searchParams = transformSearchParams({
+        start: 0,
+        rows: skus.length,
+        search: { sku: skus.join(';') },
+      } as any);
+      const resp = await post<{ results: RawProduct[]; numFound: number }>(API_ENDPOINTS_B2B.SEARCH, searchParams);
+      const items = transformProduct(resp?.results || []);
+      return { items, nextPage: null };
+    },
+    enabled: likesOrTrending,
+    getNextPageParam: (lastPage) => lastPage?.nextPage ?? undefined,
+    initialPageParam: 1,
+  });
+
+  const baseQuery = useProductListInfinitQuery(mergedParams);
+
+  const data = likesOrTrending ? likesTrendingQuery.data : baseQuery.data;
+  const error = likesOrTrending ? likesTrendingQuery.error as any : baseQuery.error;
+  const isLoading = likesOrTrending ? likesTrendingQuery.isFetching : baseQuery.isFetching;
+  const fetchNextPage = likesOrTrending ? likesTrendingQuery.fetchNextPage : baseQuery.fetchNextPage;
+  const loadingMore = likesOrTrending ? likesTrendingQuery.isFetchingNextPage : baseQuery.isFetchingNextPage;
+  const hasNextPage = likesOrTrending ? !!likesTrendingQuery.hasNextPage : baseQuery.hasNextPage;
 
   // ⬇️ Include ALL variant ids so list view has prices when expanded
   const entity_codes = useMemo(() => {

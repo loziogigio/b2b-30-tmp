@@ -61,7 +61,7 @@ export default function TrendingProductsCarousel({
   return (
     <ProductsCarousel
       sectionHeading={sectionTitle}
-      categorySlug={`search?sku=${encodeURIComponent(skuJoined)}`}
+      categorySlug={`search?source=trending&period=${encodeURIComponent(timePeriod)}&page_size=${limitSkus}`}
       products={data}
       loading={isLoading}
       limit={LIMITS.BEST_SELLER_PRODUCTS_LIMITS}
@@ -71,4 +71,3 @@ export default function TrendingProductsCarousel({
     />
   );
 }
-

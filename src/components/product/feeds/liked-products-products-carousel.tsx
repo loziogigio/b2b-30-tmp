@@ -41,7 +41,7 @@ export default function LikedProductsProductsCarousel({ lang, carouselBreakpoint
   return (
     <ProductsCarousel
       sectionHeading={t('text-wishlist')}
-      categorySlug={`search?sku=${encodeURIComponent(skusJoined)}`}
+      categorySlug={`search?source=likes&page_size=${limitSkus}`}
       products={data}
       loading={isLoading}
       limit={LIMITS.BEST_SELLER_PRODUCTS_LIMITS}
@@ -51,4 +51,3 @@ export default function LikedProductsProductsCarousel({ lang, carouselBreakpoint
     />
   );
 }
-
