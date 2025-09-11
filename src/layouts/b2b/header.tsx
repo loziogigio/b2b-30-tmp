@@ -12,6 +12,7 @@ import Container from '@components/ui/container';
 import Logo from '@components/ui/logo';
 import B2BHeaderMenu from '@layouts/header/b2b-header-menu';
 import SearchB2B from '@components/common/search-b2b';
+import { Suspense } from 'react';
 import LanguageSwitcher from '@components/ui/language-switcher';
 import CompanyIcon from '@components/icons/company-icon';
 import SearchIcon from '@components/icons/search-icon';
@@ -59,11 +60,13 @@ function Header({ lang }: { lang: string }) {
           <Logo className="logo" />
 
           {/* Desktop search (inline, stable) */}
-          <SearchB2B
-            searchId="top-bar-search"
-            className="hidden lg:flex lg:max-w-[650px] 2xl:max-w-[800px] lg:mx-6"
-            lang={lang}
-          />
+          <Suspense fallback={null}>
+            <SearchB2B
+              searchId="top-bar-search"
+              className="hidden lg:flex lg:max-w-[650px] 2xl:max-w-[800px] lg:mx-6"
+              lang={lang}
+            />
+          </Suspense>
 
           {/* Right controls */}
           <div className="flex shrink-0 items-center -mx-2.5 xl:-mx-3.5">
@@ -107,11 +110,13 @@ function Header({ lang }: { lang: string }) {
         {/* Mobile search (row under top bar) */}
         <div className="hidden border-t border-gray-100">
           <Container>
-            <SearchB2B
-              searchId="mobile-search"
-              className="w-full py-2"
-              lang={lang}
-            />
+            <Suspense fallback={null}>
+              <SearchB2B
+                searchId="mobile-search"
+                className="w-full py-2"
+                lang={lang}
+              />
+            </Suspense>
           </Container>
         </div>
 
@@ -122,11 +127,13 @@ function Header({ lang }: { lang: string }) {
         {displaySearch ? (
           <div className="border-t border-gray-100 bg-fill-secondary">
             <Container className="h-16 flex items-center justify-center">
-              <SearchB2B
-                ref={siteSearchRef}
-                className="w-full max-w-[780px] xl:max-w-[830px] 2xl:max-w-[1000px]"
-                lang={lang}
-              />
+              <Suspense fallback={null}>
+                <SearchB2B
+                  ref={siteSearchRef}
+                  className="w-full max-w-[780px] xl:max-w-[830px] 2xl:max-w-[1000px]"
+                  lang={lang}
+                />
+              </Suspense>
             </Container>
           </div>
         ) : (
