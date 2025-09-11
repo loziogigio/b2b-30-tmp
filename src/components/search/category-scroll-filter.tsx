@@ -11,7 +11,6 @@ import {
   findNodeByCode,
 } from '@utils/transform/b2b-menu-tree';
 import { useCmsB2BMenuRawQuery } from '@framework/product/get-b2b-cms';
-import CategoryBreadcrumb from '@components/ui/category-breadcrumb';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -85,22 +84,15 @@ const CategoryScrollFilter: React.FC<{ lang: string }> = ({ lang }) => {
   );
 
   useEffect(() => {
-    if (swiperRef.current && activeIndex >= 0) {
-      swiperRef.current.slideTo(activeIndex, 0);
+    if (swiperRef.current) {
+      const target = activeIndex >= 0 ? activeIndex + 1 : 0; // +1 for "All Categories" tab
+      swiperRef.current.slideTo(target, 0);
     }
   }, [activeIndex]);
 
   // ⭐ Always render the same outer structure on SSR & first client render
   return (
     <div className="relative py-3 bg-white">
-      <CategoryBreadcrumb
-        lang={lang}
-        categories={path}
-        allLabel="All Categories"
-        onAllCategoriesClick={() => router.push(`/${lang}/category`)}
-        onCategorySelect={(node) => router.push(toCategoryUrl(node))}
-      />
-
       {/* ⭐ Gate Carousel (Swiper & width-dependent layout) until after mount
           so the first client render matches the server. */}
       {mounted && currentLevel.length > 0 ? (
@@ -116,9 +108,24 @@ const CategoryScrollFilter: React.FC<{ lang: string }> = ({ lang }) => {
           buttonSize="small"
           prevActivateId="category-carousel-prev"
           nextActivateId="category-carousel-next"
-          initialSlide={Math.max(activeIndex, 0)}
+          initialSlide={activeIndex >= 0 ? activeIndex + 1 : 0}
           onSwiper={(s) => (swiperRef.current = s)}
         >
+          {/* First tab: All Categories */}
+          <SwiperSlide key="all-categories" className="!w-auto">
+            <Link
+              href={`/${lang}/category`}
+              className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm border whitespace-nowrap transition-colors ${
+                activeId == null
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+              }`}
+              title="All Categories"
+              onClick={() => { setActiveId(null); setPath([]); }}
+            >
+              All Categories
+            </Link>
+          </SwiperSlide>
           {currentLevel.map((cat) => {
             const isActive = cat.id === activeId;
             const href =

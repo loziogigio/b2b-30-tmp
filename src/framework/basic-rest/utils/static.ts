@@ -34,7 +34,7 @@ function saveState(state: ErpStaticState) {
 }
 
 export let ERP_STATIC: ErpStaticState =
-  loadState() || ({ id_cart: '0', customer_code: '', address_code: '', username: 'guest@example.com', company_name: undefined, ext_call: true } as ErpStaticState);
+  loadState() || ({ id_cart: '0', customer_code: '0', address_code: '0', username: 'guest@example.com', company_name: undefined, ext_call: true } as ErpStaticState);
 
 export function setErpStatic(next: Partial<ErpStaticState>) {
   ERP_STATIC = { ...ERP_STATIC, ...next } as ErpStaticState;

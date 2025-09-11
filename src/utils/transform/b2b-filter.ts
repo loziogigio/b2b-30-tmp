@@ -95,7 +95,9 @@ export function transformFilterParamsForApi(params: Record<string, any>): Record
     if (
       key.startsWith('filters-') ||
       key === 'address_code' ||
-      key === 'customer_code'
+      key === 'customer_code' ||
+      key === 'text' ||
+      key === 'category'
     ) {
       acc[key] = params[key];
     }

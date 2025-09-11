@@ -1,4 +1,4 @@
-import { forwardRef, useState } from 'react';
+import { forwardRef, useEffect, useState } from 'react';
 import cn from 'classnames';
 import { useSearchQuery } from '@framework/product/use-search';
 import SearchBox from '@components/common/search-box';
@@ -9,6 +9,7 @@ import Scrollbar from '@components/ui/scrollbar';
 import { useUI } from '@contexts/ui.context';
 import { Product } from '@framework/types';
 import SearchBoxB2B from './search-box-b2b';
+import { useSearchParams } from 'next/navigation';
 
 type Props = {
   lang: string;
@@ -34,6 +35,7 @@ const SearchB2B = forwardRef<HTMLDivElement, Props>(
       closeSearch,
     } = useUI();
     const [searchText, setSearchText] = useState('');
+    const searchParams = useSearchParams();
     const [inputFocus, setInputFocus] = useState<boolean>(false);
     const { data, isLoading } = useSearchQuery({
       text: searchText,
@@ -61,6 +63,15 @@ const SearchB2B = forwardRef<HTMLDivElement, Props>(
       closeMobileSearch();           // ✅ closes mobile overlay if open
       closeSearch();                 // ✅ closes desktop overlay if open
     }
+
+    // Sync input with URL param `text` when present (non-empty). Also reacts to tab changes.
+    useEffect(() => {
+      const urlText = (searchParams?.get('text') || '').trim();
+      if (urlText && urlText !== searchText) {
+        setSearchText(urlText);
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [searchParams]);
     
 
     return (
