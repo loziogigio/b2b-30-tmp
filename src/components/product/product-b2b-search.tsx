@@ -14,12 +14,14 @@ import ProductRowB2B from './product-rows/product-row-b2b';
 import { fetchErpPrices } from '@framework/erp/prices';
 import { useMemo, useEffect, useRef, useState } from 'react';
 import { ERP_STATIC } from '@framework/utils/static';
+import { IoGridOutline, IoListOutline } from 'react-icons/io5';
 import type { ErpPriceData } from '@utils/transform/erp-prices';
 import { useUI } from '@contexts/ui.context';
 import { getUserLikes as apiGetUserLikes, getTrendingProductsPage as apiGetTrendingPage } from '@framework/likes';
 import { post } from '@framework/utils/httpB2B';
 import { API_ENDPOINTS_B2B } from '@framework/utils/api-endpoints-b2b';
 import { transformProduct, RawProduct, transformSearchParams } from '@utils/transform/b2b-product';
+import React from 'react';
 
 interface ProductSearchProps {
   lang: string;
@@ -34,13 +36,35 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({ className = '', lang 
   const searchParams = useSearchParams();
 
   // view from query
-  const viewParam = (searchParams.get('view') || 'grid').toLowerCase();
-  const isList = viewParam === 'list';
+  // View mode persistence (URL 'view' param OR localStorage fallback)
+  const [view, setViewState] = React.useState<'grid' | 'list'>(() => {
+    const fromUrl = (searchParams.get('view') || '').toLowerCase();
+    if (fromUrl === 'list' || fromUrl === 'grid') return fromUrl as 'grid' | 'list';
+    try {
+      const ls = localStorage.getItem('search-view');
+      if (ls === 'list' || ls === 'grid') return ls as 'grid' | 'list';
+    } catch {}
+    return 'grid';
+  });
+
+  const isList = view === 'list';
   const setView = (next: 'grid' | 'list') => {
+    setViewState(next);
+    try { localStorage.setItem('search-view', next); } catch {}
     const params = new URLSearchParams(searchParams as any);
+    // keep URL stable; optionally persist 'view' explicitly
     if (next === 'grid') params.delete('view'); else params.set('view', next);
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
+
+  // If URL param changes externally, sync local state (but keep LS preference otherwise)
+  React.useEffect(() => {
+    const fromUrl = (searchParams.get('view') || '').toLowerCase();
+    if (fromUrl === 'grid' || fromUrl === 'list') {
+      if (fromUrl !== view) setViewState(fromUrl as 'grid' | 'list');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   // params for API
   const urlParams: Record<string, string> = {};
@@ -173,23 +197,27 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({ className = '', lang 
           type="button"
           onClick={() => setView('grid')}
           className={cn(
-            'h-9 px-3 rounded border text-sm',
+            'h-9 w-9 flex items-center justify-center rounded border',
             !isList ? 'bg-brand text-white border-brand' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
           )}
+          aria-label={t('grid', { defaultValue: 'Grid' })}
           aria-pressed={!isList}
+          title={t('grid', { defaultValue: 'Grid' })}
         >
-          {t('grid', { defaultValue: 'Grid' })}
+          <IoGridOutline />
         </button>
         <button
           type="button"
           onClick={() => setView('list')}
           className={cn(
-            'h-9 px-3 rounded border text-sm',
+            'h-9 w-9 flex items-center justify-center rounded border',
             isList ? 'bg-brand text-white border-brand' : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
           )}
+          aria-label={t('list', { defaultValue: 'List' })}
           aria-pressed={isList}
+          title={t('list', { defaultValue: 'List' })}
         >
-          {t('list', { defaultValue: 'List' })}
+          <IoListOutline />
         </button>
       </div>
 
