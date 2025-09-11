@@ -12,9 +12,9 @@ import { useProductListInfinitQuery } from '@framework/product/get-b2b-product';
 import ProductCardB2B from './product-cards/product-card-b2b';
 import ProductRowB2B from './product-rows/product-row-b2b';
 import { fetchErpPrices } from '@framework/erp/prices';
-import { useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMemo, useEffect, useRef, useState } from 'react';
 import { ERP_STATIC } from '@framework/utils/static';
+import type { ErpPriceData } from '@utils/transform/erp-prices';
 import { getUserLikes as apiGetUserLikes, getTrendingProductsPage as apiGetTrendingPage } from '@framework/likes';
 import { post } from '@framework/utils/httpB2B';
 import { API_ENDPOINTS_B2B } from '@framework/utils/api-endpoints-b2b';
@@ -105,31 +105,63 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({ className = '', lang 
   const hasNextPage = likesOrTrending ? !!likesTrendingQuery.hasNextPage : baseQuery.hasNextPage;
 
   // ⬇️ Include ALL variant ids so list view has prices when expanded
-  const entity_codes = useMemo(() => {
-    return (
-      data?.pages?.flatMap((page) =>
-        page?.items?.flatMap((p: Product) => {
-          if (Array.isArray(p.variations) && p.variations.length > 0) {
-            return p.variations.map((v) => v.id);
-          }
-          return p.id;
-        })
-      ) ?? []
-    );
+  // --- ERP prices: fetch only for newly loaded page and merge
+  const [erpPricesMap, setErpPricesMap] = useState<Record<string, ErpPriceData>>({});
+  const fetchedCodesRef = useRef<Set<string>>(new Set());
+
+  // Reset ERP cache when search signature changes
+  const searchSignature = useMemo(() => {
+    const base = searchParams.toString();
+    if (likesOrTrending) {
+      return source === 'likes' ? `likes:${pageSizeParam}` : `trending:${period}:${pageSizeParam}`;
+    }
+    return `base:${base}`;
+  }, [likesOrTrending, source, period, pageSizeParam, searchParams]);
+
+  const prevSig = useRef<string>('');
+  useEffect(() => {
+    if (prevSig.current !== searchSignature) {
+      prevSig.current = searchSignature;
+      setErpPricesMap({});
+      fetchedCodesRef.current = new Set();
+    }
+  }, [searchSignature]);
+
+  const lastItems: Product[] = useMemo(() => {
+    const pages = (data as any)?.pages;
+    if (!pages?.length) return [];
+    const last = pages[pages.length - 1];
+    return last?.items ?? [];
   }, [data]);
 
-  const erpPayload = {
-    entity_codes: entity_codes.map(String),
-    ...ERP_STATIC
-  };
+  const newCodes = useMemo(() => {
+    const codes: string[] = [];
+    for (const p of lastItems as any[]) {
+      const vars = Array.isArray(p?.variations) ? p.variations : [];
+      if (vars.length > 0) {
+        for (const v of vars) codes.push(String(v?.id ?? ''));
+      } else {
+        codes.push(String((p as any)?.id ?? ''));
+      }
+    }
+    return codes.filter((c) => c && !fetchedCodesRef.current.has(c));
+  }, [lastItems]);
 
-  const { data: erpPricesData } = useQuery({
-    queryKey: ['erp-prices', erpPayload],
-    queryFn: () => fetchErpPrices(erpPayload),
-    enabled: entity_codes.length > 0,
-  });
+  useEffect(() => {
+    if (!newCodes.length) return;
+    const payload = { entity_codes: newCodes, ...ERP_STATIC } as any;
+    let mounted = true;
+    fetchErpPrices(payload)
+      .then((res) => {
+        if (!mounted || !res) return;
+        setErpPricesMap((prev) => ({ ...prev, ...(res as any) }));
+        for (const c of newCodes) fetchedCodesRef.current.add(c);
+      })
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, [newCodes]);
 
-  const getPrice = (id: string | number) => erpPricesData?.[String(id)];
+  const getPrice = (id: string | number) => erpPricesMap[String(id)];
 
   return (
     <>
