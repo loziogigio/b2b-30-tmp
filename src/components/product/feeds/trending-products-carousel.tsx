@@ -4,7 +4,8 @@ import React from 'react';
 import ProductsCarousel from '@components/product/products-carousel';
 import { useProductListQuery } from '@framework/product/get-b2b-product';
 import { LIMITS } from '@framework/utils/limits';
-import { getTrendingProducts } from '@framework/likes';
+import { getTrendingProductsPage } from '@framework/likes';
+import { ERP_STATIC } from '@framework/utils/static';
 
 interface Props {
   lang: string;
@@ -23,13 +24,13 @@ export default function TrendingProductsCarousel({
 }: Props) {
   const [skuJoined, setSkuJoined] = React.useState<string>('');
 
-  // Always fetch trending on mount
+  // Always fetch trending on mount (paginated API: page 1)
   React.useEffect(() => {
     let mounted = true;
     (async () => {
       try {
-        const res = await getTrendingProducts(timePeriod, limitSkus, false);
-        const skus = (res || []).map((r) => r.sku).filter(Boolean);
+        const page = await getTrendingProductsPage(timePeriod, 1, limitSkus, false);
+        const skus = (page?.items || []).map((r) => r.sku).filter(Boolean);
         if (!mounted) return;
         setSkuJoined(skus.join(';'));
       } catch {
@@ -47,10 +48,7 @@ export default function TrendingProductsCarousel({
   const { data, isLoading, error } = useProductListQuery(
     hasSkus
       ? {
-          address_code: '',
-          per_page: 12,
-          start: 1,
-          customer_code: '00000',
+          ...ERP_STATIC,
           search: { sku: skuJoined },
         }
       : { search: '' }

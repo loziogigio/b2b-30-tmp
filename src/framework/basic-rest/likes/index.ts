@@ -61,6 +61,14 @@ export interface TrendingProductsResponse {
   product_info?: any;
 }
 
+export interface TrendingProductsPageResponse {
+  items: TrendingProductsResponse[];
+  total_count: number;
+  page: number;
+  page_size: number;
+  has_next: boolean;
+}
+
 export interface LikeAnalyticsResponse {
   time_period: '1d' | '7d' | '30d' | '90d' | string;
   total_likes: number;
@@ -140,6 +148,21 @@ export async function getTrendingProducts(
     include_product_info: String(includeProductInfo),
   }).toString();
   return get<TrendingProductsResponse[]>(`${EP.TRENDING}?${qs}`);
+}
+
+export async function getTrendingProductsPage(
+  timePeriod: '1d' | '7d' | '30d' | '90d' | string = '7d',
+  page = 1,
+  pageSize = 24,
+  includeProductInfo = false
+): Promise<TrendingProductsPageResponse> {
+  const qs = new URLSearchParams({
+    time_period: String(timePeriod),
+    page: String(page),
+    page_size: String(pageSize),
+    include_product_info: String(includeProductInfo),
+  }).toString();
+  return get<TrendingProductsPageResponse>(`${EP.TRENDING}?${qs}`);
 }
 
 // Analytics and stats

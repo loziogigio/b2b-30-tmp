@@ -15,7 +15,7 @@ import { fetchErpPrices } from '@framework/erp/prices';
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ERP_STATIC } from '@framework/utils/static';
-import { getUserLikes as apiGetUserLikes, getTrendingProducts as apiGetTrending } from '@framework/likes';
+import { getUserLikes as apiGetUserLikes, getTrendingProductsPage as apiGetTrendingPage } from '@framework/likes';
 import { post } from '@framework/utils/httpB2B';
 import { API_ENDPOINTS_B2B } from '@framework/utils/api-endpoints-b2b';
 import { transformProduct, RawProduct, transformSearchParams } from '@utils/transform/b2b-product';
@@ -76,9 +76,9 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({ className = '', lang 
         const nextPage = res?.has_next ? pageParam + 1 : null;
         return { items, nextPage };
       }
-      // trending: fetch once; pagination not supported (single page)
-      const trending = await apiGetTrending(period, pageSizeParam, false);
-      const skus = (trending || []).map((x: any) => x.sku).filter(Boolean);
+      // trending: paginated response
+      const trendingPage = await apiGetTrendingPage(period, pageParam, pageSizeParam, false);
+      const skus = (trendingPage?.items || []).map((x: any) => x.sku).filter(Boolean);
       if (!skus.length) return { items: [], nextPage: null };
       const searchParams = transformSearchParams({
         start: 0,
@@ -87,7 +87,8 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({ className = '', lang 
       } as any);
       const resp = await post<{ results: RawProduct[]; numFound: number }>(API_ENDPOINTS_B2B.SEARCH, searchParams);
       const items = transformProduct(resp?.results || []);
-      return { items, nextPage: null };
+      const nextPage = trendingPage?.has_next ? pageParam + 1 : null;
+      return { items, nextPage };
     },
     enabled: likesOrTrending,
     getNextPageParam: (lastPage) => lastPage?.nextPage ?? undefined,
