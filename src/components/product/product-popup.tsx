@@ -22,6 +22,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ERP_STATIC } from '@framework/utils/static';
 import type { ErpPriceData } from '@utils/transform/erp-prices';
 import { fetchErpPrices } from '@framework/erp/prices';
+import { useLikes } from '@contexts/likes/likes.context';
 
 // B2B bits
 import PackagingGrid from './packaging-grid';
@@ -35,13 +36,14 @@ export default function ProductPopup({ lang }: { lang: string }) {
   const { closeModal } = useModalAction();
   const router = useRouter();
 
+  // Likes context
+  const likes = useLikes();
+  const sku = String(product?.sku ?? '');
+  const favorite = sku ? likes.isLiked(sku) : false;
   // --- Wishlist / share UI only ---
-  const [favorite, setFavorite] = useState(false);
   const [addToWishlistLoader, setAddToWishlistLoader] = useState(false);
   const [shareButtonStatus, setShareButtonStatus] = useState(false);
   const toggleShare = () => setShareButtonStatus((s) => !s);
-
-  useEffect(() => setFavorite(false), [product?.id]);
 
   // --- ERP prices for this product ---
   const entityCodes = [String(product?.id ?? '')].filter(Boolean); // string[]
@@ -63,6 +65,15 @@ export default function ProductPopup({ lang }: { lang: string }) {
     closeModal();
     router.push(`/${lang}/${ROUTES.PRODUCT}/${product.slug}`);
   }
+
+  // Ensure we know initial like status with a lightweight bulk check
+  useEffect(() => {
+    if (!sku) return;
+    if (!favorite) {
+      likes.loadBulkStatus([sku]).catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sku]);
 
   if (!product) return null;
 
@@ -150,16 +161,20 @@ export default function ProductPopup({ lang }: { lang: string }) {
               <div className="grid grid-cols-2 gap-2.5">
                 <Button
                   variant="border"
-                  onClick={() => {
-                    setAddToWishlistLoader(true);
-                    setFavorite((f) => !f);
-                    setTimeout(() => setAddToWishlistLoader(false), 600);
+                  onClick={async () => {
+                    try {
+                      setAddToWishlistLoader(true);
+                      if (!sku) return;
+                      await likes.toggle(sku);
+                    } finally {
+                      setAddToWishlistLoader(false);
+                    }
                   }}
                   loading={addToWishlistLoader}
                   className={`group hover:text-brand ${favorite ? 'text-brand' : ''}`}
                 >
                   {favorite ? (
-                    <IoIosHeart className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 transition-all" />
+                    <IoIosHeart className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 transition-all text-red-500" />
                   ) : (
                     <IoIosHeartEmpty className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 transition-all group-hover:text-brand" />
                   )}

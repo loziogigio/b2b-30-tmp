@@ -2,6 +2,7 @@
 
 import { HomeCategory } from '@utils/transform/b2b-cms-home';
 import CategoryProductsCarousel from '@components/product/category-products-carousel';
+import LikedProductsProductsCarousel from '@components/product/feeds/liked-products-products-carousel';
 interface B2BHomeProductsProps {
   lang: string;
   carouselBreakpoint?: any;
@@ -15,6 +16,9 @@ export default function B2BHomeProducts({
 }: B2BHomeProductsProps) {
   return (
     <>
+      {/* Liked products block */}
+      <LikedProductsProductsCarousel lang={lang} carouselBreakpoint={carouselBreakpoint} />
+
       {homeCategoryFiltered.map((category) => (
         <CategoryProductsCarousel
           key={`cat-${category.order}-${category.label}`}

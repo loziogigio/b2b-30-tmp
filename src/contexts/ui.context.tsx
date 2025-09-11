@@ -5,6 +5,7 @@ import { getToken } from '@framework/utils/get-token';
 import { CartProvider } from './cart/cart.context';
 import { ModalProvider } from '@components/common/modal/modal.context';
 import { AddressProvider } from './address/address.context';
+import { LikesProvider } from './likes/likes.context';
 
 export interface State {
   isAuthorized: boolean;
@@ -339,7 +340,9 @@ export function ManagedUIContext({ children }: React.PropsWithChildren<{}>) {
     <CartProvider>
       <UIProvider>
         <AddressProvider>
-          <ModalProvider>{children}</ModalProvider>
+          <LikesProvider>
+            <ModalProvider>{children}</ModalProvider>
+          </LikesProvider>
         </AddressProvider>
       </UIProvider>
     </CartProvider>

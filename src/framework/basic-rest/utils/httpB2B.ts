@@ -35,5 +35,15 @@ const post = async <T = any>(
   return response.data;
 };
 
-export { get, post };
+const del = async <T = any>(
+  url: string,
+  data?: Record<string, any>,
+  config?: Record<string, any>
+) => {
+  const response = await http.delete<T>(url,  config);
+  return response.data;
+};
+
+
+export { get, post , del };
 export default http;

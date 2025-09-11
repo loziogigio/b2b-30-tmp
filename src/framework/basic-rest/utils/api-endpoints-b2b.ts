@@ -26,4 +26,18 @@ export const API_ENDPOINTS_B2B = {
   GET_CUSTOMER:'/account/get_customer',
   CHANGE_PASSWORD: '/wrapper/change_password',
   LOGIN: '/wrapper/login',
+  LIKES: {
+    ROOT: '/likes',
+    TOGGLE: '/likes/toggle',
+    STATUS: (userId: string, sku: string) => `/likes/status/${userId}/${sku}`,
+    BULK_STATUS: '/likes/status/bulk',
+    USER: (userId: string) => `/likes/user/${userId}`,
+    USER_SUMMARY: (userId: string) => `/likes/user/${userId}/summary`,
+    POPULAR: '/likes/popular',
+    TRENDING: '/likes/trending',
+    ANALYTICS: '/likes/analytics',
+    STATS: (sku: string) => `/likes/stats/${sku}`,
+    CLEAR_ALL: (userId: string) => `/likes/user/${userId}/all`,
+    HEALTH: '/likes/health',
+  },
 };

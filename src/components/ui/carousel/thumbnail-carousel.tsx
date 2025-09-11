@@ -4,6 +4,8 @@ import {
   SwiperOptions,
   Navigation,
   Thumbs,
+  Mousewheel,
+  FreeMode,
 } from '@components/ui/carousel/slider';
 import Image from '@components/ui/image';
 import { useRef, useState } from 'react';
@@ -22,7 +24,8 @@ interface Props {
 // product gallery breakpoints
 const galleryCarouselBreakpoints = {
   '0': {
-    slidesPerView: 4,
+    slidesPerView: 5,
+    spaceBetween: 6,
   },
 };
 
@@ -96,16 +99,20 @@ const ThumbnailCarousel: React.FC<Props> = ({
       </div>
       {/* End of product main slider */}
 
-      <div className={`shrink-0 ${galleryClassName}`}>
+      <div className={cn('shrink-0', galleryClassName)}>
         <Swiper
           id="productGalleryThumbs"
           onSwiper={setThumbsSwiper}
-          spaceBetween={0}
+          spaceBetween={6}
           watchSlidesProgress={true}
           freeMode={true}
+          direction="vertical"
+          mousewheel={true}
+          modules={[Thumbs, Mousewheel, FreeMode]}
           observer={true}
           observeParents={true}
           breakpoints={galleryCarouselBreakpoints}
+          style={{ maxHeight: 620, paddingRight: 2 }}
         >
           {gallery?.map((item: any) => (
             <SwiperSlide
@@ -115,9 +122,11 @@ const ThumbnailCarousel: React.FC<Props> = ({
               <Image
                 src={item?.thumbnail ?? productGalleryPlaceholder}
                 alt={`Product thumb gallery ${item.id}`}
-                width={170}
-                height={170}
-                style={{ width: 'auto' }}
+                width={0}
+                height={0}
+                sizes="100vw"
+                style={{ width: '100%', height: 'auto' }}
+                className="object-contain"
               />
             </SwiperSlide>
           ))}

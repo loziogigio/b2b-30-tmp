@@ -25,6 +25,7 @@ import type { ErpPriceData } from '@utils/transform/erp-prices';
 // NEW: AddToCart (server-aware)
 import AddToCart from '@components/product/add-to-cart';
 import { fetchErpPrices } from '@framework/erp/prices';
+import { useLikes } from '@contexts/likes/likes.context';
 import PriceAndPromo from './price-and-promo';
 import PackagingGrid from './packaging-grid';
 import { da } from 'date-fns/locale';
@@ -209,23 +210,38 @@ const ProductB2BDetails: React.FC<{ lang: string; search: any }> = ({ lang, sear
     ? erpPricesData[0]
     : (erpPricesData as any)?.[entityCodes[0]];
 
-  // UI state (wishlist/share only)
-  const [favorite, setFavorite] = useState(false);
+  // Likes context
+  const likes = useLikes();
+  const sku = String(data?.sku ?? '');
+  const favorite = sku ? likes.isLiked(sku) : false;
   const [addToWishlistLoader, setAddToWishlistLoader] = useState(false);
   const [shareButtonStatus, setShareButtonStatus] = useState(false);
 
   const productUrl = `${process.env.NEXT_PUBLIC_WEBSITE_URL}${ROUTES.PRODUCT}/${pathname.slug}`;
+
+  // Ensure we know initial like status with a lightweight bulk check
+  React.useEffect(() => {
+    if (!sku) return;
+    if (!favorite) {
+      // If unknown/not liked locally, fetch status and merge store
+      likes.loadBulkStatus([sku]).catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sku]);
 
   if (isLoading) return <p>Loading...</p>;
   if (!data) return null;
 
   const toggleShare = () => setShareButtonStatus((s) => !s);
 
-  const addToWishlist = () => {
-    setAddToWishlistLoader(true);
-    const next = !favorite;
-    setFavorite(next);
-    setTimeout(() => setAddToWishlistLoader(false), 800);
+  const addToWishlist = async () => {
+    try {
+      setAddToWishlistLoader(true);
+      if (!sku) return;
+      await likes.toggle(sku);
+    } finally {
+      setAddToWishlistLoader(false);
+    }
   };
 
   return (
@@ -310,7 +326,7 @@ const ProductB2BDetails: React.FC<{ lang: string; search: any }> = ({ lang, sear
                 className={`group hover:text-brand ${favorite ? 'text-brand' : ''}`}
               >
                 {favorite ? (
-                  <IoIosHeart className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 transition-all" />
+                  <IoIosHeart className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 transition-all text-red-500" />
                 ) : (
                   <IoIosHeartEmpty className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 transition-all group-hover:text-brand" />
                 )}

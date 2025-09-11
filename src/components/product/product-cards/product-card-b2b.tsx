@@ -1,4 +1,5 @@
 import cn from 'classnames';
+import * as React from 'react';
 import Image from '@components/ui/image';
 import usePrice from '@framework/product/use-price';
 import { Product } from '@framework/types';
@@ -14,6 +15,8 @@ import { ErpPriceData } from '@utils/transform/erp-prices';
 import { formatAvailability } from '@utils/format-availability';
 import PackagingGrid from '../packaging-grid';
 import PriceAndPromo from '../price-and-promo';
+import { IoIosHeart, IoIosHeartEmpty } from 'react-icons/io';
+import { useLikes } from '@contexts/likes/likes.context';
 const AddToCart = dynamic(() => import('@components/product/add-to-cart'), {
   ssr: false,
 });
@@ -86,6 +89,9 @@ const ProductCardB2B: React.FC<ProductProps> = ({
   const { name, image, unit, product_type, sku, brand, slug, description, model, quantity, parent_sku } = product ?? {};
   const { openModal } = useModalAction();
   const { t } = useTranslation(lang, 'common');
+  const likes = useLikes();
+  const isFavorite = sku ? likes.isLiked(sku) : false;
+  const [likeLoading, setLikeLoading] = React.useState<boolean>(false);
 
   const { price: finalPrice, basePrice, discount } = usePrice({
     amount: product?.sale_price ?? product?.price,
@@ -152,21 +158,52 @@ const ProductCardB2B: React.FC<ProductProps> = ({
       {/* Textual Information Section */}
       <div className="flex flex-col px-3 md:px-4 lg:px-[18px] pb-1 lg:pb-1 lg:pt-1.5 h-full space-y-1.5">
 
-        {/* SKU + Brand (single line, small gap) */}
-        <div className="flex items-center text-xs text-gray-500 whitespace-nowrap gap-1.5 min-w-0">
-          <span className="uppercase">{sku}</span>
+        {/* SKU + Brand + Favorite (single line) */}
+        <div className="flex items-center justify-between text-xs text-gray-500 gap-2 min-w-0">
+          <div className="flex items-center whitespace-nowrap gap-1.5 min-w-0 flex-1 overflow-hidden">
+            <span className="uppercase">{sku}</span>
 
-          {brand?.name && brand?.id !== '0' && (
-            <>
-              <span className="text-gray-300">•</span>
-              <Link
-                href={`/${lang}/search?filters-id_brand=${brand.id}`}
-                className="text-brand hover:underline uppercase truncate max-w-[55%] sm:max-w-[60%]"
-                title={brand.name}
-              >
-                {brand.name}
-              </Link>
-            </>
+            {brand?.name && brand?.id !== '0' && (
+              <>
+                <span className="text-gray-300">•</span>
+                <Link
+                  href={`/${lang}/search?filters-id_brand=${brand.id}`}
+                  className="text-brand hover:underline uppercase truncate max-w-[55%] sm:max-w-[60%]"
+                  title={brand.name}
+                >
+                  {brand.name}
+                </Link>
+              </>
+            )}
+          </div>
+
+          {priceData && (
+          <button
+            type="button"
+            aria-label="Toggle wishlist"
+            className={cn(
+              'shrink-0 ml-2 p-1 rounded transition-colors',
+              isFavorite ? 'text-red-500' : 'text-gray-400 hover:text-brand'
+            )}
+            onClick={async (e) => {
+              e.stopPropagation();
+              try {
+                setLikeLoading(true);
+                if (!sku) return;
+                await likes.toggle(sku);
+              } finally {
+                setLikeLoading(false);
+              }
+            }}
+            disabled={likeLoading || !sku}
+            title={isFavorite ? t('text-wishlist') : t('text-wishlist')}
+          >
+            {isFavorite ? (
+              <IoIosHeart className="text-[18px]" />
+            ) : (
+              <IoIosHeartEmpty className="text-[18px]" />
+            )}
+          </button>
           )}
         </div>
 

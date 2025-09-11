@@ -13,6 +13,8 @@ import { ErpPriceData } from '@utils/transform/erp-prices';
 import PackagingGrid from '../packaging-grid';
 import { formatAvailability } from '@utils/format-availability';
 import PriceAndPromo from '../price-and-promo';
+import { useLikes } from '@contexts/likes/likes.context';
+import { IoIosHeart, IoIosHeartEmpty } from 'react-icons/io';
 
 const AddToCart = dynamic(() => import('@components/product/add-to-cart'), { ssr: false });
 
@@ -58,6 +60,7 @@ export default function ProductRowB2B({
 }: Props) {
   const { t } = useTranslation(lang, 'common');
   const { openModal } = useModalAction();
+  const likes = useLikes();
 
   const {
     name,
@@ -209,8 +212,9 @@ export default function ProductRowB2B({
               )}>
                 {/* Stesse 5 colonne + divisori verticali per “effetto tabella” */}
                 <div className={cn(GRID, GRID_COL_DIVIDERS)}>
-                  {/* 1) Immagine variante — align to right */}
+                  {/* 1) Immagine variante — align to right, with wishlist toggle above */}
                   <Cell className="!px-0 sm:justify-self-end justify-self-start">
+
                     {isPseudo ? (
                       <div aria-hidden style={{ width: VARIANT_IMG, height: VARIANT_IMG }} />
                     ) : (
@@ -235,6 +239,33 @@ export default function ProductRowB2B({
                   {/* 2) Info variante: riga 1 SKU+Brand, riga 2 Model */}
                   <Cell>
                     <div className="min-w-0">
+                      {/* Wishlist (above, left-aligned) */}
+                      <div className="flex items-center gap-1 text-[12px] text-gray-600 mb-1">
+                        <span>{t('text-wishlist')}</span>
+                        <button
+                          type="button"
+                          aria-label="Toggle wishlist"
+                          className={cn(
+                            'p-1 rounded text-[18px] transition-colors',
+                            likes.isLiked(v.sku ?? sku) ? 'text-red-500' : 'text-gray-400 hover:text-brand'
+                          )}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const targetSku = String(v.sku ?? sku ?? '');
+                            if (!targetSku) return;
+                            likes.toggle(targetSku);
+                          }}
+                          title={t('text-wishlist')}
+                        >
+                          {likes.isLiked(v.sku ?? sku) ? (
+                            <IoIosHeart />
+                          ) : (
+                            <IoIosHeartEmpty />
+                          )}
+                        </button>
+                      </div>
+
+                      {/* Row: SKU + Brand */}
                       <div className="flex items-center text-xs text-gray-600 whitespace-nowrap gap-1.5 min-w-0">
                         <span className="uppercase">{v.sku ?? sku ?? '-'}</span>
                         {brand?.name && brand?.id !== '0' ? (
