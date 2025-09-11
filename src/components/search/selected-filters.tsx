@@ -6,7 +6,13 @@ import isEmpty from 'lodash/isEmpty';
 import { useEffect, useState } from 'react';
 import useQueryParam from '@utils/use-query-params';
 
-export default function SelectedFilters({ lang }: { lang: string }) {
+type Props = {
+  lang: string;
+  allowedKeys?: string[]; // e.g., ['filters-promo_type', 'filters-id_brand']
+  labelMap?: Record<string, Record<string, string>>; // key -> (value -> label)
+};
+
+export default function SelectedFilters({ lang, allowedKeys, labelMap }: Props) {
   const { t } = useTranslation(lang, 'common');
 
   const { push } = useRouter();
@@ -16,20 +22,15 @@ export default function SelectedFilters({ lang }: { lang: string }) {
   const [state, setState] = useState({});
 
   useEffect(() => {
-    setState({});
+    const next: Record<string, string | string[]> = {};
     searchParams?.forEach((value, key) => {
-      if (value.includes(',')) {
-        setState((prev) => {
-          return { ...prev, [key]: value.split(',') };
-        });
-      } else {
-        setState((prev) => {
-          return { ...prev, [key]: value };
-        });
-      }
+      // Only include whitelisted facet keys if provided
+      if (allowedKeys && !allowedKeys.includes(key)) return;
+      if (value.includes(',')) next[key] = value.split(',');
+      else next[key] = value;
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
+    setState(next);
+  }, [searchParams, allowedKeys]);
 
   function handleArrayUpdate(key: string, item: string) {
     let o = searchParams?.get(key)?.split(',');
@@ -60,8 +61,8 @@ export default function SelectedFilters({ lang }: { lang: string }) {
                 return value.map((item) => (
                   <FilteredItem
                     itemKey={key ? key : ' '}
-                    key={item}
-                    itemValue={item as any}
+                    key={`${key}-${item}`}
+                    itemValue={(labelMap?.[key]?.[String(item)]) ?? (item as any)}
                     onClick={() => handleArrayUpdate(key, item)}
                   />
                 ));
@@ -69,8 +70,8 @@ export default function SelectedFilters({ lang }: { lang: string }) {
                 return (
                   <FilteredItem
                     itemKey={key ? key : ' '}
-                    key={key}
-                    itemValue={value as any}
+                    key={`${key}-${value}`}
+                    itemValue={(labelMap?.[key]?.[String(value)]) ?? (value as any)}
                     onClick={() => {
                       clearQueryParam([key]);
                     }}
