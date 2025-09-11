@@ -34,7 +34,7 @@ import { B2BInfoBlock } from './product-b2b-details';
 export default function ProductPopup({ lang }: { lang: string }) {
   const { t } = useTranslation(lang, 'common');
   const { data: product } = useModalState() as { data: any };
-  const { closeModal } = useModalAction();
+  const { closeModal, closeAll } = useModalAction();
   const router = useRouter();
 
   // Likes context
@@ -64,7 +64,8 @@ export default function ProductPopup({ lang }: { lang: string }) {
   const productUrl = `${process.env.NEXT_PUBLIC_WEBSITE_URL}/${lang}${ROUTES.PRODUCT}/${product?.slug ?? ''}`;
 
   function navigateToProductPage() {
-    closeModal();
+    // Close entire modal stack (ProductPopup + any parent like Variants Quick View)
+    closeAll();
     router.push(`/${lang}/${ROUTES.PRODUCT}/${product.slug}`);
   }
 
