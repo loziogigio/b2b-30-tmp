@@ -3,6 +3,7 @@
 import { HomeCategory } from '@utils/transform/b2b-cms-home';
 import CategoryProductsCarousel from '@components/product/category-products-carousel';
 import LikedProductsProductsCarousel from '@components/product/feeds/liked-products-products-carousel';
+import TrendingProductsCarousel from '@components/product/feeds/trending-products-carousel';
 interface B2BHomeProductsProps {
   lang: string;
   carouselBreakpoint?: any;
@@ -27,6 +28,9 @@ export default function B2BHomeProducts({
           carouselBreakpoint={carouselBreakpoint}
         />
       ))}
+
+      {/* Trending products block (always fetched) */}
+      <TrendingProductsCarousel lang={lang} carouselBreakpoint={carouselBreakpoint} />
     </>
   );
 }
