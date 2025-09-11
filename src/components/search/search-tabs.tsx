@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import cn from 'classnames';
+import { useUI } from '@contexts/ui.context';
 
 type Tab = {
   id: string;           // stable id for DnD
@@ -48,7 +49,7 @@ function loadTabs(): Tab[] {
 }
 
 function saveTabs(tabs: Tab[]) {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(tabs)); } catch {}
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(tabs)); } catch { }
 }
 
 export default function SearchTabs({ lang }: { lang: string }) {
@@ -59,6 +60,7 @@ export default function SearchTabs({ lang }: { lang: string }) {
   const [tabs, setTabs] = React.useState<Tab[]>([]);
   const [active, setActive] = React.useState<number>(0);
   const [editing, setEditing] = React.useState<string | null>(null);
+  const { isAuthorized } = useUI();
 
   // bootstrap from LS and current URL
   React.useEffect(() => {
@@ -191,23 +193,26 @@ export default function SearchTabs({ lang }: { lang: string }) {
     <div className="mb-2 border-b border-gray-200 overflow-x-auto">
       <div className="flex items-end gap-1 min-w-max">
         {/* Fixed tabs: Wishlist and Trending at the beginning */}
-        <button
-          className={cn(
-            'mr-1 px-3 py-2 rounded-t-md text-sm border',
-            (searchParams.get('source') || '') === 'likes'
-              ? 'bg-white border border-b-white text-pink-700'
-              : 'bg-pink-50 text-pink-700 border-pink-200 hover:bg-pink-100'
-          )}
-          onClick={() => {
-            const qs = new URLSearchParams(searchParams as any);
-            qs.set('source', 'likes');
-            if (!qs.get('page_size')) qs.set('page_size', '24');
-            router.replace(`${pathname}?${qs.toString()}`, { scroll: false });
-          }}
-          title="Wishlist"
-        >
-          Wishlist
-        </button>
+        {isAuthorized ? (
+          <button
+            className={cn(
+              'mr-1 px-3 py-2 rounded-t-md text-sm border',
+              (searchParams.get('source') || '') === 'likes'
+                ? 'bg-white border border-b-white text-pink-700'
+                : 'bg-pink-50 text-pink-700 border-pink-200 hover:bg-pink-100'
+            )}
+            onClick={() => {
+              const qs = new URLSearchParams(searchParams as any);
+              qs.set('source', 'likes');
+              if (!qs.get('page_size')) qs.set('page_size', '24');
+              router.replace(`${pathname}?${qs.toString()}`, { scroll: false });
+            }}
+            title="Wishlist"
+          >
+            Wishlist
+          </button>
+        ) : null}
+
         <button
           className={cn(
             'mr-2 px-3 py-2 rounded-t-md text-sm border',

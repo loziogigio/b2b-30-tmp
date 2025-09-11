@@ -13,7 +13,7 @@ import Logo from '@components/ui/logo';
 import B2BHeaderMenu from '@layouts/header/b2b-header-menu';
 import SearchB2B from '@components/common/search-b2b';
 import LanguageSwitcher from '@components/ui/language-switcher';
-import UserIcon from '@components/icons/user-icon';
+import CompanyIcon from '@components/icons/company-icon';
 import SearchIcon from '@components/icons/search-icon';
 import { useModalAction } from '@components/common/modal/modal.context';
 import useOnClickOutside from '@utils/use-click-outside';
@@ -87,7 +87,7 @@ function Header({ lang }: { lang: string }) {
             ) : null}
 
             <div className="items-center hidden lg:flex shrink-0 mx-2.5 xl:mx-3.5">
-              <UserIcon className={cn('text-opacity-40', isAuthorized ? 'text-brand' : 'text-brand-dark')} />
+              <CompanyIcon className={cn('w-7 h-7 md:w-7 md:h-7 text-opacity-40', isAuthorized ? 'text-brand' : 'text-brand-dark')} />
               <AuthMenu
                 isAuthorized={isAuthorized}
                 href={`/${lang}${ROUTES.ACCOUNT}`}
