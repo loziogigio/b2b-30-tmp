@@ -37,15 +37,8 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({ className = '', lang 
 
   // view from query
   // View mode persistence (URL 'view' param OR localStorage fallback)
-  const [view, setViewState] = React.useState<'grid' | 'list'>(() => {
-    const fromUrl = (searchParams.get('view') || '').toLowerCase();
-    if (fromUrl === 'list' || fromUrl === 'grid') return fromUrl as 'grid' | 'list';
-    try {
-      const ls = localStorage.getItem('search-view');
-      if (ls === 'list' || ls === 'grid') return ls as 'grid' | 'list';
-    } catch {}
-    return 'grid';
-  });
+  // Default to grid on first SSR render; sync from URL/LS after mount
+  const [view, setViewState] = useState<'grid' | 'list'>('grid');
 
   const isList = view === 'list';
   const setView = (next: 'grid' | 'list') => {
@@ -57,12 +50,18 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({ className = '', lang 
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
-  // If URL param changes externally, sync local state (but keep LS preference otherwise)
-  React.useEffect(() => {
+  // After mount or when URL changes, sync view from URL or fallback to LS
+  useEffect(() => {
     const fromUrl = (searchParams.get('view') || '').toLowerCase();
-    if (fromUrl === 'grid' || fromUrl === 'list') {
-      if (fromUrl !== view) setViewState(fromUrl as 'grid' | 'list');
+    let next: 'grid' | 'list' | null = null;
+    if (fromUrl === 'grid' || fromUrl === 'list') next = fromUrl as 'grid' | 'list';
+    if (!next) {
+      try {
+        const ls = localStorage.getItem('search-view');
+        if (ls === 'grid' || ls === 'list') next = ls as 'grid' | 'list';
+      } catch {}
     }
+    if (next && next !== view) setViewState(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
