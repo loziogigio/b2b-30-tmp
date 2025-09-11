@@ -15,6 +15,7 @@ import { fetchErpPrices } from '@framework/erp/prices';
 import { useMemo, useEffect, useRef, useState } from 'react';
 import { ERP_STATIC } from '@framework/utils/static';
 import type { ErpPriceData } from '@utils/transform/erp-prices';
+import { useUI } from '@contexts/ui.context';
 import { getUserLikes as apiGetUserLikes, getTrendingProductsPage as apiGetTrendingPage } from '@framework/likes';
 import { post } from '@framework/utils/httpB2B';
 import { API_ENDPOINTS_B2B } from '@framework/utils/api-endpoints-b2b';
@@ -105,9 +106,10 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({ className = '', lang 
   const hasNextPage = likesOrTrending ? !!likesTrendingQuery.hasNextPage : baseQuery.hasNextPage;
 
   // ⬇️ Include ALL variant ids so list view has prices when expanded
-  // --- ERP prices: fetch only for newly loaded page and merge
+  // --- ERP prices: fetch only for newly loaded page and merge (only when authorized)
   const [erpPricesMap, setErpPricesMap] = useState<Record<string, ErpPriceData>>({});
   const fetchedCodesRef = useRef<Set<string>>(new Set());
+  const { isAuthorized } = useUI();
 
   // Reset ERP cache when search signature changes
   const searchSignature = useMemo(() => {
@@ -148,7 +150,7 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({ className = '', lang 
   }, [lastItems]);
 
   useEffect(() => {
-    if (!newCodes.length) return;
+    if (!isAuthorized || !newCodes.length) return;
     const payload = { entity_codes: newCodes, ...ERP_STATIC } as any;
     let mounted = true;
     fetchErpPrices(payload)

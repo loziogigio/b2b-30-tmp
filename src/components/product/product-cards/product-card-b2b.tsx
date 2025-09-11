@@ -17,6 +17,7 @@ import PackagingGrid from '../packaging-grid';
 import PriceAndPromo from '../price-and-promo';
 import { IoIosHeart, IoIosHeartEmpty } from 'react-icons/io';
 import { useLikes } from '@contexts/likes/likes.context';
+import { useUI } from '@contexts/ui.context';
 const AddToCart = dynamic(() => import('@components/product/add-to-cart'), {
   ssr: false,
 });
@@ -39,6 +40,7 @@ function RenderPopupOrAddToCart({
 }) {
   let { data }: any = props;
   const { t } = useTranslation(lang, 'common');
+  const { isAuthorized } = useUI();
   const { id, quantity, product_type } = data ?? {};
   const { width } = useWindowSize();
   const { openModal } = useModalAction();
@@ -73,6 +75,7 @@ function RenderPopupOrAddToCart({
     );
   }
 
+  if (!isAuthorized) return null;
   return <AddToCart product={data} variant="venus" lang={lang} priceData={priceData} />;
 }
 function formatVariation(product: Product): string {
@@ -90,6 +93,7 @@ const ProductCardB2B: React.FC<ProductProps> = ({
   const { openModal } = useModalAction();
   const { t } = useTranslation(lang, 'common');
   const likes = useLikes();
+  const { isAuthorized } = useUI();
   const isFavorite = sku ? likes.isLiked(sku) : false;
   const [likeLoading, setLikeLoading] = React.useState<boolean>(false);
 
@@ -177,7 +181,7 @@ const ProductCardB2B: React.FC<ProductProps> = ({
             )}
           </div>
 
-          {priceData && (
+          {isAuthorized && priceData && (
           <button
             type="button"
             aria-label="Toggle wishlist"

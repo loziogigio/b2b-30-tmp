@@ -6,6 +6,7 @@ import { useTranslation } from 'src/app/i18n/client';
 import cn from 'classnames';
 import { ROUTES } from '@utils/routes';
 import { useUI } from '@contexts/ui.context';
+import { ERP_STATIC } from '@framework/utils/static';
 import { siteSettings } from '@settings/site-settings';
 import Container from '@components/ui/container';
 import Logo from '@components/ui/logo';
@@ -30,9 +31,8 @@ function Header({ lang }: { lang: string }) {
     displayMobileSearch,
     openSearch,
     closeSearch,
-    // isAuthorized,
+    isAuthorized,
   } = useUI();
-  const isAuthorized = true;
   const { openModal } = useModalAction();
   const siteHeaderRef = useRef<HTMLDivElement>(null);
   const siteSearchRef = useRef<HTMLDivElement>(null);
@@ -82,10 +82,12 @@ function Header({ lang }: { lang: string }) {
               <SearchIcon className="w-[22px] h-[22px] text-brand-dark text-opacity-40" />
             </button>
 
-            <CartButton className="mx-2.5 xl:mx-3.5" lang={lang} />
+            {isAuthorized ? (
+              <CartButton className="mx-2.5 xl:mx-3.5" lang={lang} />
+            ) : null}
 
             <div className="items-center hidden lg:flex shrink-0 mx-2.5 xl:mx-3.5">
-              <UserIcon className="text-brand-dark text-opacity-40" />
+              <UserIcon className={cn('text-opacity-40', isAuthorized ? 'text-brand' : 'text-brand-dark')} />
               <AuthMenu
                 isAuthorized={isAuthorized}
                 href={`/${lang}${ROUTES.ACCOUNT}`}
@@ -94,7 +96,9 @@ function Header({ lang }: { lang: string }) {
                   onClick: handleLogin,
                 }}
               >
-                {t('text-account')}
+                {isAuthorized && (ERP_STATIC?.company_name || ERP_STATIC?.username)
+                  ? (ERP_STATIC.company_name || ERP_STATIC.username)
+                  : t('text-account')}
               </AuthMenu>
             </div>
           </div>
@@ -133,7 +137,9 @@ function Header({ lang }: { lang: string }) {
               {/* Main menu (fetches its own data; no data prop) */}
               <B2BHeaderMenu className="flex" lang={lang} />
               <div className="flex items-center ltr:ml-auto rtl:mr-auto shrink-0">
-                <Delivery lang={lang} />
+                {isAuthorized ? (
+                  <Delivery lang={lang} />
+                ) : null}
               </div>
             </Container>
           </div>

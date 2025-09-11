@@ -15,6 +15,7 @@ import { fetchErpPrices } from '@framework/erp/prices';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { ERP_STATIC } from '@framework/utils/static';
+import { useUI } from '@contexts/ui.context';
 
 interface ProductsCarouselProps {
   sectionHeading: string;
@@ -91,6 +92,7 @@ const ProductsCarousel: React.FC<ProductsCarouselProps> = ({
   }, [products]);
 
   const erpEnabled = entity_codes.length > 0;
+  const { isAuthorized } = useUI();
 
   const erpPayload = {
     entity_codes,
@@ -100,7 +102,7 @@ const ProductsCarousel: React.FC<ProductsCarouselProps> = ({
   const { data: erpPricesData, isLoading: isLoadingErpPrices } = useQuery({
     queryKey: ['erp-prices', erpPayload],
     queryFn: () => fetchErpPrices(erpPayload),
-    enabled: erpEnabled,
+    enabled: isAuthorized && erpEnabled,
   });
   // console.log('sliderEnd', sliderEnd)
 

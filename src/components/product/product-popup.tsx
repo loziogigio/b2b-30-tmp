@@ -23,6 +23,7 @@ import { ERP_STATIC } from '@framework/utils/static';
 import type { ErpPriceData } from '@utils/transform/erp-prices';
 import { fetchErpPrices } from '@framework/erp/prices';
 import { useLikes } from '@contexts/likes/likes.context';
+import { useUI } from '@contexts/ui.context';
 
 // B2B bits
 import PackagingGrid from './packaging-grid';
@@ -38,8 +39,9 @@ export default function ProductPopup({ lang }: { lang: string }) {
 
   // Likes context
   const likes = useLikes();
+  const { isAuthorized } = useUI();
   const sku = String(product?.sku ?? '');
-  const favorite = sku ? likes.isLiked(sku) : false;
+  const favorite = isAuthorized && sku ? likes.isLiked(sku) : false;
   // --- Wishlist / share UI only ---
   const [addToWishlistLoader, setAddToWishlistLoader] = useState(false);
   const [shareButtonStatus, setShareButtonStatus] = useState(false);
@@ -52,7 +54,7 @@ export default function ProductPopup({ lang }: { lang: string }) {
   const { data: erpPricesData } = useQuery({
     queryKey: ['erp-prices', entityCodes],
     queryFn: () => fetchErpPrices(erpPayload),
-    enabled: entityCodes.length > 0,
+    enabled: isAuthorized && entityCodes.length > 0,
   });
 
   const erpPrice: ErpPriceData | undefined = Array.isArray(erpPricesData)
@@ -159,6 +161,7 @@ export default function ProductPopup({ lang }: { lang: string }) {
             {/* Wishlist / Share */}
             <div className="pt-3 md:pt-4">
               <div className="grid grid-cols-2 gap-2.5">
+                {isAuthorized && (
                 <Button
                   variant="border"
                   onClick={async () => {
@@ -180,6 +183,7 @@ export default function ProductPopup({ lang }: { lang: string }) {
                   )}
                   {t('text-wishlist')}
                 </Button>
+                )}
 
                 <div className="relative group">
                   <Button

@@ -26,6 +26,7 @@ import type { ErpPriceData } from '@utils/transform/erp-prices';
 import AddToCart from '@components/product/add-to-cart';
 import { fetchErpPrices } from '@framework/erp/prices';
 import { useLikes } from '@contexts/likes/likes.context';
+import { useUI } from '@contexts/ui.context';
 import PriceAndPromo from './price-and-promo';
 import PackagingGrid from './packaging-grid';
 import { da } from 'date-fns/locale';
@@ -199,10 +200,11 @@ const ProductB2BDetails: React.FC<{ lang: string; search: any }> = ({ lang, sear
   const entityCodes = [String(data?.id ?? '')].filter(Boolean); // string[]
   const erpPayload = { ...ERP_STATIC, entity_codes: entityCodes };
 
+  const { isAuthorized: isAuthForPrices } = useUI();
   const { data: erpPricesData } = useQuery({
     queryKey: ['erp-prices', entityCodes],
     queryFn: () => fetchErpPrices(erpPayload),
-    enabled: entityCodes.length > 0,
+    enabled: isAuthForPrices && entityCodes.length > 0,
   });
 
   // pick the ERP price slice for this product (shape may vary by backend)
@@ -212,8 +214,9 @@ const ProductB2BDetails: React.FC<{ lang: string; search: any }> = ({ lang, sear
 
   // Likes context
   const likes = useLikes();
+  const { isAuthorized } = useUI();
   const sku = String(data?.sku ?? '');
-  const favorite = sku ? likes.isLiked(sku) : false;
+  const favorite = isAuthorized && sku ? likes.isLiked(sku) : false;
   const [addToWishlistLoader, setAddToWishlistLoader] = useState(false);
   const [shareButtonStatus, setShareButtonStatus] = useState(false);
 
@@ -312,13 +315,16 @@ const ProductB2BDetails: React.FC<{ lang: string; search: any }> = ({ lang, sear
 
             {/* col 3: add to cart (right-aligned on md+) */}
             <div className="flex items-center justify-center md:justify-end">
-              <AddToCart lang={lang} product={data} priceData={erpPrice} className='justify-center md:justify-end' disabled={!erpPrice?.product_label_action?.ADD_TO_CART} />
+              {isAuthForPrices && (
+                <AddToCart lang={lang} product={data} priceData={erpPrice} className='justify-center md:justify-end' disabled={!erpPrice?.product_label_action?.ADD_TO_CART} />
+              )}
             </div>
           </div>
 
           {/* Wishlist / Share */}
           <div className="pt-3 md:pt-4">
             <div className="grid grid-cols-2 gap-2.5">
+              {isAuthorized && (
               <Button
                 variant="border"
                 onClick={addToWishlist}
@@ -332,6 +338,7 @@ const ProductB2BDetails: React.FC<{ lang: string; search: any }> = ({ lang, sear
                 )}
                 {t('text-wishlist')}
               </Button>
+              )}
 
               <div className="relative group">
                 <Button

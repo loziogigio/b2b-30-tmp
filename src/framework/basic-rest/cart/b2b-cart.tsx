@@ -9,6 +9,7 @@ import { useCart } from '@contexts/cart/cart.context';
 import { mapServerCart } from '@utils/adapter/cart-adapter';
 import { sameLine, type CartSummary, type Item } from '@contexts/cart/cart.utils';
 import { AddToCartInput } from '@utils/transform/cart';
+import { useUI } from '@contexts/ui.context';
 
 // ----- fetch cart  -----
 export const fetchCartData = async (): Promise<{ items: Item[]; summary: CartSummary }> => {
@@ -22,14 +23,18 @@ export const fetchCartData = async (): Promise<{ items: Item[]; summary: CartSum
   return mapServerCart(res);
 };
 
-export const useCartQuery = () =>
-  useQuery({
+export const useCartQuery = () => {
+  const { isAuthorized } = useUI();
+  const enabled = isAuthorized && !!ERP_STATIC.customer_code && !!ERP_STATIC.address_code;
+  return useQuery({
     queryKey: ['b2b-cart'],
     queryFn: fetchCartData,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
+    enabled,
+    refetchOnMount: enabled ? 'always' : false,
+    refetchOnWindowFocus: enabled,
     staleTime: 0,
   });
+};
 
 
 // delete the whole cart (id_cart)

@@ -6,6 +6,7 @@ import { useProductListQuery } from '@framework/product/get-b2b-product';
 import { LIMITS } from '@framework/utils/limits';
 import { useLikes } from '@contexts/likes/likes.context';
 import { useTranslation } from 'src/app/i18n/client';
+import { useUI } from '@contexts/ui.context';
 
 interface Props {
   lang: string;
@@ -16,6 +17,7 @@ interface Props {
 export default function LikedProductsProductsCarousel({ lang, carouselBreakpoint, limitSkus = 24 }: Props) {
   const { t } = useTranslation(lang, 'common');
   const likes = useLikes();
+  const { isAuthorized } = useUI();
 
   const skuList = useMemo(() => (likes?.items || []).map((it) => it.sku).filter(Boolean), [likes?.items]);
   const hasLikes = skuList.length > 0;
@@ -35,7 +37,7 @@ export default function LikedProductsProductsCarousel({ lang, carouselBreakpoint
       : { search: '' }
   );
 
-  if (!hasLikes) return null;
+  if (!isAuthorized || !hasLikes) return null;
   if (error) return null;
 
   return (

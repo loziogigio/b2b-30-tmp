@@ -2,7 +2,9 @@
 
 import cn from 'classnames';
 import Link from 'next/link';
-import { usePathname, useParams } from 'next/navigation';
+import { usePathname, useParams, useRouter } from 'next/navigation';
+import Cookies from 'js-cookie';
+import { useUI } from '@contexts/ui.context';
 
 type MenuItem = { label: string; href: (lang: string) => string; match: (pathname: string) => boolean };
 
@@ -21,6 +23,23 @@ export default function SidebarMenu() {
   const pathname = usePathname();
   const params = useParams<{ lang?: string }>();
   const lang = (params?.lang as string) || 'en';
+  const router = useRouter();
+  const { unauthorize } = useUI();
+
+  function handleLogout() {
+    try {
+      // Remove auth token
+      Cookies.remove('auth_token');
+      // Clear persisted app state that should reset on logout
+      if (typeof window !== 'undefined') {
+        try { window.localStorage.removeItem('erp-static'); } catch {}
+        try { window.localStorage.removeItem('likes-state'); } catch {}
+      }
+    } catch {}
+    // Update UI auth state and redirect to home
+    unauthorize?.();
+    router.replace(`/${lang}/hidros`);
+  }
 
   return (
     <nav className="rounded-2xl bg-white p-2 shadow-sm">
@@ -48,13 +67,12 @@ export default function SidebarMenu() {
       </ul>
 
       <div className="mt-4 border-t pt-2">
-        {/* TODO: hook this to your auth sign-out */}
-        <Link
-          href={`/${lang}/logout`}
+        <button
+          onClick={handleLogout}
           className="block w-full rounded-xl px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50"
         >
           Logout
-        </Link>
+        </button>
       </div>
     </nav>
   );

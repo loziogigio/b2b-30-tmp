@@ -14,6 +14,7 @@ import PackagingGrid from '../packaging-grid';
 import { formatAvailability } from '@utils/format-availability';
 import PriceAndPromo from '../price-and-promo';
 import { useLikes } from '@contexts/likes/likes.context';
+import { useUI } from '@contexts/ui.context';
 import { IoIosHeart, IoIosHeartEmpty } from 'react-icons/io';
 
 const AddToCart = dynamic(() => import('@components/product/add-to-cart'), { ssr: false });
@@ -61,6 +62,7 @@ export default function ProductRowB2B({
   const { t } = useTranslation(lang, 'common');
   const { openModal } = useModalAction();
   const likes = useLikes();
+  const { isAuthorized } = useUI();
 
   const {
     name,
@@ -240,30 +242,32 @@ export default function ProductRowB2B({
                   <Cell>
                     <div className="min-w-0">
                       {/* Wishlist (above, left-aligned) */}
-                      <div className="flex items-center gap-1 text-[12px] text-gray-600 mb-1">
-                        <span>{t('text-wishlist')}</span>
-                        <button
-                          type="button"
-                          aria-label="Toggle wishlist"
-                          className={cn(
-                            'p-1 rounded text-[18px] transition-colors',
-                            likes.isLiked(v.sku ?? sku) ? 'text-red-500' : 'text-gray-400 hover:text-brand'
-                          )}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const targetSku = String(v.sku ?? sku ?? '');
-                            if (!targetSku) return;
-                            likes.toggle(targetSku);
-                          }}
-                          title={t('text-wishlist')}
-                        >
-                          {likes.isLiked(v.sku ?? sku) ? (
-                            <IoIosHeart />
-                          ) : (
-                            <IoIosHeartEmpty />
-                          )}
-                        </button>
-                      </div>
+                      {isAuthorized && (
+                        <div className="flex items-center gap-1 text-[12px] text-gray-600 mb-1">
+                          <span>{t('text-wishlist')}</span>
+                          <button
+                            type="button"
+                            aria-label="Toggle wishlist"
+                            className={cn(
+                              'p-1 rounded text-[18px] transition-colors',
+                              likes.isLiked(v.sku ?? sku) ? 'text-red-500' : 'text-gray-400 hover:text-brand'
+                            )}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const targetSku = String(v.sku ?? sku ?? '');
+                              if (!targetSku) return;
+                              likes.toggle(targetSku);
+                            }}
+                            title={t('text-wishlist')}
+                          >
+                            {likes.isLiked(v.sku ?? sku) ? (
+                              <IoIosHeart />
+                            ) : (
+                              <IoIosHeartEmpty />
+                            )}
+                          </button>
+                        </div>
+                      )}
 
                       {/* Row: SKU + Brand */}
                       <div className="flex items-center text-xs text-gray-600 whitespace-nowrap gap-1.5 min-w-0">
@@ -342,8 +346,9 @@ export default function ProductRowB2B({
                   {/* 6)  Add */}
                   <Cell>
                     <div className="flex flex-col justify-center items-end gap-2">
-
-                      <AddToCart product={isPseudo ? (product as any) : v} priceData={vPrice} variant="venus" lang={lang} className='justify-end' />
+                      {isAuthorized && (
+                        <AddToCart product={isPseudo ? (product as any) : v} priceData={vPrice} variant="venus" lang={lang} className='justify-end' />
+                      )}
                     </div>
                   </Cell>
                 </div>

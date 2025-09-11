@@ -16,6 +16,7 @@ import Image from '@components/ui/image';
 import { productPlaceholder } from '@assets/placeholders';
 import Link from 'next/link';
 import { ERP_STATIC } from '@framework/utils/static';
+import { useUI } from '@contexts/ui.context';
 
 type VariantMinimal = {
   id: string | number;
@@ -28,6 +29,7 @@ type VariantMinimal = {
 export default function B2BProductVariantsQuickView({ lang }: { lang: string }) {
   const { data } = useModalState();
   const { closeModal } = useModalAction();
+  const { isAuthorized } = useUI();
 
   // normalize payload (allow { product } or raw)
   const raw = (data as any)?.product ?? data;
@@ -76,7 +78,7 @@ export default function B2BProductVariantsQuickView({ lang }: { lang: string }) 
     refetch,
   } = useInfiniteQuery({
     queryKey: ['erp-variant-prices', raw?.id ?? 'no-product', allIds.join(','), pageSize],
-    enabled: totalCount > 0,
+    enabled: isAuthorized && totalCount > 0,
     initialPageParam: 0,
     queryFn: async ({ pageParam }) => {
       const start = pageParam as number;
@@ -97,19 +99,28 @@ export default function B2BProductVariantsQuickView({ lang }: { lang: string }) 
     return merged;
   }, [pages]);
 
+  const getSortPrice = (variant: any): number => {
+    const row = priceMap[String(variant?.id)];
+    if (!row) return Number.POSITIVE_INFINITY;
+    const anyPD = row as any;
+    const v = anyPD.price_discount ?? anyPD.net_price ?? anyPD.price ?? anyPD.gross_price;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : Number.POSITIVE_INFINITY;
+  };
+
   const sorted = useMemo(() => {
     const copy = filtered.slice();
-    if (sortKey === 'sku-asc') {
+    if (!isAuthorized || sortKey === 'sku-asc') {
       copy.sort((a, b) => String(a.sku ?? a.id).localeCompare(String(b.sku ?? b.id)));
     } else {
       copy.sort((a, b) => {
-        const pa = priceMap[String(a.id)]?.final_price ?? Number.POSITIVE_INFINITY;
-        const pb = priceMap[String(b.id)]?.final_price ?? Number.POSITIVE_INFINITY;
+        const pa = getSortPrice(a);
+        const pb = getSortPrice(b);
         return sortKey === 'price-asc' ? pa - pb : pb - pa;
       });
     }
     return copy;
-  }, [filtered, sortKey, priceMap]);
+  }, [filtered, sortKey, priceMap, isAuthorized]);
 
   // ==== Only the GRID scrolls ====
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -200,9 +211,11 @@ export default function B2BProductVariantsQuickView({ lang }: { lang: string }) 
       {/* NON-SCROLLING controls */}
       <div className="border-b px-3 sm:px-4 py-2.5">
         <div className="flex flex-wrap items-center gap-2">
-          <div className="text-xs text-gray-600 whitespace-nowrap order-1 sm:order-none">
-            {loadedCount}/{totalCount} priced
-          </div>
+          {isAuthorized ? (
+            <div className="text-xs text-gray-600 whitespace-nowrap order-1 sm:order-none">
+              {loadedCount}/{totalCount} priced
+            </div>
+          ) : null}
 
           <input
             aria-label="Filter variants"
@@ -212,6 +225,7 @@ export default function B2BProductVariantsQuickView({ lang }: { lang: string }) 
             className="h-9 min-w-[150px] sm:w-[220px] flex-1 rounded-md border px-2 text-sm"
           />
 
+          {isAuthorized && (
           <select
             aria-label="Sort variants"
             value={sortKey}
@@ -224,6 +238,7 @@ export default function B2BProductVariantsQuickView({ lang }: { lang: string }) 
             <option value="price-asc">Sort: Price (Low→High)</option>
             <option value="price-desc">Sort: Price (High→Low)</option>
           </select>
+          )}
         </div>
 
         {error && (
@@ -260,7 +275,7 @@ export default function B2BProductVariantsQuickView({ lang }: { lang: string }) 
             );
           })}
 
-          {isFetching && !pages?.pages?.length &&
+          {isAuthorized && isFetching && !pages?.pages?.length &&
             Array.from({ length: Math.min(pageSize, sorted.length || totalCount) }).map((_, i) => (
               <ProductCardLoader key={`skeleton-${i}`} uniqueKey={`skeleton-${i}`} />
             ))
@@ -270,7 +285,7 @@ export default function B2BProductVariantsQuickView({ lang }: { lang: string }) 
         {/* sentinel inside the scrollable grid */}
         <div ref={sentinelRef} className="h-8" />
 
-        {hasNextPage && (
+        {isAuthorized && hasNextPage && (
           <div className="pt-2 text-center">
             <Button
               loading={isFetchingNextPage}
