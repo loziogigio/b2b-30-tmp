@@ -16,6 +16,42 @@ type Tab = {
 const STORAGE_KEY = 'b2b-search-tabs';
 const MAX_TABS = 10;
 
+// Safe UUID generator with fallbacks for older environments
+function randomId(): string {
+  try {
+    // Modern browsers / Node 16+
+    if (typeof crypto !== 'undefined' && typeof (crypto as any).randomUUID === 'function') {
+      return (crypto as any).randomUUID();
+    }
+    // Browsers with getRandomValues but no randomUUID
+    if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
+      const bytes = new Uint8Array(16);
+      crypto.getRandomValues(bytes);
+      bytes[6] = (bytes[6] & 0x0f) | 0x40; // version 4
+      bytes[8] = (bytes[8] & 0x3f) | 0x80; // variant 10
+      const hex = Array.from(bytes).map((b) => b.toString(16).padStart(2, '0'));
+      return (
+        hex[0] + hex[1] + hex[2] + hex[3] +
+        '-' + hex[4] + hex[5] +
+        '-' + hex[6] + hex[7] +
+        '-' + hex[8] + hex[9] +
+        '-' + hex[10] + hex[11] + hex[12] + hex[13] + hex[14] + hex[15]
+      );
+    }
+  } catch {}
+  // Last-resort Math.random-based v4-like id
+  let s = '';
+  for (let i = 0; i < 36; i++) {
+    if (i === 8 || i === 13 || i === 18 || i === 23) s += '-';
+    else if (i === 14) s += '4';
+    else {
+      const r = (Math.random() * 16) | 0;
+      s += (i === 19 ? (r & 0x3) | 0x8 : r).toString(16);
+    }
+  }
+  return s;
+}
+
 function parseQuery(qs: URLSearchParams): string {
   const entries = Array.from(qs.entries()).filter(([k]) => k !== 'view');
   entries.sort(([a], [b]) => (a > b ? 1 : a < b ? -1 : 0));
@@ -79,7 +115,7 @@ export default function SearchTabs({ lang }: { lang: string }) {
         list = stored.map((t, i) => (i === idx ? { ...t, query: currentQS } : t));
       } else {
         const next: Tab = {
-          id: crypto.randomUUID(),
+          id: randomId(),
           key: currentKey,
           label: labelFromQuery(searchParams),
           query: currentQS,
@@ -143,7 +179,7 @@ export default function SearchTabs({ lang }: { lang: string }) {
     const hasEmpty = tabs.some((t) => t.key === 'empty');
     if (hasEmpty) return goto(tabs.findIndex((t) => t.key === 'empty'));
     if (tabs.length >= MAX_TABS) return;
-    const t: Tab = { id: crypto.randomUUID(), key: 'empty', label: 'Search', query: '' };
+    const t: Tab = { id: randomId(), key: 'empty', label: 'Search', query: '' };
     const next = [...tabs, t];
     setTabs(next);
     setActive(next.length - 1);
