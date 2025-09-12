@@ -2,6 +2,7 @@
 
 module.exports = {
   reactStrictMode: true,
+  output: 'standalone',
   ...(process.env.NODE_ENV === 'production' && {
     typescript: {
       ignoreBuildErrors: true,

@@ -1,45 +1,79 @@
-# Install dependencies only when needed
-FROM node:20-alpine AS deps
+# syntax=docker/dockerfile:1.6
 
+ARG NODE_IMAGE=node:20-alpine
+ARG PNPM_VERSION=9.5.0
+
+# Base image with pnpm enabled
+FROM ${NODE_IMAGE} AS base
 WORKDIR /app
+ENV PNPM_HOME=/pnpm
+ENV PATH=$PNPM_HOME:$PATH
+RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@9.5.0 --activate
-
+# Install dependencies (cached by lockfile)
+FROM base AS deps
 COPY package.json pnpm-lock.yaml ./
+# Use BuildKit cache for the pnpm store for faster repeated builds
+RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
+    pnpm install --frozen-lockfile
 
-RUN pnpm install --frozen-lockfile
-
-# Rebuild the source code only when needed
-FROM node:20-alpine AS builder
-
-WORKDIR /app
-
-# Install pnpm here too
-RUN corepack enable && corepack prepare pnpm@9.5.0 --activate
-
+# Build the app
+FROM base AS build
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+ENV NEXT_TELEMETRY_DISABLED=1
+# Accept build-time args and expose them as env for Next build
+ARG NEXT_PUBLIC_REST_API_ENDPOINT
+ARG NEXT_PUBLIC_B2B_PUBLIC_REST_API_ENDPOINT
+ARG NEXT_PUBLIC_WEBSITE_URL
+ARG NEXT_PUBLIC_GOOGLE_API_KEY
+ARG NEXT_PUBLIC_STRIPE_PUBLIC_KEY
+ARG CMS_PUBLIC_REST_API_ENDPOINT
+ARG NEXT_PROJECT_CODE
 
-RUN pnpm build
+ENV NEXT_PUBLIC_REST_API_ENDPOINT=$NEXT_PUBLIC_REST_API_ENDPOINT
+ENV NEXT_PUBLIC_B2B_PUBLIC_REST_API_ENDPOINT=$NEXT_PUBLIC_B2B_PUBLIC_REST_API_ENDPOINT
+ENV NEXT_PUBLIC_WEBSITE_URL=$NEXT_PUBLIC_WEBSITE_URL
+ENV NEXT_PUBLIC_GOOGLE_API_KEY=$NEXT_PUBLIC_GOOGLE_API_KEY
+ENV NEXT_PUBLIC_STRIPE_PUBLIC_KEY=$NEXT_PUBLIC_STRIPE_PUBLIC_KEY
+ENV CMS_PUBLIC_REST_API_ENDPOINT=$CMS_PUBLIC_REST_API_ENDPOINT
+ENV NEXT_PROJECT_CODE=$NEXT_PROJECT_CODE
 
-# Production image, copy only necessary files
-FROM node:20-alpine AS runner
+RUN --mount=type=cache,id=next-cache,target=/app/.next/cache pnpm build
 
+# Production runtime using Next.js standalone output
+FROM ${NODE_IMAGE} AS runner
 WORKDIR /app
-
 ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
 
-# 👉 Install pnpm via Corepack
-RUN corepack enable && corepack prepare pnpm@9.5.0 --activate
+# Re-declare args and set runtime envs for SSR/server usage
+ARG NEXT_PUBLIC_REST_API_ENDPOINT
+ARG NEXT_PUBLIC_B2B_PUBLIC_REST_API_ENDPOINT
+ARG NEXT_PUBLIC_WEBSITE_URL
+ARG NEXT_PUBLIC_GOOGLE_API_KEY
+ARG NEXT_PUBLIC_STRIPE_PUBLIC_KEY
+ARG CMS_PUBLIC_REST_API_ENDPOINT
+ARG NEXT_PROJECT_CODE
 
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
+ENV NEXT_PUBLIC_REST_API_ENDPOINT=$NEXT_PUBLIC_REST_API_ENDPOINT
+ENV NEXT_PUBLIC_B2B_PUBLIC_REST_API_ENDPOINT=$NEXT_PUBLIC_B2B_PUBLIC_REST_API_ENDPOINT
+ENV NEXT_PUBLIC_WEBSITE_URL=$NEXT_PUBLIC_WEBSITE_URL
+ENV NEXT_PUBLIC_GOOGLE_API_KEY=$NEXT_PUBLIC_GOOGLE_API_KEY
+ENV NEXT_PUBLIC_STRIPE_PUBLIC_KEY=$NEXT_PUBLIC_STRIPE_PUBLIC_KEY
+ENV CMS_PUBLIC_REST_API_ENDPOINT=$CMS_PUBLIC_REST_API_ENDPOINT
+ENV NEXT_PROJECT_CODE=$NEXT_PROJECT_CODE
+
+# Run as non-root user for security
+RUN addgroup -S nextjs && adduser -S nextjs -G nextjs
+USER nextjs
+
+# Copy standalone server and static assets only
+COPY --from=build /app/.next/standalone ./
+COPY --from=build /app/.next/static ./.next/static
+COPY --from=build /app/public ./public
 
 EXPOSE 3000
-
-# Use shell to ensure pnpm works
-CMD ["sh", "-c", "pnpm start"]
+CMD ["node", "server.js"]

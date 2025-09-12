@@ -18,6 +18,12 @@ import BannerAllCarousel from '@components/common/banner-all-carousel';
 import B2BHomeProducts from '@components/product/feeds/b2b-home-products';
 import { fetchCmsB2BHomeData } from '@framework/product/get-b2b-cms';
 
+// This page depends on external APIs. Force dynamic rendering so Docker/CI builds
+// don't attempt to prerender it at build time.
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'force-no-store';
+
 
 export const metadata: Metadata = {
   title: 'Classic',
@@ -121,7 +127,13 @@ const flyerBreakpoints = {
 
 export default async function Page({ params }: { params: any }) {
   const { lang } = await params;
-  const sliderTopData = await fetchCmsB2BHomeData();
+  const sliderTopData = await fetchCmsB2BHomeData().catch(() => ({
+    slider_top_transformed: [],
+    home_brand_transformed: [],
+    promo_banner_transformed: [],
+    flyer_transformed: [],
+    home_category_filtered: [],
+  }));
 
   return (
     <>

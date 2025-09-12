@@ -27,10 +27,7 @@ const AllProductFeed: FC<ProductFeedProps> = ({
   const { t } = useTranslation(lang, 'common');
   const pathname = usePathname();
   const { getParams, query } = useQueryParam(pathname ?? '/');
-  const newQuery: any = getParams(
-    // @ts-ignore
-    `${process.env.NEXT_PUBLIC_WEBSITE_URL}${query}`,
-  );
+  const newQuery: any = getParams(query || '');
 
   const {
     isFetching: isLoading,

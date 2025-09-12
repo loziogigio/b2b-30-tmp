@@ -44,17 +44,18 @@ export function transformProduct(rawProducts: RawProduct[]): Product[] {
   });
 
   const transformSingle = (item: RawProduct): Product => {
-    const mainImage = item.images?.[0];
+    const imagesArray = Array.isArray(item.images) ? item.images : [];
+    const mainImage = imagesArray[0];
 
     const image: Attachment = mainImage
       ? transformImage(mainImage)
       : { id: 1, thumbnail: '', original: '' };
 
-    const gallery: Attachment[] = item.images?.map((img, index) => ({
+    const gallery: Attachment[] = imagesArray.map((img, index) => ({
       id: index + 1,
-      thumbnail: img.main,
-      original: img.original,
-    })) || [];
+      thumbnail: img?.main || '',
+      original: img?.original || '',
+    }));
 
     const brand: Brand | undefined = item.brand
       ? {
@@ -72,19 +73,19 @@ export function transformProduct(rawProducts: RawProduct[]): Product[] {
       ? transformProduct(item.children_items)
       : [];
 
-    // 🔹 map docs -> Product.docs
-    const docs =
-      item.docs?.map((d, i) => {
-        const filename = d.url?.split('/').pop() ?? '';
-        const ext = filename.includes('.') ? filename.split('.').pop()?.toLowerCase() : undefined;
-        return {
-          id: i + 1,
-          url: d.url,
-          area: d.media_area_id,
-          filename,
-          ext,
-        };
-      }) || [];
+    // 🔹 map docs -> Product.docs (defensive: API may return "" or object)
+    const docsArray = Array.isArray(item.docs) ? item.docs : [];
+    const docs = docsArray.map((d, i) => {
+      const filename = d?.url?.split('/').pop() ?? '';
+      const ext = filename.includes('.') ? filename.split('.').pop()?.toLowerCase() : undefined;
+      return {
+        id: i + 1,
+        url: d?.url || '',
+        area: (d as any)?.media_area_id,
+        filename,
+        ext,
+      };
+    });
 
     return {
       id: item.id,
