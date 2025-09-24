@@ -38,18 +38,6 @@ export default function Cart({ lang }: { lang: string }) {
             {t('text-close') || 'Chiudi'}
             <span className="text-xs leading-none">×</span>
           </button>
-
-          {/* {!isEmpty && (
-            <button
-              onClick={() => resetCart()}
-              className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase text-gray-500 hover:text-gray-700"
-              aria-label={t('text-clear-all')}
-              title={t('text-clear-all')}
-            >
-              <DeleteIcon className="h-3.5 w-3.5" />
-              <span>{t('text-clear-all')}</span>
-            </button>
-          )} */}
         </div>
         <div className="flex items-center justify-between flex-col">
           <div className="mb-3 flex justify-between w-full">
