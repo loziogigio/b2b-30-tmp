@@ -226,7 +226,7 @@ export function transformErpPricesResponse(response: any): Record<string, ErpPri
   return transformed;
 }
 
-function formatPromoDate(dateStr?: string): string {
+export function formatPromoDate(dateStr?: string): string {
   if (!dateStr) return '';
   // Handles both DD/MM/YY and MM/DD/YYYY formats
   const parts = dateStr.split(' ')[0].split('/');

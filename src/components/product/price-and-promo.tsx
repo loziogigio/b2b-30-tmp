@@ -3,7 +3,7 @@
 
 import React from 'react';
 import cn from 'classnames';
-import type { ErpPriceData } from '@utils/transform/erp-prices';
+import { formatPromoDate, type ErpPriceData } from '@utils/transform/erp-prices';
 
 export type PriceSlice = Pick<
   ErpPriceData,
@@ -48,6 +48,9 @@ export default function PriceAndPromo({
   const discount_description = anyPD.discount_description;
   const is_promo: boolean = Boolean(anyPD.is_promo);
   const count_promo: number = Number(anyPD.count_promo ?? 0);
+  const is_improving_promo: boolean = Boolean(anyPD.is_improving_promo);
+  const end_promo_date = anyPD.end_promo_date;
+  const promoEndDisplay = formatPromoDate(end_promo_date);
 
   if (price_discount == null) return null;
 
@@ -74,15 +77,31 @@ export default function PriceAndPromo({
       >
         {withSchemaOrg && <meta itemProp="priceCurrency" content={currency} />}
 
-        <div className="grid grid-cols-[auto_auto] gap-x-8 items-start w-fit">
-          <div className="flex flex-col items-end text-xs leading-tight text-gray-600 whitespace-nowrap">
-            {showPrev ? (
-              <span className="line-through">{gross_price} €</span>
-            ) : (
-              <span className="opacity-0 select-none">—</span>
-            )}
+        <div className="flex items-center justify-between gap-4 w-full max-w-[280px]">
+          <div className="flex flex-col items-center text-center gap-1">
+            <div className="flex items-baseline gap-2">
+              {showPrev && (
+                <span className="line-through uppercase tracking-wide text-xs text-gray-500">
+                  {gross_price} €
+                </span>
+              )}
+              <div className={cn('text-[22px] font-bold flex items-baseline gap-1', is_promo ? 'text-red-500' : 'text-black')}>
+                <span {...(withSchemaOrg ? { itemProp: 'price' } : {})}>{price_discount}</span>
+                <span className="text-base font-normal">€</span>
+              </div>
+              {count_promo > 0 && (
+                <button
+                  type="button"
+                  onClick={onPromosClick}
+                  title="View all promotions"
+                  className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
+                >
+                  +{count_promo}
+                </button>
+              )}
+            </div>
             {discountLines.length > 0 && showPrev ? (
-              <div className="text-right">
+              <div className="text-xs text-gray-500 leading-tight">
                 {discountLines.map((d, i) => (
                   <div key={i}>{d}</div>
                 ))}
@@ -90,24 +109,16 @@ export default function PriceAndPromo({
             ) : null}
           </div>
 
-          <div
-            className={cn(
-              'font-bold text-left px-2 py-1 rounded text-[22px] flex items-center gap-2',
-              is_promo ? 'text-red-500' : 'text-black'
-            )}
-          >
-            <span {...(withSchemaOrg ? { itemProp: 'price' } : {})}>{price_discount}</span> €
-            {count_promo > 0 && (
-              <button
-                type="button"
-                onClick={onPromosClick}
-                title="View all promotions"
-                className="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-semibold"
-              >
-                +{count_promo}
-              </button>
-            )}
-          </div>
+          {is_improving_promo && (
+            <div className="flex flex-col items-center text-red-500 uppercase tracking-wide text-xs">
+              <span className="bg-red-500 text-white px-2 py-0.5 rounded-full font-semibold">Offerta</span>
+              {promoEndDisplay ? (
+                <span className="mt-0.5 text-[11px] normal-case font-semibold tracking-normal">
+                  {promoEndDisplay}
+                </span>
+              ) : null}
+            </div>
+          )}
         </div>
       </div>
     </Wrapper>
