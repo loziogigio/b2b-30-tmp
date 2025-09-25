@@ -12,12 +12,21 @@ import { AddToCartInput } from '@utils/transform/cart';
 import { useUI } from '@contexts/ui.context';
 
 // ----- fetch cart  -----
-export const fetchCartData = async (): Promise<{ items: Item[]; summary: CartSummary }> => {
+export interface FetchCartOptions {
+  cartId?: string | number;
+  customerCode?: string;
+  addressCode?: string;
+  username?: string;
+}
+
+export const fetchCartData = async (
+  options?: FetchCartOptions
+): Promise<{ items: Item[]; summary: CartSummary }> => {
   const res = await post<any>(API_ENDPOINTS_B2B.GET_CART, {
-    id_cart: ERP_STATIC.id_cart,
-    client_id: ERP_STATIC.customer_code,
-    address_code: ERP_STATIC.address_code,
-    username: ERP_STATIC.username,
+    id_cart: options?.cartId ?? ERP_STATIC.id_cart,
+    client_id: options?.customerCode ?? ERP_STATIC.customer_code,
+    address_code: options?.addressCode ?? ERP_STATIC.address_code,
+    username: options?.username ?? ERP_STATIC.username,
     ext_call: ERP_STATIC.ext_call,
   });
   return mapServerCart(res);

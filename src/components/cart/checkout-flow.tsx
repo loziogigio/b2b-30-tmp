@@ -7,6 +7,7 @@ import CartTableB2B from '@components/cart/cart-table-b2b';
 import CheckoutSendOrder from '@components/checkout/checkout-send-order';
 import { useCart } from '@contexts/cart/cart.context';
 import CartTotals from './cart-totals';
+import SavedCartsManager from './saved-carts-manager';
 
 function formatEUR(n: number) {
   return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n);
@@ -142,6 +143,8 @@ export default function CheckoutFlow({
           )}
         </div>
       </div>
+
+      <SavedCartsManager lang={lang} />
 
       {/* CART (collapsible) */}
       <div
