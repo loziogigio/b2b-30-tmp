@@ -61,7 +61,7 @@ export default function PriceAndPromo({
 
   return (
     <Wrapper
-      className={cn('flex items-center justify-center px-3 py-1', className)}
+      className={cn('flex items-center justify-center px-0 py-0', className)}
       {...(withSchemaOrg ? { itemScope: true, itemType: 'https://schema.org/Product' } : {})}
     >
       {withSchemaOrg && (
@@ -79,11 +79,20 @@ export default function PriceAndPromo({
 
         <div className="flex items-center justify-between gap-4 w-full max-w-[280px]">
           <div className="flex flex-col items-center text-center gap-1">
-            <div className="flex items-baseline gap-2">
+            <div className="flex items-center gap-2">
               {showPrev && (
-                <span className="line-through uppercase tracking-wide text-xs text-gray-500">
-                  {gross_price} €
-                </span>
+                <div>
+                  <span className="line-through uppercase tracking-wide text-xs text-gray-500">
+                    {gross_price} €
+                  </span>
+                  {discountLines.length > 0 && showPrev ? (
+                    <div className="text-xs text-gray-500 leading-tight">
+                      {discountLines.map((d, i) => (
+                        <div key={i}>{d}</div>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
               )}
               <div className={cn('text-[22px] font-bold flex items-baseline gap-1', is_promo ? 'text-red-500' : 'text-black')}>
                 <span {...(withSchemaOrg ? { itemProp: 'price' } : {})}>{price_discount}</span>
@@ -100,13 +109,6 @@ export default function PriceAndPromo({
                 </button>
               )}
             </div>
-            {discountLines.length > 0 && showPrev ? (
-              <div className="text-xs text-gray-500 leading-tight">
-                {discountLines.map((d, i) => (
-                  <div key={i}>{d}</div>
-                ))}
-              </div>
-            ) : null}
           </div>
 
           {is_improving_promo && (

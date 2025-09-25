@@ -139,7 +139,7 @@ export default function ProductPopup({ lang }: { lang: string }) {
             <B2BInfoBlock product={product} priceData={erpPrice} lang={lang} />
 
             {/* 3-up row: Packaging | Price | AddToCart */}
-            <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-3">
+            <div className="mt-2 grid grid-cols-1 gap-1 md:grid-cols-3">
               <div>
                 <PackagingGrid pd={erpPrice} />
               </div>

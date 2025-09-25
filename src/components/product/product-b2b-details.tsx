@@ -302,7 +302,7 @@ const ProductB2BDetails: React.FC<{ lang: string; search: any }> = ({ lang, sear
 
 
           {/* === 3-up row: Packaging | Price | AddToCart === */}
-          <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-3">
+          <div className="mt-2 grid grid-cols-1 gap-1 md:grid-cols-3">
             {/* col 1: packaging */}
             <div>
               <PackagingGrid pd={erpPrice} />
