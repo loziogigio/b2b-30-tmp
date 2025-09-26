@@ -35,6 +35,14 @@ const CartItem: React.FC<CartItemProps> = ({ lang, item }) => {
   const { price: unitPrice } = usePrice({ amount: unit, currencyCode: 'EUR' });
   const { price: linePrice } = usePrice({ amount: line, currencyCode: 'EUR' });
 
+  const normalizedLang = (lang ?? 'it').trim().replace(/^\/+|\/+$|\s+/g, '') || 'it';
+  const skuSegment = typeof item?.sku === 'string' && item.sku.trim() !== ''
+    ? encodeURIComponent(item.sku.trim())
+    : '';
+  const productHref = skuSegment
+    ? `/${normalizedLang}${ROUTES.PRODUCT}/${skuSegment}`
+    : `/${normalizedLang}${ROUTES.PRODUCT}`;
+
   return (
     <div
       className="group relative flex w-full items-center justify-start gap-3 border-b border-border-one/70 py-3 last:border-b-0 md:py-3.5"
@@ -65,7 +73,7 @@ const CartItem: React.FC<CartItemProps> = ({ lang, item }) => {
         <div className="min-w-0">
           <div className="text-xs text-blue-600 font-semibold">{item?.sku}</div>
           <Link
-            href={`/${lang}${ROUTES.PRODUCT}/${item?.slug}`}
+            href={productHref}
             className="block truncate text-[13px] font-medium text-brand-dark transition hover:text-brand md:text-sm"
           >
             {item?.name}

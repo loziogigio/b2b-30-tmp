@@ -263,5 +263,12 @@
   "text-quantity": "Quantità",
   "text-saved-carts-refresh-hint": "Totali e quantità vengono aggiornati dal server.",
   "text-refresh": "Aggiorna",
-  "text-refreshing": "Aggiornamento..."
+  "text-refreshing": "Aggiornamento...",
+  "text-show-saved-carts": "Mostra carrelli salvati",
+  "text-hide-saved-carts": "Nascondi carrelli salvati",
+  "text-cart-already-saved": "Questo carrello è già salvato come \"{{name}}\".",
+  "text-cart-already-saved-generic": "Questo carrello è già salvato.",
+  "text-deactivate-cart": "Disattiva",
+  "text-deactivating-cart": "Disattivazione...",
+  "text-saved-cart-missing-items": "Aggiungi prodotti al carrello prima di salvarlo."
 }

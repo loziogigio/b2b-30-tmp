@@ -152,14 +152,14 @@ export default function CheckoutFlow({
         ref={cartRef}
         className={cn(
           'overflow-hidden rounded-md border border-gray-200 bg-white',
-          'transition-[max-height] duration-500 ease-in-out'
+          'transition-[max-height] duration-500 ease-in-out mt-4'
         )}
         style={{ maxHeight: stage === 'cart' ? `${cartMaxH}px` : 0 }}
         aria-hidden={stage !== 'cart'}
       >
         <div className="p-2">
           {/* ⬇️ pass items + qty handler */}
-          <CartTableB2B />
+          <CartTableB2B lang={lang} />
         </div>
       </div>
 

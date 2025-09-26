@@ -121,7 +121,7 @@ const ProductsCarousel: React.FC<ProductsCarouselProps> = ({
               <img
                 src={headerImageSrc}
                 alt={headerImageAlt || sectionHeading}
-                className="h-10 w-10 rounded object-cover sm:h-10 sm:w-10"
+                className="h-20 w-20 rounded object-cover sm:h-30 sm:w-30"
                 loading="lazy"
                 decoding="async"
               />

@@ -263,5 +263,12 @@
   "text-quantity": "Quantity",
   "text-saved-carts-refresh-hint": "Totals and item counts are refreshed from the server.",
   "text-refresh": "Refresh",
-  "text-refreshing": "Refreshing..."
+  "text-refreshing": "Refreshing...",
+  "text-show-saved-carts": "Show saved carts",
+  "text-hide-saved-carts": "Hide saved carts",
+  "text-cart-already-saved": "This cart is already saved as \"{{name}}\".",
+  "text-cart-already-saved-generic": "This cart is already saved.",
+  "text-deactivate-cart": "Deactivate",
+  "text-deactivating-cart": "Deactivating...",
+  "text-saved-cart-missing-items": "Add items to your cart before saving it."
 }

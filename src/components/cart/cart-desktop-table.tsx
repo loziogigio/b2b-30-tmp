@@ -8,6 +8,8 @@ import PackagingGrid from '@components/product/packaging-grid';
 import PriceAndPromo, { PriceSlice } from '@components/product/price-and-promo';
 import AddToCart from '@components/product/add-to-cart';
 import UpdateCart from '@components/product/update-cart';
+import Link from 'next/link';
+import { ROUTES } from '@utils/routes';
 
 export type SortKey = 'rowId' | 'sku' | 'name' | 'priceDiscount' | 'quantity' | 'lineTotal';
 
@@ -22,6 +24,7 @@ type Props = {
   sortAsc?: boolean;
   className?: string;
   formatCurrency?: (n: number) => string;
+  lang?: string;
 };
 
 const defaultCurrency = (n: number) =>
@@ -42,6 +45,7 @@ export default function CartDesktopTable({
   sortAsc,
   className,
   formatCurrency = defaultCurrency,
+  lang = 'it',
 }: Props) {
   const sortBtn = (key: SortKey, label: React.ReactNode, extraClass = '') => (
     <th
@@ -106,18 +110,58 @@ export default function CartDesktopTable({
               ),
             };
 
+            const normalizedLang = (lang ?? 'it').trim().replace(/^\/+|\/+$|\s+/g, '') || 'it';
+            const langPrefix = `/${normalizedLang}`;
+            const rawLink = typeof (r as any)?.link === 'string' ? (r as any).link.trim() : '';
+            const skuSegment = typeof r.sku === 'string' && r.sku.trim() !== ''
+              ? encodeURIComponent(r.sku.trim())
+              : '';
+
+            const toLangHref = (base: string) => {
+              if (!base) return '';
+              if (base.startsWith('http://') || base.startsWith('https://')) return base;
+              if (base.startsWith(langPrefix)) return base;
+              if (base.startsWith('/')) return `${langPrefix}${base}`;
+              return `${langPrefix}/${base}`;
+            };
+
+            const productHref = rawLink
+              ? toLangHref(rawLink)
+              : skuSegment
+              ? `${langPrefix}${ROUTES.PRODUCT}/${skuSegment}`
+              : langPrefix;
+
             return (
               <tr key={String(r.id)} className="hover:bg-gray-50">
                 <td className="px-3 py-3 text-gray-600">{(r as any).rowId ?? r.id}</td>
 
                 <td className="px-3 py-3">
                   <div className="flex items-center gap-3">
-                    <div className="relative h-12 w-12 overflow-hidden rounded-md ring-1 ring-gray-200 bg-gray-100">
-                      {r.image ? <Image src={r.image} alt={r.name ?? ''} fill className="object-cover" /> : null}
-                    </div>
+                    <Link
+                      href={productHref}
+                      className="relative h-12 w-12 overflow-hidden rounded-md ring-1 ring-gray-200 bg-gray-100 focus:outline-none focus:ring-2 focus:ring-brand"
+                      title={r.name ?? r.sku ?? 'Product detail'}
+                    >
+                      {r.image ? (
+                        <Image src={r.image} alt={r.name ?? ''} fill className="object-cover" />
+                      ) : null}
+                      <span className="sr-only">Visit {r.name ?? r.sku ?? 'product'}</span>
+                    </Link>
                     <div className="min-w-0">
-                      <div className="text-xs text-blue-600 font-semibold">{r.sku}</div>
-                      <div className="truncate font-medium text-gray-900">{r.name}</div>
+                      <Link
+                        href={productHref}
+                        className="text-xs font-semibold text-blue-600 hover:underline focus:outline-none focus:underline"
+                        title={r.sku ?? undefined}
+                      >
+                        {r.sku}
+                      </Link>
+                      <Link
+                        href={productHref}
+                        className="block truncate font-medium text-gray-900 hover:text-brand focus:outline-none focus:text-brand"
+                        title={r.name ?? undefined}
+                      >
+                        {r.name}
+                      </Link>
                       <div className="truncate text-[12px] text-gray-700">
                         {r.model ? <span className="font-semibold">MODELLO:</span> : null} {r.model || '-'}
                       </div>

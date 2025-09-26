@@ -48,13 +48,11 @@ export default function Cart({ lang }: { lang: string }) {
           </div>
           <div className="mb-3 w-full items-center justify-center">
             <Link
-              href={isEmpty === false ? `/${lang}${ROUTES.CHECKOUT}` : `/${lang}`}
+              href={`/${lang}${ROUTES.CHECKOUT}`}
               onClick={closeDrawer}
               className={cn(
                 'flex w-full items-center justify-center rounded bg-gray-600 px-4 py-2.5',
-                'text-sm font-semibold text-white transition hover:bg-gray-700 md:py-3',
-                { 'cursor-not-allowed !text-white/40 bg-gray-400 hover:bg-gray-400': isEmpty }
-              )}
+                'text-sm font-semibold text-white transition hover:bg-gray-700 md:py-3'              )}
             >
               VAI AL CARRELLO
             </Link>

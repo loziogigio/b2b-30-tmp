@@ -12,6 +12,8 @@ import {
   renderCartExcelHtml,
   renderCartPdfHtml,
 } from './export/cart-export';
+import { BsFiletypePdf, BsFiletypeXlsx } from 'react-icons/bs';
+import { ImSpinner2 } from 'react-icons/im';
 
 type SortKey = 'rowId' | 'sku' | 'name' | 'priceDiscount' | 'quantity' | 'lineTotal';
 
@@ -29,7 +31,7 @@ const SORT_LABELS: Record<SortKey, string> = {
   lineTotal: 'Line total',
 };
 
-export default function CartTableB2B() {
+export default function CartTableB2B({ lang = 'it' }: { lang?: string }) {
   const { items, setItemQuantity, resetCart, meta } = useCart();
 
   const [query, setQuery] = useState('');
@@ -338,12 +340,17 @@ export default function CartTableB2B() {
             onClick={handleExportPdf}
             disabled={isExportingPdf || !baseRows.length}
             className={cn(
-              'h-10 rounded-md border border-gray-300 px-3 font-semibold text-gray-700 hover:bg-gray-50',
+              'flex h-10 w-10 items-center justify-center rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50',
               (isExportingPdf || !baseRows.length) && 'cursor-not-allowed opacity-60'
             )}
             title="Export cart as PDF"
           >
-            {isExportingPdf ? 'Preparing…' : 'Export PDF'}
+            {isExportingPdf ? (
+              <ImSpinner2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <BsFiletypePdf className="h-5 w-5 text-red-600" aria-hidden="true" />
+            )}
+            <span className="sr-only">Export PDF</span>
           </button>
 
           <button
@@ -351,12 +358,17 @@ export default function CartTableB2B() {
             onClick={handleExportExcel}
             disabled={isExportingExcel || !baseRows.length}
             className={cn(
-              'h-10 rounded-md border border-gray-300 px-3 font-semibold text-gray-700 hover:bg-gray-50',
+              'flex h-10 w-10 items-center justify-center rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50',
               (isExportingExcel || !baseRows.length) && 'cursor-not-allowed opacity-60'
             )}
             title="Export cart as Excel"
           >
-            {isExportingExcel ? 'Preparing…' : 'Export Excel'}
+            {isExportingExcel ? (
+              <ImSpinner2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            ) : (
+              <BsFiletypeXlsx className="h-5 w-5 text-emerald-600" aria-hidden="true" />
+            )}
+            <span className="sr-only">Export Excel</span>
           </button>
 
           {/* Delete cart button */}
@@ -378,7 +390,7 @@ export default function CartTableB2B() {
       </div>
 
       {/* ===== Mobile cards (< md) ===== */}
-      <CartMobileList rows={rows} onInc={inc} onDec={dec} />
+      <CartMobileList rows={rows} onInc={inc} onDec={dec} lang={lang} />
 
       {/* ===== Desktop table (≥ md) ===== */}
       <CartDesktopTable
@@ -388,6 +400,7 @@ export default function CartTableB2B() {
         onRequestSort={(k: SortKey) => toggleSort(k)}
         sortKey={sortKey}
         sortAsc={sortAsc}
+        lang={lang}
       />
 
       {/* Totals */}

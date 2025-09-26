@@ -37,7 +37,7 @@ export const useCartQuery = () => {
   const enabled = isAuthorized && !!ERP_STATIC.customer_code && !!ERP_STATIC.address_code;
   return useQuery({
     queryKey: ['b2b-cart'],
-    queryFn: fetchCartData,
+    queryFn: () => fetchCartData(),
     enabled,
     refetchOnMount: enabled ? 'always' : false,
     refetchOnWindowFocus: enabled,

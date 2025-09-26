@@ -18,7 +18,7 @@ interface CartProviderState extends State {
   isInCart: (id: Item['id']) => boolean;
   isInStock: (id: Item['id']) => boolean;
   setItemQuantity: (item: Item, quantity: number) => void;
-  resetCart: () => Promise<void>;
+  resetCart: (idCart?: number | string) => Promise<void>;
   hydrateFromServer: (serverItems: Item[], mode?: 'replace' | 'merge') => void;
   getCart: (mode?: 'replace' | 'merge') => Promise<void>;
   setCartSummary: (meta: CartSummary | null) => void;
@@ -135,10 +135,10 @@ export function CartProvider(props: React.PropsWithChildren<any>) {
   );
 
   // ---- NEW: resetCart that calls backend DELETE_CART and re-syncs
-  // signature in context type: resetCart: (idCart: number | string) => Promise<void>
+  // signature in context type: resetCart: (idCart?: number | string) => Promise<void>
 
   const resetCart = React.useCallback(
-    async (idCart: number | string) => {
+    async (idCart?: number | string) => {
       try {
         if (idCart != null && idCart !== '') {
           await deleteCart(idCart);
@@ -169,7 +169,16 @@ export function CartProvider(props: React.PropsWithChildren<any>) {
       setCartSummary,
       addToCartServer
     }),
-    [getItemFromCart, isInCart, isInStock, state, getCart, setCartSummary, addToCartServer]
+    [
+      getItemFromCart,
+      isInCart,
+      isInStock,
+      state,
+      getCart,
+      setCartSummary,
+      addToCartServer,
+      resetCart,
+    ]
   );
 
   return <cartContext.Provider value={value} {...props} />;

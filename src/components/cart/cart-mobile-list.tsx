@@ -3,10 +3,12 @@
 import React from 'react';
 import Image from 'next/image';
 import cn from 'classnames';
+import Link from 'next/link';
 import { Item } from '@contexts/cart/cart.utils';
 import PriceAndPromo, { PriceSlice } from '@components/product/price-and-promo';
 import PackagingGrid from '@components/product/packaging-grid';
 import UpdateCart from '@components/product/update-cart';
+import { ROUTES } from '@utils/routes';
 
 const defaultCurrency = (n: number) =>
   new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n);
@@ -23,6 +25,7 @@ type Props = {
   onDec?: (row: Item) => void;
   formatCurrency?: (n: number) => string;
   className?: string;
+  lang?: string;
 };
 
 export default function CartMobileList({
@@ -31,6 +34,7 @@ export default function CartMobileList({
   onDec,
   formatCurrency = defaultCurrency,
   className,
+  lang = 'it',
 }: Props) {
   return (
     <div className={cn('md:hidden space-y-2', className)}>
@@ -68,20 +72,58 @@ export default function CartMobileList({
           ),
         };
 
+        const normalizedLang = (lang ?? 'it').trim().replace(/^\/+|\/+$|\s+/g, '') || 'it';
+        const langPrefix = `/${normalizedLang}`;
+        const rawLink = typeof (r as any)?.link === 'string' ? (r as any).link.trim() : '';
+        const skuSegment = typeof r.sku === 'string' && r.sku.trim() !== ''
+          ? encodeURIComponent(r.sku.trim())
+          : '';
+
+        const toLangHref = (base: string) => {
+          if (!base) return '';
+          if (base.startsWith('http://') || base.startsWith('https://')) return base;
+          if (base.startsWith(langPrefix)) return base;
+          if (base.startsWith('/')) return `${langPrefix}${base}`;
+          return `${langPrefix}/${base}`;
+        };
+
+        const productHref = rawLink
+          ? toLangHref(rawLink)
+          : skuSegment
+          ? `${langPrefix}${ROUTES.PRODUCT}/${skuSegment}`
+          : langPrefix;
+
         return (
           <div key={String(r.id)} className="rounded-md border border-gray-200 bg-white p-3">
             <div className="flex items-start gap-3">
-              <div className="relative h-14 w-14 overflow-hidden rounded-md ring-1 ring-gray-200 bg-gray-100 shrink-0">
+              <Link
+                href={productHref}
+                className="relative h-14 w-14 overflow-hidden rounded-md ring-1 ring-gray-200 bg-gray-100 shrink-0 focus:outline-none focus:ring-2 focus:ring-brand"
+                title={r.name ?? r.sku ?? 'Product detail'}
+              >
                 {r.image ? <Image src={r.image} alt={r.name ?? ''} fill className="object-cover" /> : null}
-              </div>
+                <span className="sr-only">Visit {r.name ?? r.sku ?? 'product'}</span>
+              </Link>
 
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-semibold text-blue-600">{r.sku}</span>
+                  <Link
+                    href={productHref}
+                    className="text-[11px] font-semibold text-blue-600 hover:underline focus:outline-none focus:underline"
+                    title={r.sku ?? undefined}
+                  >
+                    {r.sku}
+                  </Link>
                   <span className="text-[11px] text-gray-500">N {r.rowId ?? r.id}</span>
                 </div>
 
-                <div className="truncate text-[13px] font-semibold text-gray-900">{r.name}</div>
+                <Link
+                  href={productHref}
+                  className="truncate text-[13px] font-semibold text-gray-900 hover:text-brand focus:outline-none focus:text-brand text-left w-full"
+                  title={r.name ?? undefined}
+                >
+                  {r.name}
+                </Link>
 
                 {r.model && (
                   <div className="text-[12px] text-gray-700">

@@ -122,3 +122,17 @@ export async function activateCart(options: { cartId: number | string }) {
 
   return summary;
 }
+
+export async function deactivateCart(options: { cartId: number | string; label?: string }) {
+  ensureCustomerContext();
+
+  const payload = {
+    label: options.label ?? `Cart #${options.cartId}`,
+    cart_id: Number(options.cartId),
+    customer_code: ERP_STATIC.customer_code,
+    address_code: ERP_STATIC.address_code,
+  };
+
+  const raw = await post(API_ENDPOINTS_B2B.CART_SAVE, payload);
+  return toSavedCart(raw as SavedCartListResponse['data'][number]);
+}
