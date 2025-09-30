@@ -118,3 +118,16 @@
   padding-top: 10px;
   padding-bottom: 40px;
 }
+
+/* Prevent zoom/scale on product gallery images when using magnifier */
+#productGallery .swiper-slide button > div,
+#productGallery .swiper-slide button > div > *,
+#productGallery .swiper-slide > div {
+  transform: none !important;
+}
+#productGallery .swiper-slide button:hover > div,
+#productGallery .swiper-slide button:hover > div > *,
+#productGallery .swiper-slide:hover > div {
+  transform: none !important;
+  scale: 1 !important;
+}

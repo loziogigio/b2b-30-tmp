@@ -32,309 +32,20 @@ import PriceAndPromo from './price-and-promo';
 import PackagingGrid from './packaging-grid';
 import { da } from 'date-fns/locale';
 import { formatAvailability } from '@utils/format-availability';
+import B2BInfoBlock from './details/b2b-info-block';
+import ProductImageLightbox from './details/product-image-lightbox';
 
 // add inside ProductB2BDetails.tsx (same file, above the component's return)
 
-export function B2BInfoBlock({
-  product,
-  priceData,
-  lang,
-}: {
-  product: any;
-  priceData?: ErpPriceData;
-  lang: string;
-}) {
-  // --- helpers
-  type SupplierArrival = {
-    expected_date?: string;          // YYYY-MM-DD or DD/MM/YYYY
-    confirmed_date?: string;         // YYYY-MM-DD or DD/MM/YYYY
-    DataArrivoPrevista?: string;     // fallback (raw)
-    DataArrivoConfermata?: string;   // fallback (raw)
-    NumeroDellaSettimana?: number;
-  };
-
-  const dmyToIso = (s?: string) => {
-    if (!s) return undefined;
-    const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-    return m ? `${m[3]}-${m[2]}-${m[1]}` : s;
-  };
-  const isoToDmy = (s?: string) => {
-    if (!s) return undefined;
-    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    return m ? `${m[3]}/${m[2]}/${m[1]}` : s;
-  };
-  const parseDate = (s?: string) => {
-    if (!s) return NaN;
-    const iso = dmyToIso(s);
-    const t = Date.parse(iso!);
-    return Number.isNaN(t) ? NaN : t;
-  };
-
-  const arrivals: SupplierArrival[] =
-    priceData?.product_label_action?.order_supplier_available ??
-    (priceData as any)?.order_supplier_available ??
-    (priceData as any)?.order_suplier_available ??
-    [];
-
-  const earliest = arrivals
-    .map((a) => ({
-      ...a,
-      _chosen: a.expected_date ?? a.confirmed_date ?? a.DataArrivoPrevista ?? a.DataArrivoConfermata,
-      _ts: parseDate(a.expected_date ?? a.confirmed_date ?? a.DataArrivoPrevista ?? a.DataArrivoConfermata),
-    }))
-    .filter((a) => Number.isFinite(a._ts))
-    .sort((a, b) => a._ts - b._ts)[0];
-
-  const earliestDateDmy = isoToDmy(earliest?._chosen);
-  const earliestWeek = earliest?.NumeroDellaSettimana;
-
-  // --- static/specs
-  const model = product?.model ?? '—';
-  const codiceProdotto = product?.sku ?? product?.id ?? '—';
-  const codiceFigura = (product as any)?.figure_code ?? (product as any)?.fig_code ?? 'F84240';
-
-  const availability = Number(priceData?.availability ?? 0);
-  const buyDid = Boolean(priceData?.buy_did);
-  const buyDidLast = priceData?.buy_did_last_date;
-
-  const stato =
-    priceData?.product_label_action?.LABEL ??
-    (availability > 0 ? 'DISPONIBILE' : earliestDateDmy ? 'IN ARRIVO' : 'NON DISPONIBILE');
-
-  const brandImg = product?.brand?.brand_image?.original;
-  const brandName = product?.brand?.name || 'Brand';
-
-  return (
-    <div className="mt-2 rounded-md border border-gray-200 bg-white/60">
-      <div className="grid grid-cols-5 items-start gap-4 p-4">
-        {/* Left: specs */}
-        <div className="col-span-4">
-          <dl className="grid grid-cols-[140px,1fr] gap-y-2 text-[13px] sm:text-sm">
-            <dt className="text-gray-500">MODELLO:</dt>
-            <dd className="font-semibold text-gray-700 break-words">{model}</dd>
-
-            <dt className="text-gray-500">Codice Prodotto:</dt>
-            <dd className="text-gray-700">{codiceProdotto}</dd>
-
-            <dt className="text-gray-500">Codice Figura:</dt>
-            <dd className="text-gray-700">{codiceFigura}</dd>
-
-            <dt className="text-gray-500">Stato:</dt>
-            <dd
-              className={
-                availability > 0
-                  ? 'font-semibold text-emerald-600'
-                  : earliestDateDmy
-                    ? 'font-semibold text-blue-700'
-                    : 'font-semibold text-gray-600'
-              }
-            >
-              {stato}
-            </dd>
-            { availability > 0 && priceData  && (
-              <>
-                <dt className="text-gray-500">Disponiblita:</dt>
-                <dd className="text-gray-700">{formatAvailability(
-                  availability,
-                  priceData.packaging_option_default?.packaging_uom
-                )}</dd>
-              </>
-            )}
-
-            {buyDid && buyDidLast && (
-              <>
-                <dt className="text-gray-500">Ultimo ordinato:</dt>
-                <dd className="text-gray-700">{buyDidLast}</dd>
-              </>
-            )}
-            {earliestDateDmy && availability <= 0 && (
-              <>
-                <dt className="text-gray-500">Arrivo Previsto:</dt>
-                <dd className="font-semibold text-green-600">
-                  {earliestDateDmy ?? '—'}
-                  {earliestWeek ? <span className="ml-1 text-gray-700">(Settimana {earliestWeek})</span> : null}
-                </dd>
-              </>
-            )}
-          </dl>
-        </div>
-
-        {/* Right: brand logo */}
-        <div className="col-span-1 flex justify-end">
-          {brandImg ? (
-            <Link
-              href={`/${lang}/search?filters-id_brand=${product?.brand?.id ?? ''}`}
-              className="flex justify-start sm:justify-end"
-            >
-              <img src={brandImg} alt={brandName} className="h-full w-full object-contain" />
-            </Link>
-          ) : (
-            <div className="h-10 sm:h-12 w-24 rounded bg-gray-100" />
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
+// OldB2BInfoBlock removed (extracted to ./details/b2b-info-block)
 
 
+// GalleryImage type retained for local typing in this file
 type GalleryImage = {
   id?: string | number;
   original: string;
   thumbnail?: string;
   alt?: string;
-};
-
-interface LightboxProps {
-  images: GalleryImage[];
-  index: number;
-  onClose: () => void;
-  onStep: (delta: number) => void;
-}
-
-const ProductImageLightbox: React.FC<LightboxProps> = ({ images, index, onClose, onStep }) => {
-  const [zoom, setZoom] = React.useState(1);
-  const scrollRef = React.useRef<HTMLDivElement>(null);
-  const total = images.length;
-  const current = images[index];
-
-  React.useEffect(() => {
-    setZoom(1);
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = 0;
-      scrollRef.current.scrollLeft = 0;
-    }
-  }, [index]);
-
-  React.useEffect(() => {
-    const handleKey = (event: KeyboardEvent) => {
-      if (!total) return;
-      switch (event.key) {
-        case 'Escape':
-          onClose();
-          break;
-        case 'ArrowRight':
-          onStep(1);
-          break;
-        case 'ArrowLeft':
-          onStep(-1);
-          break;
-        case '+':
-        case '=':
-          setZoom((prev) => Math.min(prev + 0.25, 4));
-          break;
-        case '-':
-          setZoom((prev) => Math.max(prev - 0.25, 0.5));
-          break;
-        case '0':
-          setZoom(1);
-          break;
-        default:
-          break;
-      }
-    };
-
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, [onClose, onStep, total]);
-
-  if (!total || !current) return null;
-
-  const zoomIn = () => setZoom((prev) => Math.min(prev + 0.25, 4));
-  const zoomOut = () => setZoom((prev) => Math.max(prev - 0.25, 0.5));
-  const resetZoom = () => setZoom(1);
-
-  return (
-    <div
-      className="fixed inset-0 z-[60] flex h-full w-full items-stretch justify-center bg-black/90 text-white"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Product gallery lightbox"
-      onClick={onClose}
-    >
-      <div className="flex h-full w-full max-w-6xl flex-col" onClick={(event) => event.stopPropagation()}>
-        <div className="flex items-center justify-between px-4 py-3">
-          <span className="text-sm font-medium">{current.alt ?? 'Product image'} · {index + 1} / {total}</span>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={resetZoom}
-              className="rounded border border-white/30 px-3 py-1 text-xs uppercase tracking-wide transition hover:bg-white/20"
-            >
-              Reset
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded border border-white/30 px-3 py-1 text-xs uppercase tracking-wide transition hover:bg-white/20"
-              aria-label="Close lightbox"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-
-        <div ref={scrollRef} className="flex-1 overflow-auto px-4 pb-6">
-          <div className="mx-auto flex min-h-[60vh] w-full max-w-3xl items-center justify-center">
-            <div
-              className="relative w-full max-w-[min(90vw,900px)] rounded-md bg-white"
-              style={{ aspectRatio: '1 / 1' }}
-            >
-              <div className="pointer-events-none absolute inset-0 flex items-center justify-center" style={{ transform: `scale(${zoom})`, transformOrigin: 'center center' }}>
-                <Image
-                  src={current.original}
-                  alt={current.alt ?? 'Product image enlarged'}
-                  fill
-                  sizes="(min-width: 1024px) 70vw, 90vw"
-                  className="object-contain select-none"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center justify-center gap-3 px-4 pb-5 text-sm">
-          <button
-            type="button"
-            onClick={zoomOut}
-            className="rounded border border-white/30 px-3 py-1 transition hover:bg-white/20"
-            aria-label="Zoom out"
-          >
-            Zoom −
-          </button>
-          <button
-            type="button"
-            onClick={zoomIn}
-            className="rounded border border-white/30 px-3 py-1 transition hover:bg-white/20"
-            aria-label="Zoom in"
-          >
-            Zoom +
-          </button>
-          {total > 1 ? (
-            <>
-              <button
-                type="button"
-                onClick={() => onStep(-1)}
-                className="rounded border border-white/30 px-3 py-1 transition hover:bg-white/20"
-                aria-label="Previous image"
-              >
-                Prev
-              </button>
-              <button
-                type="button"
-                onClick={() => onStep(1)}
-                className="rounded border border-white/30 px-3 py-1 transition hover:bg-white/20"
-                aria-label="Next image"
-              >
-                Next
-              </button>
-            </>
-          ) : null}
-          <span className="ml-2 text-xs text-white/70">Use mouse wheel, +/- keys, or buttons to zoom. ESC to close.</span>
-        </div>
-      </div>
-    </div>
-  );
 };
 
 
@@ -471,6 +182,11 @@ const ProductB2BDetails: React.FC<{ lang: string; search: any }> = ({ lang, sear
               // The inner slide already uses aspect-square; flex-1 makes it expand
               thumbnailClassName="flex-1 w-full"
               galleryClassName="xl:w-[120px] 2xl:w-[140px]"
+              enableMagnifier={true}
+              activationMode="hover"
+              magnifierZoom={2.6}
+              magnifierPanelWidth={620}
+              showMagnifierPanel
               lang={lang}
               onImageClick={openLightbox}
             />

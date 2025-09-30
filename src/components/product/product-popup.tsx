@@ -29,7 +29,7 @@ import { useUI } from '@contexts/ui.context';
 import PackagingGrid from './packaging-grid';
 import PriceAndPromo from './price-and-promo';
 import AddToCart from './add-to-cart';
-import { B2BInfoBlock } from './product-b2b-details';
+import B2BInfoBlock from './details/b2b-info-block';
 
 export default function ProductPopup({ lang }: { lang: string }) {
   const { t } = useTranslation(lang, 'common');
