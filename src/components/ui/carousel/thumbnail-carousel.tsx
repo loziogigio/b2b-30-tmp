@@ -8,7 +8,7 @@ import {
   FreeMode,
 } from '@components/ui/carousel/slider';
 import Image from '@components/ui/image';
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import cn from 'classnames';
 import { productGalleryPlaceholder } from '@assets/placeholders';
 import { getDirection } from '@utils/get-direction';
@@ -78,6 +78,21 @@ const ThumbnailCarousel: React.FC<Props> = ({
   const [pos, setPos] = useState({ x: 0, y: 0 });
   const panStart = useRef<{ x: number; y: number; moved: boolean }>({ x: 0, y: 0, moved: false });
   const [panelPos, setPanelPos] = useState<{ left: number; top: number }>({ left: 0, top: 0 });
+  const [thumbsHeight, setThumbsHeight] = useState<number>(520);
+
+  // Keep thumbs column height in sync with main image container
+  useEffect(() => {
+    const el = mainContainerRef.current;
+    if (!el || typeof window === 'undefined') return;
+    const ro = new ResizeObserver((entries) => {
+      const rect = entries[0]?.contentRect;
+      if (!rect) return;
+      const h = Math.max(200, Math.min(620, Math.round(rect.height)));
+      setThumbsHeight(h);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const lensW = Math.max(60, Math.round((magnifierPanelWidth / magnifierZoom)));
   const lensH = lensW; // keep square
@@ -167,7 +182,7 @@ const ThumbnailCarousel: React.FC<Props> = ({
             observer={true}
             observeParents={true}
             breakpoints={galleryCarouselBreakpoints}
-            style={{ maxHeight: 620, paddingRight: 2 }}
+            style={{ height: thumbsHeight, paddingRight: 2 }}
           >
             {normalizedGallery.map((item: any, index: number) => (
               <SwiperSlide
