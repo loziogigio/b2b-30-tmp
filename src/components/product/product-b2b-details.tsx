@@ -467,14 +467,16 @@ const ProductB2BDetails: React.FC<{ lang: string; search: any }> = ({ lang, sear
           {galleryItems.length ? (
             <ThumbnailCarousel
               gallery={galleryItems}
-              thumbnailClassName="xl:w-[460px] 2xl:w-[520px]"
+              // Fill remaining horizontal space while keeping a perfect square
+              // The inner slide already uses aspect-square; flex-1 makes it expand
+              thumbnailClassName="flex-1 w-full"
               galleryClassName="xl:w-[120px] 2xl:w-[140px]"
               lang={lang}
               onImageClick={openLightbox}
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center">
-              <div className="relative w-full max-w-[320px] rounded-md border border-border-base bg-white" style={{ aspectRatio: '1 / 1' }}>
+              <div className="relative w-full rounded-md border border-border-base bg-white" style={{ aspectRatio: '1 / 1' }}>
                 <Image
                   src={productPlaceholder}
                   alt={data?.name ?? 'Product'}
@@ -487,7 +489,7 @@ const ProductB2BDetails: React.FC<{ lang: string; search: any }> = ({ lang, sear
         </div>
 
         {/* Right column */}
-        <div className="flex flex-col rounded-md border border-gray-200 bg-white/80 px-4 pb-6 pt-4 shadow-sm">
+        <div className="flex flex-col bg-white/80 px-4 pb-6 pt-4 ">
           {/* Title + brand + short description */}
           <div className="pb-1">
             <div className="md:mb-2.5 block -mt-1.5">
@@ -516,17 +518,17 @@ const ProductB2BDetails: React.FC<{ lang: string; search: any }> = ({ lang, sear
           {/* === 3-up row: Packaging | Price | AddToCart === */}
           <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
             {/* col 1: packaging */}
-            <div className="rounded-md border border-gray-200 bg-white p-3">
+            <div className="">
               <PackagingGrid pd={erpPrice} />
             </div>
 
             {/* col 2: price/promo (centered) */}
-            <div className="flex items-center justify-center rounded-md border border-gray-200 bg-white p-3">
+            <div className="flex items-center justify-center ">
               {erpPrice ? <PriceAndPromo priceData={erpPrice} /> : null}
             </div>
 
             {/* col 3: add to cart (right-aligned on md+) */}
-            <div className="flex items-center justify-center rounded-md border border-gray-200 bg-white p-3 md:justify-end">
+            <div className="flex items-center justify-center  md:justify-end">
               {isAuthForPrices && (
                 <AddToCart
                   lang={lang}
