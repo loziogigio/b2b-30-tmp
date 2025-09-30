@@ -2,6 +2,8 @@
 
 import React from 'react';
 import Image from '@components/ui/image';
+import { Swiper, SwiperSlide, FreeMode } from '@components/ui/carousel/slider';
+import { IoIosArrowBack, IoIosArrowForward } from 'react-icons/io';
 
 type GalleryImage = {
   id?: string | number;
@@ -90,6 +92,11 @@ export default function ProductImageLightbox({ images, index, onClose, onStep }:
   const resetZoom = () => { setZoom(1); setTx(0); setTy(0); };
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    // Ignore pan start when interacting with UI controls inside the container (arrows, etc.)
+    const t = e.target as HTMLElement | null;
+    if (t && t.closest('[data-nopan="true"]')) {
+      return; // allow normal click on controls
+    }
     // Start panning immediately on press
     e.preventDefault();
     e.stopPropagation();
@@ -161,8 +168,68 @@ export default function ProductImageLightbox({ images, index, onClose, onStep }:
                   className="object-contain select-none"
                 />
               </div>
+              {/* Overlay arrows to change image */}
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onStep(-1); }}
+                aria-label="Previous image"
+                data-nopan="true"
+                className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-black/30 hover:bg-black/40 text-white flex items-center justify-center"
+              >
+                <IoIosArrowBack />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onStep(1); }}
+                aria-label="Next image"
+                data-nopan="true"
+                className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-black/30 hover:bg-black/40 text-white flex items-center justify-center"
+              >
+                <IoIosArrowForward />
+              </button>
             </div>
           </div>
+        </div>
+
+        {/* Thumbnails carousel (centered) */}
+        <div className="px-4 pb-3 flex justify-center">
+          <Swiper
+            modules={[FreeMode]}
+            freeMode
+            spaceBetween={10}
+            slidesPerView={6}
+            centeredSlides
+            centeredSlidesBounds
+            className="max-w-[min(90vw,900px)]"
+            breakpoints={{
+              0: { slidesPerView: 4 },
+              480: { slidesPerView: 5 },
+              768: { slidesPerView: 6 },
+              1024: { slidesPerView: 7 },
+            }}
+          >
+            {images.map((img, i) => (
+              <SwiperSlide key={`lb-thumb-${img.id ?? i}`} className="!w-auto">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (i !== index) onStep(i - index);
+                  }}
+                  className={`relative w-16 h-16 rounded-md overflow-hidden border ${i === index ? 'border-amber-500' : 'border-border-base'} bg-white`}
+                  aria-label={`Show image ${i + 1}`}
+                  title={img.alt ?? `Image ${i + 1}`}
+                >
+                  <Image
+                    src={img.thumbnail || img.original}
+                    alt={img.alt ?? `Image ${i + 1}`}
+                    fill
+                    className="object-contain"
+                  />
+                </button>
+              </SwiperSlide>
+            ))}
+          </Swiper>
         </div>
 
         <div className="flex items-center justify-center gap-3 px-4 pb-6 text-sm">
