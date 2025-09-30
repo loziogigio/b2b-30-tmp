@@ -90,7 +90,9 @@ export default function ProductImageLightbox({ images, index, onClose, onStep }:
   const resetZoom = () => { setZoom(1); setTx(0); setTy(0); };
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    // Allow grab-to-pan
+    // Start panning immediately on press
+    e.preventDefault();
+    e.stopPropagation();
     try { (e.currentTarget as any).setPointerCapture?.(e.pointerId); } catch {}
     panRef.current = {
       startX: e.clientX,
@@ -102,6 +104,7 @@ export default function ProductImageLightbox({ images, index, onClose, onStep }:
   };
   const onPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!panRef.current.panning) return;
+    e.preventDefault();
     const dx = e.clientX - panRef.current.startX;
     const dy = e.clientY - panRef.current.startY;
     const nx = panRef.current.startTx + dx;
@@ -140,12 +143,13 @@ export default function ProductImageLightbox({ images, index, onClose, onStep }:
           <div className="mx-auto flex min-h-[60vh] w-full max-w-3xl items-center justify-center">
             <div
               ref={containerRef}
-              className="relative w-full max-w-[min(90vw,900px)] rounded-md bg-white overflow-hidden cursor-grab"
-              style={{ aspectRatio: '1 / 1' }}
+              className="relative w-full max-w-[min(90vw,900px)] rounded-md bg-white overflow-hidden"
+              style={{ aspectRatio: '1 / 1', touchAction: 'none', cursor: panRef.current.panning ? 'grabbing' as any : 'grab' as any }}
               onPointerDown={onPointerDown}
               onPointerMove={onPointerMove}
               onPointerUp={endPan}
               onPointerLeave={endPan}
+              onPointerCancel={endPan}
             >
               <div className="absolute inset-0 flex items-center justify-center select-none"
                 style={{ transform: `translate(${tx}px, ${ty}px) scale(${zoom})`, transformOrigin: 'center center' }}>
