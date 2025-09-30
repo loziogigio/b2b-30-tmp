@@ -221,13 +221,13 @@ const ProductCardB2B: React.FC<ProductProps> = ({
         </h3>
 
         {/* Product Description (optional) */}
-        {description && (
+        {/* {description && (
           <p className="text-xs text-gray-600 line-clamp-2">{description}</p>
-        )}
+        )} */}
 
         {/* Product Model (optional) */}
         {model && (
-          <div className="text-sm text-gray-700 line-clamp-1">
+          <div className="text-sm text-gray-700 line-clamp-2">
             model: <strong>{model}</strong>
           </div>
         )}

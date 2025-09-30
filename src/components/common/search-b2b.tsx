@@ -10,6 +10,7 @@ import { useUI } from '@contexts/ui.context';
 import { Product } from '@framework/types';
 import SearchBoxB2B from './search-box-b2b';
 import { useSearchParams } from 'next/navigation';
+import SearchOverlayB2B from '@components/search/search-overlay-b2b';
 
 type Props = {
   lang: string;
@@ -49,6 +50,18 @@ const SearchB2B = forwardRef<HTMLDivElement, Props>(
     function handleAutoSearch(e: React.FormEvent<HTMLInputElement>) {
       setSearchText(e.currentTarget.value);
     }
+    const RECENT_KEY = 'b2b-recent-searches';
+    function pushRecent(term: string) {
+      const t = term.trim();
+      if (!t) return;
+      try {
+        const raw = localStorage.getItem(RECENT_KEY);
+        const arr = raw ? (JSON.parse(raw) as string[]) : [];
+        const next = [t, ...arr.filter((x) => x !== t)].slice(0, 10);
+        localStorage.setItem(RECENT_KEY, JSON.stringify(next));
+      } catch {}
+    }
+
     function clear() {
       setSearchText('');
       setInputFocus(false);
@@ -105,12 +118,27 @@ const SearchB2B = forwardRef<HTMLDivElement, Props>(
               onChange={handleAutoSearch}
               onClear={clear}
               onFocus={() => enableInputFocus()}
-              onSubmitSuccess={disableInputFocus}
+              onSubmitSuccess={() => {
+                pushRecent(searchText);
+                disableInputFocus();
+              }}
               variant={variant}
               lang={lang}
             />
           </div>
           {/* End of searchbox */}
+          {/* Full overlay content (suggestions + recommended) */}
+          <SearchOverlayB2B
+            lang={lang}
+            open={inputFocus === true || displaySearch}
+            onClose={disableInputFocus}
+            value={searchText}
+            onChange={handleAutoSearch}
+            onClear={clear}
+            onSubmitSuccess={() => {
+              pushRecent(searchText);
+            }}
+          />
 {/* 
           {searchText && (
             <div className="w-full absolute top-[56px] ltr:left-0 rtl:right-0 bg-brand-light rounded-md flex flex-col overflow-hidden shadow-dropDown z-30">

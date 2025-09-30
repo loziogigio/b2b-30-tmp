@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { CheckBox } from '@components/ui/form/checkbox';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { IoIosArrowUp, IoIosArrowDown } from 'react-icons/io';
 import {
@@ -9,7 +8,6 @@ import {
   DisclosureButton,
   DisclosurePanel,
 } from '@headlessui/react';
-import Heading from '@components/ui/heading';
 import { useTranslation } from 'src/app/i18n/client';
 import useQueryParam from '@utils/use-query-params';
 
@@ -32,6 +30,7 @@ export const FiltersB2BItem = ({ lang, filterKey, label, values }: FiltersB2BIte
   const searchParams = useSearchParams();
   const { updateQueryparams } = useQueryParam(pathname ?? '/');
   const [formState, setFormState] = useState<string[]>([]);
+  const [expanded, setExpanded] = useState(false);
 
   const queryKey = `filters-${filterKey}`; // ✅ THIS IS THE KEY USED IN URL
   const queryParamValue = searchParams?.get(queryKey);
@@ -53,42 +52,51 @@ export const FiltersB2BItem = ({ lang, filterKey, label, values }: FiltersB2BIte
     );
   }
 
+  const visibleCount = 5;
+  const shownValues = expanded ? values : values.slice(0, visibleCount);
+
   return (
     <div className="block">
-      <Heading className="mb-5 -mt-1">{label}</Heading>
-      <div className="flex flex-col p-5 border rounded-md border-border-base">
-        {values.slice(0, 3).map((item) => (
-          <CheckBox
-            key={`${filterKey}-${item.value}`}
-            label={`${item.label} (${item.count})`}
-            name={`${filterKey}-${item.value}`}
-            checked={formState.includes(item.value)}
-            value={item.value}
-            onChange={handleItemClick}
-            lang={lang}
-          />
-        ))}
-
-        {values.length > 3 && (
-          <div className="w-full">
-            <Disclosure>
-              {({ open }) => (
-                <div>
-                  <DisclosurePanel className="pt-4 pb-2">
-                    {values.slice(3).map((item) => (
-                      <CheckBox
-                        key={`${filterKey}-${item.value}`}
-                        label={item.label}
+      <Disclosure defaultOpen>
+        {({ open }) => (
+          <div className="border rounded-md border-border-base">
+            <DisclosureButton className="w-full flex items-center justify-between px-5 py-4">
+              <span className="text-brand-dark text-base font-semibold">{label}</span>
+              {open ? (
+                <IoIosArrowUp className="text-brand-dark text-opacity-80 text-lg" />
+              ) : (
+                <IoIosArrowDown className="text-brand-dark text-opacity-80 text-lg" />
+              )}
+            </DisclosureButton>
+            <DisclosurePanel>
+              <div className="flex flex-col px-5 pb-3">
+                {shownValues.map((item) => (
+                  <label
+                    key={`${filterKey}-${item.value}`}
+                    className="group flex items-center justify-between text-brand-dark text-sm md:text-15px cursor-pointer transition-all hover:text-opacity-80 py-1"
+                  >
+                    <span className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        className="form-checkbox text-yellow-100 w-[18px] h-[18px] border-2 border-border-four rounded-sm cursor-pointer transition duration-300 ease-in-out focus:ring-0 focus:outline-none checked:bg-yellow-100"
                         name={`${filterKey}-${item.value}`}
                         checked={formState.includes(item.value)}
                         value={item.value}
                         onChange={handleItemClick}
-                        lang={lang}
                       />
-                    ))}
-                  </DisclosurePanel>
-                  <DisclosureButton className="flex justify-center items-center w-full px-4 pt-3.5 pb-1 text-sm font-medium text-center text-brand focus:outline-none">
-                    {open ? (
+                      <span>{item.label}</span>
+                    </span>
+                    <span className="text-13px text-brand-dark/70">{item.count}</span>
+                  </label>
+                ))}
+
+                {values.length > visibleCount && (
+                  <button
+                    type="button"
+                    onClick={() => setExpanded((s) => !s)}
+                    className="flex justify-center items-center w-full px-4 pt-3.5 pb-1 text-sm font-medium text-center text-brand focus:outline-none"
+                  >
+                    {expanded ? (
                       <>
                         <span className="inline-block ltr:pr-1 rtl:pl-1">
                           {t('text-see-less')}
@@ -103,13 +111,13 @@ export const FiltersB2BItem = ({ lang, filterKey, label, values }: FiltersB2BIte
                         <IoIosArrowDown className="text-brand-dark text-opacity-60 text-15px" />
                       </>
                     )}
-                  </DisclosureButton>
-                </div>
-              )}
-            </Disclosure>
+                  </button>
+                )}
+              </div>
+            </DisclosurePanel>
           </div>
         )}
-      </div>
+      </Disclosure>
     </div>
   );
 };

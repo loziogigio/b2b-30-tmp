@@ -9,7 +9,7 @@ import { FiltersB2BItem } from './filters-b2b-item';
 import { ERP_STATIC } from '@framework/utils/static';
 import { FACET_FIELDS } from '@framework/utils/filters';
 
-export const SearchFiltersB2B: React.FC<{ lang: string }> = ({ lang }) => {
+export const SearchFiltersB2B: React.FC<{ lang: string; text?: string }> = ({ lang, text }) => {
   const { t } = useTranslation(lang, 'common');
   const searchParams = useSearchParams();
 
@@ -20,6 +20,7 @@ export const SearchFiltersB2B: React.FC<{ lang: string }> = ({ lang }) => {
 
   const mergedParams = {
     ...urlParams,
+    ...(text ? { text } : {}),
     ...ERP_STATIC
   };
 
@@ -40,13 +41,17 @@ export const SearchFiltersB2B: React.FC<{ lang: string }> = ({ lang }) => {
     return map;
   }, [filters]);
 
-  const allowedKeys = React.useMemo(
-    () => FACET_FIELDS.map((k) => `filters-${k}`),
-    []
-  );
+  const allowedKeys = React.useMemo(() => {
+    // Prefer keys from loaded filters (dynamic, includes family/categories etc.)
+    if (filters && filters.length) {
+      return filters.map((f) => `filters-${f.key}`);
+    }
+    // Fallback to static facet fields
+    return FACET_FIELDS.map((k) => `filters-${k}`);
+  }, [filters]);
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-4">
       {isLoadingFilters && <p>Loading filters...</p>}
       {filtersError && <p>Error loading filters</p>}
 
