@@ -3,7 +3,7 @@
 import React from 'react';
 import cn from 'classnames';
 import Container from '@components/ui/container';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import TrendingProductsCarousel from '@components/product/feeds/trending-products-carousel';
 import ProductsCarousel from '@components/product/products-carousel';
 import { useProductListQuery } from '@framework/product/get-b2b-product';
@@ -50,6 +50,7 @@ function useRecentSearches() {
 export default function SearchOverlayB2B({ lang, open, onClose, value = '', onChange, onClear, onSubmitSuccess }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
   const { items: recent, remove, clear } = useRecentSearches();
 
   // Popular search seeds (simple defaults, can be wired to API later)
@@ -96,6 +97,13 @@ export default function SearchOverlayB2B({ lang, open, onClose, value = '', onCh
 
   const { data: autoProducts = [], isLoading: isLoadingAuto } = useProductListQuery(liveQueryParams);
 
+  // Close overlay on navigation to another route (e.g., product detail or search page)
+  React.useEffect(() => {
+    if (!open) return;
+    onClose();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
+
   // Overlay-specific carousel breakpoints: target ~4.5 items on large screens
   const overlayBreakpoints = {
     1921: { slidesPerView: 4.5 },
@@ -139,6 +147,8 @@ export default function SearchOverlayB2B({ lang, open, onClose, value = '', onCh
               <SearchBoxB2B
                 searchId="overlay-search"
                 lang={lang}
+                name="overlay-search"
+                onSubmit={(e) => { e.preventDefault(); }}
                 value={value}
                 onChange={(e) => onChange?.(e)}
                 onClear={(e) => onClear?.(e)}
