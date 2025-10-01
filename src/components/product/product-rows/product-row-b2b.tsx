@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import cn from 'classnames';
 import Image from '@components/ui/image';
 import Link from 'next/link';
@@ -16,6 +16,7 @@ import PriceAndPromo from '../price-and-promo';
 import { useLikes } from '@contexts/likes/likes.context';
 import { useUI } from '@contexts/ui.context';
 import { IoIosHeart, IoIosHeartEmpty } from 'react-icons/io';
+import VariantsFilterBar from './variants-filter-bar';
 
 const AddToCart = dynamic(() => import('@components/product/add-to-cart'), { ssr: false });
 
@@ -27,6 +28,10 @@ interface Props {
   getPrice: GetPrice;
   priceData?: ErpPriceData;          // parent price (or single-variation)
   className?: string;
+  // show Search + Model tags controls only if variant count >= this value
+  filterThreshold?: number;
+  // Only hide search+sort below this threshold; tags remain visible
+  searchSortThreshold?: number;
 }
 
 // Parent row: 3 columns (image | info | brand)
@@ -58,6 +63,8 @@ export default function ProductRowB2B({
   getPrice,
   priceData,
   className,
+  filterThreshold = 0,
+  searchSortThreshold = 10,
 }: Props) {
   const { t } = useTranslation(lang, 'common');
   const { openModal } = useModalAction();
@@ -105,6 +112,66 @@ export default function ProductRowB2B({
   const shouldShowRows = hasMultiple ? undefined : true; // se <=1, mostriamo sempre
 
   const [showVars, setShowVars] = useState<boolean>(shouldShowRows ?? false);
+
+  // -------- Filters (Search + Model tags) --------
+  const modelOptions = useMemo(() => {
+    const set = new Set<string>();
+    const src = Array.isArray(variations) ? variations : [];
+    src.forEach((v) => {
+      const m = String(v?.model ?? '').trim();
+      if (m) set.add(m);
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+  }, [variations]);
+
+  const [selectedModels, setSelectedModels] = useState<string[]>([]);
+  const toggleModel = (m: string) =>
+    setSelectedModels((prev) => (prev.includes(m) ? prev.filter((x) => x !== m) : [...prev, m]));
+
+  const [query, setQuery] = useState('');
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+
+  const filteredVariants = useMemo(() => {
+    let list = variantRows;
+    if (selectedModels.length) {
+      const s = new Set(selectedModels.map((m) => String(m).trim()));
+      list = list.filter((v) => s.has(String(v.model ?? '').trim()));
+    }
+    const q = query.trim().toLowerCase();
+    if (!q) return list;
+    return list.filter((v) =>
+      (v.sku?.toLowerCase().includes(q)) ||
+      (v.name?.toLowerCase().includes(q)) ||
+      (v.model?.toLowerCase().includes(q))
+    );
+  }, [variantRows, selectedModels, query]);
+
+  // Sorting
+  const [sortKey, setSortKey] = useState<'sku-asc' | 'price-asc' | 'price-desc'>('sku-asc');
+  const getSortPrice = (v: any): number => {
+    const pd = getPrice(v?.id as any);
+    if (!pd) return Number.POSITIVE_INFINITY;
+    const anyPD: any = pd;
+    const p = anyPD.price_discount ?? anyPD.net_price ?? anyPD.price ?? anyPD.gross_price;
+    const n = Number(p);
+    return Number.isFinite(n) ? n : Number.POSITIVE_INFINITY;
+  };
+  const sortedVariants = useMemo(() => {
+    const arr = filteredVariants.slice();
+    if (selectedModels.length > 0) {
+      // align behavior with Quick View when tags are active
+      arr.sort((a, b) => String(a.model ?? '').localeCompare(String(b.model ?? ''), undefined, { numeric: true, sensitivity: 'base' }));
+    } else if (!isAuthorized || sortKey === 'sku-asc') {
+      arr.sort((a, b) => String(a.sku ?? a.id).localeCompare(String(b.sku ?? b.id)));
+    } else {
+      arr.sort((a, b) => {
+        const pa = getSortPrice(a);
+        const pb = getSortPrice(b);
+        return sortKey === 'price-asc' ? pa - pb : pb - pa;
+      });
+    }
+    return arr;
+  }, [filteredVariants, selectedModels, isAuthorized, sortKey]);
 
   /** ---------- RIGA PARENT (stesso grid) ---------- */
   return (
@@ -202,7 +269,24 @@ export default function ProductRowB2B({
       {/* ---------- SEZIONE VARIANTI (tabellare e omogenea) ---------- */}
       {(showVars || shouldShowRows) && (
         <div className="pl-2 sm:pl-3 pb-2 pr-2 divide-y-2 divide-gray-200">
-          {variantRows.map((v) => {
+          {/* Filters: always visible by default; can gate via prop if > 0 */}
+          {((filterThreshold ?? 0) <= 0) || ((variations?.length ?? 0) >= filterThreshold) ? (
+            <VariantsFilterBar
+              className="mb-2"
+              query={query}
+              onQueryChange={setQuery}
+              sortKey={sortKey}
+              onSortChange={(k) => setSortKey(k as any)}
+              modelOptions={modelOptions}
+              selectedModels={selectedModels}
+              onToggleModel={toggleModel}
+              onClearModels={() => setSelectedModels([])}
+              isAuthorized={isAuthorized}
+              searchPlaceholder={t('search-variants', { defaultValue: 'Search SKU, name, model…' })}
+              showSearchAndSort={(variations?.length ?? 0) >= (searchSortThreshold ?? 0)}
+            />
+          ) : null}
+          {sortedVariants.map((v) => {
             const isPseudo = !!(v as any).__pseudo;
             const vPrice: ErpPriceData | undefined = isPseudo ? priceData : getPrice(v.id);
             const vImg = v.image?.thumbnail ?? productPlaceholder;
@@ -289,7 +373,16 @@ export default function ProductRowB2B({
                       </div>
                       {v.model ? (
                         <div className="text-[13px] text-gray-700 mt-0.5 line-clamp-1">
-                          {t('model', { defaultValue: 'model:' })} <strong>{v.model}</strong>
+                          <span className="mr-1">{t('model', { defaultValue: 'model:' })}</span>
+                          <span
+                            className={cn(
+                              'inline-flex items-center rounded-md border px-2 py-0.5 align-middle',
+                              'text-[11px] font-semibold tracking-wide',
+                              'bg-brand/10 text-brand-dark border-brand/30'
+                            )}
+                          >
+                            {v.model}
+                          </span>
                         </div>
                       ) : (
                         <div className="text-[13px] text-gray-400 mt-0.5">''</div>

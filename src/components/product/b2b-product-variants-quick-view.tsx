@@ -50,19 +50,39 @@ export default function B2BProductVariantsQuickView({ lang }: { lang: string }) 
   const totalCount = allIds.length;
 
   // Filter + sort UI
-  const [query, setQuery] = useState('');
   const [sortKey, setSortKey] =
     useState<'sku-asc' | 'price-asc' | 'price-desc'>('sku-asc');
+  const [query, setQuery] = useState('');
+  // model tag filter
+  const modelOptions = useMemo(() => {
+    const set = new Set<string>();
+    variants.forEach(v => {
+      const m = String(v.model ?? '').trim();
+      if (m) set.add(m);
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+  }, [variants]);
+  const [selectedModels, setSelectedModels] = useState<string[]>([]);
+  const toggleModel = (m: string) =>
+    setSelectedModels(prev => (prev.includes(m) ? prev.filter(x => x !== m) : [...prev, m]));
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   const filtered = useMemo(() => {
-    if (!query.trim()) return variants;
-    const q = query.toLowerCase();
-    return variants.filter(v =>
+    // Tag filter first
+    let base = variants;
+    if (selectedModels.length) {
+      const s = new Set(selectedModels.map((m) => String(m).trim()));
+      base = base.filter(v => s.has(String(v.model ?? '').trim()));
+    }
+    // Text query filter next
+    const q = query.trim().toLowerCase();
+    if (!q) return base;
+    return base.filter(v =>
       (v.sku?.toLowerCase().includes(q)) ||
       (v.name?.toLowerCase().includes(q)) ||
       (v.model?.toLowerCase().includes(q))
     );
-  }, [variants, query]);
+  }, [variants, selectedModels, query]);
 
   const pageSize = LIMITS.PRODUCTS_LIMITS;
 
@@ -110,7 +130,10 @@ export default function B2BProductVariantsQuickView({ lang }: { lang: string }) 
 
   const sorted = useMemo(() => {
     const copy = filtered.slice();
-    if (!isAuthorized || sortKey === 'sku-asc') {
+    if (selectedModels.length > 0) {
+      // When filtering by tags, sort alphabetically by model
+      copy.sort((a, b) => String(a.model ?? '').localeCompare(String(b.model ?? ''), undefined, { numeric: true, sensitivity: 'base' }));
+    } else if (!isAuthorized || sortKey === 'sku-asc') {
       copy.sort((a, b) => String(a.sku ?? a.id).localeCompare(String(b.sku ?? b.id)));
     } else {
       copy.sort((a, b) => {
@@ -120,7 +143,7 @@ export default function B2BProductVariantsQuickView({ lang }: { lang: string }) 
       });
     }
     return copy;
-  }, [filtered, sortKey, priceMap, isAuthorized]);
+  }, [filtered, sortKey, priceMap, isAuthorized, selectedModels]);
 
   // ==== Only the GRID scrolls ====
   const scrollRef = useRef<HTMLDivElement | null>(null);
@@ -210,34 +233,84 @@ export default function B2BProductVariantsQuickView({ lang }: { lang: string }) 
 
       {/* NON-SCROLLING controls */}
       <div className="border-b px-3 sm:px-4 py-2.5">
-        <div className="flex flex-wrap items-center gap-2">
-          {isAuthorized ? (
-            <div className="text-xs text-gray-600 whitespace-nowrap order-1 sm:order-none">
-              {loadedCount}/{totalCount} priced
-            </div>
-          ) : null}
+        {/* Top-right: priced counter */}
+        {isAuthorized ? (
+          <div className="flex justify-end mb-1">
+            <div className="text-[11px] text-gray-600">{loadedCount}/{totalCount} priced</div>
+          </div>
+        ) : null}
 
-          <input
-            aria-label="Filter variants"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Filter by SKU, name, model…"
-            className="h-9 min-w-[150px] sm:w-[220px] flex-1 rounded-md border px-2 text-sm"
-          />
-
+        {/* Row 1: search (left) + sort (right) */}
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <input
+              ref={searchInputRef}
+              aria-label="Filter variants"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Filter by SKU, name, model…"
+              className="h-10 sm:h-11 w-full rounded-md border px-3 pr-10 text-sm bg-white border-gray-300 placeholder-gray-500 focus:ring-2 focus:ring-brand/30 focus:border-brand"
+            />
+            {query && (
+              <button
+                type="button"
+                aria-label="Clear search"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700"
+                onClick={() => {
+                  setQuery('');
+                  // focus back input after clearing
+                  searchInputRef.current?.focus();
+                }}
+                title="Clear"
+              >
+                ×
+              </button>
+            )}
+          </div>
           {isAuthorized && (
-          <select
-            aria-label="Sort variants"
-            value={sortKey}
-            onChange={(e) =>
-              setSortKey(e.target.value as 'sku-asc' | 'price-asc' | 'price-desc')
-            }
-            className="h-9 rounded-md border px-2 text-sm"
-          >
-            <option value="sku-asc">Sort: SKU (A→Z)</option>
-            <option value="price-asc">Sort: Price (Low→High)</option>
-            <option value="price-desc">Sort: Price (High→Low)</option>
-          </select>
+            <div className="shrink-0 ml-auto">
+              <select
+                aria-label="Sort variants"
+                value={sortKey}
+                onChange={(e) =>
+                  setSortKey(e.target.value as 'sku-asc' | 'price-asc' | 'price-desc')
+                }
+                className="h-10 sm:h-11 rounded-md border px-2 text-sm bg-white border-gray-300"
+              >
+                <option value="sku-asc">Sort: SKU (A→Z)</option>
+                <option value="price-asc">Sort: Price (Low→High)</option>
+                <option value="price-desc">Sort: Price (High→Low)</option>
+              </select>
+            </div>
+          )}
+        </div>
+
+        {/* Row 2: full-width tags */}
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          {modelOptions.map((m) => (
+            <button
+              key={`mdl-${m}`}
+              type="button"
+              className={cn(
+                'px-2 py-1 rounded-md border text-xs font-medium transition-colors',
+                selectedModels.includes(m)
+                  ? 'bg-brand text-white border-brand'
+                  : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
+              )}
+              onClick={() => toggleModel(m)}
+            >
+              {m}
+            </button>
+          ))}
+
+          {selectedModels.length > 0 && (
+            <button
+              type="button"
+              className="ml-1 px-2 py-1 rounded-md border text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200"
+              onClick={() => setSelectedModels([])}
+            >
+              Clear all
+            </button>
           )}
         </div>
 
