@@ -225,10 +225,20 @@ const ProductCardB2B: React.FC<ProductProps> = ({
           <p className="text-xs text-gray-600 line-clamp-2">{description}</p>
         )} */}
 
-        {/* Product Model (optional) */}
+        {/* Product Model (label + highlighted value) */}
         {model && (
-          <div className="text-sm text-gray-700 line-clamp-2">
-            model: <strong>{model}</strong>
+          <div className="mt-0.5 text-[13px] text-gray-700">
+            <span className="mr-1">model:</span>
+            <span
+              className={cn(
+                'inline-flex items-center rounded-md border px-2 py-0.5 align-middle',
+                'text-[11px] font-semibold tracking-wide',
+                'bg-brand/10 text-brand-dark border-brand/30'
+              )}
+              title="Model"
+            >
+              {model}
+            </span>
           </div>
         )}
       </div>
