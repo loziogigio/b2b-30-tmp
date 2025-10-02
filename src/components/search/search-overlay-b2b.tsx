@@ -52,6 +52,7 @@ export default function SearchOverlayB2B({ lang, open, onClose, value = '', onCh
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const { items: recent, remove, clear } = useRecentSearches();
+  const rootRef = React.useRef<HTMLDivElement>(null);
 
   // Popular search seeds (simple defaults, can be wired to API later)
   const popular = React.useMemo(
@@ -104,6 +105,38 @@ export default function SearchOverlayB2B({ lang, open, onClose, value = '', onCh
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
+  // Close overlay when clicking any anchor inside the overlay (captures same-page links too)
+  const handleClickCapture = React.useCallback((e: React.MouseEvent) => {
+    if (!open) return;
+    const root = rootRef.current;
+    let node = e.target as HTMLElement | null;
+    while (node && node !== root) {
+      if (node.tagName === 'A') {
+        onClose();
+        break;
+      }
+      node = node.parentElement as HTMLElement | null;
+    }
+  }, [open, onClose]);
+
+  // Also listen globally while open, to catch links clicked outside the overlay
+  // (e.g., in Product Popup portals) and close even for same-page links.
+  React.useEffect(() => {
+    if (!open) return;
+    const onDocClick = (ev: MouseEvent) => {
+      let el = ev.target as HTMLElement | null;
+      while (el) {
+        if (el.tagName === 'A') {
+          onClose();
+          break;
+        }
+        el = el.parentElement as HTMLElement | null;
+      }
+    };
+    document.addEventListener('click', onDocClick, true);
+    return () => document.removeEventListener('click', onDocClick, true);
+  }, [open, onClose]);
+
   // Overlay-specific carousel breakpoints: target ~4.5 items on large screens
   const overlayBreakpoints = {
     1921: { slidesPerView: 4.5 },
@@ -123,6 +156,8 @@ export default function SearchOverlayB2B({ lang, open, onClose, value = '', onCh
 
   return (
     <div
+      ref={rootRef}
+      onClickCapture={handleClickCapture}
       className={cn(
         'fixed inset-x-0 top-0 z-40 transition-all duration-200',
         open ? 'opacity-100 visible' : 'opacity-0 invisible',
