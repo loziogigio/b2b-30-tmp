@@ -49,10 +49,30 @@ type GalleryImage = {
 };
 
 
-const ProductB2BDetails: React.FC<{ lang: string; search: any }> = ({ lang, search }) => {
+import type { PageBlock } from '@/lib/types/blocks';
+import { BlockRenderer } from '@/components/blocks/BlockRenderer';
+
+const ProductB2BDetails: React.FC<{ lang: string; search: any; blocks?: PageBlock[]; showZoneLabels?: boolean }> = ({ lang, search, blocks = [], showZoneLabels = false }) => {
   const { t } = useTranslation(lang, 'common');
   const pathname = useParams();
   const { width } = useWindowSize();
+
+  // Filter blocks by zone
+  const zone1Blocks = blocks.filter(b => b.zone === 'zone1');
+  const zone2Blocks = blocks.filter(b => b.zone === 'zone2');
+  const zone3Blocks = blocks.filter(b => b.zone === 'zone3');
+  const zone4Blocks = blocks.filter(b => b.zone === 'zone4');
+
+  // Zone label component for preview mode
+  const ZoneLabel = ({ zone, color, label }: { zone: string; color: string; label: string }) => {
+    if (!showZoneLabels) return null;
+    return (
+      <div className={`mb-2 flex items-center gap-2 rounded-md border-2 border-dashed border-${color}-300 bg-${color}-50/50 px-3 py-2`}>
+        <div className={`h-2 w-2 rounded-full bg-${color}-500`}></div>
+        <span className={`text-xs font-bold text-${color}-700`}>{label}</span>
+      </div>
+    );
+  };
 
   // Load product from B2B list
   const { data: data_results, isLoading } = useProductListQuery({
@@ -294,10 +314,57 @@ const ProductB2BDetails: React.FC<{ lang: string; search: any }> = ({ lang, sear
               </div>
             </div>
           </div>
+
+          {/* Zone 1: Sidebar blocks (below wishlist/share) */}
+          {zone1Blocks.length > 0 && (
+            <div className="pt-4 space-y-4">
+              <ZoneLabel zone="zone1" color="blue" label="Sidebar" />
+              {zone1Blocks.map((block, index) => (
+                <BlockRenderer
+                  key={block.id || `zone1-${index}`}
+                  block={block}
+                  productData={{ sku: String(data?.sku ?? ''), lang }}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
-      <ProductB2BDetailsTab lang={lang} product={data} />
+      {/* Zone 2: After gallery (full width) */}
+      {zone2Blocks.length > 0 && (
+        <div className="pt-6 space-y-4">
+          <ZoneLabel zone="zone2" color="green" label="After Gallery" />
+          {zone2Blocks.map((block, index) => (
+            <BlockRenderer
+              key={block.id || `zone2-${index}`}
+              block={block}
+              productData={{ sku: String(data?.sku ?? ''), lang }}
+            />
+          ))}
+        </div>
+      )}
+
+      {showZoneLabels && zone3Blocks.length > 0 && (
+        <div className="pt-6">
+          <ZoneLabel zone="zone3" color="purple" label="New Tab" />
+        </div>
+      )}
+      <ProductB2BDetailsTab lang={lang} product={data} zone3Blocks={zone3Blocks} />
+
+      {/* Zone 4: Below tabs (full width) */}
+      {zone4Blocks.length > 0 && (
+        <div className="pt-6 space-y-4">
+          <ZoneLabel zone="zone4" color="orange" label="Bottom Section" />
+          {zone4Blocks.map((block, index) => (
+            <BlockRenderer
+              key={block.id || `zone4-${index}`}
+              block={block}
+              productData={{ sku: String(data?.sku ?? ''), lang }}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };
