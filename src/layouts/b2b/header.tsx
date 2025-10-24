@@ -26,12 +26,12 @@ const Delivery = dynamic(() => import('@layouts/header/delivery'), { ssr: false 
 const CartButton = dynamic(() => import('@components/cart/cart-button'), { ssr: false });
 
 const promoButtons = [
-  { label: 'Promozioni', color: 'bg-[#a52a2a] text-white', href: ROUTES.PRODUCTS },
-  { label: 'Novità', color: 'bg-brand text-white', href: ROUTES.PRODUCTS },
+  { label: 'Promozioni', color: 'bg-[#a52a2a] text-white', href: '/search?filters-promo_type=all' },
+  { label: 'Novità', color: 'bg-brand text-white', href: '/search?filters-new=true' },
 ];
 
 const quickLinks = [
-  { label: 'i miei ordini', href: ROUTES.ORDERS },
+  { label: 'i miei ordini', href: '/account/orders' },
   { label: 'confronta', href: ROUTES.PRODUCTS },
   { label: 'importa', href: ROUTES.BUNDLE },
 ];
@@ -64,9 +64,13 @@ function Header({ lang }: HeaderProps) {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  const handleCategoriesMenu = () => {
+    openModal('CATEGORY_VIEW', { lang });
+  };
+
   const handleAccount = () => {
     if (isAuthorized) {
-      router.push(`/${lang}${ROUTES.ACCOUNT}`);
+      router.push(`/${lang}/account/profile`);
     } else {
       openModal('LOGIN_VIEW');
     }
@@ -101,7 +105,7 @@ function Header({ lang }: HeaderProps) {
             </div>
 
             <Link
-              href={`/${lang}${ROUTES.WISHLIST}`}
+              href={`/${lang}/search?source=likes&page_size=12`}
               aria-label={t('text-wishlist', { defaultValue: 'Wishlist' })}
               className="relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 hover:border-brand hover:text-brand shrink-0"
             >
@@ -142,6 +146,7 @@ function Header({ lang }: HeaderProps) {
             <div className="flex flex-wrap items-center gap-3">
               <button
                 type="button"
+                onClick={handleCategoriesMenu}
                 className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-slate-700 hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
               >
                 <HiOutlineMenuAlt3 className="h-5 w-5" />
