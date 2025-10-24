@@ -25,6 +25,9 @@ function NodeIcon({ src, alt }: { src?: string | null; alt: string }) {
 interface MenuProps {
   lang: string;
   className?: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  renderTrigger?: (props: { onClick: () => void; open: boolean }) => React.ReactNode;
 }
 
 const DRAWER_W = 'w-[380px] md:w-[420px]';
@@ -58,20 +61,36 @@ function categoryHrefFromPath(lang: string, branch: MenuTreeNode[], tail?: MenuT
   return `/${lang}/category/${segments.join('/')}`;
 }
 
-const B2BHeaderMenu: React.FC<MenuProps> = ({ lang, className }) => {
+const B2BHeaderMenu: React.FC<MenuProps> = ({
+  lang,
+  className,
+  open: controlledOpen,
+  onOpenChange,
+  renderTrigger
+}) => {
   const { t } = useTranslation(lang, 'menu');
   const { data, isLoading, isError } = useCmsB2BMenuRawQuery({ staleTime: 5 * 60 * 1000 });
 
   const allCategoriesLabel = t('all-categories', { defaultValue: 'All Categories' });
   const tree: MenuTreeNode[] = useMemo(() => buildB2BMenuTree(data ?? []), [data]);
 
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
   const [path, setPath] = useState<MenuTreeNode[]>([]); // drilled nodes stack
 
   const currentLevel: MenuTreeNode[] = useMemo(
     () => (path.length === 0 ? tree : path[path.length - 1]?.children ?? []),
     [tree, path]
   );
+
+  const setOpen = (value: boolean) => {
+    if (isControlled) {
+      onOpenChange?.(value);
+    } else {
+      setInternalOpen(value);
+    }
+  };
 
   const close = () => { setOpen(false); setPath([]); };
   const goBack = () => (path.length === 0 ? close() : setPath((p) => p.slice(0, -1)));
@@ -112,20 +131,27 @@ const B2BHeaderMenu: React.FC<MenuProps> = ({ lang, className }) => {
 
   const headerTitle = path.length === 0 ? allCategoriesLabel : path[path.length - 1].label || '';
 
+  // Custom trigger or default trigger
+  const triggerButton = renderTrigger ? (
+    renderTrigger({ onClick: () => setOpen(true), open })
+  ) : (
+    <button
+      type="button"
+      onClick={() => setOpen(true)}
+      className="relative inline-flex items-center py-2 px-3 text-sm lg:text-15px text-brand-dark hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+      aria-haspopup="dialog"
+      aria-expanded={open}
+      aria-controls="b2b-cats-drawer"
+    >
+      <span className="capitalize">{normalizeLabel(allCategoriesLabel)}</span>
+      <span className="ml-2 text-xs opacity-60">▾</span>
+    </button>
+  );
+
   return (
     <nav className={cn('headerMenu flex w-full relative -mx-3 xl:-mx-4', className)}>
       {/* trigger */}
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="relative inline-flex items-center py-2 px-3 text-sm lg:text-15px text-brand-dark hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        aria-controls="b2b-cats-drawer"
-      >
-        <span className="capitalize">{normalizeLabel(allCategoriesLabel)}</span>
-        <span className="ml-2 text-xs opacity-60">▾</span>
-      </button>
+      {triggerButton}
 
       {/* overlay */}
       {open && <div className="fixed inset-0 z-40 bg-black/20" onClick={close} aria-hidden />}
