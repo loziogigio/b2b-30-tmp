@@ -148,13 +148,27 @@ const B2BHeaderMenu: React.FC<MenuProps> = ({
     </button>
   );
 
-  return (
+  const wrapperElement = renderTrigger ? (
+    <>
+      {/* trigger */}
+      {triggerButton}
+
+      {/* overlay */}
+      {open && <div className="fixed inset-0 z-40 bg-black/20" onClick={close} aria-hidden />}
+    </>
+  ) : (
     <nav className={cn('headerMenu flex w-full relative -mx-3 xl:-mx-4', className)}>
       {/* trigger */}
       {triggerButton}
 
       {/* overlay */}
       {open && <div className="fixed inset-0 z-40 bg-black/20" onClick={close} aria-hidden />}
+    </nav>
+  );
+
+  return (
+    <>
+      {wrapperElement}
 
       {/* drawer */}
       <aside
@@ -303,7 +317,7 @@ const B2BHeaderMenu: React.FC<MenuProps> = ({
           </ul>
         </div>
       </aside>
-    </nav>
+    </>
   );
 };
 
