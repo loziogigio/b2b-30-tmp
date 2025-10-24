@@ -1,165 +1,201 @@
 'use client';
 
-import { useRef } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { useTranslation } from 'src/app/i18n/client';
-import cn from 'classnames';
-import { ROUTES } from '@utils/routes';
-import { useUI } from '@contexts/ui.context';
-import { ERP_STATIC } from '@framework/utils/static';
-import { siteSettings } from '@settings/site-settings';
+import Link from '@components/ui/link';
 import Container from '@components/ui/container';
 import Logo from '@components/ui/logo';
-import B2BHeaderMenu from '@layouts/header/b2b-header-menu';
 import SearchB2B from '@components/common/search-b2b';
-import { Suspense } from 'react';
-import { useIsMounted } from '@utils/use-is-mounted';
-import LanguageSwitcher from '@components/ui/language-switcher';
-import CompanyIcon from '@components/icons/company-icon';
-import SearchIcon from '@components/icons/search-icon';
+import { useTranslation } from 'src/app/i18n/client';
+import { useUI } from '@contexts/ui.context';
+import { ROUTES } from '@utils/routes';
+import { siteSettings } from '@settings/site-settings';
+import { useHomeSettings } from '@/hooks/use-home-settings';
 import { useModalAction } from '@components/common/modal/modal.context';
-import useOnClickOutside from '@utils/use-click-outside';
+import { useRouter } from 'next/navigation';
+import cn from 'classnames';
+import {
+  HiOutlineHeart,
+  HiOutlineViewGrid,
+  HiOutlineUserCircle,
+  HiOutlineMenuAlt3,
+  HiOutlineArrowUp,
+} from 'react-icons/hi';
 
 const Delivery = dynamic(() => import('@layouts/header/delivery'), { ssr: false });
-const AuthMenu = dynamic(() => import('@layouts/header/auth-menu'), { ssr: false });
 const CartButton = dynamic(() => import('@components/cart/cart-button'), { ssr: false });
 
-const { site_header } = siteSettings;
+const promoButtons = [
+  { label: 'Promozioni', color: 'bg-[#a52a2a] text-white', href: ROUTES.PRODUCTS },
+  { label: 'Novità', color: 'bg-brand text-white', href: ROUTES.PRODUCTS },
+];
 
-function Header({ lang }: { lang: string }) {
+const quickLinks = [
+  { label: 'i miei ordini', href: ROUTES.ORDERS },
+  { label: 'confronta', href: ROUTES.PRODUCTS },
+  { label: 'importa', href: ROUTES.BUNDLE },
+];
+
+interface HeaderProps {
+  lang: string;
+}
+
+function Header({ lang }: HeaderProps) {
   const { t } = useTranslation(lang, 'common');
-  const {
-    displaySearch,
-    displayMobileSearch,
-    openSearch,
-    closeSearch,
-    isAuthorized,
-  } = useUI();
+  const { isAuthorized } = useUI();
+  const router = useRouter();
   const { openModal } = useModalAction();
-  const siteHeaderRef = useRef<HTMLDivElement>(null);
-  const siteSearchRef = useRef<HTMLDivElement>(null);
-  const isMounted = useIsMounted();
+  const { settings } = useHomeSettings();
+  const brandingTitle = useMemo(
+    () => settings?.branding?.title || siteSettings?.site_header?.title || 'Hidros',
+    [settings?.branding?.title]
+  );
 
-  useOnClickOutside(siteSearchRef, () => closeSearch());
+  const [isElevated, setIsElevated] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
 
-  function handleLogin() {
-    openModal('LOGIN_VIEW');
-  }
+  useEffect(() => {
+    const handleScroll = () => {
+      const y = window.scrollY || 0;
+      setIsElevated(y > 10);
+      setShowScrollTop(y > 300);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const handleAccount = () => {
+    if (isAuthorized) {
+      router.push(`/${lang}${ROUTES.ACCOUNT}`);
+    } else {
+      openModal('LOGIN_VIEW');
+    }
+  };
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
     <>
-      <header
-        id="siteHeader"
-        ref={siteHeaderRef}
-        className={cn(
-          // Always fixed styling; no scroll-driven changes
-          'sticky top-0 z-40 w-full bg-fill-secondary border-b border-gray-100',
-          displayMobileSearch && 'active-mobile-search'
-        )}
-      >
-        {/* Top bar: logo + desktop search + actions */}
-        <Container className="flex items-center justify-between h-16">
-          <Logo className="logo" />
-
-          {/* Desktop search (inline, stable) */}
-          {isMounted && (
-            <Suspense fallback={null}>
-              <SearchB2B
-                searchId="top-bar-search"
-                className="hidden lg:flex lg:max-w-[650px] 2xl:max-w-[800px] lg:mx-6"
-                lang={lang}
-              />
-            </Suspense>
+      <header className="border-b border-slate-200 bg-white text-slate-900">
+        <div
+          className={cn(
+            'sticky top-0 z-40 border-b border-slate-200 bg-white transition-shadow',
+            isElevated && 'shadow-sm'
           )}
+        >
+          <Container className="flex flex-col gap-4 py-5 lg:py-6">
+            {/* First row: Logo, Search, Icons (no cart) */}
+            <div className="flex items-center gap-8">
+              <div className="flex h-12 items-center justify-center shrink-0">
+                <Logo className="h-12 w-auto max-w-[180px]" />
+              </div>
 
-          {/* Right controls */}
-          <div className="flex shrink-0 items-center -mx-2.5 xl:-mx-3.5">
-            {/* <div className="xl:mx-3.5 mx-2.5">
-              <LanguageSwitcher lang={lang} />
-            </div> */}
-
-            {/* Compact search trigger for small screens / on-demand */}
-            <button
-              type="button"
-              aria-label="Search Toggle"
-              onClick={() => openSearch()}
-              title="Search toggle"
-              className="flex items-center justify-center w-10 h-10 md:w-12 md:h-12 mx-2.5 xl:mx-3.5 lg:hidden"
-            >
-              <SearchIcon className="w-[22px] h-[22px] text-brand-dark text-opacity-40" />
-            </button>
-
-            {isAuthorized ? (
-              <CartButton className="mx-2.5 xl:mx-3.5" lang={lang} />
-            ) : null}
-
-            <div className="items-center hidden lg:flex shrink-0 mx-2.5 xl:mx-3.5">
-              <CompanyIcon className={cn('w-7 h-7 md:w-7 md:h-7 text-opacity-40', isAuthorized ? 'text-brand' : 'text-brand-dark')} />
-              <AuthMenu
-                isAuthorized={isAuthorized}
-                href={`/${lang}${ROUTES.ACCOUNT}`}
-                btnProps={{
-                  children: t('text-sign-in'),
-                  onClick: handleLogin,
-                }}
-              >
-                {isMounted && isAuthorized && (ERP_STATIC?.company_name || ERP_STATIC?.username)
-                  ? (ERP_STATIC.company_name || ERP_STATIC.username)
-                  : t('text-account')}
-              </AuthMenu>
-            </div>
-          </div>
-        </Container>
-
-        {/* Mobile search (row under top bar) */}
-        <div className="hidden border-t border-gray-100">
-          <Container>
-            {isMounted && (
-              <Suspense fallback={null}>
-                <SearchB2B
-                  searchId="mobile-search"
-                  className="w-full py-2"
-                  lang={lang}
-                />
-              </Suspense>
-            )}
-          </Container>
-        </div>
-
-
-      </header>
-      <div>
-        {/* Row below: either MENU or a FULL search row (no absolute overlay) */}
-        {displaySearch ? (
-          <div className="border-t border-gray-100 bg-fill-secondary">
-            <Container className="h-16 flex items-center justify-center">
-              {isMounted && (
+              <div className="flex h-12 flex-1 min-w-[360px] items-center">
                 <Suspense fallback={null}>
                   <SearchB2B
-                    ref={siteSearchRef}
-                    className="w-full max-w-[780px] xl:max-w-[830px] 2xl:max-w-[1000px]"
+                    searchId="hidros-main-search"
+                    className="w-full"
                     lang={lang}
                   />
                 </Suspense>
-              )}
-            </Container>
-          </div>
-        ) : (
-          <div className="hidden lg:block border-t border-gray-100 bg-brand-light">
-            <Container className="flex items-center justify-between h-14">
-              {/* Keep logo space stable on the menu row if needed */}
-              <div className="w-0" />
-              {/* Main menu (fetches its own data; no data prop) */}
-              <B2BHeaderMenu className="flex" lang={lang} />
-              <div className="flex items-center ltr:ml-auto rtl:mr-auto shrink-0">
-                {isAuthorized ? (
-                  <Delivery lang={lang} />
-                ) : null}
               </div>
-            </Container>
-          </div>
-        )}
-      </div>
+
+              <div className="flex h-12 items-center gap-5 text-slate-600">
+              <Link
+                href={`/${lang}${ROUTES.WISHLIST}`}
+                aria-label={t('text-wishlist', { defaultValue: 'Wishlist' })}
+                className="relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 hover:border-brand hover:text-brand"
+              >
+                <HiOutlineHeart className="h-5 w-5" />
+              </Link>
+
+              <Link
+                href={`/${lang}${ROUTES.SHOPS}`}
+                aria-label="Catalog grid"
+                className="hidden sm:inline-flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 hover:border-brand hover:text-brand"
+              >
+                <HiOutlineViewGrid className="h-5 w-5" />
+              </Link>
+
+              <div className="hidden lg:flex flex-col items-end justify-center leading-tight">
+                <Suspense fallback={null}>
+                  <Delivery lang={lang} />
+                </Suspense>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleAccount}
+                className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+                aria-label={isAuthorized ? t('text-account') : t('text-sign-in')}
+              >
+                <HiOutlineUserCircle className="h-6 w-6" />
+              </button>
+            </div>
+            </div>
+
+            {/* Second row: Cart */}
+            <div className="flex justify-end">
+              <div className="hidden md:block">
+                <CartButton lang={lang} />
+              </div>
+            </div>
+          </Container>
+        </div>
+
+        <div className="bg-white">
+          <Container className="flex flex-wrap items-center justify-between gap-5 py-5 text-sm font-medium">
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-slate-700 hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+              >
+                <HiOutlineMenuAlt3 className="h-5 w-5" />
+                <span>Categorie</span>
+              </button>
+
+              {promoButtons.map((btn) => (
+                <Link
+                  key={btn.label}
+                  href={`/${lang}${btn.href}`}
+                  className={cn('rounded-full px-4 py-2 text-sm font-semibold shadow-sm', btn.color)}
+                >
+                  {btn.label}
+                </Link>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {quickLinks.map((link) => (
+                <Link
+                  key={link.label}
+                  href={`/${lang}${link.href}`}
+                  className="rounded border border-slate-300 px-4 py-2 text-slate-700 hover:border-brand hover:text-brand"
+                >
+                  {link.label}
+                </Link>
+              ))}
+              <div className="md:hidden">
+                <CartButton lang={lang} hideLabel iconClassName="text-slate-700" />
+              </div>
+            </div>
+          </Container>
+        </div>
+      </header>
+
+      {showScrollTop ? (
+        <button
+          type="button"
+          onClick={scrollToTop}
+          className="fixed bottom-6 right-6 z-40 inline-flex items-center gap-2 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white shadow-lg hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+          aria-label={t('text-scroll-to-top', { defaultValue: 'Scroll to top' })}
+        >
+          <HiOutlineArrowUp className="h-4 w-4" />
+          <span>{t('text-top', { defaultValue: 'Top' })}</span>
+        </button>
+      ) : null}
     </>
   );
 }
