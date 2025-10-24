@@ -2,6 +2,17 @@
 
 import SectionHeader from '@components/common/section-header';
 
+interface MediaImageStyle {
+  borderWidth?: number;
+  borderColor?: string;
+  borderStyle?: "solid" | "dashed" | "dotted" | "none";
+  borderRadius?: "none" | "sm" | "md" | "lg" | "xl" | "2xl" | "full";
+  paddingX?: number;
+  paddingY?: number;
+  backgroundColor?: string;
+  customCSS?: string; // For expert users
+}
+
 interface MediaImageConfig {
   imageUrl: string;
   alt?: string;
@@ -11,12 +22,23 @@ interface MediaImageConfig {
   width?: string;
   maxWidth?: string;
   alignment?: "left" | "center" | "right";
+  style?: MediaImageStyle;
 }
 
 interface MediaImageBlockProps {
   config: MediaImageConfig;
   lang?: string;
 }
+
+const borderRadiusMap = {
+  none: '0',
+  sm: '0.125rem',
+  md: '0.375rem',
+  lg: '0.5rem',
+  xl: '0.75rem',
+  '2xl': '1rem',
+  full: '9999px'
+};
 
 export function MediaImageBlock({ config, lang = 'it' }: MediaImageBlockProps) {
   const {
@@ -27,8 +49,22 @@ export function MediaImageBlock({ config, lang = 'it' }: MediaImageBlockProps) {
     openInNewTab = true,
     width = "100%",
     maxWidth = "800px",
-    alignment = "center"
+    alignment = "center",
+    style
   } = config;
+
+  const defaultStyle: MediaImageStyle = {
+    borderWidth: 0,
+    borderColor: '#e5e7eb',
+    borderStyle: 'solid',
+    borderRadius: 'lg',
+    paddingX: 0,
+    paddingY: 0,
+    backgroundColor: 'transparent',
+    customCSS: ''
+  };
+
+  const styleOptions = { ...defaultStyle, ...(style || {}) };
 
   if (!imageUrl) {
     return (
@@ -46,35 +82,55 @@ export function MediaImageBlock({ config, lang = 'it' }: MediaImageBlockProps) {
     right: "ml-auto"
   };
 
+  // Build inline styles from style options
+  const containerStyle: React.CSSProperties = {
+    borderWidth: styleOptions.borderWidth ? `${styleOptions.borderWidth}px` : '0',
+    borderColor: styleOptions.borderColor,
+    borderStyle: styleOptions.borderStyle === 'none' ? 'none' : styleOptions.borderStyle,
+    borderRadius: borderRadiusMap[styleOptions.borderRadius || 'lg'],
+    paddingLeft: styleOptions.paddingX ? `${styleOptions.paddingX}px` : '0',
+    paddingRight: styleOptions.paddingX ? `${styleOptions.paddingX}px` : '0',
+    paddingTop: styleOptions.paddingY ? `${styleOptions.paddingY}px` : '0',
+    paddingBottom: styleOptions.paddingY ? `${styleOptions.paddingY}px` : '0',
+    backgroundColor: styleOptions.backgroundColor,
+    width,
+    maxWidth: maxWidth === "none" ? undefined : maxWidth,
+  };
+
   const imageElement = (
     <img
       src={imageUrl}
       alt={alt}
-      className="h-auto rounded-lg shadow-lg transition-transform duration-300 hover:scale-[1.02]"
+      className="h-auto w-full object-contain transition-transform duration-300 hover:scale-[1.02]"
       style={{
-        width,
-        maxWidth: maxWidth === "none" ? undefined : maxWidth
+        borderRadius: borderRadiusMap[styleOptions.borderRadius || 'lg']
       }}
     />
   );
 
-  const containerClass = `my-6 ${alignmentClasses[alignment]}`;
+  const containerClass = `my-6 ${alignmentClasses[alignment]} overflow-hidden`;
 
   const contentBlock = linkUrl ? (
-    <div className={containerClass} style={{ width, maxWidth: maxWidth === "none" ? undefined : maxWidth }}>
-      <a
-        href={linkUrl}
-        target={openInNewTab ? "_blank" : undefined}
-        rel={openInNewTab ? "noopener noreferrer" : undefined}
-        className="block"
-      >
-        {imageElement}
-      </a>
-    </div>
+    <>
+      {styleOptions.customCSS && <style dangerouslySetInnerHTML={{ __html: styleOptions.customCSS }} />}
+      <div className={containerClass} style={containerStyle}>
+        <a
+          href={linkUrl}
+          target={openInNewTab ? "_blank" : undefined}
+          rel={openInNewTab ? "noopener noreferrer" : undefined}
+          className="block"
+        >
+          {imageElement}
+        </a>
+      </div>
+    </>
   ) : (
-    <div className={containerClass} style={{ width, maxWidth: maxWidth === "none" ? undefined : maxWidth }}>
-      {imageElement}
-    </div>
+    <>
+      {styleOptions.customCSS && <style dangerouslySetInnerHTML={{ __html: styleOptions.customCSS }} />}
+      <div className={containerClass} style={containerStyle}>
+        {imageElement}
+      </div>
+    </>
   );
 
   // If there's a title, wrap with section header
