@@ -1,6 +1,11 @@
+"use client";
+
+import SectionHeader from '@components/common/section-header';
+
 interface MediaImageConfig {
   imageUrl: string;
   alt?: string;
+  title?: string;
   linkUrl?: string;
   openInNewTab?: boolean;
   width?: string;
@@ -10,12 +15,14 @@ interface MediaImageConfig {
 
 interface MediaImageBlockProps {
   config: MediaImageConfig;
+  lang?: string;
 }
 
-export function MediaImageBlock({ config }: MediaImageBlockProps) {
+export function MediaImageBlock({ config, lang = 'it' }: MediaImageBlockProps) {
   const {
     imageUrl,
     alt = "Product image",
+    title,
     linkUrl,
     openInNewTab = true,
     width = "100%",
@@ -53,26 +60,35 @@ export function MediaImageBlock({ config }: MediaImageBlockProps) {
 
   const containerClass = `my-6 ${alignmentClasses[alignment]}`;
 
-  // If there's a link, wrap the image in an anchor tag
-  if (linkUrl) {
-    return (
-      <div className={containerClass} style={{ width, maxWidth: maxWidth === "none" ? undefined : maxWidth }}>
-        <a
-          href={linkUrl}
-          target={openInNewTab ? "_blank" : undefined}
-          rel={openInNewTab ? "noopener noreferrer" : undefined}
-          className="block"
-        >
-          {imageElement}
-        </a>
-      </div>
-    );
-  }
-
-  // No link, just show the image
-  return (
+  const contentBlock = linkUrl ? (
+    <div className={containerClass} style={{ width, maxWidth: maxWidth === "none" ? undefined : maxWidth }}>
+      <a
+        href={linkUrl}
+        target={openInNewTab ? "_blank" : undefined}
+        rel={openInNewTab ? "noopener noreferrer" : undefined}
+        className="block"
+      >
+        {imageElement}
+      </a>
+    </div>
+  ) : (
     <div className={containerClass} style={{ width, maxWidth: maxWidth === "none" ? undefined : maxWidth }}>
       {imageElement}
     </div>
   );
+
+  // If there's a title, wrap with section header
+  if (title) {
+    return (
+      <div className="mb-8 lg:mb-10 xl:mb-12">
+        <div className="mb-5 md:mb-6">
+          <SectionHeader sectionHeading={title} className="mb-0" lang={lang} />
+        </div>
+        {contentBlock}
+      </div>
+    );
+  }
+
+  // No title, just return the content
+  return contentBlock;
 }

@@ -4,6 +4,7 @@ import cn from 'classnames';
 import BannerCard from '@components/cards/banner-card';
 import Carousel from '@components/ui/carousel/carousel';
 import { SwiperSlide } from 'swiper/react';
+import SectionHeader from '@components/common/section-header';
 
 const defaultBreakpoints = {
   '1536': {
@@ -42,6 +43,7 @@ interface BannerProps {
   buttonGroupClassName?: string;
   prevButtonClassName?: string;
   nextButtonClassName?: string;
+  title?: string;
 }
 
 const BannerAllCarousel: React.FC<BannerProps> = ({
@@ -54,10 +56,16 @@ const BannerAllCarousel: React.FC<BannerProps> = ({
   forceFullHeight = false,
   buttonGroupClassName,
   prevButtonClassName,
-  nextButtonClassName
+  nextButtonClassName,
+  title
 }) => {
   return (
     <div className={cn(className, forceFullHeight && 'heightFull')}>
+      {title && (
+        <div className="mb-5 md:mb-6">
+          <SectionHeader sectionHeading={title} className="mb-0" lang={lang} />
+        </div>
+      )}
       <Carousel
         autoplay={false}
         breakpoints={breakpoints || defaultBreakpoints}
