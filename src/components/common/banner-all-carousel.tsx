@@ -1,5 +1,6 @@
 'use client';
 
+import cn from 'classnames';
 import BannerCard from '@components/cards/banner-card';
 import Carousel from '@components/ui/carousel/carousel';
 import { SwiperSlide } from 'swiper/react';
@@ -36,7 +37,11 @@ interface BannerProps {
   className?: string;
   buttonSize?: 'default' | 'small';
   breakpoints?: Record<string, any>; // Optional custom breakpoints
-  key?:string
+  itemKeyPrefix?: string;
+  forceFullHeight?: boolean;
+  buttonGroupClassName?: string;
+  prevButtonClassName?: string;
+  nextButtonClassName?: string;
 }
 
 const BannerAllCarousel: React.FC<BannerProps> = ({
@@ -45,10 +50,14 @@ const BannerAllCarousel: React.FC<BannerProps> = ({
   buttonSize = 'default',
   lang,
   breakpoints,
-  key = 'all-banner--key'
+  itemKeyPrefix = 'all-banner--key',
+  forceFullHeight = false,
+  buttonGroupClassName,
+  prevButtonClassName,
+  nextButtonClassName
 }) => {
   return (
-    <div className={className}>
+    <div className={cn(className, forceFullHeight && 'heightFull')}>
       <Carousel
         autoplay={false}
         breakpoints={breakpoints || defaultBreakpoints}
@@ -56,12 +65,19 @@ const BannerAllCarousel: React.FC<BannerProps> = ({
         prevActivateId="all-banner-carousel-button-prev"
         nextActivateId="all-banner-carousel-button-next"
         lang={lang}
+        buttonGroupClassName={buttonGroupClassName}
+        prevButtonClassName={prevButtonClassName}
+        nextButtonClassName={nextButtonClassName}
+        className={forceFullHeight ? 'h-full' : undefined}
       >
-        {data?.map((banner: any) => (
-          <SwiperSlide key={`${key}${banner.id}`}>
-            <BannerCard banner={banner} effectActive={true} lang={lang} />
-          </SwiperSlide>
-        ))}
+        {data?.map((banner: any, index: number) => {
+          const slideIdentifier = banner?.id ?? index;
+          return (
+            <SwiperSlide key={`${itemKeyPrefix}-${slideIdentifier}`} className={forceFullHeight ? 'h-full' : undefined}>
+              <BannerCard banner={banner} effectActive={true} lang={lang} forceFullHeight={forceFullHeight} noPadding={forceFullHeight} />
+            </SwiperSlide>
+          );
+        })}
       </Carousel>
     </div>
   );
