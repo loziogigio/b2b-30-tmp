@@ -18,12 +18,12 @@ import {
   HiOutlineHeart,
   HiOutlineViewGrid,
   HiOutlineUserCircle,
-  HiOutlineMenuAlt3,
   HiOutlineArrowUp,
 } from 'react-icons/hi';
 
 const Delivery = dynamic(() => import('@layouts/header/delivery'), { ssr: false });
 const CartButton = dynamic(() => import('@components/cart/cart-button'), { ssr: false });
+const B2BHeaderMenu = dynamic(() => import('@layouts/header/b2b-header-menu'), { ssr: false });
 
 const promoButtons = [
   { label: 'Promozioni', color: 'bg-[#a52a2a] text-white', href: '/search?filters-promo_type=all' },
@@ -63,10 +63,6 @@ function Header({ lang }: HeaderProps) {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-
-  const handleCategoriesMenu = () => {
-    openModal('CATEGORY_VIEW', { lang });
-  };
 
   const handleAccount = () => {
     if (isAuthorized) {
@@ -144,14 +140,7 @@ function Header({ lang }: HeaderProps) {
         <div className="bg-white border-b border-slate-200">
           <Container className="flex flex-wrap items-center justify-between gap-4 py-3 text-sm font-medium">
             <div className="flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                onClick={handleCategoriesMenu}
-                className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-slate-700 hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
-              >
-                <HiOutlineMenuAlt3 className="h-5 w-5" />
-                <span>Categorie</span>
-              </button>
+              <B2BHeaderMenu lang={lang} />
 
               {promoButtons.map((btn) => (
                 <Link
