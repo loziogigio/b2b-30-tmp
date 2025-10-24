@@ -78,75 +78,67 @@ function Header({ lang }: HeaderProps) {
 
   return (
     <>
+      <div
+        className={cn(
+          'sticky top-0 z-40 border-b border-slate-200 bg-white transition-shadow',
+          isElevated && 'shadow-sm'
+        )}
+      >
+        <Container className="flex items-center gap-3 py-3">
+          <div className="flex items-center shrink-0">
+            <Logo className="h-14 w-auto" />
+          </div>
+
+          <div className="flex items-center justify-center gap-3 flex-1">
+            <div className="w-full max-w-2xl">
+              <Suspense fallback={null}>
+                <SearchB2B
+                  searchId="hidros-main-search"
+                  className="w-full h-12"
+                  lang={lang}
+                />
+              </Suspense>
+            </div>
+
+            <Link
+              href={`/${lang}${ROUTES.WISHLIST}`}
+              aria-label={t('text-wishlist', { defaultValue: 'Wishlist' })}
+              className="relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 hover:border-brand hover:text-brand shrink-0"
+            >
+              <HiOutlineHeart className="h-5 w-5" />
+            </Link>
+          </div>
+
+          <div className="flex h-14 items-center gap-4 text-slate-600 shrink-0">
+            <div className="hidden lg:flex flex-col items-end justify-center leading-tight">
+              <Suspense fallback={null}>
+                <Delivery lang={lang} />
+              </Suspense>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleAccount}
+              className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+              aria-label={isAuthorized ? t('text-account') : t('text-sign-in')}
+            >
+              <HiOutlineUserCircle className="h-6 w-6" />
+            </button>
+
+            <Link
+              href={`/${lang}${ROUTES.SHOPS}`}
+              aria-label="Catalog grid"
+              className="hidden sm:inline-flex h-12 w-12 items-center justify-center hover:text-brand"
+            >
+              <HiOutlineViewGrid className="h-5 w-5" />
+            </Link>
+          </div>
+        </Container>
+      </div>
+
       <header className="border-b border-slate-200 bg-white text-slate-900">
-        <div
-          className={cn(
-            'sticky top-0 z-40 border-b border-slate-200 bg-white transition-shadow',
-            isElevated && 'shadow-sm'
-          )}
-        >
-          <Container className="flex flex-col gap-4 py-5 lg:py-6">
-            {/* First row: Logo, Search, Icons (no cart) */}
-            <div className="flex items-center gap-8">
-              <div className="flex h-12 items-center justify-center shrink-0">
-                <Logo className="h-12 w-auto max-w-[180px]" />
-              </div>
-
-              <div className="flex h-12 flex-1 min-w-[360px] items-center">
-                <Suspense fallback={null}>
-                  <SearchB2B
-                    searchId="hidros-main-search"
-                    className="w-full"
-                    lang={lang}
-                  />
-                </Suspense>
-              </div>
-
-              <div className="flex h-12 items-center gap-5 text-slate-600">
-              <Link
-                href={`/${lang}${ROUTES.WISHLIST}`}
-                aria-label={t('text-wishlist', { defaultValue: 'Wishlist' })}
-                className="relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 hover:border-brand hover:text-brand"
-              >
-                <HiOutlineHeart className="h-5 w-5" />
-              </Link>
-
-              <Link
-                href={`/${lang}${ROUTES.SHOPS}`}
-                aria-label="Catalog grid"
-                className="hidden sm:inline-flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 hover:border-brand hover:text-brand"
-              >
-                <HiOutlineViewGrid className="h-5 w-5" />
-              </Link>
-
-              <div className="hidden lg:flex flex-col items-end justify-center leading-tight">
-                <Suspense fallback={null}>
-                  <Delivery lang={lang} />
-                </Suspense>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleAccount}
-                className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
-                aria-label={isAuthorized ? t('text-account') : t('text-sign-in')}
-              >
-                <HiOutlineUserCircle className="h-6 w-6" />
-              </button>
-            </div>
-            </div>
-
-            {/* Second row: Cart */}
-            <div className="flex justify-end">
-              <div className="hidden md:block">
-                <CartButton lang={lang} />
-              </div>
-            </div>
-          </Container>
-        </div>
-
-        <div className="bg-white">
-          <Container className="flex flex-wrap items-center justify-between gap-5 py-5 text-sm font-medium">
+        <div className="bg-white border-b border-slate-200">
+          <Container className="flex flex-wrap items-center justify-between gap-4 py-3 text-sm font-medium">
             <div className="flex flex-wrap items-center gap-3">
               <button
                 type="button"
@@ -167,7 +159,7 @@ function Header({ lang }: HeaderProps) {
               ))}
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-3">
               {quickLinks.map((link) => (
                 <Link
                   key={link.label}
@@ -177,9 +169,7 @@ function Header({ lang }: HeaderProps) {
                   {link.label}
                 </Link>
               ))}
-              <div className="md:hidden">
-                <CartButton lang={lang} hideLabel iconClassName="text-slate-700" />
-              </div>
+              <CartButton lang={lang} summaryVariant="amount" className="ml-3" />
             </div>
           </Container>
         </div>
