@@ -15,6 +15,7 @@ interface BannerProps {
   className?: string;
   classNameInner?: string;
   forceFullHeight?: boolean;
+  noPadding?: boolean;
 }
 
 interface CardStyleOptions {
@@ -131,6 +132,7 @@ const BannerCard: React.FC<BannerProps> = ({
   effectActive = true,
   classNameInner,
   forceFullHeight = false,
+  noPadding = false,
 }) => {
   const { width } = useWindowSize();
   const { slug, title } = banner;
@@ -288,7 +290,7 @@ const BannerCard: React.FC<BannerProps> = ({
   );
 
   return (
-    <div className={cn('mx-auto w-full p-2.5', className, forceFullHeight && 'h-full')}>
+    <div className={cn('mx-auto w-full', !noPadding && 'p-2.5', className, forceFullHeight && 'h-full')}>
       {hoverData.css ? <style dangerouslySetInnerHTML={{ __html: hoverData.css }} /> : null}
       {href ? (
         <Link
