@@ -286,6 +286,11 @@ const BannerCard: React.FC<BannerProps> = ({
           <div className="absolute top-0 block w-1/2 h-full transform -skew-x-12 ltr:-left-full rtl:-right-full z-5 bg-gradient-to-r from-transparent to-white opacity-30 group-hover:animate-shine" />
         )}
       </div>
+      {title && (
+        <div className="mt-2 px-2 text-center">
+          <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
+        </div>
+      )}
     </div>
   );
 
