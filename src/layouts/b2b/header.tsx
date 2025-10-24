@@ -18,6 +18,7 @@ import {
   HiOutlineHeart,
   HiOutlineViewGrid,
   HiOutlineUserCircle,
+  HiOutlineMenuAlt3,
   HiOutlineArrowUp,
 } from 'react-icons/hi';
 
@@ -140,7 +141,19 @@ function Header({ lang }: HeaderProps) {
         <div className="bg-white border-b border-slate-200">
           <Container className="flex flex-wrap items-center justify-between gap-4 py-3 text-sm font-medium">
             <div className="flex flex-wrap items-center gap-3">
-              <B2BHeaderMenu lang={lang} />
+              <B2BHeaderMenu
+                lang={lang}
+                renderTrigger={({ onClick }) => (
+                  <button
+                    type="button"
+                    onClick={onClick}
+                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-slate-700 hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+                  >
+                    <HiOutlineMenuAlt3 className="h-5 w-5" />
+                    <span>Categorie</span>
+                  </button>
+                )}
+              />
 
               {promoButtons.map((btn) => (
                 <Link
