@@ -6,6 +6,27 @@ import Carousel from '@components/ui/carousel/carousel';
 import { SwiperSlide } from 'swiper/react';
 import SectionHeader from '@components/common/section-header';
 
+interface MediaCarouselStyle {
+  borderWidth?: number;
+  borderColor?: string;
+  borderStyle?: "solid" | "dashed" | "dotted" | "none";
+  borderRadius?: "none" | "sm" | "md" | "lg" | "xl" | "2xl" | "full";
+  paddingX?: number;
+  paddingY?: number;
+  backgroundColor?: string;
+  customCSS?: string; // For expert users
+}
+
+const borderRadiusMap = {
+  none: '0',
+  sm: '0.125rem',
+  md: '0.375rem',
+  lg: '0.5rem',
+  xl: '0.75rem',
+  '2xl': '1rem',
+  full: '9999px'
+};
+
 const defaultBreakpoints = {
   '1536': {
     slidesPerView: 3,
@@ -44,6 +65,7 @@ interface BannerProps {
   prevButtonClassName?: string;
   nextButtonClassName?: string;
   title?: string;
+  style?: MediaCarouselStyle;
 }
 
 const BannerAllCarousel: React.FC<BannerProps> = ({
@@ -57,15 +79,44 @@ const BannerAllCarousel: React.FC<BannerProps> = ({
   buttonGroupClassName,
   prevButtonClassName,
   nextButtonClassName,
-  title
+  title,
+  style
 }) => {
+  const defaultStyle: MediaCarouselStyle = {
+    borderWidth: 0,
+    borderColor: '#e5e7eb',
+    borderStyle: 'solid',
+    borderRadius: 'none',
+    paddingX: 0,
+    paddingY: 0,
+    backgroundColor: 'transparent',
+    customCSS: ''
+  };
+
+  const styleOptions = { ...defaultStyle, ...(style || {}) };
+
+  // Build container styles
+  const containerStyle: React.CSSProperties = {
+    borderWidth: styleOptions.borderWidth ? `${styleOptions.borderWidth}px` : '0',
+    borderColor: styleOptions.borderColor,
+    borderStyle: styleOptions.borderStyle === 'none' ? 'none' : styleOptions.borderStyle,
+    borderRadius: borderRadiusMap[styleOptions.borderRadius || 'none'],
+    paddingLeft: styleOptions.paddingX ? `${styleOptions.paddingX}px` : undefined,
+    paddingRight: styleOptions.paddingX ? `${styleOptions.paddingX}px` : undefined,
+    paddingTop: styleOptions.paddingY ? `${styleOptions.paddingY}px` : undefined,
+    paddingBottom: styleOptions.paddingY ? `${styleOptions.paddingY}px` : undefined,
+    backgroundColor: styleOptions.backgroundColor,
+  };
+
   return (
-    <div className={cn(className, forceFullHeight && 'heightFull')}>
-      {title && (
-        <div className="mb-5 md:mb-6">
-          <SectionHeader sectionHeading={title} className="mb-0" lang={lang} />
-        </div>
-      )}
+    <>
+      {styleOptions.customCSS && <style dangerouslySetInnerHTML={{ __html: styleOptions.customCSS }} />}
+      <div className={cn(className, forceFullHeight && 'heightFull')} style={containerStyle}>
+        {title && (
+          <div className="mb-5 md:mb-6">
+            <SectionHeader sectionHeading={title} className="mb-0" lang={lang} />
+          </div>
+        )}
       <Carousel
         autoplay={false}
         breakpoints={breakpoints || defaultBreakpoints}
@@ -87,7 +138,8 @@ const BannerAllCarousel: React.FC<BannerProps> = ({
           );
         })}
       </Carousel>
-    </div>
+      </div>
+    </>
   );
 };
 
