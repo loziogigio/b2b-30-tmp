@@ -1,5 +1,6 @@
 "use client";
 
+import React from 'react';
 import SectionHeader from '@components/common/section-header';
 
 interface MediaImageStyle {
