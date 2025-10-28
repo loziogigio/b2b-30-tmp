@@ -93,10 +93,13 @@ export default function SearchOverlayB2B({ lang, open, onClose, value = '', onCh
   const liveQueryParams = React.useMemo(() => (
     showAutocomplete
       ? { per_page: 12, start: 1, ...urlFilters, text: trimmed }
-      : { search: '' }
+      : {}
   ), [showAutocomplete, urlFilters, trimmed]);
 
-  const { data: autoProducts = [], isLoading: isLoadingAuto } = useProductListQuery(liveQueryParams);
+  const { data: autoProducts = [], isLoading: isLoadingAuto } = useProductListQuery(
+    liveQueryParams,
+    { enabled: open && showAutocomplete }  // Only query when overlay is open AND searching
+  );
 
   // Close overlay on navigation to another route (e.g., product detail or search page)
   React.useEffect(() => {
@@ -289,12 +292,14 @@ export default function SearchOverlayB2B({ lang, open, onClose, value = '', onCh
                   />
                 </div>
               )}
-              <TrendingProductsCarousel
-                lang={lang}
-                limitSkus={18}
-                sectionTitle="Prodotti consigliati"
-                carouselBreakpoint={overlayBreakpoints}
-              />
+              {open && (
+                <TrendingProductsCarousel
+                  lang={lang}
+                  limitSkus={18}
+                  sectionTitle="Prodotti consigliati"
+                  carouselBreakpoint={overlayBreakpoints}
+                />
+              )}
             </div>
           </div>
         </Container>

@@ -1,22 +1,27 @@
 import { QueryOptionsType, Product } from '@framework/types';
-import http from '@framework/utils/http';
-import { API_ENDPOINTS } from '@framework/utils/api-endpoints';
 import { useQuery } from '@tanstack/react-query';
 
-export const fetchSearchedProducts = async ({ queryKey }: any) => {
-  const options = queryKey[1];
+type SearchQueryKey = [string, QueryOptionsType];
 
-  const { data } = await http.get(API_ENDPOINTS.SEARCH);
+export const fetchSearchedProducts = async ({ queryKey }: { queryKey: SearchQueryKey }) => {
+  const [, options] = queryKey;
+  const text = (options?.text as string | undefined)?.trim();
 
-  function searchProduct(product: any) {
-    return product.name.toLowerCase().indexOf(options.text.toLowerCase()) > -1;
+  if (!text) {
+    return [] as Product[];
   }
 
-  return data.filter(searchProduct);
+  return [] as Product[];
 };
+
 export const useSearchQuery = (options: QueryOptionsType) => {
+  const trimmedText = (options?.text as string | undefined)?.trim() ?? '';
+
   return useQuery({
-    queryKey: [API_ENDPOINTS.SEARCH, options],
+    queryKey: ['local-search', options] as SearchQueryKey,
     queryFn: fetchSearchedProducts,
+    enabled: Boolean(trimmedText),
+    staleTime: Infinity,
+    retry: false,
   });
 };

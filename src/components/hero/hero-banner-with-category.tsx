@@ -48,6 +48,7 @@ const HeroBannerWithCategory: React.FC<Props> = ({
           buttonSize="small"
           className="mb-0"
           lang={lang}
+          itemKeyPrefix="hero-banner-discount"
         />
       </div>
     </div>

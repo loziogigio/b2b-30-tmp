@@ -25,7 +25,9 @@
       "@styles/*": ["src/styles/*"],
       "@utils/*": ["src/utils/*"],
       "@assets/*": ["src/assets/*"],
-      "@public/*": ["public/*"]
+      "@public/*": ["public/*"],
+      "@lib/*": ["src/lib/*"],
+      "@/*": ["src/*"]
     },
     "incremental": true,
     "plugins": [

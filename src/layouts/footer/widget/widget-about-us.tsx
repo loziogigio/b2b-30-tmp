@@ -29,7 +29,7 @@ const WidgetAbout: React.FC<AboutProps> = ({ lang, social, className }) => {
           href={ROUTES.HOME}
           className="mx-auto mb-3 lg:mb-5 sm:ltr:ml-0 sm:rtl:mr-0"
         />
-        <Text>{t('text-about-us')}</Text>
+        <Text suppressHydrationWarning>{t('text-about-us')}</Text>
       </div>
 
       {social && (

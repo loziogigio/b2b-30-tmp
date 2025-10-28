@@ -4,6 +4,8 @@
 import * as React from 'react';
 import { Tab, TabGroup, TabList, TabPanel, TabPanels } from '@headlessui/react';
 import type { Product } from '@framework/types';
+import type { PageBlock } from '@/lib/types/blocks';
+import { BlockRenderer } from '@/components/blocks/BlockRenderer';
 
 function classNames(...classes: any[]) {
   return classes.filter(Boolean).join(' ');
@@ -92,9 +94,11 @@ function groupDocs(docs?: DocItem[]) {
 export default function ProductB2BDetailsTab({
   lang, // reserved for future i18n labels
   product,
+  zone3Blocks = [],
 }: {
   lang: string;
   product: Product;
+  zone3Blocks?: PageBlock[];
 }) {
   const hasDescription = Boolean(product?.description && product.description.trim().length > 0);
   const features = normalizeFeatures(product?.features);
@@ -197,6 +201,20 @@ export default function ProductB2BDetailsTab({
     });
   }
 
+  // Add zone3 blocks as new tabs
+  zone3Blocks.forEach((block, index) => {
+    tabs.push({
+      id: `zone3-${block.id || index}`,
+      label: block.tabLabel || `Tab ${index + 1}`,
+      node: (
+        <BlockRenderer
+          key={block.id || `zone3-${index}`}
+          block={block}
+          productData={{ sku: String(product?.sku ?? ''), lang }}
+        />
+      ),
+    });
+  });
 
   return (
     <div className="w-full py-8 sm:px-0 lg:py-10 xl:px-2 xl:py-12">

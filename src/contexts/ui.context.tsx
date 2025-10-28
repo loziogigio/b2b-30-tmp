@@ -6,6 +6,7 @@ import { CartProvider } from './cart/cart.context';
 import { ModalProvider } from '@components/common/modal/modal.context';
 import { AddressProvider } from './address/address.context';
 import { LikesProvider } from './likes/likes.context';
+import { RemindersProvider } from './reminders/reminders.context';
 
 export interface State {
   isAuthorized: boolean;
@@ -341,7 +342,9 @@ export function ManagedUIContext({ children }: React.PropsWithChildren<{}>) {
       <UIProvider>
         <AddressProvider>
           <LikesProvider>
-            <ModalProvider>{children}</ModalProvider>
+            <RemindersProvider>
+              <ModalProvider>{children}</ModalProvider>
+            </RemindersProvider>
           </LikesProvider>
         </AddressProvider>
       </UIProvider>

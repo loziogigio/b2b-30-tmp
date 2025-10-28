@@ -11,11 +11,24 @@ module.exports = {
       ignoreDuringBuilds: true,
     },
   }),
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Permissions-Policy',
+            value: 'clipboard-read=(self "http://localhost:3001"), clipboard-write=(self "http://localhost:3001")',
+          },
+        ],
+      },
+    ];
+  },
   async redirects() {
     return [
       {
         source: '/',
-        destination: '/en',
+        destination: '/it',
         permanent: true,
       },
       {

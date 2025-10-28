@@ -1,3 +1,5 @@
+'use client';
+
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'src/app/i18n/client';
 import Heading from '@components/ui/heading';

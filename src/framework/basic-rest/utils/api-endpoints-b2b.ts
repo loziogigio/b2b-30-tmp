@@ -43,4 +43,15 @@ export const API_ENDPOINTS_B2B = {
     CLEAR_ALL: (userId: string) => `/likes/user/${userId}/all`,
     HEALTH: '/likes/health',
   },
+  REMINDERS: {
+    ROOT: '/reminders',
+    TOGGLE: '/reminders/toggle',
+    STATUS: (userId: string, sku: string) => `/reminders/status/${userId}/${sku}`,
+    BULK_STATUS: '/reminders/status/bulk',
+    USER: (userId: string) => `/reminders/user/${userId}`,
+    USER_SUMMARY: (userId: string) => `/reminders/user/${userId}/summary`,
+    STATS: (sku: string) => `/reminders/stats/${sku}`,
+    CLEAR_ALL: (userId: string) => `/reminders/user/${userId}/all`,
+    HEALTH: '/reminders/health',
+  },
 };

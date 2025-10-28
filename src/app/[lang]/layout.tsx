@@ -7,6 +7,7 @@ import ManagedDrawer from '@components/common/drawer/managed-drawer';
 import { Metadata } from 'next';
 import ToasterProvider from 'src/app/provider/toaster-provider';
 import Providers from 'src/app/provider/provider';
+import { getServerHomeSettings } from '@/lib/home-settings/fetch-server';
 
 // external
 import 'react-toastify/dist/ReactToastify.css';
@@ -51,14 +52,31 @@ export default async function RootLayout({
   params: any;
 }) {
   const { lang } = await params;
+  const homeSettings = await getServerHomeSettings();
+  const branding = homeSettings?.branding ?? {
+    title: 'B2B Store',
+    primaryColor: '#009f7f',
+    secondaryColor: '#02b290',
+    logo: undefined,
+    favicon: undefined
+  };
 
   return (
     <html lang={lang} dir={dir(lang)} suppressHydrationWarning={true}>
+      <head>
+        <title>{branding.title}</title>
+        {branding.favicon ? <link rel="icon" href={branding.favicon} /> : null}
+      </head>
       <body
         className={`${inter.variable} ${manrope.variable}`}
+        style={{
+          // Ensure CSS variables available on first paint
+          ['--color-brand' as string]: branding.primaryColor,
+          ['--color-brand-secondary' as string]: branding.secondaryColor
+        }}
         suppressHydrationWarning={true}
       >
-        <Providers>
+        <Providers initialHomeSettings={homeSettings}>
           <ManagedUIContext>
             {children}
             <ManagedModal lang={lang} />

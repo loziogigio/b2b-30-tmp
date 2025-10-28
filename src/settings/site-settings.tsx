@@ -4,6 +4,7 @@ import { CNFlag } from '@components/icons/language/CNFlag';
 import { USFlag } from '@components/icons/language/USFlag';
 import { DEFlag } from '@components/icons/language/DEFlag';
 import { ESFlag } from '@components/icons/language/ESFlag';
+import { ITFlag } from '@components/icons/language/ITFlag';
 const siteLogo = 'https://hidros.s3.eu-de.cloud-object-storage.appdomain.cloud/hidros/eshop/mymb_settings/logoHidrosPoint.png';
 
 export const siteSettings = {
@@ -18,17 +19,17 @@ export const siteSettings = {
   logo: {
     url: siteLogo,
     alt: 'Hidros B2B',
-    href: '/en/hidros',
+    href: '/it',
     width: 128,
     height: 30,
   },
-  defaultLanguage: 'en',
+  defaultLanguage: 'it',
   currencyCode: 'USD',
   site_header: {
     menu: [
       {
         id: 1,
-        path: '/hidros',
+        path: '/',
         label: 'menu-demos',
         subMenu: [
           {
@@ -218,6 +219,12 @@ export const siteSettings = {
       },
     ],
     languageMenu: [
+      {
+        id: 'it',
+        name: 'Italiano - IT',
+        value: 'it',
+        icon: <ITFlag />,
+      },
       // {
       //   id: 'ar',
       //   name: 'عربى - AR',
@@ -258,7 +265,7 @@ export const siteSettings = {
     pagesMenu: [
       {
         id: 1,
-        path: '/hidros/search',
+        path: '/search',
         label: 'menu-best-deals',
       },
       {

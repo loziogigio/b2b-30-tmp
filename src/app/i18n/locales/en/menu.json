@@ -35,5 +35,11 @@
   "menu-terms-condition": "Terms & Condition",
   "menu-contact-us": "Contact Us",
   "menu-checkout": "Checkout",
-  "menu-404": "404"
+  "menu-404": "404",
+  "all-categories": "All Categories",
+  "loading": "Loading...",
+  "menu-error": "Menu unavailable right now.",
+  "close": "Close",
+  "back": "Back",
+  "see-all-in": "See all in"
 }

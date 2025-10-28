@@ -8,6 +8,8 @@ import Logo from '@components/ui/logo';
 import SearchB2B from '@components/common/search-b2b';
 import { useTranslation } from 'src/app/i18n/client';
 import { useUI } from '@contexts/ui.context';
+import { useLikes } from '@contexts/likes/likes.context';
+import { useCompareList } from '@/contexts/compare/compare.context';
 import { ROUTES } from '@utils/routes';
 import { siteSettings } from '@settings/site-settings';
 import { useHomeSettings } from '@/hooks/use-home-settings';
@@ -20,6 +22,7 @@ import {
   HiOutlineUserCircle,
   HiOutlineMenuAlt3,
   HiOutlineArrowUp,
+  HiOutlineSwitchHorizontal
 } from 'react-icons/hi';
 
 const Delivery = dynamic(() => import('@layouts/header/delivery'), { ssr: false });
@@ -33,7 +36,7 @@ const promoButtons = [
 
 const quickLinks = [
   { label: 'i miei ordini', href: '/account/orders' },
-  { label: 'confronta', href: ROUTES.PRODUCTS },
+  { label: 'confronta', href: ROUTES.PRODUCT_COMPARE },
   { label: 'importa', href: ROUTES.BUNDLE },
 ];
 
@@ -44,6 +47,8 @@ interface HeaderProps {
 function Header({ lang }: HeaderProps) {
   const { t } = useTranslation(lang, 'common');
   const { isAuthorized } = useUI();
+  const { summary } = useLikes();
+  const { skus: compareSkus } = useCompareList();
   const router = useRouter();
   const { openModal } = useModalAction();
   const { settings } = useHomeSettings();
@@ -107,6 +112,24 @@ function Header({ lang }: HeaderProps) {
               className="relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 hover:border-brand hover:text-brand shrink-0"
             >
               <HiOutlineHeart className="h-5 w-5" />
+              {summary?.totalCount ? (
+                <span className="absolute -top-1 -right-1 rounded-full bg-brand px-1.5 text-[10px] font-semibold text-white">
+                  {summary.totalCount}
+                </span>
+              ) : null}
+            </Link>
+
+            <Link
+              href={`/${lang}${ROUTES.PRODUCT_COMPARE}`}
+              aria-label="Product compare"
+              className="relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 hover:border-brand hover:text-brand shrink-0"
+            >
+              <HiOutlineSwitchHorizontal className="h-5 w-5" />
+              {compareSkus.length ? (
+                <span className="absolute -top-1 -right-1 rounded-full bg-emerald-600 px-1.5 text-[10px] font-semibold text-white">
+                  {compareSkus.length}
+                </span>
+              ) : null}
             </Link>
           </div>
 

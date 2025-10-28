@@ -38,7 +38,7 @@ export default function SidebarMenu() {
     } catch {}
     // Update UI auth state and redirect to home
     unauthorize?.();
-    router.replace(`/${lang}/hidros`);
+    router.replace(`/${lang}`);
   }
 
   return (

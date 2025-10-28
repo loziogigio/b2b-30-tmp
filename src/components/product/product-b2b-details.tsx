@@ -9,14 +9,16 @@ import ThumbnailCarousel from '@components/ui/carousel/thumbnail-carousel';
 import Image from '@components/ui/image';
 import Button from '@components/ui/button';
 import { IoIosHeart, IoIosHeartEmpty } from 'react-icons/io';
+import { IoNotificationsOutline, IoNotifications, IoArrowRedoOutline } from 'react-icons/io5';
+import { HiOutlineSwitchHorizontal, HiOutlineCheckCircle, HiOutlinePrinter } from 'react-icons/hi';
 import TagLabel from '@components/ui/tag-label';
 import LabelIcon from '@components/icons/label-icon';
-import { IoArrowRedoOutline } from 'react-icons/io5';
 import SocialShareBox from '@components/ui/social-share-box';
 import ProductB2BDetailsTab from '@components/product/product-details/product-b2b-tab';
 import { useTranslation } from 'src/app/i18n/client';
 import Link from 'next/link';
 import { productPlaceholder } from '@assets/placeholders';
+import cn from 'classnames';
 
 // NEW: ERP prices
 import { useQuery } from '@tanstack/react-query';
@@ -27,6 +29,7 @@ import type { ErpPriceData } from '@utils/transform/erp-prices';
 import AddToCart from '@components/product/add-to-cart';
 import { fetchErpPrices } from '@framework/erp/prices';
 import { useLikes } from '@contexts/likes/likes.context';
+import { useReminders } from '@contexts/reminders/reminders.context';
 import { useUI } from '@contexts/ui.context';
 import PriceAndPromo from './price-and-promo';
 import PackagingGrid from './packaging-grid';
@@ -34,6 +37,8 @@ import { da } from 'date-fns/locale';
 import { formatAvailability } from '@utils/format-availability';
 import B2BInfoBlock from './details/b2b-info-block';
 import ProductImageLightbox from './details/product-image-lightbox';
+import { useCompareList } from '@/contexts/compare/compare.context';
+import { printProductDetail } from '@utils/print-product';
 
 // add inside ProductB2BDetails.tsx (same file, above the component's return)
 
@@ -106,11 +111,18 @@ const ProductB2BDetails: React.FC<{ lang: string; search: any; blocks?: PageBloc
 
   // Likes context
   const likes = useLikes();
+  const reminders = useReminders();
   const { isAuthorized } = useUI();
   const sku = String(data?.sku ?? '');
+  const { addSku: addSkuToCompare, hasSku } = useCompareList();
   const favorite = isAuthorized && sku ? likes.isLiked(sku) : false;
+  const hasReminder = isAuthorized && sku ? reminders.hasReminder(sku) : false;
   const [addToWishlistLoader, setAddToWishlistLoader] = useState(false);
+  const [addToReminderLoader, setAddToReminderLoader] = useState(false);
   const [shareButtonStatus, setShareButtonStatus] = useState(false);
+
+  // Check if product is out of stock
+  const isOutOfStock = erpPrice ? Number(erpPrice.availability) <= 0 : false;
 
   const galleryItems = React.useMemo<GalleryImage[]>(() => {
     if (!data) return [];
@@ -156,13 +168,27 @@ const ProductB2BDetails: React.FC<{ lang: string; search: any; blocks?: PageBloc
   );
 
   const productUrl = `${process.env.NEXT_PUBLIC_WEBSITE_URL}${ROUTES.PRODUCT}/${pathname.slug}`;
+  const isInCompare = hasSku(sku);
 
-  // Ensure we know initial like status with a lightweight bulk check
+  const handleAddToCompare = React.useCallback(() => {
+    if (!sku) return;
+    addSkuToCompare(sku);
+  }, [sku, addSkuToCompare]);
+
+  const handlePrint = React.useCallback(() => {
+    if (!data) return;
+    printProductDetail(data, erpPrice);
+  }, [data, erpPrice]);
+
+  // Ensure we know initial like/reminder status with a lightweight bulk check
   React.useEffect(() => {
     if (!sku) return;
     if (!favorite) {
       // If unknown/not liked locally, fetch status and merge store
       likes.loadBulkStatus([sku]).catch(() => {});
+    }
+    if (!hasReminder) {
+      reminders.loadBulkStatus([sku]).catch(() => {});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sku]);
@@ -179,6 +205,16 @@ const ProductB2BDetails: React.FC<{ lang: string; search: any; blocks?: PageBloc
       await likes.toggle(sku);
     } finally {
       setAddToWishlistLoader(false);
+    }
+  };
+
+  const toggleReminder = async () => {
+    try {
+      setAddToReminderLoader(true);
+      if (!sku) return;
+      await reminders.toggle(sku);
+    } finally {
+      setAddToReminderLoader(false);
     }
   };
 
@@ -277,25 +313,66 @@ const ProductB2BDetails: React.FC<{ lang: string; search: any; blocks?: PageBloc
             </div>
           </div>
 
-          {/* Wishlist / Share */}
+          {/* Wishlist / Reminder / Compare / Share / Print */}
           <div className="pt-3 md:pt-4">
-            <div className="grid grid-cols-2 gap-2.5">
-              {isAuthorized && (
-              <Button
-                variant="border"
-                onClick={addToWishlist}
-                loading={addToWishlistLoader}
-                className={`group hover:text-brand ${favorite ? 'text-brand' : ''}`}
-              >
-                {favorite ? (
-                  <IoIosHeart className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 transition-all text-red-500" />
-                ) : (
-                  <IoIosHeartEmpty className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 transition-all group-hover:text-brand" />
-                )}
-                {t('text-wishlist')}
-              </Button>
+            <div
+              className={`grid gap-2.5 ${
+                isAuthorized ? (isOutOfStock ? 'grid-cols-5' : 'grid-cols-4') : 'grid-cols-3'
+              }`}
+            >
+              {/* Reminder Button - only show when out of stock */}
+              {isOutOfStock && isAuthorized && (
+                <Button
+                  variant="border"
+                  onClick={toggleReminder}
+                  loading={addToReminderLoader}
+                  className={`group hover:text-yellow-500 ${hasReminder ? 'text-yellow-500' : ''}`}
+                >
+                  {hasReminder ? (
+                    <IoNotifications className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 transition-all animate-pulse text-yellow-500" />
+                  ) : (
+                    <IoNotificationsOutline className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 transition-all group-hover:text-yellow-500" />
+                  )}
+                  {t('text-reminder')}
+                </Button>
               )}
 
+              {/* Wishlist Button */}
+              {isAuthorized && (
+                <Button
+                  variant="border"
+                  onClick={addToWishlist}
+                  loading={addToWishlistLoader}
+                  className={`group hover:text-brand ${favorite ? 'text-brand' : ''}`}
+                >
+                  {favorite ? (
+                    <IoIosHeart className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 transition-all text-red-500" />
+                  ) : (
+                    <IoIosHeartEmpty className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 transition-all group-hover:text-brand" />
+                  )}
+                  {t('text-wishlist')}
+                </Button>
+              )}
+
+              {/* Compare Button */}
+              <Button
+                variant="border"
+                onClick={handleAddToCompare}
+                disabled={!sku}
+                className={cn(
+                  'group hover:text-emerald-600',
+                  isInCompare ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : ''
+                )}
+              >
+                {isInCompare ? (
+                  <HiOutlineCheckCircle className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 text-emerald-500" />
+                ) : (
+                  <HiOutlineSwitchHorizontal className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 transition-all group-hover:text-emerald-600" />
+                )}
+                {isInCompare ? 'In compare' : 'Confronta'}
+              </Button>
+
+              {/* Share Button */}
               <div className="relative group">
                 <Button
                   variant="border"
@@ -312,6 +389,16 @@ const ProductB2BDetails: React.FC<{ lang: string; search: any; blocks?: PageBloc
                   lang={lang}
                 />
               </div>
+
+              {/* Print Button */}
+              <Button
+                variant="border"
+                onClick={handlePrint}
+                className="group hover:text-blue-600"
+              >
+                <HiOutlinePrinter className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 transition-all group-hover:text-blue-600" />
+                {t('text-print', { defaultValue: 'Print' })}
+              </Button>
             </div>
           </div>
 

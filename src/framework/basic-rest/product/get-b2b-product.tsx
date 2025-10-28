@@ -1,6 +1,7 @@
 import { post } from '@framework/utils/httpB2B';
 import { API_ENDPOINTS_B2B } from '@framework/utils/api-endpoints-b2b';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import { Product } from '@framework/types';
 import { transformProduct, RawProduct, transformSearchParams } from '@utils/transform/b2b-product';
 
@@ -46,16 +47,25 @@ export const fetchProductList = async (
 // ===============================
 // 2. Simple paginated (single-shot) query
 // ===============================
-export const useProductListQuery = (params: any) => {
-  const finalParams = transformSearchParams(params);
+export const useProductListQuery = (params: any, options?: { enabled?: boolean }) => {
+  const enabled = options?.enabled ?? true;
 
-  return useQuery<Product[], Error>({
+  // Transform params once, stably - use JSON.stringify for deep comparison
+  const finalParams = useMemo(() => {
+    if (!enabled) return {};
+    return transformSearchParams(params);
+  }, [JSON.stringify(params), enabled]);
+
+  const query = useQuery<Product[], Error>({
     queryKey: [API_ENDPOINTS_B2B.SEARCH, finalParams],
     queryFn: async () => {
       const { items } = await fetchProductList(finalParams, 0);
       return items;
-    }
+    },
+    enabled
   });
+
+  return query;
 };
 
 // ===============================

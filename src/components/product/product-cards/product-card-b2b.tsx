@@ -16,8 +16,11 @@ import { formatAvailability } from '@utils/format-availability';
 import PackagingGrid from '../packaging-grid';
 import PriceAndPromo from '../price-and-promo';
 import { IoIosHeart, IoIosHeartEmpty } from 'react-icons/io';
+import { IoNotificationsOutline, IoNotifications } from 'react-icons/io5';
 import { useLikes } from '@contexts/likes/likes.context';
+import { useReminders } from '@contexts/reminders/reminders.context';
 import { useUI } from '@contexts/ui.context';
+import { useHomeSettings, getCardStyleCSS, getCardHoverClass } from '@/hooks/use-home-settings';
 const AddToCart = dynamic(() => import('@components/product/add-to-cart'), {
   ssr: false,
 });
@@ -27,6 +30,7 @@ interface ProductProps {
   product: Product;
   className?: string;
   priceData?: ErpPriceData;
+  customStyle?: React.CSSProperties;
 }
 
 function RenderPopupOrAddToCart({
@@ -87,15 +91,67 @@ const ProductCardB2B: React.FC<ProductProps> = ({
   product,
   className,
   lang,
-  priceData
+  priceData,
+  customStyle
 }) => {
   const { name, image, unit, product_type, sku, brand, slug, description, model, quantity, parent_sku } = product ?? {};
   const { openModal } = useModalAction();
   const { t } = useTranslation(lang, 'common');
   const likes = useLikes();
+  const reminders = useReminders();
   const { isAuthorized } = useUI();
   const isFavorite = sku ? likes.isLiked(sku) : false;
+  const hasReminder = sku ? reminders.hasReminder(sku) : false;
   const [likeLoading, setLikeLoading] = React.useState<boolean>(false);
+  const [reminderLoading, setReminderLoading] = React.useState<boolean>(false);
+
+  // Check if product is out of stock
+  const isOutOfStock = priceData ? Number(priceData.availability) <= 0 : false;
+  const { settings } = useHomeSettings();
+  const globalCardStyle = settings?.cardStyle;
+  const hoverEffect = globalCardStyle?.hoverEffect;
+  const derivedStyle = React.useMemo<React.CSSProperties | undefined>(() => {
+    if (customStyle) return customStyle;
+    if (!globalCardStyle) return undefined;
+    return getCardStyleCSS(globalCardStyle);
+  }, [customStyle, globalCardStyle]);
+
+  const hoverClass = React.useMemo(() => {
+    if (customStyle) return '';
+    if (!globalCardStyle) return '';
+    return getCardHoverClass(globalCardStyle.hoverEffect);
+  }, [customStyle, globalCardStyle]);
+
+  const hoverBackgroundColor =
+    !customStyle && hoverEffect !== 'shadow' ? globalCardStyle?.hoverBackgroundColor : undefined;
+
+  const hoverBackgroundClass = React.useMemo(() => {
+    if (!hoverBackgroundColor) return undefined;
+    return `card-hover-bg-${hoverBackgroundColor.replace(/[^a-z0-9]/gi, '').toLowerCase()}`;
+  }, [hoverBackgroundColor]);
+
+  React.useEffect(() => {
+    if (typeof document === 'undefined') return;
+    if (!hoverBackgroundClass || !hoverBackgroundColor) return;
+    const styleId = `hover-style-${hoverBackgroundClass}`;
+    if (document.getElementById(styleId)) return;
+    const styleTag = document.createElement('style');
+    styleTag.id = styleId;
+    styleTag.textContent = `.${hoverBackgroundClass}:hover { background-color: ${hoverBackgroundColor}; }`;
+    document.head.appendChild(styleTag);
+  }, [hoverBackgroundClass, hoverBackgroundColor]);
+
+  const combinedClassName = React.useMemo(
+    () =>
+      cn(
+        'flex flex-col group overflow-hidden cursor-pointer transition-all duration-300 relative h-full border border-[#EAEEF2] rounded',
+        className,
+        hoverClass,
+        hoverBackgroundClass,
+        hoverBackgroundColor ? 'transition-colors duration-200' : null
+      ),
+    [className, hoverClass, hoverBackgroundClass, hoverBackgroundColor]
+  );
 
   const { price: finalPrice, basePrice, discount } = usePrice({
     amount: product?.sale_price ?? product?.price,
@@ -118,10 +174,8 @@ const ProductCardB2B: React.FC<ProductProps> = ({
 
   return (
     <article
-      className={cn(
-        'flex flex-col group overflow-hidden cursor-pointer transition-all duration-300 relative h-full border border-[#EAEEF2] rounded',
-        className,
-      )}
+      className={combinedClassName}
+      style={derivedStyle}
       title={name}
     >
       {/* Product Image */}
@@ -182,32 +236,65 @@ const ProductCardB2B: React.FC<ProductProps> = ({
           </div>
 
           {isAuthorized && priceData && (
-          <button
-            type="button"
-            aria-label="Toggle wishlist"
-            className={cn(
-              'shrink-0 ml-2 p-1 rounded transition-colors',
-              isFavorite ? 'text-red-500' : 'text-gray-400 hover:text-brand'
-            )}
-            onClick={async (e) => {
-              e.stopPropagation();
-              try {
-                setLikeLoading(true);
-                if (!sku) return;
-                await likes.toggle(sku);
-              } finally {
-                setLikeLoading(false);
-              }
-            }}
-            disabled={likeLoading || !sku}
-            title={isFavorite ? t('text-wishlist') : t('text-wishlist')}
-          >
-            {isFavorite ? (
-              <IoIosHeart className="text-[18px]" />
-            ) : (
-              <IoIosHeartEmpty className="text-[18px]" />
-            )}
-          </button>
+            <div className="flex items-center gap-1">
+              {/* Reminder Bell - only show when out of stock */}
+              {isOutOfStock && (
+                <button
+                  type="button"
+                  aria-label="Toggle reminder"
+                  className={cn(
+                    'shrink-0 p-1 rounded transition-colors',
+                    hasReminder ? 'text-yellow-500' : 'text-gray-400 hover:text-yellow-500'
+                  )}
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    try {
+                      setReminderLoading(true);
+                      if (!sku) return;
+                      await reminders.toggle(sku);
+                    } finally {
+                      setReminderLoading(false);
+                    }
+                  }}
+                  disabled={reminderLoading || !sku}
+                  title={hasReminder ? t('text-reminder-active') : t('text-reminder-notify')}
+                >
+                  {hasReminder ? (
+                    <IoNotifications className={cn('text-[18px] animate-pulse')} />
+                  ) : (
+                    <IoNotificationsOutline className="text-[18px]" />
+                  )}
+                </button>
+              )}
+
+              {/* Wishlist Heart */}
+              <button
+                type="button"
+                aria-label="Toggle wishlist"
+                className={cn(
+                  'shrink-0 p-1 rounded transition-colors',
+                  isFavorite ? 'text-red-500' : 'text-gray-400 hover:text-brand'
+                )}
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  try {
+                    setLikeLoading(true);
+                    if (!sku) return;
+                    await likes.toggle(sku);
+                  } finally {
+                    setLikeLoading(false);
+                  }
+                }}
+                disabled={likeLoading || !sku}
+                title={isFavorite ? t('text-wishlist') : t('text-wishlist')}
+              >
+                {isFavorite ? (
+                  <IoIosHeart className="text-[18px]" />
+                ) : (
+                  <IoIosHeartEmpty className="text-[18px]" />
+                )}
+              </button>
+            </div>
           )}
         </div>
 

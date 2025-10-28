@@ -21,7 +21,6 @@ export default function CategoryProductsCarousel({
     // filters_next_insert: '',
     per_page: 12,
     start: 1,
-    customer_code: '00000',
     search: category.url,
   });
 

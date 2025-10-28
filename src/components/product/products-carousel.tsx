@@ -109,7 +109,7 @@ const ProductsCarousel: React.FC<ProductsCarouselProps> = ({
   return (
     <div
       className={cn(
-        'max-w-[1920px] overflow-hidden 4xl:overflow-visible px-4 md:px-6 lg:px-8 2xl:ltr:pl-10 2xl:rtl:pr-10 2xl:ltr:pr-0 2xl:rtl:pl-0 4xl:ltr:pr-10 4xl:rtl:pl-10 mx-auto relative',
+        'max-w-[1920px] overflow-hidden 4xl:overflow-visible mx-auto relative',
         className,
       )}
     >

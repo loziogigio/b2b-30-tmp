@@ -10,9 +10,10 @@ type CartButtonProps = {
   lang: string;
   className?: string;
   iconClassName?: string;
-  hideLabel?: boolean;
+  hideLabel?: boolean; // legacy flag: hides summary entirely
   currency?: string;         // default "EUR"
   locale?: string;           // default "it-IT"
+  summaryVariant?: 'full' | 'amount' | 'none';
 };
 
 const formatCurrency = (n: number, currency = 'EUR', locale = 'it-IT') =>
@@ -52,6 +53,7 @@ const CartButton: React.FC<CartButtonProps> = ({
   hideLabel,
   currency = 'EUR',
   locale = 'it-IT',
+  summaryVariant = 'full',
 }) => {
   const { t } = useTranslation(lang, 'common');
   const { openDrawer, setDrawerView } = useUI();
@@ -64,6 +66,8 @@ const CartButton: React.FC<CartButtonProps> = ({
 
   const amount = formatCurrency(total || 0, currency, locale);
 
+  const resolvedVariant: 'full' | 'amount' | 'none' = hideLabel ? 'none' : summaryVariant;
+
   return (
     <button
       className={cn(
@@ -74,16 +78,18 @@ const CartButton: React.FC<CartButtonProps> = ({
       aria-label="cart-button"
     >
       {/* Two-row info block (before icon) */}
-      {!hideLabel && (
+      {resolvedVariant !== 'none' && (
         <div className="flex flex-col items-end leading-tight">
-          {/* ~1/3 visual weight */}
-          <div className="text-[11px] uppercase tracking-wide text-gray-600">
-            {t('text-cart')}
-          </div>
-          {/* ~2/3 visual weight */}
-          <div className="text-sm sm:text-base font-semibold text-gray-900">
-            {amount}
-          </div>
+          {resolvedVariant === 'full' ? (
+            <div className="text-[11px] uppercase tracking-wide text-gray-600">
+              {t('text-cart')}
+            </div>
+          ) : null}
+          {resolvedVariant !== 'none' ? (
+            <div className="text-sm sm:text-base font-semibold text-gray-900">
+              {amount}
+            </div>
+          ) : null}
         </div>
       )}
 

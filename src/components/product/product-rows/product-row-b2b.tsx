@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import cn from 'classnames';
 import Image from '@components/ui/image';
 import Link from 'next/link';
@@ -14,8 +14,10 @@ import PackagingGrid from '../packaging-grid';
 import { formatAvailability } from '@utils/format-availability';
 import PriceAndPromo from '../price-and-promo';
 import { useLikes } from '@contexts/likes/likes.context';
+import { useReminders } from '@contexts/reminders/reminders.context';
 import { useUI } from '@contexts/ui.context';
 import { IoIosHeart, IoIosHeartEmpty } from 'react-icons/io';
+import { IoNotificationsOutline, IoNotifications } from 'react-icons/io5';
 import VariantsFilterBar from './variants-filter-bar';
 
 const AddToCart = dynamic(() => import('@components/product/add-to-cart'), { ssr: false });
@@ -69,6 +71,7 @@ export default function ProductRowB2B({
   const { t } = useTranslation(lang, 'common');
   const { openModal } = useModalAction();
   const likes = useLikes();
+  const reminders = useReminders();
   const { isAuthorized } = useUI();
 
   const {
@@ -85,6 +88,8 @@ export default function ProductRowB2B({
   const isVariable = (variations?.length ?? 0) > 1;
 
   const singleVar = variations?.length === 1 ? variations[0] : null;
+
+  const [reminderLoading, setReminderLoading] = useState<Record<string, boolean>>({});
 
   // update this helper so it can accept a specific item (variant)
   const openQuick = (item?: Product) => {
@@ -172,6 +177,19 @@ export default function ProductRowB2B({
     }
     return arr;
   }, [filteredVariants, selectedModels, isAuthorized, sortKey]);
+
+  useEffect(() => {
+    if (!isAuthorized) return;
+    const candidates = new Set<string>();
+    const baseSku = String(sku ?? '').trim();
+    if (baseSku) candidates.add(baseSku);
+    variantRows.forEach((v) => {
+      const candidateSku = String(v?.sku ?? baseSku).trim();
+      if (candidateSku) candidates.add(candidateSku);
+    });
+    if (!candidates.size) return;
+    reminders.loadBulkStatus(Array.from(candidates)).catch(() => {});
+  }, [isAuthorized, reminders, variantRows, sku]);
 
   /** ---------- RIGA PARENT (stesso grid) ---------- */
   return (
@@ -290,6 +308,10 @@ export default function ProductRowB2B({
             const isPseudo = !!(v as any).__pseudo;
             const vPrice: ErpPriceData | undefined = isPseudo ? priceData : getPrice(v.id);
             const vImg = v.image?.thumbnail ?? productPlaceholder;
+            const targetSku = String(v.sku ?? sku ?? '').trim();
+            const isOutOfStock = vPrice ? Number(vPrice.availability) <= 0 : false;
+            const reminderActive = targetSku ? reminders.hasReminder(targetSku) : false;
+            const reminderBusy = targetSku ? !!reminderLoading[targetSku] : false;
 
             return (
               <div key={v.id} className={cn(
@@ -325,33 +347,61 @@ export default function ProductRowB2B({
                   {/* 2) Info variante: riga 1 SKU+Brand, riga 2 Model */}
                   <Cell>
                     <div className="min-w-0">
-                      {/* Wishlist (above, left-aligned) */}
-                      {isAuthorized && (
-                        <div className="flex items-center gap-1 text-[12px] text-gray-600 mb-1">
-                          <span>{t('text-wishlist')}</span>
-                          <button
-                            type="button"
-                            aria-label="Toggle wishlist"
-                            className={cn(
-                              'p-1 rounded text-[18px] transition-colors',
-                              likes.isLiked(v.sku ?? sku) ? 'text-red-500' : 'text-gray-400 hover:text-brand'
-                            )}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const targetSku = String(v.sku ?? sku ?? '');
-                              if (!targetSku) return;
-                              likes.toggle(targetSku);
-                            }}
-                            title={t('text-wishlist')}
-                          >
-                            {likes.isLiked(v.sku ?? sku) ? (
-                              <IoIosHeart />
-                            ) : (
-                              <IoIosHeartEmpty />
-                            )}
-                          </button>
+                      {isAuthorized ? (
+                        <div className="flex flex-col gap-1 text-[12px] text-gray-600 mb-1">
+                          {isOutOfStock && targetSku ? (
+                            <div className="flex items-center gap-1">
+                              <span>{t('text-reminder')}</span>
+                              <button
+                                type="button"
+                                aria-label="Toggle reminder"
+                                className={cn(
+                                  'p-1 rounded text-[18px] transition-colors',
+                                  reminderActive ? 'text-yellow-500' : 'text-gray-400 hover:text-yellow-500'
+                                )}
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  if (!targetSku) return;
+                                  setReminderLoading((prev) => ({ ...prev, [targetSku]: true }));
+                                  try {
+                                    await reminders.toggle(targetSku);
+                                  } finally {
+                                    setReminderLoading((prev) => ({ ...prev, [targetSku]: false }));
+                                  }
+                                }}
+                                disabled={reminderBusy || !targetSku}
+                                title={reminderActive ? t('text-reminder-active') : t('text-reminder-notify')}
+                              >
+                                {reminderActive ? (
+                                  <IoNotifications className="animate-pulse" />
+                                ) : (
+                                  <IoNotificationsOutline />
+                                )}
+                              </button>
+                            </div>
+                          ) : null}
+
+                          <div className="flex items-center gap-1">
+                            <span>{t('text-wishlist')}</span>
+                            <button
+                              type="button"
+                              aria-label="Toggle wishlist"
+                              className={cn(
+                                'p-1 rounded text-[18px] transition-colors',
+                                likes.isLiked(targetSku) ? 'text-red-500' : 'text-gray-400 hover:text-brand'
+                              )}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (!targetSku) return;
+                                likes.toggle(targetSku);
+                              }}
+                              title={t('text-wishlist')}
+                            >
+                              {likes.isLiked(targetSku) ? <IoIosHeart /> : <IoIosHeartEmpty />}
+                            </button>
+                          </div>
                         </div>
-                      )}
+                      ) : null}
 
                       {/* Row: SKU + Brand */}
                       <div className="flex items-center text-xs text-gray-600 whitespace-nowrap gap-1.5 min-w-0">

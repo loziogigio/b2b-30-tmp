@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import cn from 'classnames';
 import { useRouter } from 'next/navigation';
 import { ROUTES } from '@utils/routes';
 import Button from '@components/ui/button';
 import ThumbnailCarousel from '@components/ui/carousel/thumbnail-carousel';
 import Image from '@components/ui/image';
-import { IoArrowRedoOutline } from 'react-icons/io5';
+import { IoArrowRedoOutline, IoNotificationsOutline, IoNotifications } from 'react-icons/io5';
+import { HiOutlineSwitchHorizontal, HiOutlineCheckCircle } from 'react-icons/hi';
 import SocialShareBox from '@components/ui/social-share-box';
 import { IoIosHeart, IoIosHeartEmpty } from 'react-icons/io';
 import {
@@ -15,7 +17,6 @@ import {
 } from '@components/common/modal/modal.context';
 import CloseButton from '@components/ui/close-button';
 import { useTranslation } from 'src/app/i18n/client';
-import Link from 'next/link';
 
 // ERP prices
 import { useQuery } from '@tanstack/react-query';
@@ -23,6 +24,7 @@ import { ERP_STATIC } from '@framework/utils/static';
 import type { ErpPriceData } from '@utils/transform/erp-prices';
 import { fetchErpPrices } from '@framework/erp/prices';
 import { useLikes } from '@contexts/likes/likes.context';
+import { useReminders } from '@contexts/reminders/reminders.context';
 import { useUI } from '@contexts/ui.context';
 
 // B2B bits
@@ -30,6 +32,7 @@ import PackagingGrid from './packaging-grid';
 import PriceAndPromo from './price-and-promo';
 import AddToCart from './add-to-cart';
 import B2BInfoBlock from './details/b2b-info-block';
+import { useCompareList } from '@/contexts/compare/compare.context';
 
 export default function ProductPopup({ lang }: { lang: string }) {
   const { t } = useTranslation(lang, 'common');
@@ -39,11 +42,15 @@ export default function ProductPopup({ lang }: { lang: string }) {
 
   // Likes context
   const likes = useLikes();
+  const reminders = useReminders();
   const { isAuthorized } = useUI();
   const sku = String(product?.sku ?? '');
+  const { addSku: addSkuToCompare, hasSku } = useCompareList();
   const favorite = isAuthorized && sku ? likes.isLiked(sku) : false;
+  const hasReminder = isAuthorized && sku ? reminders.hasReminder(sku) : false;
   // --- Wishlist / share UI only ---
   const [addToWishlistLoader, setAddToWishlistLoader] = useState(false);
+  const [addToReminderLoader, setAddToReminderLoader] = useState(false);
   const [shareButtonStatus, setShareButtonStatus] = useState(false);
   const toggleShare = () => setShareButtonStatus((s) => !s);
 
@@ -62,6 +69,12 @@ export default function ProductPopup({ lang }: { lang: string }) {
     : (erpPricesData as any)?.[entityCodes[0]];
 
   const productUrl = `${process.env.NEXT_PUBLIC_WEBSITE_URL}/${lang}${ROUTES.PRODUCT}/${product?.slug ?? ''}`;
+  const isInCompare = hasSku(sku);
+
+  const handleAddToCompare = () => {
+    if (!sku) return;
+    addSkuToCompare(sku);
+  };
 
   function navigateToProductPage() {
     // Close entire modal stack (ProductPopup + any parent like Variants Quick View)
@@ -75,12 +88,26 @@ export default function ProductPopup({ lang }: { lang: string }) {
     if (!favorite) {
       likes.loadBulkStatus([sku]).catch(() => {});
     }
+    if (isAuthorized && !hasReminder) {
+      reminders.loadBulkStatus([sku]).catch(() => {});
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sku]);
 
   if (!product) return null;
 
   const canAdd = erpPrice?.product_label_action?.ADD_TO_CART ?? true;
+  const isOutOfStock = erpPrice ? Number(erpPrice.availability) <= 0 : false;
+
+  const handleToggleReminder = async () => {
+    try {
+      setAddToReminderLoader(true);
+      if (!sku) return;
+      await reminders.toggle(sku);
+    } finally {
+      setAddToReminderLoader(false);
+    }
+  };
 
   return (
     <div className="md:w-[600px] lg:w-[940px] xl:w-[1180px] 2xl:w-[1360px] mx-auto p-1 lg:p-0 xl:p-3 bg-brand-light rounded-md">
@@ -159,9 +186,31 @@ export default function ProductPopup({ lang }: { lang: string }) {
               </div>
             </div>
 
-            {/* Wishlist / Share */}
+            {/* Wishlist / Reminder / Compare / Share */}
             <div className="pt-3 md:pt-4">
-              <div className="grid grid-cols-2 gap-2.5">
+              <div
+                className={cn(
+                  'grid gap-2.5',
+                  isAuthorized && isOutOfStock ? 'grid-cols-4' : isAuthorized ? 'grid-cols-3' : 'grid-cols-2'
+                )}
+              >
+                {isAuthorized && isOutOfStock && (
+                  <Button
+                    variant="border"
+                    onClick={handleToggleReminder}
+                    loading={addToReminderLoader}
+                    className={`group hover:text-yellow-500 ${hasReminder ? 'text-yellow-500' : ''}`}
+                    title={hasReminder ? t('text-reminder-active') : t('text-reminder-notify')}
+                  >
+                    {hasReminder ? (
+                      <IoNotifications className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 transition-all animate-pulse text-yellow-500" />
+                    ) : (
+                      <IoNotificationsOutline className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 transition-all group-hover:text-yellow-500" />
+                    )}
+                    {t('text-reminder')}
+                  </Button>
+                )}
+
                 {isAuthorized && (
                 <Button
                   variant="border"
@@ -176,6 +225,7 @@ export default function ProductPopup({ lang }: { lang: string }) {
                   }}
                   loading={addToWishlistLoader}
                   className={`group hover:text-brand ${favorite ? 'text-brand' : ''}`}
+                  title={t('text-wishlist')}
                 >
                   {favorite ? (
                     <IoIosHeart className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 transition-all text-red-500" />
@@ -185,6 +235,24 @@ export default function ProductPopup({ lang }: { lang: string }) {
                   {t('text-wishlist')}
                 </Button>
                 )}
+
+                <Button
+                  variant="border"
+                  className={cn(
+                    'hover:text-emerald-600',
+                    isInCompare ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : ''
+                  )}
+                  onClick={handleAddToCompare}
+                  title="Confronta"
+                  disabled={!sku}
+                >
+                  {isInCompare ? (
+                    <HiOutlineCheckCircle className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 text-emerald-500" />
+                  ) : (
+                    <HiOutlineSwitchHorizontal className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 transition-all" />
+                  )}
+                  {isInCompare ? 'In compare' : 'Confronta'}
+                </Button>
 
                 <div className="relative group">
                   <Button

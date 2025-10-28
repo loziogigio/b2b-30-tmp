@@ -124,6 +124,63 @@ const hoverShadowMap: Record<Exclude<CardStyleOptions['hoverShadowSize'], undefi
   '2xl': shadowMap['2xl']
 };
 
+const DEFAULT_OVERLAY_COLOR = '#0f172a';
+const DEFAULT_OVERLAY_OPACITY = 0.65;
+
+const overlayPositionMap: Record<NonNullable<BannerOverlayConfig['position']>, string> = {
+  top: 'items-start justify-start pt-6',
+  middle: 'items-center justify-center',
+  bottom: 'items-end justify-end pb-6'
+};
+
+function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  const sanitized = hex.replace('#', '');
+  if (sanitized.length !== 3 && sanitized.length !== 6) return null;
+
+  const normalized =
+    sanitized.length === 3
+      ? sanitized
+          .split('')
+          .map((char) => char + char)
+          .join('')
+      : sanitized;
+
+  const value = Number.parseInt(normalized, 16);
+  if (Number.isNaN(value)) return null;
+
+  return {
+    r: (value >> 16) & 255,
+    g: (value >> 8) & 255,
+    b: value & 255
+  };
+}
+
+function resolveOverlayBackground(color?: string, opacity?: number) {
+  const effectiveOpacity =
+    typeof opacity === 'number' && opacity >= 0 && opacity <= 1 ? opacity : DEFAULT_OVERLAY_OPACITY;
+
+  if (!color) {
+    return `rgba(15, 23, 42, ${effectiveOpacity})`;
+  }
+
+  if (color.startsWith('rgba')) {
+    return color;
+  }
+
+  if (color.startsWith('rgb(')) {
+    return color.replace('rgb', 'rgba').replace(')', `, ${effectiveOpacity})`);
+  }
+
+  if (color.startsWith('#')) {
+    const rgb = hexToRgb(color);
+    if (rgb) {
+      return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${effectiveOpacity})`;
+    }
+  }
+
+  return color || `rgba(15, 23, 42, ${effectiveOpacity})`;
+}
+
 const BannerCard: React.FC<BannerProps> = ({
   lang,
   banner,
@@ -210,6 +267,21 @@ const BannerCard: React.FC<BannerProps> = ({
   const shouldRenderHoverTint =
     Boolean(styleOptions?.hoverBackgroundColor) && styleOptions?.hoverEffect !== 'shadow';
 
+  const overlayConfig = (banner?.overlay as BannerOverlayConfig | undefined) ?? null;
+  const overlayShouldRender = Boolean(overlayConfig && banner?.title);
+  const overlayPosition: NonNullable<BannerOverlayConfig['position']> =
+    overlayConfig?.position === 'top' || overlayConfig?.position === 'middle'
+      ? overlayConfig.position
+      : 'bottom';
+  const overlayPositionClass = overlayPositionMap[overlayPosition];
+  const overlayBackground = overlayShouldRender
+    ? resolveOverlayBackground(
+        overlayConfig?.backgroundColor || DEFAULT_OVERLAY_COLOR,
+        overlayConfig?.backgroundOpacity
+      )
+    : undefined;
+  const overlayTextColor = overlayConfig?.textColor || '#ffffff';
+
   const href =
     banner?.link ??
     banner?.linkUrl ??
@@ -282,6 +354,24 @@ const BannerCard: React.FC<BannerProps> = ({
             width: forceFullHeight ? '100%' : undefined
           }}
         />
+        {overlayShouldRender ? (
+          <div
+            className={cn(
+              'pointer-events-none absolute inset-0 z-20 flex px-6 text-center',
+              overlayPositionClass
+            )}
+          >
+            <div
+              className="mx-auto w-full max-w-xl rounded-full px-5 py-2 text-base font-semibold leading-tight shadow-lg"
+              style={{
+                backgroundColor: overlayBackground,
+                color: overlayTextColor
+              }}
+            >
+              {banner.title}
+            </div>
+          </div>
+        ) : null}
         {effectActive && (
           <div className="absolute top-0 block w-1/2 h-full transform -skew-x-12 ltr:-left-full rtl:-right-full z-5 bg-gradient-to-r from-transparent to-white opacity-30 group-hover:animate-shine" />
         )}

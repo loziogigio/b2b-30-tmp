@@ -20,6 +20,7 @@ export const ROUTES = {
   SIGN_UP: '/signup',
   SEARCH: '/search',
   PRODUCTS: '/products',
+  PRODUCT_COMPARE: '/product-compare',
   BUNDLE: '/bundles',
   CATEGORY: '/category',
   ORDER: '/complete-order',

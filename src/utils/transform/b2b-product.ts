@@ -119,68 +119,99 @@ export function transformProduct(rawProducts: RawProduct[]): Product[] {
 
 
 export function transformSearchParams(params: Record<string, any>): Record<string, any> {
-  // 🟢 Pre-step: ensure category is included in search entries
-  if (params.category) {
-    if (!params.search) {
-      params.search = {};
-    }
-    if (typeof params.search === 'object' && !Array.isArray(params.search)) {
-      params.search.category = params.category;
-    }
-  }
-
-  if (!params.search) return params;
-
-  const result: Record<string, any> = {
-    ...params,
-    filters: {
-      ...(params.filters || {}),
-    },
+  const nextParams: Record<string, any> = {
+    ...params
   };
 
-  let entries: Record<string, any> = {};
+  const filters: Record<string, string[]> = {
+    ...(Array.isArray(params.filters) ? {} : params.filters || {})
+  };
 
-  // Case 1: search is a string
-  if (typeof params.search === 'string') {
-    const queryString = params.search.startsWith('shop?')
-      ? params.search.replace(/^shop\?/, '')
-      : params.search;
+  if (nextParams.category) {
+    const categoryValues = Array.isArray(nextParams.category)
+      ? nextParams.category
+      : [nextParams.category];
+    filters.category = Array.from(
+      new Set([
+        ...(filters.category || []),
+        ...categoryValues.map((value) => String(value).trim()).filter(Boolean)
+      ])
+    );
+  }
+
+  if (!nextParams.search) {
+    return {
+      ...nextParams,
+      filters,
+      start:
+        typeof nextParams.start === "number" && nextParams.start > 0
+          ? nextParams.start - 1
+          : 0
+    };
+  }
+
+  let searchEntries: Record<string, any> = {};
+
+  if (typeof nextParams.search === "string") {
+    const rawSearch = nextParams.search.trim();
+    const withoutLeadingSlash = rawSearch.startsWith("/") ? rawSearch.slice(1) : rawSearch;
+    const queryString = withoutLeadingSlash.startsWith("shop?")
+      ? withoutLeadingSlash.slice(5)
+      : withoutLeadingSlash.startsWith("?")
+        ? withoutLeadingSlash.slice(1)
+        : withoutLeadingSlash;
     const searchParams = new URLSearchParams(queryString);
-    entries = Object.fromEntries(searchParams);
+    searchParams.forEach((value, key) => {
+      searchEntries[key] = value;
+    });
+  } else if (
+    typeof nextParams.search === "object" &&
+    !Array.isArray(nextParams.search)
+  ) {
+    searchEntries = nextParams.search;
   }
 
-  // Case 2: search is an object
-  if (typeof params.search === 'object' && !Array.isArray(params.search)) {
-    entries = params.search;
-  }
+  for (const key of Object.keys(searchEntries)) {
+    const rawValue = searchEntries[key];
+    if (rawValue == null) continue;
 
-  for (const key in entries) {
-    const rawValue = entries[key];
-    const value = typeof rawValue === 'string' ? rawValue.toLowerCase() : rawValue;
-
-    // ✅ Normalize the key
-    let mappedKey = key;
-
-    // Strip `filters-` prefix if present
-    if (mappedKey.startsWith('filters-')) {
-      mappedKey = mappedKey.replace(/^filters-/, '');
+    let mappedKey = key.startsWith("filters-") ? key.replace(/^filters-/, "") : key;
+    if (mappedKey === "product_parent_codes") {
+      mappedKey = "codice_figura";
+    } else if (mappedKey === "sku") {
+      mappedKey = "carti";
     }
 
-    if (key === 'product_parent_codes') mappedKey = 'codice_figura';
-    if (key === 'sku') mappedKey = 'carti';
-    if (key === 'category') mappedKey = 'category';
-
-    if (key === 'text') {
-      result.text = value;
-    } else {
-      result.filters[mappedKey] = value.split(';').filter(Boolean);
+    if (key === "text") {
+      nextParams.text = Array.isArray(rawValue)
+        ? rawValue.join(" ")
+        : String(rawValue);
+      continue;
     }
+
+    const values = Array.isArray(rawValue)
+      ? rawValue
+      : String(rawValue)
+          .split(";")
+          .map((value) => value.trim())
+          .filter(Boolean);
+
+    if (!values.length) continue;
+
+    filters[mappedKey] = Array.from(
+      new Set([...(filters[mappedKey] || []), ...values])
+    );
   }
-  // Normalize `page` (reduce by 1 if > 0)
-  if (typeof result.start === 'number' && result.start > 0) {
-    result.start = result.start - 1;
-  }
+
+  const result: Record<string, any> = {
+    ...nextParams,
+    filters
+  };
 
   delete result.search;
+
+  result.start =
+    typeof result.start === "number" && result.start > 0 ? result.start - 1 : 0;
+
   return result;
 }

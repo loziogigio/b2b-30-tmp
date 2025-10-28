@@ -4,6 +4,7 @@ import { HomeCategory } from '@utils/transform/b2b-cms-home';
 import CategoryProductsCarousel from '@components/product/category-products-carousel';
 import LikedProductsProductsCarousel from '@components/product/feeds/liked-products-products-carousel';
 import TrendingProductsCarousel from '@components/product/feeds/trending-products-carousel';
+import Container from '@components/ui/container';
 interface B2BHomeProductsProps {
   lang: string;
   carouselBreakpoint?: any;
@@ -15,10 +16,17 @@ export default function B2BHomeProducts({
   carouselBreakpoint,
   homeCategoryFiltered = [],
 }: B2BHomeProductsProps) {
+  const carouselSpacing = 'mb-12 xl:mb-14 pt-1';
+
   return (
     <>
       {/* Liked products block */}
-      <LikedProductsProductsCarousel lang={lang} carouselBreakpoint={carouselBreakpoint} />
+      <Container className={carouselSpacing}>
+        <LikedProductsProductsCarousel
+          lang={lang}
+          carouselBreakpoint={carouselBreakpoint}
+        />
+      </Container>
 
       {homeCategoryFiltered.map((category) => (
         <CategoryProductsCarousel
@@ -30,7 +38,12 @@ export default function B2BHomeProducts({
       ))}
 
       {/* Trending products block (always fetched) */}
-      <TrendingProductsCarousel lang={lang} carouselBreakpoint={carouselBreakpoint} />
+      <Container className={carouselSpacing}>
+        <TrendingProductsCarousel
+          lang={lang}
+          carouselBreakpoint={carouselBreakpoint}
+        />
+      </Container>
     </>
   );
 }
