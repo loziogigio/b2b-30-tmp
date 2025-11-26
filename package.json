@@ -15,6 +15,7 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "@google/model-viewer": "^4.1.0",
     "@headlessui/react": "^2.2.0",
     "@react-google-maps/api": "^2.20.5",
     "@stripe/react-stripe-js": "^3.1.1",

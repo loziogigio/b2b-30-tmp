@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { ROUTES } from '@utils/routes';
 import useWindowSize from '@utils/use-window-size';
-import { useProductListQuery } from '@framework/product/get-b2b-product';
+import { usePimProductListQuery } from '@framework/product/get-pim-product';
 import ThumbnailCarousel from '@components/ui/carousel/thumbnail-carousel';
 import Image from '@components/ui/image';
 import Button from '@components/ui/button';
@@ -51,6 +51,10 @@ type GalleryImage = {
   original: string;
   thumbnail?: string;
   alt?: string;
+  mediaType?: 'image' | 'video' | '3d-model';
+  videoUrl?: string;
+  modelUrl?: string;
+  label?: string;
 };
 
 
@@ -79,16 +83,19 @@ const ProductB2BDetails: React.FC<{ lang: string; search: any; blocks?: PageBloc
     );
   };
 
-  // Load product from B2B list
-  const { data: data_results, isLoading } = useProductListQuery({
-    address_code: '',
-    per_page: 12,
-    start: 1,
-    customer_code: '00000',
-    search,
-  });
+  // Load product from PIM
+  const skuToSearch = search?.sku ? [search.sku] : [];
+  const { data: pimResults = [], isLoading } = usePimProductListQuery(
+    {
+      limit: 1,
+      filters: {
+        sku: skuToSearch,
+      },
+    },
+    { enabled: skuToSearch.length > 0 }
+  );
 
-  const first = data_results?.[0];
+  const first = pimResults?.[0];
   const data = Array.isArray(first?.variations) && first.variations.length > 0
     ? first.variations[0]
     : first;
@@ -126,24 +133,69 @@ const ProductB2BDetails: React.FC<{ lang: string; search: any; blocks?: PageBloc
 
   const galleryItems = React.useMemo<GalleryImage[]>(() => {
     if (!data) return [];
-    if (Array.isArray(data.gallery) && data.gallery.length > 0) {
-      return data.gallery.map((item: any, index: number) => ({
-        id: item.id ?? index,
-        original: item.original ?? productPlaceholder,
-        thumbnail: item.thumbnail ?? item.original ?? productPlaceholder,
-        alt: item.alt ?? data.name ?? 'Product image',
-      }));
-    }
 
-    const fallback = data.image?.original ?? data.image?.thumbnail ?? productPlaceholder;
-    return [
-      {
+    const items: GalleryImage[] = [];
+
+    // Add product images
+    if (Array.isArray(data.gallery) && data.gallery.length > 0) {
+      data.gallery.forEach((item: any, index: number) => {
+        items.push({
+          id: item.id ?? `img-${index}`,
+          original: item.original ?? productPlaceholder,
+          thumbnail: item.thumbnail ?? item.original ?? productPlaceholder,
+          alt: item.alt ?? data.name ?? 'Product image',
+          mediaType: 'image',
+        });
+      });
+    } else {
+      // Fallback to main image
+      const fallback = data.image?.original ?? data.image?.thumbnail ?? productPlaceholder;
+      items.push({
         id: data.id ?? 'primary',
         original: fallback,
         thumbnail: data.image?.thumbnail ?? fallback,
         alt: data.name ?? 'Product image',
-      },
-    ];
+        mediaType: 'image',
+      });
+    }
+
+    // Add videos and 3D models from media array
+    const media = (data as any).media;
+    if (Array.isArray(media)) {
+      media.forEach((m: any, index: number) => {
+        if (m.type === 'video') {
+          // Extract YouTube thumbnail if it's a YouTube video
+          let thumbnail = productPlaceholder;
+          if (m.url?.includes('youtube.com') || m.url?.includes('youtu.be')) {
+            const videoId = m.url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&]+)/)?.[1];
+            if (videoId) {
+              thumbnail = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+            }
+          }
+          items.push({
+            id: `video-${index}`,
+            original: thumbnail,
+            thumbnail: thumbnail,
+            alt: m.label || 'Video',
+            mediaType: 'video',
+            videoUrl: m.url,
+            label: m.label,
+          });
+        } else if (m.type === '3d-model') {
+          items.push({
+            id: `3d-${index}`,
+            original: productPlaceholder,
+            thumbnail: productPlaceholder,
+            alt: m.label || '3D Model',
+            mediaType: '3d-model',
+            modelUrl: m.url,
+            label: m.label,
+          });
+        }
+      });
+    }
+
+    return items;
   }, [data]);
 
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -268,7 +320,7 @@ const ProductB2BDetails: React.FC<{ lang: string; search: any; blocks?: PageBloc
               <span className="text-[10px] md:text-xs font-bold text-white uppercase bg-brand px-2 py-2">
                 {data.sku}
               </span>
-              <h2 className="mt-2 text-lg font-semibold uppercase tracking-wide text-brand-dark md:text-xl xl:text-2xl">
+              <h2 className="mt-2 text-lg font-semibold tracking-wide text-brand-dark md:text-xl xl:text-2xl">
                 {data?.name}
               </h2>
             </div>
@@ -346,7 +398,7 @@ const ProductB2BDetails: React.FC<{ lang: string; search: any; blocks?: PageBloc
                   className={`group hover:text-brand ${favorite ? 'text-brand' : ''}`}
                 >
                   {favorite ? (
-                    <IoIosHeart className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 transition-all text-red-500" />
+                    <IoIosHeart className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 transition-all text-[#6D727F]" />
                   ) : (
                     <IoIosHeartEmpty className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 transition-all group-hover:text-brand" />
                   )}

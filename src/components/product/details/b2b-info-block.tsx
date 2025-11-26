@@ -67,8 +67,8 @@ export default function B2BInfoBlock({ product, priceData, lang }: Props) {
     priceData?.product_label_action?.LABEL ??
     (availability > 0 ? 'DISPONIBILE' : earliestDateDmy ? 'IN ARRIVO' : 'NON DISPONIBILE');
 
-  const brandImg = product?.brand?.brand_image?.original;
-  const brandName = product?.brand?.name || 'Brand';
+  const brandImg = product?.brand?.image?.original || product?.brand?.logo_url;
+  const brandName = product?.brand?.name || product?.brand?.label || 'Brand';
 
   return (
     <div className="mt-2 rounded-md border border-gray-200 bg-white/60">
@@ -128,10 +128,10 @@ export default function B2BInfoBlock({ product, priceData, lang }: Props) {
         <div className="col-span-1 flex justify-end">
           {brandImg ? (
             <Link
-              href={`/${lang}/search?filters-id_brand=${product?.brand?.id ?? ''}`}
+              href={`/${lang}/search?filters-id_brand=${product?.brand?.id || product?.brand?.brand_id || ''}`}
               className="flex justify-start sm:justify-end"
             >
-              <img src={brandImg} alt={brandName} className="h-full w-full object-contain" />
+              <img src={brandImg} alt={brandName} className="h-16 w-auto max-w-[120px] object-contain" />
             </Link>
           ) : (
             <div className="h-10 sm:h-12 w-24 rounded bg-gray-100" />

@@ -52,19 +52,20 @@ function normalizeFeatures(raw: any): { label: string; value: string }[] {
 
 /* ----------------- Documents helpers ----------------- */
 
-type DocItem = { url: string; area?: string; filename?: string; ext?: string };
+type DocItem = { url: string; area?: string; filename?: string; ext?: string; label?: string };
 
-// map media_area_id -> label (English-friendly)
+// map media_area_id -> label (Italian-friendly)
 const DOC_LABEL: Record<string, string> = {
   datasheet: 'Datasheet',
-  certification: 'Certification',
-  catalog: 'Catalog',
+  certification: 'Certificazione',
+  catalog: 'Catalogo',
   docs: 'Scheda Tecnica',
-  safety: 'Safety',
+  safety: 'Sicurezza',
   barcode: 'Barcode',
-  instruction: 'Instructions',
-  details: 'Details',
-  videos: 'Videos',
+  instruction: 'Istruzioni',
+  details: 'Dettagli',
+  videos: 'Video',
+  document: 'Documento',
 };
 
 // normalize misspelling `istruction` -> `instruction`
@@ -72,6 +73,20 @@ function normalizeDocType(area?: string) {
   const a = (area || '').toLowerCase();
   if (a === 'istruction') return 'instruction';
   return a;
+}
+
+// Extract documents from PIM media array
+function extractMediaDocs(media?: any[]): DocItem[] {
+  if (!Array.isArray(media)) return [];
+  return media
+    .filter(m => m.type === 'document')
+    .map(m => ({
+      url: m.url,
+      area: 'document',
+      filename: m.label || m.url?.split('/').pop() || '',
+      ext: m.file_type?.split('/').pop() || m.url?.split('.').pop() || '',
+      label: m.label,
+    }));
 }
 
 // group docs by normalized type
@@ -104,7 +119,11 @@ export default function ProductB2BDetailsTab({
   const features = normalizeFeatures(product?.features);
   const hasFeatures = features.length > 0;
 
-  const docsByType = groupDocs(product.docs as any);
+  // Combine legacy docs with PIM media documents
+  const legacyDocs = (product.docs as DocItem[] | undefined) || [];
+  const mediaDocs = extractMediaDocs((product as any).media);
+  const allDocs = [...legacyDocs, ...mediaDocs];
+  const docsByType = groupDocs(allDocs);
   const hasDocs = Object.keys(docsByType).length > 0;
 
   if (!hasDescription && !hasFeatures && !hasDocs) return null;
@@ -152,11 +171,12 @@ export default function ProductB2BDetailsTab({
   if (hasDocs) {
     tabs.push({
       id: 'docs',
-      label: 'Documenti',
+      label: 'Schede tecniche e documenti',
       node: (
         <div className="rounded border border-border-base">
           <dl className="grid grid-cols-1 sm:grid-cols-[220px,1fr]">
             {[
+              'document',
               'datasheet',
               'certification',
               'catalog',
@@ -173,7 +193,7 @@ export default function ProductB2BDetailsTab({
                   <React.Fragment key={`${type}-${i}`}>
                     {/* Left column: label */}
                     <dt className="border-b border-border-base bg-gray-50 px-4 py-3 text-[12px] font-semibold text-gray-600 sm:text-sm">
-                      {DOC_LABEL[type] ?? type}
+                      {d.label || DOC_LABEL[type] || type}
                     </dt>
                     {/* Right column: link */}
                     <dd className="border-b border-border-base px-4 py-3 text-sm">
