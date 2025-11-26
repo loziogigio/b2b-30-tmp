@@ -6,7 +6,7 @@ import Container from '@components/ui/container';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import TrendingProductsCarousel from '@components/product/feeds/trending-products-carousel';
 import ProductsCarousel from '@components/product/products-carousel';
-import { useProductListQuery } from '@framework/product/get-b2b-product';
+import { usePimProductListQuery } from '@framework/product/get-pim-product';
 import CloseIcon from '@components/icons/close-icon';
 import SearchBoxB2B from '@components/common/search-box-b2b';
 import { SearchFiltersB2B } from '@components/search/filters-b2b';
@@ -96,8 +96,8 @@ export default function SearchOverlayB2B({ lang, open, onClose, value = '', onCh
       : {}
   ), [showAutocomplete, urlFilters, trimmed]);
 
-  const { data: autoProducts = [], isLoading: isLoadingAuto } = useProductListQuery(
-    liveQueryParams,
+  const { data: autoProducts = [], isLoading: isLoadingAuto } = usePimProductListQuery(
+    { ...liveQueryParams, q: trimmed },
     { enabled: open && showAutocomplete }  // Only query when overlay is open AND searching
   );
 

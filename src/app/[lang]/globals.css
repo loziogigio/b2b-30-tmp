@@ -12,6 +12,10 @@
   html,
   body {
     @apply antialiased bg-brand-light text-brand-muted font-body;
+    font-family: 'Helvetica Neue LT Std', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  }
+  h2 {
+    @apply text-brand font-bold;
   }
   p {
     @apply mb-5;

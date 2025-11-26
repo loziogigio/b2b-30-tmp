@@ -1,4 +1,5 @@
 import type { PageVersionTags } from "@/lib/types/blocks";
+import { fallbackLng, languages } from "@/app/i18n/settings";
 
 export type PageContextSource = "url" | "session" | "segment" | "default" | "language" | "cookie";
 
@@ -161,9 +162,10 @@ export const ensureLanguageAttribute = (
 ): PageContext | null => {
   const langValue = normalizeValue(language);
   if (!langValue) return context;
+  const normalizedLang = languages.includes(langValue) ? langValue : fallbackLng;
   const languageAttributes = {
     ...(context?.attributes ?? {}),
-    language: langValue
+    language: normalizedLang
   };
   return mergeContexts(context, {
     attributes: languageAttributes,

@@ -2,7 +2,7 @@
 
 import React, { useMemo } from 'react';
 import ProductsCarousel from '@components/product/products-carousel';
-import { useProductListQuery } from '@framework/product/get-b2b-product';
+import { usePimProductListQuery } from '@framework/product/get-pim-product';
 import { useLikes } from '@contexts/likes/likes.context';
 import { useTranslation } from 'src/app/i18n/client';
 import { useUI } from '@contexts/ui.context';
@@ -29,19 +29,16 @@ export default function LikedProductsProductsCarousel({
   const skuList = useMemo(() => (likes?.items || []).map((it) => it.sku).filter(Boolean), [likes?.items]);
   const hasLikes = skuList.length > 0;
 
-  const skusJoined = skuList.slice(0, limitSkus).join(';');
+  // Join SKUs for PIM search filter
+  const skusToSearch = skuList.slice(0, limitSkus);
 
-  const { data = [], isLoading, error } = useProductListQuery(
-    hasLikes
-      ? {
-          address_code: '',
-          per_page: 12,
-          start: 1,
-          customer_code: '00000',
-          // Use transformSearchParams to map sku -> carti
-          search: { sku: skusJoined },
-        }
-      : {},
+  const { data = [], isLoading, error } = usePimProductListQuery(
+    {
+      limit: limitSkus,
+      filters: {
+        sku: skusToSearch,
+      },
+    },
     { enabled: hasLikes }
   );
 

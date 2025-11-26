@@ -23,20 +23,27 @@ const VINC_STOREFRONT_BASE = resolveBaseUrl(rawStorefrontUrl);
 
 async function fetchHomeSettingsOnce(): Promise<HomeSettings> {
   try {
-    const response = await fetch(new URL('/api/b2b/home-settings', `${VINC_STOREFRONT_BASE}/`).toString(), {
+    const url = new URL('/api/b2b/home-settings', `${VINC_STOREFRONT_BASE}/`).toString();
+
+    const response = await fetch(url, {
       headers: {
         'Content-Type': 'application/json'
       },
       next: {
         revalidate: 300
       }
+    }).catch((fetchError) => {
+      console.warn('[HomeSettings] Network error, using defaults:', fetchError.message);
+      return null;
     });
 
+    if (!response) {
+      return DEFAULT_HOME_SETTINGS;
+    }
+
     if (!response.ok) {
-      if (response.status === 404 || response.status === 429) {
-        return DEFAULT_HOME_SETTINGS;
-      }
-      throw new Error(`Failed to fetch home settings: ${response.statusText}`);
+      console.warn(`[HomeSettings] Response ${response.status}, using defaults`);
+      return DEFAULT_HOME_SETTINGS;
     }
 
     const contentType = response.headers.get('content-type') || '';
@@ -64,4 +71,13 @@ async function fetchHomeSettingsOnce(): Promise<HomeSettings> {
   }
 }
 
-export const getServerHomeSettings = cache(fetchHomeSettingsOnce);
+const cachedFetch = cache(fetchHomeSettingsOnce);
+
+export async function getServerHomeSettings(): Promise<HomeSettings> {
+  try {
+    return await cachedFetch();
+  } catch (error) {
+    console.error('[HomeSettings] Unexpected error from cached fetch, using defaults:', error);
+    return DEFAULT_HOME_SETTINGS;
+  }
+}

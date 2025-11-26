@@ -40,6 +40,10 @@ export const metadata: Metadata = {
   },
 };
 
+// Force dynamic rendering for all pages to avoid timeout during Docker build
+export const dynamic = 'force-dynamic';
+export const dynamicParams = true;
+
 export async function generateStaticParams() {
   return languages.map((lang) => ({ lang }));
 }

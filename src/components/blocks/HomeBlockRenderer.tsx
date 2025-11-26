@@ -7,6 +7,7 @@ import ProductsCarousel from '@components/product/products-carousel';
 import LikedProductsProductsCarousel from '@components/product/feeds/liked-products-products-carousel';
 import TrendingProductsCarousel from '@components/product/feeds/trending-products-carousel';
 import { RichTextBlock } from './RichTextBlock';
+import { CustomHTMLBlock } from './CustomHTMLBlock';
 import { YouTubeBlock } from './YouTubeBlock';
 import { MediaImageBlock } from './MediaImageBlock';
 import HeroCarouselWithWidgets from '@components/home/HeroCarouselWithWidgets';
@@ -17,7 +18,7 @@ import ProductCardB2B from '@components/product/product-cards/product-card-b2b';
 import ProductCardLoader from '@components/ui/loaders/product-card-loader';
 
 import type { Product } from '@framework/types';
-import { useProductListQuery } from '@framework/product/get-b2b-product';
+import { usePimProductListQuery } from '@framework/product/get-pim-product';
 
 interface HomeBlockRendererProps {
   block: any;
@@ -82,6 +83,24 @@ const formatCurrency = (value: number | undefined | null, lang: string) => {
   }
 };
 
+/**
+ * Extract search text from URL-like strings (e.g., "shop?text=luce" -> "luce")
+ */
+const extractSearchText = (urlOrQuery: string | undefined): string => {
+  if (!urlOrQuery) return '';
+  const trimmed = urlOrQuery.trim();
+  // Check if it looks like a URL with query params
+  if (trimmed.includes('?')) {
+    const qs = trimmed.split('?')[1];
+    if (qs) {
+      const sp = new URLSearchParams(qs);
+      const text = sp.get('text') || sp.get('q');
+      if (text) return text;
+    }
+  }
+  return trimmed;
+};
+
 const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({ block, lang }) => {
   // Hero With Widgets Block (80/20 layout)
   if (block.type === 'hero-with-widgets') {
@@ -109,10 +128,14 @@ const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({ block, lang }) =>
           lang={lang}
           breakpoints={getBreakpoints(block.config)}
           widgets={block.config?.widgets}
-          className={block.config?.className || 'mb-12 xl:mb-14 pt-1'}
+          className={block.config?.className || 'mb-12 xl:mb-8 pt-1'}
         />
       </Container>
     );
+  }
+
+  if (block.type === 'content-custom-html') {
+    return <CustomHTMLBlock config={block.config} />;
   }
 
   // Hero Carousel Block
@@ -152,7 +175,7 @@ const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({ block, lang }) =>
     });
 
     return (
-      <Container className={block.config?.className || 'mb-12 xl:mb-14 pt-1'}>
+      <Container className={block.config?.className || 'mb-6 xl:mb-8 pt-1'}>
         <BannerAllCarousel
           data={transformedData}
           className="mb-0"
@@ -199,7 +222,7 @@ const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({ block, lang }) =>
       };
     });
 
-    const wrapperClass = block.config?.className || 'mb-12 xl:mb-14 pt-1';
+    const wrapperClass = block.config?.className || 'mb-6 xl:mb-8 pt-1';
 
     return (
       <Container className={wrapperClass}>
@@ -221,11 +244,11 @@ const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({ block, lang }) =>
   if (block.type === 'carousel-products') {
     const dataSource: 'search' | 'liked' | 'trending' = block.config?.dataSource || 'search';
     const rawSearch = block.config?.searchQuery ?? '';
-    const searchQuery = rawSearch.trim();
+    const searchQuery = extractSearchText(rawSearch);
     const limit = toNumber(block.config?.limit, 12);
     const breakpoints = getBreakpoints(block.config);
     const sectionTitle = block.config?.title?.trim();
-    const className = block.config?.className || 'mb-12 xl:mb-14 pt-1';
+    const className = block.config?.className || 'mb-6 xl:mb-8 pt-1';
 
     if (dataSource === 'liked') {
       return (
@@ -255,12 +278,10 @@ const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({ block, lang }) =>
 
     const enabled = Boolean(searchQuery);
 
-    const { data: fetchedProducts, isLoading, error } = useProductListQuery(
+    const { data: fetchedProducts, isLoading, error } = usePimProductListQuery(
       {
-        address_code: '',
-        per_page: limit,
-        start: 1,
-        search: searchQuery
+        limit,
+        q: searchQuery
       },
       { enabled }
     );
@@ -281,6 +302,7 @@ const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({ block, lang }) =>
           <div className="relative">
             <ProductsCarousel
               sectionHeading={sectionTitle || 'Featured Products'}
+              categorySlug={searchQuery ? `shop?text=${encodeURIComponent(searchQuery)}` : undefined}
               products={products}
               loading={isLoading}
               error={error?.message}
@@ -302,18 +324,15 @@ const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({ block, lang }) =>
 
   if (block.type === 'carousel-gallery') {
     const rawSearch = block.config?.searchQuery ?? '';
-    const searchQuery = rawSearch.trim();
+    const searchQuery = extractSearchText(rawSearch);
     const limit = toNumber(block.config?.limit, 12);
     const legacyItems = Array.isArray(block.config?.items) ? block.config.items : [];
     const enabled = Boolean(searchQuery);
 
-    const { data: fetchedProducts, isLoading, error } = useProductListQuery(
+    const { data: fetchedProducts, isLoading, error } = usePimProductListQuery(
       {
-        address_code: '',
-        customer_code: block.config?.customerCode || '00000',
-        per_page: limit,
-        start: 1,
-        search: searchQuery
+        limit,
+        q: searchQuery
       },
       { enabled }
     );
@@ -321,9 +340,9 @@ const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({ block, lang }) =>
     if (!enabled && legacyItems.length > 0) {
       const sectionTitle = block.config?.title?.trim();
       return (
-        <Container className={block.config?.className || 'mb-12 xl:mb-14 pt-1'}>
+        <Container className={block.config?.className || 'mb-6 xl:mb-8 pt-1'}>
           {sectionTitle ? (
-            <h2 className="mb-4 text-2xl font-semibold tracking-tight text-slate-800">
+            <h2 className="mb-4 text-2xl font-bold tracking-tight text-brand">
               {sectionTitle}
             </h2>
           ) : null}
@@ -356,9 +375,9 @@ const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({ block, lang }) =>
     const sectionTitle = block.config?.title?.trim();
 
     return (
-      <Container className={block.config?.className || 'mb-12 xl:mb-14 pt-1'}>
+      <Container className={block.config?.className || 'mb-6 xl:mb-8 pt-1'}>
         {sectionTitle ? (
-          <h2 className="mb-4 text-2xl font-semibold tracking-tight text-slate-800">
+          <h2 className="mb-4 text-2xl font-bold tracking-tight text-brand">
             {sectionTitle}
           </h2>
         ) : null}
@@ -413,7 +432,7 @@ const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({ block, lang }) =>
   // Media Image Block
   if (block.type === 'media-image') {
     return (
-      <Container className={block.config?.className || 'mb-12 xl:mb-14 pt-1'}>
+      <Container className={block.config?.className || 'mb-6 xl:mb-8 pt-1'}>
         <MediaImageBlock config={block.config} />
       </Container>
     );

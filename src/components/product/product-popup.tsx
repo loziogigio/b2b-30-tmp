@@ -228,7 +228,7 @@ export default function ProductPopup({ lang }: { lang: string }) {
                   title={t('text-wishlist')}
                 >
                   {favorite ? (
-                    <IoIosHeart className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 transition-all text-red-500" />
+                    <IoIosHeart className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 transition-all text-[#6D727F]" />
                   ) : (
                     <IoIosHeartEmpty className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 transition-all group-hover:text-brand" />
                   )}

@@ -35,8 +35,22 @@ type HeroCarouselWithWidgetsProps = {
   };
 };
 
+const resolveLocale = (lang?: string) => {
+  const supported = ['it', 'en'];
+  if (!lang) return 'it';
+  const normalized = lang.split('-')[0]?.toLowerCase();
+  if (supported.includes(lang)) return lang;
+  if (normalized && supported.includes(normalized)) return normalized;
+  try {
+    return new Intl.Locale(lang).baseName;
+  } catch {
+    return 'it';
+  }
+};
+
 const formatDayNames = (lang: string, date: Date) => {
-  const formatter = new Intl.DateTimeFormat(lang, { weekday: 'short' });
+  const locale = resolveLocale(lang);
+  const formatter = new Intl.DateTimeFormat(locale, { weekday: 'short' });
   return Array.from({ length: 7 }, (_, index) =>
     formatter
       .format(new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate() - date.getDay() + index)))
@@ -97,36 +111,33 @@ export const HeroCarouselWithWidgets = ({
 
   const timeZone = clockConfig.timezone || undefined;
 
-  const timeFormatter = useMemo(
-    () =>
-      new Intl.DateTimeFormat(lang, {
-        hour: '2-digit',
-        minute: '2-digit',
-        ...(timeZone ? { timeZone } : {})
-      }),
-    [lang, timeZone]
-  );
+  const timeFormatter = useMemo(() => {
+    const locale = resolveLocale(lang);
+    return new Intl.DateTimeFormat(locale, {
+      hour: '2-digit',
+      minute: '2-digit',
+      ...(timeZone ? { timeZone } : {})
+    });
+  }, [lang, timeZone]);
 
-  const dateFormatter = useMemo(
-    () =>
-      new Intl.DateTimeFormat(lang, {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-        ...(timeZone ? { timeZone } : {})
-      }),
-    [lang, timeZone]
-  );
+  const dateFormatter = useMemo(() => {
+    const locale = resolveLocale(lang);
+    return new Intl.DateTimeFormat(locale, {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      ...(timeZone ? { timeZone } : {})
+    });
+  }, [lang, timeZone]);
 
-  const monthFormatter = useMemo(
-    () =>
-      new Intl.DateTimeFormat(lang, {
-        month: 'long',
-        year: 'numeric',
-        ...(timeZone ? { timeZone } : {})
-      }),
-    [lang, timeZone]
-  );
+  const monthFormatter = useMemo(() => {
+    const locale = resolveLocale(lang);
+    return new Intl.DateTimeFormat(locale, {
+      month: 'long',
+      year: 'numeric',
+      ...(timeZone ? { timeZone } : {})
+    });
+  }, [lang, timeZone]);
 
   const activeDate = now ?? initialDate;
 
@@ -188,14 +199,14 @@ export const HeroCarouselWithWidgets = ({
   return (
     <div
       className={cn(
-        'relative w-full grid gap-6',
-        showWidgets && 'md:grid-cols-[minmax(0,4fr)_minmax(0,1fr)]',
-        'items-start',
+        'relative w-full grid gap-4 mt-4',
+        showWidgets && 'lg:grid-cols-[1fr_1fr_minmax(180px,0.3fr)]',
+        'items-stretch',
         className
       )}
     >
       <div
-        className="h-full overflow-hidden"
+        className="col-span-2 h-full overflow-hidden rounded-md"
         data-hero-carousel
         style={carouselStyle}
       >
@@ -208,19 +219,24 @@ export const HeroCarouselWithWidgets = ({
           forceFullHeight
           prevButtonClassName="top-1/2 -translate-y-1/2 z-30"
           nextButtonClassName="top-1/2 -translate-y-1/2 z-30"
+          style={{ borderRadius: 'md' }}
         />
       </div>
       {showWidgets ? (
-        <div className="hidden flex-col gap-4 md:flex" data-hero-widgets>
+        <div className="hidden flex-col gap-3 lg:flex" data-hero-widgets>
           {clockEnabled ? (
-            <div className="flex h-full flex-col justify-between rounded-2xl bg-gradient-to-br from-sky-400 via-blue-500 to-indigo-500 p-6 text-white shadow-sm">
-              <div className="text-xs font-semibold uppercase tracking-[0.3rem] opacity-70">
-                {timeZoneLabel}
+            <div className="flex flex-1 flex-col justify-between rounded-xl bg-gradient-to-br from-indigo-500 via-blue-600 to-indigo-700 p-4 text-white shadow-sm min-h-[160px] relative overflow-hidden">
+              {/* Weather gradient background */}
+              <div className="absolute inset-0 opacity-20 bg-gradient-to-br from-white/30 via-transparent to-white/10" />
+              <div className="relative z-10">
+                <div className="text-[10px] font-medium uppercase tracking-wider opacity-80">
+                  {timeZoneLabel}
+                </div>
+                <div className="mt-1 text-3xl font-light lg:text-4xl">{timeString}</div>
+                <div className="text-[11px] capitalize opacity-80 mt-1">{dateString}</div>
               </div>
-              <div className="mt-2 text-4xl font-semibold md:text-5xl">{timeString}</div>
-              <div className="text-sm capitalize opacity-80">{dateString}</div>
               {clockConfig.showWeather && clockConfig.weatherLocation ? (
-                <div className="mt-3 text-xs uppercase tracking-wide text-white/85">
+                <div className="relative z-10 mt-2 text-[10px] uppercase tracking-wide text-white/85">
                   {clockConfig.weatherLocation}
                 </div>
               ) : null}
@@ -228,13 +244,13 @@ export const HeroCarouselWithWidgets = ({
           ) : null}
 
           {calendarEnabled ? (
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold uppercase tracking-[0.3rem] text-slate-500">
+            <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm flex-1">
+              <div className="flex items-center justify-center">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-600">
                   {monthLabel}
                 </span>
               </div>
-              <div className="mt-4 grid grid-cols-7 gap-y-3 gap-x-1 text-center text-[0.7rem] font-medium uppercase tracking-wide text-slate-400">
+              <div className="mt-2 grid grid-cols-7 gap-y-1 text-center text-[9px] font-medium uppercase text-slate-400">
                 {dayNames.map((name) => (
                   <div key={name}>{name}</div>
                 ))}
@@ -245,10 +261,10 @@ export const HeroCarouselWithWidgets = ({
                     <div
                       key={`day-${index}`}
                       className={cn(
-                        'mx-auto flex h-8 w-8 items-center justify-center rounded-full text-sm transition-colors md:h-9 md:w-9',
+                        'mx-auto flex h-6 w-6 items-center justify-center rounded-full text-[11px] transition-colors',
                         day == null && 'text-transparent',
                         day != null && !isToday && 'text-slate-700',
-                        day != null && isToday && highlight && 'bg-sky-500 text-white font-semibold shadow-sm'
+                        day != null && isToday && highlight && 'bg-red-500 text-white font-semibold'
                       )}
                     >
                       {day ?? ''}

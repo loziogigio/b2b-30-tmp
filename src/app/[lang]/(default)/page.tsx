@@ -154,7 +154,7 @@ export default async function Page({
   const search = searchParams ? await searchParams : undefined;
   const previewParam = coerceParam(search?.preview);
   const isPreview = previewParam === 'true';
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const storedContext = parseContextCookie(cookieStore.get(PAGE_CONTEXT_COOKIE)?.value);
 
   const queryContext = buildContextFromParams({
@@ -232,7 +232,7 @@ export default async function Page({
       <Container>
         <BannerAllCarousel
           data={sliderTopData.slider_top_transformed}
-          className="mb-12 xl:mb-14 pt-1"
+          className="mb-12 xl:mb-8 pt-1"
           lang={lang}
           breakpoints={sliderTopBreakpoints}
           key="slider_top_transformed"
@@ -243,7 +243,7 @@ export default async function Page({
       <Container>
         <BannerAllCarousel
           data={sliderTopData.promo_banner_transformed}
-          className="mb-12 xl:mb-14 pt-1"
+          className="mb-12 xl:mb-8 pt-1"
           lang={lang}
           breakpoints={promoBannerBreakpoints}
           key="promo_banner_transformed"
@@ -257,7 +257,7 @@ export default async function Page({
       <Container>
         <BannerAllCarousel
           data={sliderTopData.home_brand_transformed}
-          className="mb-12 xl:mb-14 pt-1"
+          className="mb-12 xl:mb-8 pt-1"
           lang={lang}
           breakpoints={homeBrandBreakpoints}
           key="home_brand_transformed"
@@ -268,7 +268,7 @@ export default async function Page({
       <Container>
         <BannerAllCarousel
           data={sliderTopData.flyer_transformed}
-          className="mb-12 xl:mb-14 pt-1"
+          className="mb-12 xl:mb-8 pt-1"
           lang={lang}
           breakpoints={flyerBreakpoints}
           key="flyer_transformed"

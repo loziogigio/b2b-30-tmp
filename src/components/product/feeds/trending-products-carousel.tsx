@@ -2,9 +2,8 @@
 
 import React from 'react';
 import ProductsCarousel from '@components/product/products-carousel';
-import { useProductListQuery } from '@framework/product/get-b2b-product';
+import { usePimProductListQuery } from '@framework/product/get-pim-product';
 import { getTrendingProductsPage } from '@framework/likes';
-import { ERP_STATIC } from '@framework/utils/static';
 import { useTranslation } from 'src/app/i18n/client';
 
 interface Props {
@@ -24,7 +23,7 @@ export default function TrendingProductsCarousel({
   sectionTitle,
   className,
 }: Props) {
-  const [skuJoined, setSkuJoined] = React.useState<string>('');
+  const [skuList, setSkuList] = React.useState<string[]>([]);
   const { t } = useTranslation(lang, 'common');
   const headingLabel = sectionTitle ?? t('text-trending-products');
 
@@ -36,10 +35,10 @@ export default function TrendingProductsCarousel({
         const page = await getTrendingProductsPage(timePeriod, 1, limitSkus, false);
         const skus = (page?.items || []).map((r) => r.sku).filter(Boolean);
         if (!mounted) return;
-        setSkuJoined(skus.join(';'));
+        setSkuList(skus);
       } catch {
         if (!mounted) return;
-        setSkuJoined('');
+        setSkuList([]);
       }
     })();
     return () => {
@@ -47,15 +46,15 @@ export default function TrendingProductsCarousel({
     };
   }, [timePeriod, limitSkus]);
 
-  const hasSkus = skuJoined.length > 0;
+  const hasSkus = skuList.length > 0;
 
-  const { data = [], isLoading, error } = useProductListQuery(
-    hasSkus
-      ? {
-          ...ERP_STATIC,
-          search: { sku: skuJoined }
-        }
-      : {},
+  const { data = [], isLoading, error } = usePimProductListQuery(
+    {
+      limit: limitSkus,
+      filters: {
+        sku: skuList,
+      },
+    },
     { enabled: hasSkus }
   );
 

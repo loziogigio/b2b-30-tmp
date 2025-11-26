@@ -12,7 +12,8 @@ type MODAL_VIEWS =
   | 'DELIVERY_VIEW'
   | 'PRODUCT_VIEW'
   | 'CATEGORY_VIEW'
-  | 'B2B_PRODUCT_VARIANTS_QUICK_VIEW';
+  | 'B2B_PRODUCT_VARIANTS_QUICK_VIEW'
+  | 'RADIO_PLAYER';
 
 // One layer in the modal stack
 type StackItem = {

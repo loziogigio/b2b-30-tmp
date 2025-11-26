@@ -3,6 +3,11 @@
 module.exports = {
   reactStrictMode: true,
   output: 'standalone',
+  // Skip static page generation during build for faster Docker builds
+  generateBuildId: async () => {
+    return 'build-' + Date.now();
+  },
+  skipTrailingSlashRedirect: true,
   ...(process.env.NODE_ENV === 'production' && {
     typescript: {
       ignoreBuildErrors: true,
@@ -18,7 +23,11 @@ module.exports = {
         headers: [
           {
             key: 'Permissions-Policy',
-            value: 'clipboard-read=(self "http://localhost:3001"), clipboard-write=(self "http://localhost:3001")',
+            value: 'clipboard-read=(self "http://localhost:3001" "http://149.81.163.109:3001"), clipboard-write=(self "http://localhost:3001" "http://149.81.163.109:3001")',
+          },
+          {
+            key: 'Content-Security-Policy',
+            value: "frame-ancestors 'self' http://localhost:3001 http://149.81.163.109:3001",
           },
         ],
       },

@@ -30,10 +30,18 @@ const CategoryPopup = dynamic(
 const B2BProductVariantsQuickView = dynamic(
   () => import('@components/product/b2b-product-variants-quick-view')
 );
+const RadioPlayerModal = dynamic(
+  () => import('@components/radio/radio-player-modal')
+);
 
 export default function ManagedModal({ lang }: { lang: string }) {
   const { isOpen, view } = useModalState();
   const { closeModal } = useModalAction();
+
+  // Radio player renders as floating window WITHOUT modal overlay
+  if (view === 'RADIO_PLAYER') {
+    return isOpen ? <RadioPlayerModal lang={lang} /> : null;
+  }
 
   if (view === 'CATEGORY_VIEW') {
     return (
@@ -55,7 +63,6 @@ export default function ManagedModal({ lang }: { lang: string }) {
       {view === 'DELIVERY_VIEW' && <DeliveryAddresses lang={lang} />}
 
       {view === 'B2B_PRODUCT_VARIANTS_QUICK_VIEW' && <B2BProductVariantsQuickView lang={lang} />}
-
     </Modal>
   );
 }

@@ -22,7 +22,12 @@ const PackagingGrid: React.FC<Props> = ({
   minColWidthPx = 44,
 }) => {
   // Works with either `pd` or `options` (+ optional `uom`)
-  const { options, uom: resolvedUom, cols } = getPackagingGridData(pd ?? optsProp, uom);
+  const { options: rawOptions, uom: resolvedUom } = getPackagingGridData(pd ?? optsProp, uom);
+  // Filter out "imballo" / "IMB" packaging options
+  const options = rawOptions.filter(o =>
+    !['imb', 'imballo'].includes((o.packaging_code || '').toLowerCase())
+  );
+  const cols = options.length + 1;
   if (!options.length) return null;
 
   return (

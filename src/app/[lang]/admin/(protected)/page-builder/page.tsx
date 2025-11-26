@@ -1,3 +1,5 @@
+'use client';
+
 import dynamic from 'next/dynamic';
 
 const PageBuilderClient = dynamic(() => import('@components/builder/PageBuilderClient'), {
@@ -8,10 +10,6 @@ const PageBuilderClient = dynamic(() => import('@components/builder/PageBuilderC
     </div>
   )
 });
-
-export const metadata = {
-  title: 'Page Builder'
-};
 
 export default function PageBuilderPage() {
   return (

@@ -14,7 +14,10 @@ import {
 acceptLanguage.languages(languages);
 
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|assets|favicon.ico|sw.js).*)']
+  // Match all routes except API, static files, and Next.js internals
+  matcher: [
+    '/((?!api|_next/static|_next/image|_next/webpack-hmr|assets|favicon.ico|sw.js|sitemap.xml|robots.txt).*)'
+  ]
 };
 
 const LANGUAGE_COOKIE = 'i18next';
@@ -87,10 +90,12 @@ const applyCampaignPersistence = (req: NextRequest, res: NextResponse) => {
 };
 
 export function middleware(req: NextRequest) {
+  // Skip middleware for icon and chrome files
   if (req.nextUrl.pathname.includes('icon') || req.nextUrl.pathname.includes('chrome')) {
     return applyCampaignPersistence(req, NextResponse.next());
   }
 
+  // Determine language from cookie, accept-language header, or fallback
   let lang: string | undefined;
   if (req.cookies.has(LANGUAGE_COOKIE)) {
     lang = acceptLanguage.get(req.cookies.get(LANGUAGE_COOKIE)?.value);
@@ -98,20 +103,89 @@ export function middleware(req: NextRequest) {
   if (!lang) lang = acceptLanguage.get(req.headers.get('Accept-Language') ?? undefined);
   if (!lang) lang = fallbackLng;
 
+  // Ensure we always have a valid language
+  if (!languages.includes(lang)) {
+    lang = fallbackLng;
+  }
+
+  const segments = req.nextUrl.pathname.split('/').filter(Boolean);
+  // Check if URL already has a language prefix
   const hasLanguagePrefix = languages.some((loc) => req.nextUrl.pathname.startsWith(`/${loc}`));
+
   if (!hasLanguagePrefix && !req.nextUrl.pathname.startsWith('/_next')) {
-    const redirectUrl = new URL(`/${lang}${req.nextUrl.pathname}${req.nextUrl.search}`, req.url);
-    return applyCampaignPersistence(req, NextResponse.redirect(redirectUrl));
+    const normalizedSegments = segments.slice();
+    if (normalizedSegments[0] === 'shop') {
+      normalizedSegments[0] = 'search';
+    }
+    const normalizedPath =
+      normalizedSegments.length > 0 ? `/${normalizedSegments.join('/')}` : '';
+
+    const redirectUrl = new URL(`/${lang}${normalizedPath}${req.nextUrl.search}`, req.url);
+    const response = NextResponse.redirect(redirectUrl, { status: 308 });
+
+    // Set language cookie on redirect
+    response.cookies.set(LANGUAGE_COOKIE, lang, {
+      maxAge: 365 * 24 * 60 * 60, // 1 year
+      path: '/',
+      sameSite: 'lax'
+    });
+
+    return applyCampaignPersistence(req, response);
+  }
+
+  if (segments.length > 0 && languages.includes(segments[0])) {
+    lang = segments[0];
+  }
+
+  // If the first path segment is not a supported language, fallback to default language
+  if (segments.length > 0 && !languages.includes(segments[0]) && !req.nextUrl.pathname.includes('.')) {
+    const normalizedLang = lang ?? fallbackLng;
+    const pathname = `/${segments.join('/')}`;
+    const redirectUrl = new URL(`/${normalizedLang}${pathname}${req.nextUrl.search}`, req.url);
+    const response = NextResponse.redirect(redirectUrl);
+    response.cookies.set(LANGUAGE_COOKIE, normalizedLang, {
+      maxAge: 365 * 24 * 60 * 60,
+      path: '/',
+      sameSite: 'lax'
+    });
+    return applyCampaignPersistence(req, response);
+  }
+
+  // After ensuring the language prefix, normalize the pathname
+  // Redirect legacy "/{lang}/shop" paths to the search page, preserving query params
+  if (segments.length >= 2 && languages.includes(segments[0]) && segments[1] === 'shop') {
+    const search = req.nextUrl.search;
+    const redirectUrl = new URL(`/${segments[0]}/search${search}`, req.url);
+    const response = NextResponse.redirect(redirectUrl);
+    response.cookies.set(LANGUAGE_COOKIE, segments[0], {
+      maxAge: 365 * 24 * 60 * 60,
+      path: '/',
+      sameSite: 'lax'
+    });
+    return applyCampaignPersistence(req, response);
   }
 
   const response = NextResponse.next();
 
+  if (lang && languages.includes(lang)) {
+    response.cookies.set(LANGUAGE_COOKIE, lang, {
+      maxAge: 365 * 24 * 60 * 60, // 1 year
+      path: '/',
+      sameSite: 'lax'
+    });
+  }
+
+  // Update language cookie based on referer if present
   if (req.headers.has('referer')) {
     try {
       const refererUrl = new URL(req.headers.get('referer') ?? '');
       const lngInReferer = languages.find((l) => refererUrl.pathname.startsWith(`/${l}`));
       if (lngInReferer) {
-        response.cookies.set(LANGUAGE_COOKIE, lngInReferer);
+        response.cookies.set(LANGUAGE_COOKIE, lngInReferer, {
+          maxAge: 365 * 24 * 60 * 60, // 1 year
+          path: '/',
+          sameSite: 'lax'
+        });
       }
     } catch {
       // ignore malformed referer

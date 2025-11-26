@@ -6,6 +6,7 @@ import { CustomHTMLBlock } from "./CustomHTMLBlock";
 import { SpacerBlock } from "./SpacerBlock";
 import { YouTubeEmbedBlock } from "./YouTubeEmbedBlock";
 import { MediaImageBlock } from "./MediaImageBlock";
+import { ProductDataTableBlock } from "./ProductDataTableBlock";
 
 interface BlockRendererProps {
   block: PageBlock;
@@ -14,6 +15,8 @@ interface BlockRendererProps {
 
 export function BlockRenderer({ block, productData }: BlockRendererProps) {
   const blockType = block.type;
+  const configVariant = (block.config as any)?.variant;
+  const langFromProduct = typeof productData?.lang === "string" ? productData.lang : undefined;
 
   // Product detail specific blocks
   if (blockType === "productInfo") {
@@ -28,7 +31,7 @@ export function BlockRenderer({ block, productData }: BlockRendererProps) {
     return <RichTextBlock config={block.config as any} />;
   }
 
-  if (blockType === "customHTML") {
+  if (blockType === "customHTML" || blockType === "content-custom-html") {
     return <CustomHTMLBlock config={block.config as any} />;
   }
 
@@ -45,9 +48,17 @@ export function BlockRenderer({ block, productData }: BlockRendererProps) {
     return <MediaImageBlock config={block.config as any} />;
   }
 
-  const config = block.config as Record<string, unknown> | undefined;
-  if (config && config["variant"] === "richText") {
-    return <RichTextBlock config={config as any} />;
+  if (
+    blockType === "product-data-table" ||
+    blockType === "productDataTable" ||
+    blockType === "attribute-table" ||
+    (configVariant === "productDataTable" || configVariant === "product-data-table")
+  ) {
+    return <ProductDataTableBlock config={block.config as any} lang={langFromProduct} />;
+  }
+
+  if (configVariant === "richText") {
+    return <RichTextBlock config={block.config as any} />;
   }
 
   // Legacy/unknown block types - only show in development

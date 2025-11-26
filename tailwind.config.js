@@ -6,7 +6,7 @@ module.exports = {
     extend: {
       colors: {
         brand: {
-          DEFAULT: '#1a5da8',
+          DEFAULT: '#405BA8',
           dark: '#000000',
           light: '#ffffff',
           muted: '#595959',
@@ -82,8 +82,9 @@ module.exports = {
         wiggle: 'wiggle 1s ease-in-out infinite',
       },
       fontFamily: {
-        body: ['var(--font-inter)'],
+        body: ['Helvetica Neue LT Std', 'Helvetica Neue', 'Helvetica', 'Arial', 'sans-serif'],
         manrope: ['var(--font-manrope)'],
+        sans: ['Helvetica Neue LT Std', 'Helvetica Neue', 'Helvetica', 'Arial', 'sans-serif'],
       },
       boxShadow: {
         card: '0px 0px 6px rgba(79, 95, 120, 0.1)',

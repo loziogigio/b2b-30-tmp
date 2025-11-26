@@ -228,7 +228,7 @@ const ProductCardB2BHorizontal: React.FC<ProductProps> = ({
                 aria-label="Toggle wishlist"
                 className={cn(
                   'shrink-0 p-1 rounded transition-colors',
-                  isFavorite ? 'text-red-500' : 'text-gray-400 hover:text-brand'
+                  isFavorite ? 'text-[#6D727F]' : 'text-gray-400 hover:text-brand'
                 )}
                 onClick={async (e) => {
                   e.stopPropagation();

@@ -8,8 +8,7 @@ import { useCmsB2BMenuRawQuery } from '@framework/product/get-b2b-cms';
 import { buildB2BMenuTree, findNodeByPath, type MenuTreeNode } from '@utils/transform/b2b-menu-tree';
 import { useTranslation } from 'src/app/i18n/client';
 import ProductsCarousel from '@components/product/products-carousel';
-import { useProductListQuery } from '@framework/product/get-b2b-product';
-import { ERP_STATIC } from '@framework/utils/static';
+import { usePimProductListQuery } from '@framework/product/get-pim-product';
 import BannerCard from '@components/cards/banner-card';
 
 
@@ -251,21 +250,31 @@ export default function CategoryPage({ lang, slug }: { lang: string; slug: strin
 }
 
 /* =========================
+   Extract search text from URL-like strings (e.g., "shop?text=luce" -> "luce")
+========================= */
+function extractSearchText(url: string | undefined, fallback: string): string {
+  if (!url) return fallback;
+  const qs = url.includes('?') ? url.split('?')[1] : '';
+  if (qs) {
+    const sp = new URLSearchParams(qs);
+    // Check for text param first, then category filters
+    const text = sp.get('text') || sp.get('q');
+    if (text) return text;
+    const category = sp.get('filters-category') || sp.get('category');
+    if (category) return category;
+  }
+  return fallback;
+}
+
+/* =========================
    ROW: Child is a group (non-leaf)
 ========================= */
 function CategoryChildCarousel({ lang, child }: { lang: string; child: MenuTreeNode }) {
-  const codeFromUrl = (() => {
-    if (!child.url) return null;
-    const qs = child.url.includes('?') ? child.url.split('?')[1] : child.url;
-    const sp = new URLSearchParams(qs);
-    return sp.get('filters-category') || sp.get('category');
-  })();
+  const searchQuery = extractSearchText(child.url, child.slug);
 
-  const { data, isLoading, error } = useProductListQuery({
-    per_page: NUM_ITEM,
-    start: 0,
-    ...ERP_STATIC,
-    search: codeFromUrl ? { 'filters-category': codeFromUrl } : { category: child.slug },
+  const { data, isLoading, error } = usePimProductListQuery({
+    limit: NUM_ITEM,
+    q: searchQuery,
   });
 
   if (isLoading || error) return null;
@@ -295,19 +304,11 @@ function CategoryChildCarousel({ lang, child }: { lang: string; child: MenuTreeN
    ROW: Leaf (show 1 slider of products)
 ========================= */
 function CategoryLeafCarousel({ lang, node }: { lang: string; node: MenuTreeNode }) {
-  const codeFromUrl = (() => {
-    if (!node.url) return null;
-    const qs = node.url.includes('?') ? node.url.split('?')[1] : node.url;
-    const sp = new URLSearchParams(qs);
-    return sp.get('filters-category') || sp.get('category');
-  })();
+  const searchQuery = extractSearchText(node.url, node.slug);
 
-  const { data, isLoading, error } = useProductListQuery({
-    per_page: NUM_ITEM,
-    start: 0,
-    customer_code: '00000',
-    address_code: '',
-    search: codeFromUrl ? { 'filters-category': codeFromUrl } : { category: node.slug },
+  const { data, isLoading, error } = usePimProductListQuery({
+    limit: NUM_ITEM,
+    q: searchQuery,
   });
 
   if (isLoading || error) return null;

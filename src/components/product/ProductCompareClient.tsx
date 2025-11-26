@@ -15,6 +15,7 @@ import { useProductListQuery } from '@framework/product/get-b2b-product';
 import { useQuery } from '@tanstack/react-query';
 import { getAvailabilityDisplay } from '@utils/format-availability';
 import { exportToExcel, exportToPDF } from '@utils/export-comparison';
+import { useTranslation } from 'src/app/i18n/client';
 
 interface ProductCompareClientProps {
   lang: string;
@@ -79,11 +80,13 @@ const mapProductToComparison = (product: Product, priceData?: ErpPriceData): Com
     description: product.description,
     priceData: priceData, // Pass full ERP price data for PriceAndPromo component
     tags: product.tag?.map((tag) => tag?.name || tag?.slug).filter(Boolean) as string[] | undefined,
-    features: [...baseFeatures, ...technicalFeatures]
+    features: [...baseFeatures, ...technicalFeatures],
+    _originalProduct: product // Keep original product for modal
   };
 };
 
 export default function ProductCompareClient({ lang }: ProductCompareClientProps) {
+  const { t } = useTranslation(lang, 'common');
   const urlSearchParams = useSearchParams();
   const { skus, addSku, removeSku, clear } = useCompareList();
   const { isAuthorized } = useUI();
@@ -212,11 +215,7 @@ export default function ProductCompareClient({ lang }: ProductCompareClientProps
     return orderedProducts;
   }, [rawProducts, erpPricesMap, limitedSkus, lang]);
 
-  const hintText = useMemo(
-    () =>
-      'Compare models line by line. Start from any product page and tap “Confronta” to add it to this list. Prices and specs come directly from the B2B search service.',
-    []
-  );
+  const hintText = t('text-product-comparison-hint');
 
   const hasProducts = products.length > 0;
 
@@ -234,12 +233,12 @@ export default function ProductCompareClient({ lang }: ProductCompareClientProps
     <Container className="py-10 space-y-8">
       <section className="space-y-4">
         <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
-          Compare
+          {t('text-compare')}
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-          Beta layout
+          {t('text-beta-layout')}
         </div>
         <div className="space-y-2">
-          <h1 className="text-3xl font-semibold text-slate-900">Product comparison</h1>
+          <h1 className="text-3xl font-semibold text-slate-900">{t('text-product-comparison')}</h1>
           <p className="max-w-3xl text-base text-slate-600">{hintText}</p>
         </div>
       </section>
@@ -251,7 +250,7 @@ export default function ProductCompareClient({ lang }: ProductCompareClientProps
           disabled={!hasProducts}
           className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Export Excel
+          {t('text-export-excel')}
         </button>
         <button
           type="button"
@@ -259,13 +258,13 @@ export default function ProductCompareClient({ lang }: ProductCompareClientProps
           disabled={!hasProducts}
           className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-rose-300 hover:text-rose-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Export PDF
+          {t('text-export-pdf')}
         </button>
       </section>
 
       {skus.length ? (
         <div className="flex flex-wrap items-center gap-2 rounded-3xl border border-slate-200 bg-white/80 p-4 shadow-[0_25px_45px_rgba(15,23,42,0.05)] backdrop-blur">
-          <span className="text-sm font-semibold text-slate-600">Comparing:</span>
+          <span className="text-sm font-semibold text-slate-600">{t('text-comparing')}</span>
           {skus.map((sku) => (
             <button
               key={sku}
@@ -282,35 +281,35 @@ export default function ProductCompareClient({ lang }: ProductCompareClientProps
             onClick={clear}
             className="ml-auto inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-500 transition hover:border-slate-300 hover:text-slate-800"
           >
-            Clear all
+            {t('text-clear-all-comparison')}
           </button>
         </div>
       ) : null}
 
       {isLoading ? (
         <div className="rounded-3xl border border-dashed border-slate-200 bg-white/70 p-10 text-center text-slate-500">
-          Loading comparison data...
+          {t('text-loading-comparison')}
         </div>
       ) : null}
 
       {queryError ? (
         <div className="flex items-center gap-3 rounded-3xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           <HiOutlineExclamationCircle className="h-5 w-5" />
-          {queryError?.message || 'Unable to load comparison data'}
+          {queryError?.message || t('text-unable-load-comparison')}
         </div>
       ) : null}
 
       {!isLoading && !hasProducts ? (
         <div className="rounded-3xl border border-slate-200 bg-white/80 p-10 text-center">
-          <p className="text-base font-semibold text-slate-800">No products selected</p>
+          <p className="text-base font-semibold text-slate-800">{t('text-no-products-selected')}</p>
           <p className="mt-2 text-sm text-slate-500">
-            Visit any product page and click <span className="font-semibold">Confronta</span> to build your comparison.
+            {t('text-build-comparison-hint').replace('<0>', '').replace('</0>', '')}
           </p>
         </div>
       ) : null}
 
       {hasProducts ? (
-        <ProductComparisonTable products={products} onRemove={removeSku} />
+        <ProductComparisonTable products={products} onRemove={removeSku} lang={lang} />
       ) : null}
     </Container>
   );

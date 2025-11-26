@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Radio Italia Live</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1A5DA8 0%, #134178 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .player-container {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      overflow: hidden;
+      width: 100%;
+      max-width: 400px;
+    }
+    .header {
+      background: linear-gradient(135deg, #1A5DA8 0%, #134178 100%);
+      padding: 20px;
+      text-align: center;
+      color: white;
+    }
+    .header h1 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .content {
+      padding: 24px;
+    }
+    .stations {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+    .station-btn {
+      flex: 1;
+      padding: 10px 8px;
+      border: none;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: #f1f5f9;
+      color: #475569;
+    }
+    .station-btn:hover {
+      background: #e2e8f0;
+    }
+    .station-btn.active {
+      background: #1A5DA8;
+      color: white;
+    }
+    .now-playing {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .station-logo {
+      font-size: 48px;
+      margin-bottom: 8px;
+    }
+    .station-name {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 4px;
+    }
+    .status {
+      font-size: 0.875rem;
+      color: #64748b;
+    }
+    .status.playing {
+      color: #16a34a;
+    }
+    .controls {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+    }
+    .control-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 8px;
+      border-radius: 50%;
+      transition: all 0.2s;
+      color: #475569;
+    }
+    .control-btn:hover {
+      background: #f1f5f9;
+    }
+    .play-btn {
+      color: #1A5DA8;
+      transform: scale(1);
+      transition: transform 0.2s;
+    }
+    .play-btn:hover {
+      transform: scale(1.1);
+    }
+    .play-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .footer {
+      text-align: center;
+      padding: 16px;
+      font-size: 11px;
+      color: #94a3b8;
+      border-top: 1px solid #e2e8f0;
+    }
+    svg {
+      display: block;
+    }
+    .volume-slider {
+      width: 80px;
+      height: 4px;
+      -webkit-appearance: none;
+      background: #e2e8f0;
+      border-radius: 2px;
+      outline: none;
+    }
+    .volume-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      background: #1A5DA8;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+    .volume-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="player-container">
+    <div class="header">
+      <h1>🎧 Radio Streaming</h1>
+    </div>
+
+    <div class="content">
+      <div class="stations">
+        <button class="station-btn active" data-index="0">🇮🇹 Radio Italia</button>
+        <button class="station-btn" data-index="1">📻 RTL 102.5</button>
+        <button class="station-btn" data-index="2">🎵 RDS</button>
+      </div>
+
+      <div class="now-playing">
+        <div class="station-logo" id="stationLogo">🇮🇹</div>
+        <div class="station-name" id="stationName">Radio Italia</div>
+        <div class="status" id="status">Clicca play per ascoltare</div>
+      </div>
+
+      <audio id="audioPlayer" preload="none"></audio>
+
+      <div class="controls">
+        <div class="volume-container">
+          <button class="control-btn" id="muteBtn" title="Mute">
+            <svg id="volumeIcon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+            </svg>
+          </button>
+          <input type="range" class="volume-slider" id="volumeSlider" min="0" max="100" value="80">
+        </div>
+
+        <button class="control-btn play-btn" id="playBtn">
+          <svg id="playIcon" width="64" height="64" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M8 5v14l11-7z"/>
+          </svg>
+        </button>
+
+        <div style="width: 100px;"></div>
+      </div>
+    </div>
+
+    <div class="footer">
+      Streaming radio italiana in diretta
+    </div>
+  </div>
+
+  <script>
+    const STATIONS = [
+      { name: 'Radio Italia', url: 'https://streamcdnm10-4764f6c0c16c3e1f.msvdn.net/webradio/radioitaliawebradio.aac', logo: '🇮🇹' },
+      { name: 'RTL 102.5', url: 'https://streamingv2.shoutcast.com/rtl-102-5', logo: '📻' },
+      { name: 'RDS', url: 'https://icstream.rds.radio/rds', logo: '🎵' }
+    ];
+
+    let currentStation = 0;
+    let isPlaying = false;
+    let isMuted = false;
+
+    const audio = document.getElementById('audioPlayer');
+    const playBtn = document.getElementById('playBtn');
+    const playIcon = document.getElementById('playIcon');
+    const muteBtn = document.getElementById('muteBtn');
+    const volumeIcon = document.getElementById('volumeIcon');
+    const volumeSlider = document.getElementById('volumeSlider');
+    const stationLogo = document.getElementById('stationLogo');
+    const stationName = document.getElementById('stationName');
+    const status = document.getElementById('status');
+    const stationBtns = document.querySelectorAll('.station-btn');
+
+    // Set initial volume
+    audio.volume = 0.8;
+
+    function updatePlayIcon() {
+      if (isPlaying) {
+        playIcon.innerHTML = '<path d="M6 4h4v16H6zM14 4h4v16h-4z"/>';
+      } else {
+        playIcon.innerHTML = '<path d="M8 5v14l11-7z"/>';
+      }
+    }
+
+    function updateVolumeIcon() {
+      if (isMuted || audio.volume === 0) {
+        volumeIcon.innerHTML = '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line>';
+      } else {
+        volumeIcon.innerHTML = '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>';
+      }
+    }
+
+    function loadStation(index) {
+      currentStation = index;
+      const station = STATIONS[index];
+
+      audio.src = station.url;
+      stationLogo.textContent = station.logo;
+      stationName.textContent = station.name;
+
+      stationBtns.forEach((btn, i) => {
+        btn.classList.toggle('active', i === index);
+      });
+
+      if (isPlaying) {
+        audio.play().catch(() => {
+          isPlaying = false;
+          updatePlayIcon();
+          status.textContent = 'Errore di riproduzione';
+          status.classList.remove('playing');
+        });
+      }
+    }
+
+    playBtn.addEventListener('click', () => {
+      if (!audio.src) {
+        audio.src = STATIONS[currentStation].url;
+      }
+
+      if (isPlaying) {
+        audio.pause();
+        isPlaying = false;
+        status.textContent = 'In pausa';
+        status.classList.remove('playing');
+      } else {
+        playBtn.disabled = true;
+        status.textContent = 'Connessione...';
+        audio.play()
+          .then(() => {
+            isPlaying = true;
+            status.textContent = 'In riproduzione...';
+            status.classList.add('playing');
+          })
+          .catch(() => {
+            status.textContent = 'Errore di riproduzione';
+            status.classList.remove('playing');
+          })
+          .finally(() => {
+            playBtn.disabled = false;
+          });
+      }
+      updatePlayIcon();
+    });
+
+    muteBtn.addEventListener('click', () => {
+      isMuted = !isMuted;
+      audio.muted = isMuted;
+      updateVolumeIcon();
+    });
+
+    volumeSlider.addEventListener('input', (e) => {
+      const volume = e.target.value / 100;
+      audio.volume = volume;
+      if (volume === 0) {
+        isMuted = true;
+      } else if (isMuted) {
+        isMuted = false;
+        audio.muted = false;
+      }
+      updateVolumeIcon();
+    });
+
+    stationBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const index = parseInt(btn.dataset.index, 10);
+        if (index !== currentStation) {
+          loadStation(index);
+        }
+      });
+    });
+
+    // Initialize
+    audio.src = STATIONS[0].url;
+  </script>
+</body>
+</html>

@@ -1,6 +1,5 @@
 "use client";
 
-import Image from 'next/image';
 import Link from '@components/ui/link';
 import cn from 'classnames';
 import { siteSettings } from '@settings/site-settings';
@@ -26,13 +25,11 @@ const Logo: React.FC<React.AnchorHTMLAttributes<{}>> = ({
       )}
       {...props}
     >
-      <Image
+      <img
         src={logoUrl}
         alt={logoAlt}
         loading="eager"
-        width={siteSettings.logo.width}
-        height={siteSettings.logo.height}
-        className="object-contain"
+        className="h-full w-auto object-contain"
       />
     </Link>
   );

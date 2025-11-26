@@ -50,7 +50,7 @@ const SearchBoxB2B = React.forwardRef<HTMLInputElement, SearchProps>(
     return (
       <form
         className={cn(
-          'relative flex w-full rounded-full bg-white shadow-sm',
+          'relative flex w-full rounded-md bg-white',
           className,
         )}
         noValidate
@@ -60,9 +60,9 @@ const SearchBoxB2B = React.forwardRef<HTMLInputElement, SearchProps>(
         <input
           id={searchId}
           className={cn(
-            'pl-4 pr-20 text-heading outline-none w-full h-[48px] rounded-full bg-brand-light text-brand-dark text-sm lg:text-15px transition-all duration-200 focus:border-brand focus:ring-0 placeholder:text-brand-dark/50',
+            'pl-4 pr-20 text-heading outline-none w-full h-[48px] rounded-md bg-brand-light text-brand-dark text-sm lg:text-15px transition-all duration-200 focus:border-brand focus:ring-0 placeholder:text-brand-dark/50',
             {
-              'border border-border-base': variant === 'border',
+              'border border-brand': variant === 'border',
               'bg-fill-one': variant === 'fill',
             },
           )}
@@ -98,7 +98,7 @@ const SearchBoxB2B = React.forwardRef<HTMLInputElement, SearchProps>(
           <button
             type="submit"
             title="Search"
-            className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 text-gray-400 hover:text-gray-600"
+            className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-gray-100 text-brand hover:text-brand-dark"
           >
             <SearchIcon className="w-5 h-5" />
           </button>

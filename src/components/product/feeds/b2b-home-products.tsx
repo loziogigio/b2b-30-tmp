@@ -16,7 +16,7 @@ export default function B2BHomeProducts({
   carouselBreakpoint,
   homeCategoryFiltered = [],
 }: B2BHomeProductsProps) {
-  const carouselSpacing = 'mb-12 xl:mb-14 pt-1';
+  const carouselSpacing = 'mb-12 xl:mb-8 pt-1';
 
   return (
     <>

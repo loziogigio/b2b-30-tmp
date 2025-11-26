@@ -56,19 +56,18 @@ const Heading: React.FC<Props> = ({
   return (
     <Component
       className={cn(
-        'text-brand-dark',
         {
-          'text-15px sm:text-base font-semibold': variant === 'base',
-          'text-base xl:text-lg xl:leading-7 font-semibold font-manrope':
+          'text-15px sm:text-base font-semibold text-brand-dark': variant === 'base',
+          'text-base xl:text-lg xl:leading-7 font-semibold font-manrope text-brand-dark':
             variant === 'title',
           'font-semibold text-brand-dark text-xl': variant === 'titleMedium',
-          'text-base lg:text-lg xl:text-[20px] font-semibold xl:leading-8':
+          'text-base lg:text-lg xl:text-[20px] font-semibold xl:leading-8 text-brand-dark':
             variant === 'titleLarge',
-          'text-base lg:text-[17px] lg:leading-7 font-medium':
+          'text-base lg:text-[17px] lg:leading-7 font-medium text-brand-dark':
             variant === 'mediumHeading',
-          'text-lg lg:text-xl xl:text-[22px] xl:leading-8 font-bold font-manrope':
+          'text-lg lg:text-xl xl:text-[22px] xl:leading-8 font-bold text-brand':
             variant === 'heading',
-          'text-lg lg:text-xl xl:text-[26px] xl:leading-8 font-semibold text-brand-dark ':
+          'text-lg lg:text-xl xl:text-[26px] xl:leading-8 font-semibold text-brand-dark':
             variant === 'checkoutHeading',
         },
         className,

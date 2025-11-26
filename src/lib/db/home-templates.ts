@@ -28,7 +28,7 @@ const buildReturnPayload = (
 });
 
 /**
- * Get published home template for customer_web
+ * Get published home template for vinc-b2b
  * New structure: Queries for all documents with same templateId, uses version resolver
  */
 export async function getPublishedHomeTemplate(options?: { tags?: PageVersionTags | null }): Promise<any | null> {

@@ -35,7 +35,7 @@ export interface RichTextBlockConfig {
 }
 
 export interface CustomHTMLBlockConfig {
-  variant: "customHTML";
+  variant: "customHTML" | "customHtml";
   html: string;
   containerClass?: string;
 }
@@ -54,13 +54,63 @@ export interface YouTubeEmbedBlockConfig {
   height?: string;
 }
 
+export type ProductDataTableValueType = "text" | "html" | "image";
+
+export interface ProductDataTableRowLinkConfig {
+  url: string;
+  openInNewTab?: boolean;
+  rel?: string;
+}
+
+export interface ProductDataTableRowConfig {
+  id?: string;
+  label: string;
+  leftValueType?: ProductDataTableValueType;
+  valueType?: ProductDataTableValueType;
+  value?: string;
+  html?: string;
+  imageUrl?: string;
+  imageAlt?: string;
+  imageAspectRatio?: string;
+  leftHtml?: string;
+  leftLink?: ProductDataTableRowLinkConfig;
+  leftHelperText?: string;
+  valueImageUrl?: string;
+  valueImageAlt?: string;
+  valueImageAspectRatio?: string;
+  link?: ProductDataTableRowLinkConfig;
+  helperText?: string;
+  highlight?: boolean;
+}
+
+export interface ProductDataTableBlockConfig {
+  variant: "productDataTable";
+  title?: string;
+  description?: string;
+  /**
+   * Grid column width (in pixels) for the first column on ≥ sm screens.
+   * Defaults to 220 (matching legacy technical sheet layout).
+   */
+  labelColumnWidth?: number;
+  /**
+   * Optional surface customisation.
+   */
+  appearance?: {
+    bordered?: boolean;
+    rounded?: boolean;
+    zebraStripes?: boolean;
+  };
+  rows: ProductDataTableRowConfig[];
+}
+
 export type ProductDetailBlockConfig =
   | ProductInfoBlockConfig
   | ProductSuggestionsBlockConfig
   | RichTextBlockConfig
   | CustomHTMLBlockConfig
   | SpacerBlockConfig
-  | YouTubeEmbedBlockConfig;
+  | YouTubeEmbedBlockConfig
+  | ProductDataTableBlockConfig;
 
 // Zone types for product detail page placement
 export type ProductDetailZone = "zone1" | "zone2" | "zone3" | "zone4";

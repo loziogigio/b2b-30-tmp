@@ -18,7 +18,6 @@ import { useRouter } from 'next/navigation';
 import cn from 'classnames';
 import {
   HiOutlineHeart,
-  HiOutlineViewGrid,
   HiOutlineUserCircle,
   HiOutlineMenuAlt3,
   HiOutlineArrowUp,
@@ -90,13 +89,15 @@ function Header({ lang }: HeaderProps) {
           isElevated && 'shadow-sm'
         )}
       >
-        <Container className="flex items-center gap-3 py-3">
-          <div className="flex items-center shrink-0">
-            <Logo className="h-14 w-auto" />
+        <Container className="flex items-stretch h-16">
+          {/* Left 20% - Logo */}
+          <div className="w-[20%] flex items-center">
+            <Logo className="h-12 w-auto" />
           </div>
 
-          <div className="flex items-center justify-center gap-3 flex-1">
-            <div className="w-full max-w-2xl">
+          {/* Center 60% - Search + Radio */}
+          <div className="w-[60%] flex items-center justify-center gap-3 px-4">
+            <div className="w-full">
               <Suspense fallback={null}>
                 <SearchB2B
                   searchId="hidros-main-search"
@@ -106,6 +107,28 @@ function Header({ lang }: HeaderProps) {
               </Suspense>
             </div>
 
+            <button
+              type="button"
+              onClick={() => {
+                window.open(
+                  '/radio-player.html',
+                  'RadioPlayer',
+                  'width=450,height=500,resizable=yes,scrollbars=no,status=no,menubar=no,toolbar=no,location=no'
+                );
+              }}
+              className="shrink-0 hover:opacity-80 transition-opacity cursor-pointer"
+              aria-label="Ascolta la radio"
+            >
+              <img
+                src="/assets/placeholders/radio_icon.png"
+                alt="RTL 102.5"
+                className="h-10 w-auto"
+              />
+            </button>
+          </div>
+
+          {/* Right 20% - Buttons */}
+          <div className="w-[20%] flex items-center justify-end gap-3 text-slate-600">
             <Link
               href={`/${lang}/search?source=likes&page_size=12`}
               aria-label={t('text-wishlist', { defaultValue: 'Wishlist' })}
@@ -131,14 +154,6 @@ function Header({ lang }: HeaderProps) {
                 </span>
               ) : null}
             </Link>
-          </div>
-
-          <div className="flex h-14 items-center gap-4 text-slate-600 shrink-0">
-            <div className="hidden lg:flex flex-col items-end justify-center leading-tight">
-              <Suspense fallback={null}>
-                <Delivery lang={lang} />
-              </Suspense>
-            </div>
 
             <button
               type="button"
@@ -148,14 +163,6 @@ function Header({ lang }: HeaderProps) {
             >
               <HiOutlineUserCircle className="h-6 w-6" />
             </button>
-
-            <Link
-              href={`/${lang}${ROUTES.SHOPS}`}
-              aria-label="Catalog grid"
-              className="hidden sm:inline-flex h-12 w-12 items-center justify-center hover:text-brand"
-            >
-              <HiOutlineViewGrid className="h-5 w-5" />
-            </Link>
           </div>
         </Container>
       </div>
@@ -199,6 +206,9 @@ function Header({ lang }: HeaderProps) {
                   {link.label}
                 </Link>
               ))}
+              <Suspense fallback={null}>
+                <Delivery lang={lang} />
+              </Suspense>
               <CartButton lang={lang} summaryVariant="amount" className="ml-3" />
             </div>
           </Container>

@@ -388,7 +388,7 @@ export default function ProductRowB2B({
                               aria-label="Toggle wishlist"
                               className={cn(
                                 'p-1 rounded text-[18px] transition-colors',
-                                likes.isLiked(targetSku) ? 'text-red-500' : 'text-gray-400 hover:text-brand'
+                                likes.isLiked(targetSku) ? 'text-[#6D727F]' : 'text-gray-400 hover:text-brand'
                               )}
                               onClick={(e) => {
                                 e.stopPropagation();

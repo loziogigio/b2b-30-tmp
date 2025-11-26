@@ -253,10 +253,7 @@ const BannerCard: React.FC<BannerProps> = ({
         : '3px 4px 8px 0px rgba(0, 0, 0, 0.25)';
 
       hoverDeclarations.push(`box-shadow: ${shadowValue} !important;`);
-      // Remove border on hover when shadow effect is active
-      hoverDeclarations.push('border-width: 0px !important;');
-      hoverDeclarations.push('border-style: none !important;');
-      hoverDeclarations.push('border-color: transparent !important;');
+      // Keep border on hover - do not remove it
     }
 
     const className = `banner-card-style-${hashStyleValue(JSON.stringify(styleOptions))}`;
@@ -355,22 +352,34 @@ const BannerCard: React.FC<BannerProps> = ({
           }}
         />
         {overlayShouldRender ? (
-          <div
-            className={cn(
-              'pointer-events-none absolute inset-0 z-20 flex px-6 text-center',
-              overlayPositionClass
-            )}
-          >
+          <>
+            {/* Hover gradient overlay from bottom - 75% height */}
             <div
-              className="mx-auto w-full max-w-xl rounded-full px-5 py-2 text-base font-semibold leading-tight shadow-lg"
+              className="pointer-events-none absolute inset-x-0 bottom-0 z-10 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
               style={{
-                backgroundColor: overlayBackground,
-                color: overlayTextColor
+                height: '75%',
+                background: 'linear-gradient(180deg, rgba(217, 217, 217, 0) 0%, #737373 100%)',
+                borderRadius: styleOptions ? borderRadiusMap[styleOptions.borderRadius] : undefined
               }}
+            />
+            {/* Text overlay - visible only on hover */}
+            <div
+              className={cn(
+                'pointer-events-none absolute inset-0 z-20 flex px-6 text-center opacity-0 transition-opacity duration-300 group-hover:opacity-100',
+                overlayPositionClass
+              )}
             >
-              {banner.title}
+              <div
+                className="mx-auto w-full max-w-xl rounded-[17px] px-5 py-2 text-base font-semibold leading-tight"
+                style={{
+                  backgroundColor: overlayBackground,
+                  color: overlayTextColor
+                }}
+              >
+                {banner.title}
+              </div>
             </div>
-          </div>
+          </>
         ) : null}
         {effectActive && (
           <div className="absolute top-0 block w-1/2 h-full transform -skew-x-12 ltr:-left-full rtl:-right-full z-5 bg-gradient-to-r from-transparent to-white opacity-30 group-hover:animate-shine" />
