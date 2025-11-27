@@ -248,16 +248,16 @@ export default function ProductRowB2B({
             </div>
           </Cell>
 
-          {/* 3) Brand image (right) */}
+          {/* 3) Brand image (right) - PIM format */}
           <Cell className="hidden sm:flex justify-end items-center">
-            {brand?.brand_image?.original && brand?.id && (
+            {(brand as any)?.logo_url && (brand as any)?.brand_id && (
               <Link
-                href={`/${lang}/search?filters-id_brand=${brand.id}`}
+                href={`/${lang}/search?filters-brand_id=${(brand as any).brand_id}`}
                 className="block w-[120px] h-[64px]"
                 title={brand?.name || 'Brand'}
               >
                 <img
-                  src={brand.brand_image.original}
+                  src={(brand as any).logo_url}
                   alt={brand?.name || 'Brand'}
                   className="w-full h-full object-contain"
                 />
@@ -406,11 +406,11 @@ export default function ProductRowB2B({
                       {/* Row: SKU + Brand */}
                       <div className="flex items-center text-xs text-gray-600 whitespace-nowrap gap-1.5 min-w-0">
                         <span className="uppercase">{v.sku ?? sku ?? '-'}</span>
-                        {brand?.name && brand?.id !== '0' ? (
+                        {(brand as any)?.brand_id && brand?.name ? (
                           <>
                             <span className="text-gray-300">•</span>
                             <Link
-                              href={`/${lang}/search?filters-id_brand=${brand.id}`}
+                              href={`/${lang}/search?filters-brand_id=${(brand as any).brand_id}`}
                               className="text-brand hover:underline uppercase truncate max-w-[65%]"
                               title={brand.name}
                             >

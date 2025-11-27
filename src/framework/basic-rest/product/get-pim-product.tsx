@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { Product } from '@framework/types';
 import { API_ENDPOINTS_PIM, PIM_API_BASE_URL } from '@framework/utils/api-endpoints-pim';
@@ -64,7 +64,9 @@ interface PimSearchResponse {
   success: boolean;
   data: {
     results: PimProduct[];
-    total?: number;
+    numFound?: number;  // Solr standard field name
+    total?: number;     // Legacy fallback
+    start?: number;
     page?: number;
     limit?: number;
   };
@@ -75,7 +77,17 @@ interface PimSearchResponse {
 // ===============================
 function transformPimProduct(raw: PimProduct): Product {
   // Extract model from attributes if not directly available
-  const modelAttr = raw.attributes?.find(a => a.key === 'descrizione-tecnica');
+  // Handle both array format and multilingual object format
+  let modelAttr: PimProductAttribute | undefined;
+  if (Array.isArray(raw.attributes)) {
+    modelAttr = raw.attributes.find(a => a.key === 'descrizione-tecnica');
+  } else if (raw.attributes && typeof raw.attributes === 'object') {
+    // Multilingual format: { it: { key: { key, label, value } } }
+    const langAttrs = (raw.attributes as any)?.it || Object.values(raw.attributes)[0];
+    if (langAttrs && typeof langAttrs === 'object') {
+      modelAttr = langAttrs['descrizione-tecnica'];
+    }
+  }
   const model = raw.product_model || modelAttr?.value || '';
 
   return {
@@ -83,7 +95,9 @@ function transformPimProduct(raw: PimProduct): Product {
     sku: raw.sku || '',
     name: raw.name || '',
     slug: raw.slug || raw.sku?.toLowerCase() || '',
-    description: raw.description || raw.short_description || '',
+    // short_description is for display anywhere, description is HTML for product detail only
+    description: raw.short_description || '',
+    html_description: raw.description || '', // HTML content for product detail tab
     image: {
       id: raw.image?.id || '',
       thumbnail: raw.image?.thumbnail || raw.cover_image_url || '',
@@ -112,14 +126,39 @@ function transformPimProduct(raw: PimProduct): Product {
     parent_sku: raw.parent_sku || raw.parent_entity_code || '',
     variations: [],
     tag: [],
-    category: { name: '', slug: '' },
+    category: { id: '', name: '', slug: '' },
+    sold: 0,
     // Pass through media for documents, videos, 3D models
     media: raw.media || [],
+    // Pass through attributes for technical specifications
+    attributes: raw.attributes || {},
   } as Product;
 }
 
 function transformPimProducts(products: PimProduct[]): Product[] {
   return products.map(transformPimProduct);
+}
+
+// ===============================
+// Legacy to PIM field name mapping
+// ===============================
+const LEGACY_TO_PIM_FIELD: Record<string, string> = {
+  'id_brand': 'brand_id',
+  'promo_type': 'promo_type',
+  'new': 'attribute_is_new_b',
+  'is_new': 'attribute_is_new_b',
+  'promo_codes': 'promo_code',
+  'category': 'category_ancestors',
+  'family': 'category_ancestors',
+};
+
+function mapFilterKeys(filters: Record<string, any>): Record<string, any> {
+  const mapped: Record<string, any> = {};
+  for (const [key, value] of Object.entries(filters)) {
+    const pimKey = LEGACY_TO_PIM_FIELD[key] || key;
+    mapped[pimKey] = value;
+  }
+  return mapped;
 }
 
 // ===============================
@@ -133,8 +172,9 @@ export const fetchPimProductList = async (
 }> => {
   const url = `${PIM_API_BASE_URL}${API_ENDPOINTS_PIM.SEARCH}`;
 
-  // Build filters object - support array filters like sku, brand_id, etc.
-  const filters: Record<string, any> = { ...(params.filters || {}) };
+  // Build filters object - map legacy field names to PIM field names
+  const rawFilters = params.filters || {};
+  const filters: Record<string, any> = mapFilterKeys(rawFilters);
 
   // Build POST body matching PIM API structure
   const body: Record<string, any> = {
@@ -175,7 +215,8 @@ export const fetchPimProductList = async (
   }
 
   const products = transformPimProducts(data.data.results || []);
-  const total = data.data.total || products.length;
+  // Use numFound (Solr) or total (legacy) - fallback to products.length only as last resort
+  const total = data.data.numFound ?? data.data.total ?? products.length;
 
   return {
     items: products,
@@ -209,4 +250,39 @@ export const usePimProductListQuery = (
   });
 
   return query;
+};
+
+// ===============================
+// Infinite Query hook for PIM products (pagination support)
+// ===============================
+export const usePimProductListInfiniteQuery = (params: Record<string, any>) => {
+  const perPage = params.per_page || params.rows || 24;
+
+  // Build stable params without pagination
+  const baseParams = useMemo(() => {
+    const { start, rows, per_page, ...rest } = params;
+    return rest;
+  }, [JSON.stringify(params)]);
+
+  return useInfiniteQuery({
+    queryKey: ['pim-search-infinite', baseParams, perPage],
+    queryFn: async ({ pageParam = 0 }) => {
+      const result = await fetchPimProductList({
+        ...baseParams,
+        start: pageParam * perPage,
+        rows: perPage,
+      });
+
+      const hasNext = (pageParam + 1) * perPage < result.total;
+
+      return {
+        items: result.items,
+        total: result.total,
+        nextPage: hasNext ? pageParam + 1 : null,
+      };
+    },
+    getNextPageParam: (lastPage) => lastPage.nextPage ?? undefined,
+    initialPageParam: 0,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
 };

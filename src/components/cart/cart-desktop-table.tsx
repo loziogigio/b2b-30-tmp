@@ -113,7 +113,7 @@ export default function CartDesktopTable({
             const normalizedLang = (lang ?? 'it').trim().replace(/^\/+|\/+$|\s+/g, '') || 'it';
             const langPrefix = `/${normalizedLang}`;
             const rawLink = typeof (r as any)?.link === 'string' ? (r as any).link.trim() : '';
-            const skuSegment = typeof r.sku === 'string' && r.sku.trim() !== ''
+            const skuValue = typeof r.sku === 'string' && r.sku.trim() !== ''
               ? encodeURIComponent(r.sku.trim())
               : '';
 
@@ -127,8 +127,8 @@ export default function CartDesktopTable({
 
             const productHref = rawLink
               ? toLangHref(rawLink)
-              : skuSegment
-              ? `${langPrefix}${ROUTES.PRODUCT}/${skuSegment}`
+              : skuValue
+              ? `${langPrefix}${ROUTES.PRODUCT}?sku=${skuValue}`
               : langPrefix;
 
             return (

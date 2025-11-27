@@ -29,8 +29,8 @@ const CartButton = dynamic(() => import('@components/cart/cart-button'), { ssr: 
 const B2BHeaderMenu = dynamic(() => import('@layouts/header/b2b-header-menu'), { ssr: false });
 
 const promoButtons = [
-  { label: 'Promozioni', color: 'bg-[#a52a2a] text-white', href: '/search?filters-promo_type=all' },
-  { label: 'Novità', color: 'bg-brand text-white', href: '/search?filters-new=true' },
+  { label: 'Promozioni', color: 'bg-[#a52a2a] text-white', href: '/search?filters-has_active_promo=true' },
+  { label: 'Novità', color: 'bg-brand text-white', href: '/search?filters-is_new=true' },
 ];
 
 const quickLinks = [
@@ -136,7 +136,7 @@ function Header({ lang }: HeaderProps) {
             >
               <HiOutlineHeart className="h-5 w-5" />
               {summary?.totalCount ? (
-                <span className="absolute -top-1 -right-1 rounded-full bg-brand px-1.5 text-[10px] font-semibold text-white">
+                <span className="absolute -top-1 -right-1 rounded-full bg-[#E1E7EE] px-1.5 text-[10px] font-semibold text-black">
                   {summary.totalCount}
                 </span>
               ) : null}
@@ -149,7 +149,7 @@ function Header({ lang }: HeaderProps) {
             >
               <HiOutlineSwitchHorizontal className="h-5 w-5" />
               {compareSkus.length ? (
-                <span className="absolute -top-1 -right-1 rounded-full bg-emerald-600 px-1.5 text-[10px] font-semibold text-white">
+                <span className="absolute -top-1 -right-1 rounded-full bg-[#E1E7EE] px-1.5 text-[10px] font-semibold text-black">
                   {compareSkus.length}
                 </span>
               ) : null}

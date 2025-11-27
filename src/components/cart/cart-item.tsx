@@ -36,11 +36,11 @@ const CartItem: React.FC<CartItemProps> = ({ lang, item }) => {
   const { price: linePrice } = usePrice({ amount: line, currencyCode: 'EUR' });
 
   const normalizedLang = (lang ?? 'it').trim().replace(/^\/+|\/+$|\s+/g, '') || 'it';
-  const skuSegment = typeof item?.sku === 'string' && item.sku.trim() !== ''
+  const skuValue = typeof item?.sku === 'string' && item.sku.trim() !== ''
     ? encodeURIComponent(item.sku.trim())
     : '';
-  const productHref = skuSegment
-    ? `/${normalizedLang}${ROUTES.PRODUCT}/${skuSegment}`
+  const productHref = skuValue
+    ? `/${normalizedLang}${ROUTES.PRODUCT}?sku=${skuValue}`
     : `/${normalizedLang}${ROUTES.PRODUCT}`;
 
   return (

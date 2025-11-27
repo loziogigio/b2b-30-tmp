@@ -1,7 +1,7 @@
 // PIM API endpoints
 export const API_ENDPOINTS_PIM = {
   SEARCH: '/api/search/search',
-  // Add more PIM endpoints as needed
+  FACET: '/api/search/facet',
 };
 
 // Base URL for PIM API

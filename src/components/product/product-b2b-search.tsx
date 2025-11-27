@@ -8,7 +8,7 @@ import { LIMITS } from '@framework/utils/limits';
 import { Product } from '@framework/types';
 import { useTranslation } from 'src/app/i18n/client';
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { useProductListInfinitQuery } from '@framework/product/get-b2b-product';
+import { usePimProductListInfiniteQuery, fetchPimProductList } from '@framework/product/get-pim-product';
 import ProductCardB2B from './product-cards/product-card-b2b';
 import ProductRowB2B from './product-rows/product-row-b2b';
 import { fetchErpPrices } from '@framework/erp/prices';
@@ -18,9 +18,6 @@ import { IoGridOutline, IoListOutline } from 'react-icons/io5';
 import type { ErpPriceData } from '@utils/transform/erp-prices';
 import { useUI } from '@contexts/ui.context';
 import { getUserLikes as apiGetUserLikes, getTrendingProductsPage as apiGetTrendingPage } from '@framework/likes';
-import { post } from '@framework/utils/httpB2B';
-import { API_ENDPOINTS_B2B } from '@framework/utils/api-endpoints-b2b';
-import { transformProduct, RawProduct, transformSearchParams } from '@utils/transform/b2b-product';
 import React from 'react';
 
 interface ProductSearchProps {
@@ -65,15 +62,32 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({ className = '', lang 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
-  // params for API
+  // Build params for PIM API
   const urlParams: Record<string, string> = {};
   searchParams.forEach((v, k) => (urlParams[k] = v));
 
-  const mergedParams = {
-    ...urlParams,
-    per_page: LIMITS.PRODUCTS_LIMITS,
-    ...ERP_STATIC
-  };
+  // Transform URL params to PIM API format
+  const pimParams = useMemo(() => {
+    const filters: Record<string, any> = {};
+
+    // Extract filters from URL params (filters-xxx -> filters.xxx)
+    for (const [key, value] of Object.entries(urlParams)) {
+      if (key.startsWith('filters-')) {
+        const filterKey = key.replace('filters-', '');
+        // Support semicolon-separated values
+        filters[filterKey] = typeof value === 'string' && value.includes(';')
+          ? value.split(';')
+          : value;
+      }
+    }
+
+    return {
+      lang,
+      text: urlParams.text || urlParams.q || '',
+      per_page: LIMITS.PRODUCTS_LIMITS,
+      filters: Object.keys(filters).length > 0 ? filters : undefined,
+    };
+  }, [urlParams, lang]);
 
   const source = (searchParams.get('source') || '').toLowerCase();
   const period = (searchParams.get('period') || '7d').toLowerCase();
@@ -82,7 +96,7 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({ className = '', lang 
   const likesOrTrending = source === 'likes' || source === 'trending';
 
   const likesTrendingQuery = useInfiniteQuery({
-    queryKey: ['search-special', source, period, pageSizeParam],
+    queryKey: ['search-special', source, period, pageSizeParam, lang],
     queryFn: async ({ pageParam = 1 }) => {
       if (source === 'likes') {
         const res = await apiGetUserLikes(pageParam, pageSizeParam);
@@ -90,36 +104,34 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({ className = '', lang 
         if (!skus.length) {
           return { items: [], nextPage: null };
         }
-        const searchParams = transformSearchParams({
-          start: 0,
+        // Use PIM search with SKU filter
+        const result = await fetchPimProductList({
+          lang,
+          filters: { sku: skus },
           rows: skus.length,
-          search: { sku: skus.join(';') },
-        } as any);
-        const resp = await post<{ results: RawProduct[]; numFound: number }>(API_ENDPOINTS_B2B.SEARCH, searchParams);
-        const items = transformProduct(resp?.results || []);
+        });
         const nextPage = res?.has_next ? pageParam + 1 : null;
-        return { items, nextPage };
+        return { items: result.items, nextPage };
       }
       // trending: paginated response
       const trendingPage = await apiGetTrendingPage(period, pageParam, pageSizeParam, false);
       const skus = (trendingPage?.items || []).map((x: any) => x.sku).filter(Boolean);
       if (!skus.length) return { items: [], nextPage: null };
-      const searchParams = transformSearchParams({
-        start: 0,
+      // Use PIM search with SKU filter
+      const result = await fetchPimProductList({
+        lang,
+        filters: { sku: skus },
         rows: skus.length,
-        search: { sku: skus.join(';') },
-      } as any);
-      const resp = await post<{ results: RawProduct[]; numFound: number }>(API_ENDPOINTS_B2B.SEARCH, searchParams);
-      const items = transformProduct(resp?.results || []);
+      });
       const nextPage = trendingPage?.has_next ? pageParam + 1 : null;
-      return { items, nextPage };
+      return { items: result.items, nextPage };
     },
     enabled: likesOrTrending,
     getNextPageParam: (lastPage) => lastPage?.nextPage ?? undefined,
     initialPageParam: 1,
   });
 
-  const baseQuery = useProductListInfinitQuery(mergedParams);
+  const baseQuery = usePimProductListInfiniteQuery(pimParams);
 
   const data = likesOrTrending ? likesTrendingQuery.data : baseQuery.data;
   const error = likesOrTrending ? likesTrendingQuery.error as any : baseQuery.error;
@@ -136,12 +148,12 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({ className = '', lang 
 
   // Reset ERP cache when search signature changes
   const searchSignature = useMemo(() => {
-    const base = searchParams.toString();
+    const base = JSON.stringify(pimParams);
     if (likesOrTrending) {
       return source === 'likes' ? `likes:${pageSizeParam}` : `trending:${period}:${pageSizeParam}`;
     }
     return `base:${base}`;
-  }, [likesOrTrending, source, period, pageSizeParam, searchParams]);
+  }, [likesOrTrending, source, period, pageSizeParam, pimParams]);
 
   const prevSig = useRef<string>('');
   useEffect(() => {

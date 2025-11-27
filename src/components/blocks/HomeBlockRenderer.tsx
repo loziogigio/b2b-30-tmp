@@ -368,7 +368,7 @@ const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({ block, lang }) =>
       subtitle: product.description,
       price: block.config?.showPrice ? formatCurrency(product.sale_price ?? product.price, lang) : undefined,
       badge: block.config?.showBadge ? product?.brand?.name : undefined,
-      linkUrl: product.slug ? `/${lang}/products/${product.slug}` : undefined,
+      linkUrl: product.sku ? `/${lang}/products?sku=${encodeURIComponent(product.sku)}` : undefined,
       openInNewTab: false
     }));
 

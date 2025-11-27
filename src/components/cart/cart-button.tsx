@@ -19,30 +19,22 @@ type CartButtonProps = {
 const formatCurrency = (n: number, currency = 'EUR', locale = 'it-IT') =>
   new Intl.NumberFormat(locale, { style: 'currency', currency }).format(Number(n || 0));
 
-// --- New B2B cart icon (trolley + boxes) ---
-const B2BCartIcon: React.FC<{ className?: string }> = ({ className }) => (
+// --- Standard shopping cart icon (outline) ---
+const CartIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg
-    viewBox="0 0 64 40"
+    viewBox="0 0 24 24"
     xmlns="http://www.w3.org/2000/svg"
     aria-hidden="true"
-    className={cn('w-12 h-12', className)}
+    className={cn('w-7 h-7', className)}
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
   >
-    {/* handle */}
-    <path d="M10 6 v18" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-    <path d="M10 6 h10" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-    {/* deck */}
-    <rect x="16" y="26" width="32" height="4" rx="1.5" fill="currentColor" opacity="0.85" />
-    {/* wheels */}
-    <circle cx="20" cy="33" r="3.5" fill="currentColor" />
-    <circle cx="42" cy="33" r="3.5" fill="currentColor" />
-    {/* boxes */}
-    <rect x="20" y="11" width="12" height="10" rx="1.5" fill="currentColor" opacity="0.35" />
-    <rect x="34" y="11" width="10" height="14" rx="1.5" fill="currentColor" opacity="0.35" />
-    <rect x="24" y="6" width="10" height="6" rx="1.2" fill="currentColor" opacity="0.55" />
-    {/* box slits */}
-    <path d="M24 16 h6M24 18 h4" stroke="currentColor" strokeWidth="1.8" opacity="0.6" />
-    <path d="M36 17 h6M36 19 h4" stroke="currentColor" strokeWidth="1.8" opacity="0.6" />
-    <path d="M26 9 h5" stroke="currentColor" strokeWidth="1.8" opacity="0.6" />
+    <circle cx="9" cy="21" r="1" />
+    <circle cx="20" cy="21" r="1" />
+    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
   </svg>
 );
 
@@ -95,15 +87,18 @@ const CartButton: React.FC<CartButtonProps> = ({
 
       {/* Icon with badge */}
       <div className="relative flex items-center">
-        <B2BCartIcon className={cn(iconClassName, 'transition-transform group-hover:scale-105')} />
-        <span
-          className={cn(
-            'min-w-[20px] min-h-[20px] p-0.5 rounded-[20px] flex items-center justify-center',
-            'bg-red-600 text-white text-[10px] font-bold',
-            'absolute -top-0 ltr:right-0.5'
-          )}
-        >          {totalUniqueItems ?? 0}
-        </span>
+        <CartIcon className={cn(iconClassName, 'transition-transform group-hover:scale-105')} />
+        {(totalUniqueItems ?? 0) > 0 && (
+          <span
+            className={cn(
+              'min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center',
+              'bg-[#E1E7EE] text-black text-[9px] font-bold leading-none',
+              'absolute -top-1.5 -right-1.5'
+            )}
+          >
+            {totalUniqueItems}
+          </span>
+        )}
       </div>
     </button>
   );

@@ -9,9 +9,14 @@ type SearchProductProps = {
 };
 
 const SearchProduct: React.FC<SearchProductProps> = ({ lang, item }) => {
+  const skuValue = item?.sku ? encodeURIComponent(item.sku) : '';
+  const productHref = skuValue
+    ? `/${lang}${ROUTES.PRODUCT}?sku=${skuValue}`
+    : `/${lang}${ROUTES.PRODUCT}`;
+
   return (
     <Link
-      href={`/${lang}${ROUTES.PRODUCT}/${item?.slug}`}
+      href={productHref}
       className="flex items-center justify-start w-full h-auto group"
     >
       <div className="relative flex w-12 h-12 overflow-hidden rounded-md cursor-pointer shrink-0 ltr:mr-4 rtl:ml-4">

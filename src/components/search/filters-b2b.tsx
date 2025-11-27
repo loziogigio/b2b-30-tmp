@@ -4,10 +4,9 @@ import SelectedFilters from './selected-filters';
 import { useTranslation } from 'src/app/i18n/client';
 import { useSearchParams } from 'next/navigation';
 import React from 'react';
-import { useFilterQuery } from '@framework/product/get-b2b-filters';
+import { usePimFilterQuery } from '@framework/product/get-pim-filters';
 import { FiltersB2BItem } from './filters-b2b-item';
-import { ERP_STATIC } from '@framework/utils/static';
-import { FACET_FIELDS } from '@framework/utils/filters';
+import { PIM_FACET_FIELDS } from '@framework/utils/filters';
 
 export const SearchFiltersB2B: React.FC<{ lang: string; text?: string }> = ({ lang, text }) => {
   const { t } = useTranslation(lang, 'common');
@@ -20,15 +19,15 @@ export const SearchFiltersB2B: React.FC<{ lang: string; text?: string }> = ({ la
 
   const mergedParams = {
     ...urlParams,
+    lang,
     ...(text ? { text } : {}),
-    ...ERP_STATIC
   };
 
   const {
     data: filters,
     isLoading: isLoadingFilters,
     error: filtersError,
-  } = useFilterQuery(mergedParams);
+  } = usePimFilterQuery(mergedParams);
 
   // Build label map for selected chips: { 'filters-<key>': { value: label } }
   const labelMap: Record<string, Record<string, string>> = React.useMemo(() => {
@@ -42,12 +41,12 @@ export const SearchFiltersB2B: React.FC<{ lang: string; text?: string }> = ({ la
   }, [filters]);
 
   const allowedKeys = React.useMemo(() => {
-    // Prefer keys from loaded filters (dynamic, includes family/categories etc.)
+    // Prefer keys from loaded filters (dynamic)
     if (filters && filters.length) {
       return filters.map((f) => `filters-${f.key}`);
     }
-    // Fallback to static facet fields
-    return FACET_FIELDS.map((k) => `filters-${k}`);
+    // Fallback to static PIM facet fields
+    return PIM_FACET_FIELDS.map((k) => `filters-${k}`);
   }, [filters]);
 
   return (

@@ -210,11 +210,11 @@ const ProductCardB2B: React.FC<ProductProps> = ({
           <div className="flex items-center whitespace-nowrap gap-1.5 min-w-0 flex-1 overflow-hidden">
             <span className="uppercase">{sku}</span>
 
-            {brand?.name && brand?.id !== '0' && (
+            {brand?.name && (brand as any)?.brand_id && (
               <>
                 <span className="text-gray-300">•</span>
                 <Link
-                  href={`/${lang}/search?filters-id_brand=${brand.id}`}
+                  href={`/${lang}/search?filters-brand_id=${(brand as any).brand_id}`}
                   className="text-brand hover:underline uppercase truncate max-w-[55%] sm:max-w-[60%]"
                   title={brand.name}
                 >

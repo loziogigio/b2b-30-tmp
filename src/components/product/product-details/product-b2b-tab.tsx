@@ -11,7 +11,26 @@ function classNames(...classes: any[]) {
   return classes.filter(Boolean).join(' ');
 }
 
-// Normalize `product.features` into [{label, value}]
+// Normalize PIM attributes format: { "codice-prodotto": { label, value, order } } -> [{label, value}]
+function normalizeAttributes(raw: any): { label: string; value: string; order?: number }[] {
+  if (!raw || typeof raw !== 'object') return [];
+  const out: { label: string; value: string; order?: number }[] = [];
+
+  for (const [key, attr] of Object.entries(raw)) {
+    if (!attr || typeof attr !== 'object') continue;
+    const { label, value, order } = attr as any;
+    const labelStr = String(label ?? key ?? '').trim();
+    const valueStr = value == null ? '' : String(value).trim();
+    if (labelStr && valueStr) {
+      out.push({ label: labelStr, value: valueStr, order: order ?? 999 });
+    }
+  }
+
+  // Sort by order
+  return out.sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+}
+
+// Normalize `product.features` into [{label, value}] (legacy format)
 function normalizeFeatures(raw: any): { label: string; value: string }[] {
   if (!raw) return [];
   const out: { label: string; value: string }[] = [];
@@ -115,8 +134,14 @@ export default function ProductB2BDetailsTab({
   product: Product;
   zone3Blocks?: PageBlock[];
 }) {
-  const hasDescription = Boolean(product?.description && product.description.trim().length > 0);
-  const features = normalizeFeatures(product?.features);
+  // Use html_description for the detailed HTML content tab
+  const htmlDesc = (product as any)?.html_description || '';
+  const hasDescription = Boolean(htmlDesc && htmlDesc.trim().length > 0);
+
+  // Use PIM attributes if available, fallback to legacy features
+  const pimAttributes = normalizeAttributes((product as any)?.attributes);
+  const legacyFeatures = normalizeFeatures(product?.features);
+  const features = pimAttributes.length > 0 ? pimAttributes : legacyFeatures;
   const hasFeatures = features.length > 0;
 
   // Combine legacy docs with PIM media documents
@@ -137,7 +162,7 @@ export default function ProductB2BDetailsTab({
       node: (
         <div
           className="prose prose-sm max-w-none leading-[1.9] text-brand-muted"
-          dangerouslySetInnerHTML={{ __html: product.description! }}
+          dangerouslySetInnerHTML={{ __html: htmlDesc }}
         />
       ),
     });

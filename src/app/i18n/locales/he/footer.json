@@ -28,5 +28,15 @@
   "payment-paypal": "PayPal",
   "payment-jcb": "JCB",
   "payment-skrill": "סקריל",
-  "end": "קצה"
+  "end": "קצה",
+  "text-address": "Viale delle Industrie, 81020 - San Marco Evangelista ZI (CE)",
+  "text-phone": "+39 0823 1872 900",
+  "text-email": "info@hidros.com",
+  "text-opening-title": "ORARIO PUNTO VENDITA",
+  "text-opening-week": "Dal Lunedì al Venerdì",
+  "text-opening-week-hours": "7.30 - 19.00",
+  "text-opening-saturday": "Sabato",
+  "text-opening-saturday-hours": "8.00 - 13.00",
+  "text-legal-info": "HIDROS POINT SRL | Via G.Marconi, 7 80028 Grumo Nevano (NA) | CF05544601213 - PI05544601213 | Cap. Sociale € 500.000,00 I.V. REA NA 760128",
+  "text-footer-copyright": "Copyright © {{year}} Hidros Point srl All rights reserved."
 }

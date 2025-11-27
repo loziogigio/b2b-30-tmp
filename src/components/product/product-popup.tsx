@@ -68,7 +68,7 @@ export default function ProductPopup({ lang }: { lang: string }) {
     ? erpPricesData[0]
     : (erpPricesData as any)?.[entityCodes[0]];
 
-  const productUrl = `${process.env.NEXT_PUBLIC_WEBSITE_URL}/${lang}${ROUTES.PRODUCT}/${product?.slug ?? ''}`;
+  const productUrl = `${process.env.NEXT_PUBLIC_WEBSITE_URL}/${lang}${ROUTES.PRODUCT}?sku=${encodeURIComponent(product?.sku ?? '')}`;
   const isInCompare = hasSku(sku);
 
   const handleAddToCompare = () => {
@@ -79,7 +79,7 @@ export default function ProductPopup({ lang }: { lang: string }) {
   function navigateToProductPage() {
     // Close entire modal stack (ProductPopup + any parent like Variants Quick View)
     closeAll();
-    router.push(`/${lang}/${ROUTES.PRODUCT}/${product.slug}`);
+    router.push(`/${lang}${ROUTES.PRODUCT}?sku=${encodeURIComponent(product?.sku ?? '')}`);
   }
 
   // Ensure we know initial like status with a lightweight bulk check

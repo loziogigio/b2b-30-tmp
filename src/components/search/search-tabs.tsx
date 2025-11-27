@@ -98,6 +98,10 @@ export default function SearchTabs({ lang }: { lang: string }) {
   const [editing, setEditing] = React.useState<string | null>(null);
   const { isAuthorized } = useUI();
 
+  // Track if component has mounted to avoid hydration mismatch
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => { setMounted(true); }, []);
+
   // bootstrap from LS and current URL
   React.useEffect(() => {
     const currentQS = parseQuery(searchParams);
@@ -229,7 +233,7 @@ export default function SearchTabs({ lang }: { lang: string }) {
     <div className="mb-2 border-b border-gray-200 overflow-x-auto">
       <div className="flex items-end gap-1 min-w-max">
         {/* Fixed tabs: Wishlist and Trending at the beginning */}
-        {isAuthorized ? (
+        {mounted && isAuthorized ? (
           <button
             className={cn(
               'mr-1 px-3 py-2 rounded-t-md text-sm border',
