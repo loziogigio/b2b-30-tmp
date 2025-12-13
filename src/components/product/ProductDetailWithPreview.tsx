@@ -20,7 +20,7 @@ export function ProductDetailWithPreview({
   lang,
   sku,
   serverBlocks,
-  isPreview = false
+  isPreview = false,
 }: ProductDetailWithPreviewProps) {
   const [isHydrated, setIsHydrated] = useState(false);
 
@@ -34,7 +34,9 @@ export function ProductDetailWithPreview({
         const liveBlocks = isHydrated ? previewState?.blocks : undefined;
         const hasLiveBlocks = Array.isArray(liveBlocks);
         // Use live blocks from postMessage if available (after hydration), otherwise use server blocks
-        const blocks: PageBlock[] = hasLiveBlocks ? (liveBlocks as PageBlock[]) : serverBlocks;
+        const blocks: PageBlock[] = hasLiveBlocks
+          ? (liveBlocks as PageBlock[])
+          : serverBlocks;
         const isUsingLivePreview = isHydrated && isPreview && hasLiveBlocks;
         const hasUnsavedChanges = previewState?.isDirty ?? true;
         const blockCount = blocks.length;
@@ -45,7 +47,7 @@ export function ProductDetailWithPreview({
             '[Preview Mode] Using live blocks from builder:',
             blockCount,
             'dirty:',
-            hasUnsavedChanges
+            hasUnsavedChanges,
           );
         }
 
@@ -76,7 +78,12 @@ export function ProductDetailWithPreview({
               </div>
             )}
             <div className={isUsingLivePreview ? 'pt-14' : ''}>
-              <B2BProductDetail lang={lang} sku={sku} blocks={blocks} showZoneLabels={isUsingLivePreview} />
+              <B2BProductDetail
+                lang={lang}
+                sku={sku}
+                blocks={blocks}
+                showZoneLabels={isUsingLivePreview}
+              />
             </div>
           </>
         );

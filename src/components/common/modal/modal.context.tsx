@@ -34,8 +34,8 @@ interface State {
 
 type Action =
   | { type: 'open'; view?: MODAL_VIEWS; payload?: any } // push
-  | { type: 'close' }                                   // pop
-  | { type: 'clear' };                                  // clear all
+  | { type: 'close' } // pop
+  | { type: 'clear' }; // clear all
 
 const initialState: State = {
   view: undefined,
@@ -57,7 +57,10 @@ function withDerived(stack: StackItem[]): State {
 function modalReducer(state: State, action: Action): State {
   switch (action.type) {
     case 'open': {
-      const next = [...state.stack, { view: action.view, data: action.payload }];
+      const next = [
+        ...state.stack,
+        { view: action.view, data: action.payload },
+      ];
       return withDerived(next);
     }
     case 'close': {
@@ -80,8 +83,8 @@ const ModalActionContext = React.createContext<
   | {
       openModal: (view?: MODAL_VIEWS, payload?: unknown) => void;
       closeModal: () => void; // pop top
-      goBack: () => void;     // alias to closeModal
-      closeAll: () => void;   // clear
+      goBack: () => void; // alias to closeModal
+      closeAll: () => void; // clear
     }
   | undefined
 >(undefined);
@@ -105,7 +108,7 @@ export function ModalProvider({ children }: React.PropsWithChildren<{}>) {
         dispatch({ type: 'clear' });
       },
     }),
-    []
+    [],
   );
 
   return (

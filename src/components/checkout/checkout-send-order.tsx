@@ -24,7 +24,10 @@ const toLocalISODate = (d: Date) => {
 const fmtDate = (iso: string) => {
   const d = new Date(iso);
   return d.toLocaleDateString('it-IT', {
-    weekday: 'short', day: '2-digit', month: 'short', year: 'numeric',
+    weekday: 'short',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
   });
 };
 
@@ -78,7 +81,7 @@ export default function CheckoutSendOrder({ lang, onSubmit }: Props) {
     onSubmit?.({
       address: selected,
       paymentTerms,
-      date,       // already set to first available date
+      date, // already set to first available date
       notes,
     });
   };
@@ -95,7 +98,9 @@ export default function CheckoutSendOrder({ lang, onSubmit }: Props) {
       <div className="px-2 pb-3">
         {selected ? (
           <div className="relative rounded-md border-2 border-brand/60 bg-white p-4">
-            <div className="mb-1 text-sm font-semibold text-brand-dark">{selected.title}</div>
+            <div className="mb-1 text-sm font-semibold text-brand-dark">
+              {selected.title}
+            </div>
             <div className="text-sm text-brand-muted whitespace-pre-line">
               {formatAddress(selected.address)}
             </div>
@@ -103,15 +108,20 @@ export default function CheckoutSendOrder({ lang, onSubmit }: Props) {
             {/* Payment terms (read-only, label + code) */}
             {paymentTerms && (paymentTerms.label || paymentTerms.code) && (
               <div className="mt-2 text-xs text-gray-600">
-                <span className="font-medium">{t('text-payment-terms') ?? 'Payment terms'}:</span>{' '}
-                {paymentTerms.label ?? ''}{paymentTerms.label && paymentTerms.code ? ' ' : ''}
+                <span className="font-medium">
+                  {t('text-payment-terms') ?? 'Payment terms'}:
+                </span>{' '}
+                {paymentTerms.label ?? ''}
+                {paymentTerms.label && paymentTerms.code ? ' ' : ''}
                 {paymentTerms.code ? `(${paymentTerms.code})` : ''}
               </div>
             )}
 
             {/* Delivery date (read-only, hidden picker) */}
             <div className="mt-1 text-xs text-gray-600">
-              <span className="font-medium">{t('text-delivery-date') ?? 'Delivery date'}:</span>{' '}
+              <span className="font-medium">
+                {t('text-delivery-date') ?? 'Delivery date'}:
+              </span>{' '}
               {fmtDate(date)}
             </div>
           </div>
@@ -131,7 +141,9 @@ export default function CheckoutSendOrder({ lang, onSubmit }: Props) {
           rows={3}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder={t('text-notes-placeholder') ?? 'Add any notes for this order…'}
+          placeholder={
+            t('text-notes-placeholder') ?? 'Add any notes for this order…'
+          }
           className="w-full resize-y rounded-md border border-gray-300 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
         />
       </div>
@@ -143,7 +155,7 @@ export default function CheckoutSendOrder({ lang, onSubmit }: Props) {
           onClick={handleSubmit}
           className={cn(
             'rounded bg-brand px-4 py-3 text-sm font-semibold text-white',
-            !canSubmit && 'cursor-not-allowed opacity-50'
+            !canSubmit && 'cursor-not-allowed opacity-50',
           )}
         >
           {t('button-send-order') ?? 'Send Order'}

@@ -2,7 +2,7 @@
 // Type Definitions
 // ===============================
 
-import { FACET_FIELDS } from "@framework/utils/filters";
+import { PIM_FACET_FIELDS } from '@framework/utils/filters';
 
 export interface RawFacetEntry {
   value: string;
@@ -31,13 +31,17 @@ export interface TransformedFilter {
 // Transformation Logic
 // ===============================
 
-export function transformFilters(facet_results: RawFacetResult): TransformedFilter[] {
+export function transformFilters(
+  facet_results: RawFacetResult,
+): TransformedFilter[] {
   if (!facet_results || typeof facet_results !== 'object') return [];
 
   const transformed: TransformedFilter[] = [];
 
   // Step 1: Determine the most specific 'family_levX' (e.g., family_lev3 -> lev2 -> lev1)
-  const familyKeys = Object.keys(facet_results).filter((key) => key.startsWith('family_lev'));
+  const familyKeys = Object.keys(facet_results).filter((key) =>
+    key.startsWith('family_lev'),
+  );
   const sortedFamilyKeys = familyKeys.sort((a, b) => {
     const aNum = parseInt(a.replace('family_lev', ''), 10);
     const bNum = parseInt(b.replace('family_lev', ''), 10);
@@ -85,27 +89,31 @@ export function transformFilters(facet_results: RawFacetResult): TransformedFilt
   return transformed;
 }
 
-
 // ===============================
 // Payload Transformation
 // ===============================
 
-export function transformFilterParamsForApi(params: Record<string, any>): Record<string, any> {
-  const allowedParams = Object.keys(params).reduce((acc, key) => {
-    if (
-      key.startsWith('filters-') ||
-      key === 'address_code' ||
-      key === 'customer_code' ||
-      key === 'text' ||
-      key === 'category'
-    ) {
-      acc[key] = params[key];
-    }
-    return acc;
-  }, {} as Record<string, any>);
+export function transformFilterParamsForApi(
+  params: Record<string, any>,
+): Record<string, any> {
+  const allowedParams = Object.keys(params).reduce(
+    (acc, key) => {
+      if (
+        key.startsWith('filters-') ||
+        key === 'address_code' ||
+        key === 'customer_code' ||
+        key === 'text' ||
+        key === 'category'
+      ) {
+        acc[key] = params[key];
+      }
+      return acc;
+    },
+    {} as Record<string, any>,
+  );
 
   // Use centralized facet fields
-  allowedParams['facet_fields'] = FACET_FIELDS;
+  allowedParams['facet_fields'] = PIM_FACET_FIELDS;
   allowedParams['filters-include_faceting'] = true;
 
   return allowedParams;

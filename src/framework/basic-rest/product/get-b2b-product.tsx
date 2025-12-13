@@ -3,14 +3,18 @@ import { API_ENDPOINTS_B2B } from '@framework/utils/api-endpoints-b2b';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { Product } from '@framework/types';
-import { transformProduct, RawProduct, transformSearchParams } from '@utils/transform/b2b-product';
+import {
+  transformProduct,
+  RawProduct,
+  transformSearchParams,
+} from '@utils/transform/b2b-product';
 
 // ===============================
 // 1. Fetch function with pagination
 // ===============================
 export const fetchProductList = async (
   params: any,
-  pageParam: number = 0
+  pageParam: number = 0,
 ): Promise<{
   items: Product[];
   total: number;
@@ -21,13 +25,13 @@ export const fetchProductList = async (
   // Adjust backend params to request correct offset/limit
   const finalParams = {
     ...params,
-    start: pageParam , // ✅ pageParam now acts like a page index
+    start: pageParam, // ✅ pageParam now acts like a page index
     rows: perPage, // if your backend supports it
   };
 
   const response = await post<{ results: RawProduct[]; numFound: number }>(
     API_ENDPOINTS_B2B.SEARCH,
-    finalParams
+    finalParams,
   );
 
   const rawProducts = response.results || [];
@@ -47,7 +51,10 @@ export const fetchProductList = async (
 // ===============================
 // 2. Simple paginated (single-shot) query
 // ===============================
-export const useProductListQuery = (params: any, options?: { enabled?: boolean }) => {
+export const useProductListQuery = (
+  params: any,
+  options?: { enabled?: boolean },
+) => {
   const enabled = options?.enabled ?? true;
 
   // Transform params once, stably - use JSON.stringify for deep comparison
@@ -62,7 +69,7 @@ export const useProductListQuery = (params: any, options?: { enabled?: boolean }
       const { items } = await fetchProductList(finalParams, 0);
       return items;
     },
-    enabled
+    enabled,
   });
 
   return query;
@@ -79,6 +86,6 @@ export const useProductListInfinitQuery = (params: any) => {
     queryFn: async ({ pageParam = 0 }) =>
       fetchProductList(finalParams, pageParam),
     getNextPageParam: (lastPage) => lastPage.nextPage ?? undefined,
-    initialPageParam: 0
+    initialPageParam: 0,
   });
 };

@@ -36,7 +36,7 @@ interface ProductProps {
 function RenderPopupOrAddToCart({
   lang,
   props,
-  priceData
+  priceData,
 }: {
   lang: string;
   props: Object;
@@ -80,11 +80,19 @@ function RenderPopupOrAddToCart({
   }
 
   if (!isAuthorized) return null;
-  return <AddToCart product={data} variant="venus" lang={lang} priceData={priceData} />;
+  return (
+    <AddToCart
+      product={data}
+      variant="venus"
+      lang={lang}
+      priceData={priceData}
+    />
+  );
 }
 
 function formatVariation(product: Product): string {
-  if (product.variations.length > 0) return `${product.variations.length} variatios`;
+  if (product.variations.length > 0)
+    return `${product.variations.length} variatios`;
   return ' ';
 }
 
@@ -93,9 +101,21 @@ const ProductCardB2BHorizontal: React.FC<ProductProps> = ({
   className,
   lang,
   priceData,
-  customStyle
+  customStyle,
 }) => {
-  const { name, image, unit, product_type, sku, brand, slug, description, model, quantity, parent_sku } = product ?? {};
+  const {
+    name,
+    image,
+    unit,
+    product_type,
+    sku,
+    brand,
+    slug,
+    description,
+    model,
+    quantity,
+    parent_sku,
+  } = product ?? {};
   const { openModal } = useModalAction();
   const { t } = useTranslation(lang, 'common');
   const likes = useLikes();
@@ -109,14 +129,20 @@ const ProductCardB2BHorizontal: React.FC<ProductProps> = ({
   // Check if product is out of stock
   const isOutOfStock = priceData ? Number(priceData.availability) <= 0 : false;
 
-  const { price: finalPrice, basePrice, discount } = usePrice({
+  const {
+    price: finalPrice,
+    basePrice,
+    discount,
+  } = usePrice({
     amount: product?.sale_price ?? product?.price,
     baseAmount: product?.price,
     currencyCode: 'EUR',
   });
 
   function handlePopupView() {
-    const variations = Array.isArray(product.variations) ? product.variations : [];
+    const variations = Array.isArray(product.variations)
+      ? product.variations
+      : [];
     const variations_count = variations.length;
     if (variations_count > 1) {
       openModal('B2B_PRODUCT_VARIANTS_QUICK_VIEW', product);
@@ -139,9 +165,11 @@ const ProductCardB2BHorizontal: React.FC<ProductProps> = ({
       <div className="relative shrink-0" onClick={handlePopupView}>
         <div className="overflow-hidden mx-auto w-full h-[180px] sm:h-[200px] transition duration-200 ease-in-out transform group-hover:scale-105 relative cursor-pointer">
           <Image
-            src={image?.thumbnail && image.thumbnail.trim() !== ''
-              ? image.thumbnail
-              : productPlaceholder}
+            src={
+              image?.thumbnail && image.thumbnail.trim() !== ''
+                ? image.thumbnail
+                : productPlaceholder
+            }
             alt={name || 'Product Image'}
             quality={100}
             fill
@@ -159,8 +187,8 @@ const ProductCardB2BHorizontal: React.FC<ProductProps> = ({
           </div>
         )}
 
-        {/* Right badge: PROMO */}
-        {priceData?.is_promo && (
+        {/* Right badge: PROMO - show if priceData.is_promo OR product.has_active_promo */}
+        {(priceData?.is_promo || product.has_active_promo) && (
           <div className="absolute top-0 right-0 z-10">
             <span className="text-[10px] md:text-xs font-bold text-white uppercase bg-red-600 px-2 py-2">
               PROMO
@@ -199,7 +227,9 @@ const ProductCardB2BHorizontal: React.FC<ProductProps> = ({
                   aria-label="Toggle reminder"
                   className={cn(
                     'shrink-0 p-1 rounded transition-colors',
-                    hasReminder ? 'text-yellow-500' : 'text-gray-400 hover:text-yellow-500'
+                    hasReminder
+                      ? 'text-yellow-500'
+                      : 'text-gray-400 hover:text-yellow-500',
                   )}
                   onClick={async (e) => {
                     e.stopPropagation();
@@ -212,10 +242,16 @@ const ProductCardB2BHorizontal: React.FC<ProductProps> = ({
                     }
                   }}
                   disabled={reminderLoading || !sku}
-                  title={hasReminder ? t('text-reminder-active') : t('text-reminder-notify')}
+                  title={
+                    hasReminder
+                      ? t('text-reminder-active')
+                      : t('text-reminder-notify')
+                  }
                 >
                   {hasReminder ? (
-                    <IoNotifications className={cn('text-[18px] animate-pulse')} />
+                    <IoNotifications
+                      className={cn('text-[18px] animate-pulse')}
+                    />
                   ) : (
                     <IoNotificationsOutline className="text-[18px]" />
                   )}
@@ -228,7 +264,9 @@ const ProductCardB2BHorizontal: React.FC<ProductProps> = ({
                 aria-label="Toggle wishlist"
                 className={cn(
                   'shrink-0 p-1 rounded transition-colors',
-                  isFavorite ? 'text-[#6D727F]' : 'text-gray-400 hover:text-brand'
+                  isFavorite
+                    ? 'text-[#6D727F]'
+                    : 'text-gray-400 hover:text-brand',
                 )}
                 onClick={async (e) => {
                   e.stopPropagation();
@@ -269,7 +307,7 @@ const ProductCardB2BHorizontal: React.FC<ProductProps> = ({
               className={cn(
                 'inline-flex items-center rounded-md border px-2 py-0.5 align-middle',
                 'text-[11px] font-semibold tracking-wide',
-                'bg-brand/10 text-brand-dark border-brand/30'
+                'bg-brand/10 text-brand-dark border-brand/30',
               )}
               title="Model"
             >
@@ -292,7 +330,9 @@ const ProductCardB2BHorizontal: React.FC<ProductProps> = ({
                 <span className="bg-gray-600 text-white px-2 py-0.5 rounded-full font-semibold text-[10px]">
                   ORDERED
                 </span>
-                <span className="text-[13px] mt-1">{priceData?.buy_did_last_date}</span>
+                <span className="text-[13px] mt-1">
+                  {priceData?.buy_did_last_date}
+                </span>
               </div>
             </div>
           )}
@@ -314,18 +354,22 @@ const ProductCardB2BHorizontal: React.FC<ProductProps> = ({
 
         {/* CTA Button */}
         <div className="pt-1">
-          <RenderPopupOrAddToCart props={{ data: product }} lang={lang} priceData={priceData} />
+          <RenderPopupOrAddToCart
+            props={{ data: product }}
+            lang={lang}
+            priceData={priceData}
+          />
         </div>
 
         {/* Availability */}
         <div className="text-sm text-gray-400 text-center sm:text-left min-h-[24px] flex items-center justify-center sm:justify-start">
           {priceData
-            ? (Number(priceData.availability) > 0
-                ? formatAvailability(
-                    priceData.availability,
-                    priceData.packaging_option_default?.packaging_uom
-                  )
-                : (priceData.product_label_action?.LABEL ?? '—'))
+            ? Number(priceData.availability) > 0
+              ? formatAvailability(
+                  priceData.availability,
+                  priceData.packaging_option_default?.packaging_uom,
+                )
+              : (priceData.product_label_action?.LABEL ?? '—')
             : formatVariation(product)}
         </div>
       </div>

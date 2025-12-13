@@ -14,22 +14,21 @@ export interface CartSummary {
     minimumAmount: number;
     compliant: boolean;
   };
-  transportCost: number;       // spese_trasporto
-  transportFreeAbove: number;  // importo_spese_zero
-  totalNet: number;            // totale_netto
-  totalGross: number;          // totale_lordo
-  vat: number;                 // iva
-  totalDoc: number;            // totale_doc
+  transportCost: number; // spese_trasporto
+  transportFreeAbove: number; // importo_spese_zero
+  totalNet: number; // totale_netto
+  totalGross: number; // totale_lordo
+  vat: number; // iva
+  totalDoc: number; // totale_doc
   showDiscountPrice?: boolean;
   // keep room for server blobs you may use later
   packaging?: any;
 }
 
-
 export interface Item {
   /** Identifiers */
   id: string | number;
-  rowId?: string;                // CartRow.rowId (UI row number)
+  rowId?: string; // CartRow.rowId (UI row number)
   sku?: string;
   slug?: string;
   id_parent?: string | number;
@@ -44,39 +43,40 @@ export interface Item {
   image?: string;
 
   /** Quantities / units */
-  quantity: number;              // make it required to simplify totals
+  quantity: number; // make it required to simplify totals
   stock?: number;
   uom?: string;
   mvQty?: number;
   cfQty?: number;
 
   /** Pricing (canonical) */
-  priceDiscount?: number;        // unit NET (discounted)  === CartRow.priceDiscount
-  priceGross?: number;           // unit GROSS             === CartRow.priceGross
+  priceDiscount?: number; // unit NET (discounted)  === CartRow.priceDiscount
+  priceGross?: number; // unit GROSS             === CartRow.priceGross
   isPromo?: boolean;
 
   /** Pricing (back-compat / legacy fields still present in data) */
-  price?: number;                // legacy fallback
-  price_discount?: number;       // legacy snake_case
-  price_gross?: number;          // legacy snake_case
-  gross_price?: number;          // some payloads use this
-  vat_rate?: number;             // e.g. 22
+  price?: number; // legacy fallback
+  price_discount?: number; // legacy snake_case
+  price_gross?: number; // legacy snake_case
+  gross_price?: number; // some payloads use this
+  vat_rate?: number; // e.g. 22
   promo_code?: string | number;
   promo_row?: string | number;
   packaging_options_all: PackagingOption[];
 
   /** ERP/meta passthrough */
-  __cartMeta?: {
-    price_discount?: number;
-    gross_price?: number;
-    vat_rate?: number;
-    [k: string]: any;
-  } | any;
+  __cartMeta?:
+    | {
+        price_discount?: number;
+        gross_price?: number;
+        vat_rate?: number;
+        [k: string]: any;
+      }
+    | any;
 
   /** Allow extra fields without type errors */
   [key: string]: any;
 }
-
 
 export interface UpdateItemInput extends Partial<Omit<Item, 'id'>> {}
 

@@ -10,15 +10,15 @@ type Variant = 'neutral' | 'green' | 'red';
 
 export interface CounterProps {
   lang: string;
-  value: string;                         // controlled input value
+  value: string; // controlled input value
   onChangeValue: (v: string) => void;
-  onCommit: () => void;                  // called on blur / Enter
+  onCommit: () => void; // called on blur / Enter
   onIncrement: () => void;
   onDecrement: () => void;
-  disabled?: boolean;                    // locks input + buttons
+  disabled?: boolean; // locks input + buttons
   disableMinus?: boolean;
   disablePlus?: boolean;
-  variant?: Variant;                     // input color: neutral/green/red
+  variant?: Variant; // input color: neutral/green/red
   className?: string;
 }
 
@@ -44,7 +44,7 @@ export default function Counter({
       ? 'bg-red-500 text-white border-red-500 focus:ring-2 focus:ring-red-500 placeholder-white/70'
       : variant === 'green'
         ? 'bg-emerald-500 text-white border-emerald-500 focus:ring-2 focus:ring-emerald-500 placeholder-white/70'
-        : 'bg-white text-gray-900 border-gray-300 focus:ring-2 focus:ring-brand'
+        : 'bg-white text-gray-900 border-gray-300 focus:ring-2 focus:ring-brand',
   );
 
   return (
@@ -57,7 +57,7 @@ export default function Counter({
           'w-8 h-8 rounded-full border flex items-center justify-center',
           !(disabled || disableMinus)
             ? 'border-gray-300 bg-white text-gray-800 hover:bg-gray-50'
-            : 'border-gray-300 bg-white text-gray-400 opacity-50 cursor-not-allowed'
+            : 'border-gray-300 bg-white text-gray-400 opacity-50 cursor-not-allowed',
         )}
         aria-label={t('button-minus') ?? 'Decrease'}
         title={t('button-minus') ?? 'Decrease'}
@@ -93,7 +93,7 @@ export default function Counter({
           'w-8 h-8 rounded-full border flex items-center justify-center',
           !(disabled || disablePlus)
             ? 'border-gray-300 bg-white text-gray-800 hover:bg-gray-50'
-            : 'border-gray-300 bg-white text-gray-400 opacity-50 cursor-not-allowed'
+            : 'border-gray-300 bg-white text-gray-400 opacity-50 cursor-not-allowed',
         )}
         aria-label={t('button-plus') ?? 'Increase'}
         title={t('button-plus') ?? 'Increase'}

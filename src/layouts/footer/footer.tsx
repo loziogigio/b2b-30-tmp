@@ -27,7 +27,10 @@ const Footer: React.FC<FooterProps> = ({ variant = 'default', lang }) => {
           <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between xl:gap-12">
             <div className="flex items-center gap-4 sm:gap-5">
               <Logo className="h-[80px] w-auto" variant="gray" />
-              <div className="leading-[100%] text-[40px] text-[#7a7a7a]" style={{ fontFamily: 'Helvetica, sans-serif' }}>
+              <div
+                className="leading-[100%] text-[40px] text-[#7a7a7a]"
+                style={{ fontFamily: 'Helvetica, sans-serif' }}
+              >
                 <div className="font-bold">Hidros</div>
                 <div className="font-normal">Point</div>
               </div>

@@ -35,7 +35,9 @@ interface SavedCartListResponse {
   limit: number;
 }
 
-const toSavedCart = (entry: SavedCartListResponse['data'][number]): SavedCartSummary => ({
+const toSavedCart = (
+  entry: SavedCartListResponse['data'][number],
+): SavedCartSummary => ({
   cartId: entry.cart_id,
   label: entry.cart_name?.trim() || `Cart #${entry.cart_id}`,
   status: entry.status,
@@ -72,7 +74,10 @@ export async function listSavedCarts(options?: {
     },
   };
 
-  const raw = await post<SavedCartListResponse>(API_ENDPOINTS_B2B.CART_SAVED_LIST, payload);
+  const raw = await post<SavedCartListResponse>(
+    API_ENDPOINTS_B2B.CART_SAVED_LIST,
+    payload,
+  );
   const carts = (raw?.data ?? []).map(toSavedCart);
 
   // API may update server-side active cart id; keep ERP_STATIC in sync when we detect active
@@ -123,7 +128,10 @@ export async function activateCart(options: { cartId: number | string }) {
   return summary;
 }
 
-export async function deactivateCart(options: { cartId: number | string; label?: string }) {
+export async function deactivateCart(options: {
+  cartId: number | string;
+  label?: string;
+}) {
   ensureCustomerContext();
 
   const payload = {

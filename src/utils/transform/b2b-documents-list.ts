@@ -1,10 +1,13 @@
 // src/utils/transform/b2b-documents-list.ts
-import { RawDocumentItem, DocumentRow } from '@framework/documents/types-b2b-documents';
+import {
+  RawDocumentItem,
+  DocumentRow,
+} from '@framework/documents/types-b2b-documents';
 
 function dmyToISO(dmy?: string): string {
   if (!dmy) return '';
   const [d, m, y] = dmy.split('/');
-  return y && m && d ? `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}` : '';
+  return y && m && d ? `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}` : '';
 }
 
 export function transformDocumentsList(rows: RawDocumentItem[]): DocumentRow[] {

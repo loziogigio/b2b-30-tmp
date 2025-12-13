@@ -1,12 +1,12 @@
-import { Schema, model, models } from "mongoose";
-import type { PageVersionTags } from "@/lib/types/blocks";
+import { Schema, model, models } from 'mongoose';
+import type { PageVersionTags } from '@/lib/types/blocks';
 
 // Home template version
 export interface HomeTemplateVersion {
   version: number;
   blocks: any[];
   seo?: any;
-  status: "draft" | "published";
+  status: 'draft' | 'published';
   label?: string;
   createdAt: string;
   lastSavedAt: string;
@@ -29,7 +29,7 @@ export interface HomeTemplateDocument {
   version: number;
   blocks: any[];
   seo?: any;
-  status: "draft" | "published";
+  status: 'draft' | 'published';
   label?: string;
   createdAt: string;
   lastSavedAt: string;
@@ -55,50 +55,50 @@ const HomeTemplateSchema = new Schema(
     templateId: {
       type: String,
       required: true,
-      index: true // Not unique - multiple versions can have same templateId
+      index: true, // Not unique - multiple versions can have same templateId
     },
     name: {
       type: String,
-      required: true
+      required: true,
     },
     version: {
       type: Number,
-      required: true
+      required: true,
     },
     blocks: {
       type: Schema.Types.Mixed,
-      required: true
+      required: true,
     },
     seo: {
-      type: Schema.Types.Mixed
+      type: Schema.Types.Mixed,
     },
     status: {
       type: String,
-      enum: ["draft", "published"],
-      default: "draft"
+      enum: ['draft', 'published'],
+      default: 'draft',
     },
     label: {
-      type: String
+      type: String,
     },
     createdAt: {
       type: String,
-      required: true
+      required: true,
     },
     lastSavedAt: {
       type: String,
-      required: true
+      required: true,
     },
     publishedAt: {
-      type: String
+      type: String,
     },
     createdBy: {
-      type: String
+      type: String,
     },
     comment: {
-      type: String
+      type: String,
     },
     tag: {
-      type: String
+      type: String,
     },
     tags: {
       campaign: { type: String },
@@ -106,48 +106,48 @@ const HomeTemplateSchema = new Schema(
       attributes: {
         type: Map,
         of: String,
-        default: undefined
-      }
+        default: undefined,
+      },
     },
     priority: {
       type: Number,
-      default: 0
+      default: 0,
     },
     isDefault: {
       type: Boolean,
-      default: false
+      default: false,
     },
     activeFrom: {
-      type: Date
+      type: Date,
     },
     activeTo: {
-      type: Date
+      type: Date,
     },
     isCurrent: {
       type: Boolean,
       default: false,
-      index: true // Index for fast queries
+      index: true, // Index for fast queries
     },
     isCurrentPublished: {
       type: Boolean,
       default: false,
-      index: true // Index for fast queries
+      index: true, // Index for fast queries
     },
     isActive: {
       type: Boolean,
-      default: true
+      default: true,
     },
     migratedFrom: {
-      type: Schema.Types.ObjectId
+      type: Schema.Types.ObjectId,
     },
     migratedAt: {
-      type: Date
-    }
+      type: Date,
+    },
   },
   {
     timestamps: true,
-    collection: "b2bhometemplates"
-  }
+    collection: 'b2bhometemplates',
+  },
 );
 
 // Compound index for efficient queries
@@ -156,4 +156,5 @@ HomeTemplateSchema.index({ templateId: 1, isCurrent: 1 });
 HomeTemplateSchema.index({ templateId: 1, isCurrentPublished: 1 });
 
 export const HomeTemplateModel =
-  models.HomeTemplate || model<HomeTemplateDocument>("HomeTemplate", HomeTemplateSchema);
+  models.HomeTemplate ||
+  model<HomeTemplateDocument>('HomeTemplate', HomeTemplateSchema);

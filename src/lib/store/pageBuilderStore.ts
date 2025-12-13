@@ -24,6 +24,7 @@ interface BuilderFormState {
   region?: string;
   language?: string;
   device?: string;
+  addressStates?: string; // Comma-separated province codes (e.g., "TO, MI, RM")
   priority: number;
   isDefault: boolean;
   activeFrom?: string;
@@ -46,7 +47,7 @@ interface PageBuilderState {
 const initialFormState: BuilderFormState = {
   priority: 0,
   isDefault: false,
-  status: 'published'
+  status: 'published',
 };
 
 const initialState: PageBuilderState = {
@@ -57,7 +58,7 @@ const initialState: PageBuilderState = {
   error: null,
   isPublishModalOpen: false,
   selectedVersion: null,
-  form: initialFormState
+  form: initialFormState,
 };
 
 type Listener = () => void;
@@ -85,28 +86,49 @@ class PageBuilderStore {
 
 const store = new PageBuilderStore();
 
-export const usePageBuilderStore = <T,>(selector: (state: PageBuilderState) => T): T =>
+export const usePageBuilderStore = <T>(
+  selector: (state: PageBuilderState) => T,
+): T =>
   useSyncExternalStore(
     store.subscribe.bind(store),
     () => selector(store.getState()),
-    () => selector(store.getState())
+    () => selector(store.getState()),
   );
 
-const mapVersionToForm = (version?: BuilderVersionSummary | null): BuilderFormState => ({
-  campaign: version?.tags?.campaign,
-  segment: version?.tags?.segment,
-  region: version?.tags?.attributes?.region,
-  language: version?.tags?.attributes?.language,
-  device: version?.tags?.attributes?.device,
-  priority: version?.priority ?? 0,
-  isDefault: Boolean(version?.isDefault),
-  activeFrom: version?.activeFrom ? new Date(version.activeFrom).toISOString().slice(0, 16) : undefined,
-  activeTo: version?.activeTo ? new Date(version.activeTo).toISOString().slice(0, 16) : undefined,
-  comment: version?.comment ?? undefined,
-  status: version?.status ?? 'published'
-});
+const mapVersionToForm = (
+  version?: BuilderVersionSummary | null,
+): BuilderFormState => {
+  const addressStatesAttr = version?.tags?.attributes?.addressStates;
+  const addressStatesStr = Array.isArray(addressStatesAttr)
+    ? addressStatesAttr.join(', ')
+    : typeof addressStatesAttr === 'string'
+      ? addressStatesAttr
+      : undefined;
 
-const fetchJSON = async <T,>(input: RequestInfo, init?: RequestInit): Promise<T> => {
+  return {
+    campaign: version?.tags?.campaign,
+    segment: version?.tags?.segment,
+    region: version?.tags?.attributes?.region as string | undefined,
+    language: version?.tags?.attributes?.language as string | undefined,
+    device: version?.tags?.attributes?.device as string | undefined,
+    addressStates: addressStatesStr,
+    priority: version?.priority ?? 0,
+    isDefault: Boolean(version?.isDefault),
+    activeFrom: version?.activeFrom
+      ? new Date(version.activeFrom).toISOString().slice(0, 16)
+      : undefined,
+    activeTo: version?.activeTo
+      ? new Date(version.activeTo).toISOString().slice(0, 16)
+      : undefined,
+    comment: version?.comment ?? undefined,
+    status: version?.status ?? 'published',
+  };
+};
+
+const fetchJSON = async <T>(
+  input: RequestInfo,
+  init?: RequestInit,
+): Promise<T> => {
   const res = await fetch(input, init);
   if (!res.ok) {
     let errorMessage = res.statusText;
@@ -136,12 +158,19 @@ export const pageBuilderActions = {
 
     store.setState({ loading: true, error: null, slug: currentSlug });
     try {
-      const data = await fetchJSON<{ versions: BuilderVersionSummary[] }>(`/api/pages/${currentSlug}/publish`);
-      store.setState({ versions: data.versions ?? [], loading: false, error: null });
+      const data = await fetchJSON<{ versions: BuilderVersionSummary[] }>(
+        `/api/pages/${currentSlug}/publish`,
+      );
+      store.setState({
+        versions: data.versions ?? [],
+        loading: false,
+        error: null,
+      });
     } catch (error) {
       store.setState({
         loading: false,
-        error: error instanceof Error ? error.message : 'Unable to load versions'
+        error:
+          error instanceof Error ? error.message : 'Unable to load versions',
       });
     }
   },
@@ -150,7 +179,7 @@ export const pageBuilderActions = {
     store.setState({
       isPublishModalOpen: true,
       selectedVersion: version,
-      form: mapVersionToForm(version)
+      form: mapVersionToForm(version),
     });
   },
 
@@ -158,17 +187,20 @@ export const pageBuilderActions = {
     store.setState({
       isPublishModalOpen: false,
       selectedVersion: null,
-      form: initialFormState
+      form: initialFormState,
     });
   },
 
-  updateForm(field: keyof BuilderFormState, value: string | number | boolean | undefined) {
+  updateForm(
+    field: keyof BuilderFormState,
+    value: string | number | boolean | undefined,
+  ) {
     const current = store.getState().form;
     store.setState({
       form: {
         ...current,
-        [field]: value
-      }
+        [field]: value,
+      },
     });
   },
 
@@ -181,6 +213,14 @@ export const pageBuilderActions = {
     store.setState({ isPublishing: true, error: null });
 
     try {
+      // Parse addressStates from comma-separated string to array
+      const addressStatesArray = state.form.addressStates
+        ? state.form.addressStates
+            .split(',')
+            .map((s) => s.trim().toUpperCase())
+            .filter(Boolean)
+        : undefined;
+
       await fetchJSON(`/api/pages/${state.slug}/publish`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -188,16 +228,21 @@ export const pageBuilderActions = {
           versionNumber: state.selectedVersion.version,
           priority: state.form.priority,
           isDefault: state.form.isDefault,
-          activeFrom: state.form.activeFrom ? new Date(state.form.activeFrom).toISOString() : null,
-          activeTo: state.form.activeTo ? new Date(state.form.activeTo).toISOString() : null,
+          activeFrom: state.form.activeFrom
+            ? new Date(state.form.activeFrom).toISOString()
+            : null,
+          activeTo: state.form.activeTo
+            ? new Date(state.form.activeTo).toISOString()
+            : null,
           comment: state.form.comment ?? null,
           status: state.form.status,
           campaign: state.form.campaign,
           segment: state.form.segment,
           region: state.form.region,
           language: state.form.language,
-          device: state.form.device
-        })
+          device: state.form.device,
+          addressStates: addressStatesArray,
+        }),
       });
       store.setState({ isPublishing: false });
       await pageBuilderActions.fetchVersions();
@@ -205,8 +250,9 @@ export const pageBuilderActions = {
     } catch (error) {
       store.setState({
         isPublishing: false,
-        error: error instanceof Error ? error.message : 'Failed to publish version'
+        error:
+          error instanceof Error ? error.message : 'Failed to publish version',
       });
     }
-  }
+  },
 };

@@ -1,23 +1,22 @@
 {
-    "version": "0.2.0",
-    "configurations": [
-      {
-        "name": "Next.js (REST) - Chrome",
-        "type": "pwa-chrome",
-        "request": "launch",
-        "url": "http://localhost:3000",
-        "webRoot": "${workspaceFolder}",
-        "sourceMaps": true
-      },
-      {
-        "name": "Next.js: Server Debug",
-        "type": "pwa-node",
-        "request": "launch",
-        "runtimeExecutable": "pnpm",
-        "runtimeArgs": ["run", "dev"], // or "dev:gql"
-        "console": "integratedTerminal",
-        "internalConsoleOptions": "neverOpen"
-      }
-    ]
-  }
-  
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Next.js (REST) - Chrome",
+      "type": "pwa-chrome",
+      "request": "launch",
+      "url": "http://localhost:3000",
+      "webRoot": "${workspaceFolder}",
+      "sourceMaps": true
+    },
+    {
+      "name": "Next.js: Server Debug",
+      "type": "pwa-node",
+      "request": "launch",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["run", "dev"], // or "dev:gql"
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    }
+  ]
+}

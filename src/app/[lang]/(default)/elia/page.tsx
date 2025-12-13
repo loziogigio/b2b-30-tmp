@@ -1,35 +1,35 @@
-'use client'
+'use client';
 
-import { useState, useRef, useEffect } from 'react'
-import { eliaClient } from '@/lib/elia/client'
-import type { ChatMessage, ProductResult, StreamEvent } from '@/lib/elia/types'
-import { ThinkingSteps } from '@/components/elia/thinking-steps'
-import { ChatMessageComponent } from '@/components/elia/chat-message'
-import { ProductGrid } from '@/components/elia/product-grid'
-import { EliaInput } from '@/components/elia/input'
-import { AiOutlineRobot } from 'react-icons/ai'
+import { useState, useRef, useEffect } from 'react';
+import { eliaClient } from '@/lib/elia/client';
+import type { ChatMessage, ProductResult, StreamEvent } from '@/lib/elia/types';
+import { ThinkingSteps } from '@/components/elia/thinking-steps';
+import { ChatMessageComponent } from '@/components/elia/chat-message';
+import { ProductGrid } from '@/components/elia/product-grid';
+import { EliaInput } from '@/components/elia/input';
+import { AiOutlineRobot } from 'react-icons/ai';
 
 interface ThinkingStep {
-  step: string
-  message: string
-  completed: boolean
+  step: string;
+  message: string;
+  completed: boolean;
 }
 
 export default function EliaPage() {
-  const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [thinkingSteps, setThinkingSteps] = useState<ThinkingStep[]>([])
-  const [isSearching, setIsSearching] = useState(false)
-  const [currentProducts, setCurrentProducts] = useState<ProductResult[]>([])
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [thinkingSteps, setThinkingSteps] = useState<ThinkingStep[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [currentProducts, setCurrentProducts] = useState<ProductResult[]>([]);
 
-  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   useEffect(() => {
-    scrollToBottom()
-  }, [messages, thinkingSteps])
+    scrollToBottom();
+  }, [messages, thinkingSteps]);
 
   const handleSendMessage = async (text: string) => {
     // Add user message
@@ -37,60 +37,69 @@ export default function EliaPage() {
       id: Date.now().toString(),
       role: 'user',
       content: text,
-      timestamp: new Date()
-    }
-    setMessages(prev => [...prev, userMessage])
+      timestamp: new Date(),
+    };
+    setMessages((prev) => [...prev, userMessage]);
 
     // Reset state
-    setThinkingSteps([])
-    setCurrentProducts([])
-    setIsSearching(true)
+    setThinkingSteps([]);
+    setCurrentProducts([]);
+    setIsSearching(true);
 
-    let tempProducts: ProductResult[] = []
+    let tempProducts: ProductResult[] = [];
 
     try {
       // Stream from FastAPI
       for await (const event of eliaClient.streamSearch(text)) {
-        handleStreamEvent(event, tempProducts)
+        handleStreamEvent(event, tempProducts);
       }
     } catch (error) {
-      console.error('Stream error:', error)
+      console.error('Stream error:', error);
       // Add error message
-      setMessages(prev => [...prev, {
-        id: Date.now().toString(),
-        role: 'assistant',
-        content: 'Sorry, something went wrong. Please try again.',
-        timestamp: new Date()
-      }])
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          role: 'assistant',
+          content: 'Sorry, something went wrong. Please try again.',
+          timestamp: new Date(),
+        },
+      ]);
     } finally {
-      setIsSearching(false)
-      setThinkingSteps(prev => prev.map(s => ({ ...s, completed: true })))
+      setIsSearching(false);
+      setThinkingSteps((prev) => prev.map((s) => ({ ...s, completed: true })));
     }
-  }
+  };
 
-  const handleStreamEvent = (event: StreamEvent, tempProducts: ProductResult[]) => {
+  const handleStreamEvent = (
+    event: StreamEvent,
+    tempProducts: ProductResult[],
+  ) => {
     switch (event.type) {
       case 'thinking':
-        setThinkingSteps(prev => {
+        setThinkingSteps((prev) => {
           // Mark previous as completed
-          const updated = prev.map(s => ({ ...s, completed: true }))
+          const updated = prev.map((s) => ({ ...s, completed: true }));
           // Add new step
-          return [...updated, {
-            step: event.step!,
-            message: event.message!,
-            completed: false
-          }]
-        })
-        break
+          return [
+            ...updated,
+            {
+              step: event.step!,
+              message: event.message!,
+              completed: false,
+            },
+          ];
+        });
+        break;
 
       case 'intent':
-        console.log('Intent:', event.data)
-        break
+        console.log('Intent:', event.data);
+        break;
 
       case 'products':
-        tempProducts.push(...event.data.products)
-        setCurrentProducts(event.data.products)
-        break
+        tempProducts.push(...event.data.products);
+        setCurrentProducts(event.data.products);
+        break;
 
       case 'message':
         const assistantMessage: ChatMessage = {
@@ -99,24 +108,26 @@ export default function EliaPage() {
           content: event.data.text,
           products: tempProducts,
           suggestions: event.data.suggestions,
-          timestamp: new Date()
-        }
-        setMessages(prev => [...prev, assistantMessage])
-        break
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, assistantMessage]);
+        break;
 
       case 'done':
-        setThinkingSteps(prev => prev.map(s => ({ ...s, completed: true })))
-        break
+        setThinkingSteps((prev) =>
+          prev.map((s) => ({ ...s, completed: true })),
+        );
+        break;
 
       case 'error':
-        console.error('Stream error:', event.data)
-        break
+        console.error('Stream error:', event.data);
+        break;
     }
-  }
+  };
 
   const handleSuggestionClick = (suggestion: string) => {
-    handleSendMessage(suggestion)
-  }
+    handleSendMessage(suggestion);
+  };
 
   return (
     <div className="flex h-[calc(100vh-4rem)] bg-gray-50">
@@ -141,7 +152,9 @@ export default function EliaPage() {
               <p className="text-sm">Ask me anything about products!</p>
               <div className="mt-4 space-y-2">
                 <button
-                  onClick={() => handleSendMessage('lavandino bagno moderno bianco')}
+                  onClick={() =>
+                    handleSendMessage('lavandino bagno moderno bianco')
+                  }
                   className="text-sm text-blue-600 hover:underline block mx-auto"
                 >
                   "lavandino bagno moderno bianco"
@@ -156,7 +169,7 @@ export default function EliaPage() {
             </div>
           )}
 
-          {messages.map(message => (
+          {messages.map((message) => (
             <ChatMessageComponent
               key={message.id}
               {...message}
@@ -174,10 +187,7 @@ export default function EliaPage() {
 
         {/* Input */}
         <div className="p-4 border-t bg-white">
-          <EliaInput
-            onSend={handleSendMessage}
-            disabled={isSearching}
-          />
+          <EliaInput onSend={handleSendMessage} disabled={isSearching} />
         </div>
       </div>
 
@@ -189,9 +199,7 @@ export default function EliaPage() {
               <h2 className="text-2xl font-bold text-gray-900">
                 Found {currentProducts.length} products
               </h2>
-              <p className="text-sm text-gray-600 mt-1">
-                Sorted by relevance
-              </p>
+              <p className="text-sm text-gray-600 mt-1">Sorted by relevance</p>
             </div>
             <ProductGrid products={currentProducts} />
           </>
@@ -206,5 +214,5 @@ export default function EliaPage() {
         )}
       </div>
     </div>
-  )
+  );
 }

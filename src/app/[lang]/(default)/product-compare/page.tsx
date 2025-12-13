@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import ProductCompareClient from '@/components/product/ProductCompareClient';
 
 export const metadata: Metadata = {
-  title: 'Product comparison'
+  title: 'Product comparison',
 };
 
 type ProductComparePageProps = {
@@ -11,7 +11,9 @@ type ProductComparePageProps = {
   }>;
 };
 
-export default async function ProductComparisonPage({ params }: ProductComparePageProps) {
+export default async function ProductComparisonPage({
+  params,
+}: ProductComparePageProps) {
   const resolvedParams = await params;
   return <ProductCompareClient lang={resolvedParams.lang ?? 'it'} />;
 }

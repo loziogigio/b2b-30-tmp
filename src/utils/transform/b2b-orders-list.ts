@@ -1,5 +1,8 @@
 // src/utils/transform/b2b-orders-list.ts
-import { RawOrderListItem, OrderSummary } from '@framework/order/types-b2b-orders-list';
+import {
+  RawOrderListItem,
+  OrderSummary,
+} from '@framework/order/types-b2b-orders-list';
 
 const STATUS_MAP: Record<string, string> = {
   IA: 'In accettazione',
@@ -27,9 +30,11 @@ export function transformOrderSummary(row: RawOrderListItem): OrderSummary {
     .filter(Boolean)
     .join(' - ');
 
-  const ordered = Array.isArray(row.TotaliDocumentoQuantita) && row.TotaliDocumentoQuantita.length
-    ? row.TotaliDocumentoQuantita[0]
-    : 0;
+  const ordered =
+    Array.isArray(row.TotaliDocumentoQuantita) &&
+    row.TotaliDocumentoQuantita.length
+      ? row.TotaliDocumentoQuantita[0]
+      : 0;
 
   const doc = `${row.CausaleDocDefinitivo}/${row.NumeroDocDefinitivo}`;
 
@@ -43,10 +48,11 @@ export function transformOrderSummary(row: RawOrderListItem): OrderSummary {
     delivery_label: toLabelOrFallback(row.DataConsegna),
     ordered_total: money(ordered),
     status_code: row.StatoTestataOrdine || '',
-    status_label: STATUS_MAP[row.StatoTestataOrdine || ''] || (row.StatoTestataOrdine || ''),
-    cause:row.CausaleDocDefinitivo|| '',
-    doc_number:row.NumeroDocDefinitivo,
-    doc_year:row.AnnoDocDefinitivo
+    status_label:
+      STATUS_MAP[row.StatoTestataOrdine || ''] || row.StatoTestataOrdine || '',
+    cause: row.CausaleDocDefinitivo || '',
+    doc_number: row.NumeroDocDefinitivo,
+    doc_year: row.AnnoDocDefinitivo,
   };
 }
 

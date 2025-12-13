@@ -1,10 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
-import { API_ENDPOINTS_PIM, PIM_API_BASE_URL } from '@framework/utils/api-endpoints-pim';
+import {
+  API_ENDPOINTS_PIM,
+  PIM_API_BASE_URL,
+} from '@framework/utils/api-endpoints-pim';
 import {
   PIM_FACET_FIELDS,
   PIM_FACET_LABELS,
   STOCK_STATUS_LABELS,
-  BOOLEAN_LABELS
+  BOOLEAN_LABELS,
 } from '@framework/utils/filters';
 
 // ===============================
@@ -60,21 +63,9 @@ export interface PimTransformedFilter {
   values: PimFilterValue[];
 }
 
-// ===============================
-// Legacy to PIM field name mapping
-// ===============================
-const LEGACY_TO_PIM_FIELD: Record<string, string> = {
-  'id_brand': 'brand_id',
-  'promo_type': 'promo_type',
-  'new': 'attribute_is_new_b',
-  'is_new': 'attribute_is_new_b',
-  'promo_codes': 'promo_code',
-  'category': 'category_ancestors',
-  'family': 'category_ancestors',
-};
-
+// Filter key pass-through (no legacy mapping needed)
 function mapFilterKey(key: string): string {
-  return LEGACY_TO_PIM_FIELD[key] || key;
+  return key;
 }
 
 // ===============================
@@ -102,7 +93,10 @@ function resolveLabel(field: string, value: string, apiLabel?: string): string {
 // ===============================
 // Transform PIM facets to UI format
 // ===============================
-function transformPimFacets(facetResults: Record<string, PimFacetValue[]>, lang: string = 'it'): PimTransformedFilter[] {
+function transformPimFacets(
+  facetResults: Record<string, PimFacetValue[]>,
+  lang: string = 'it',
+): PimTransformedFilter[] {
   if (!facetResults || typeof facetResults !== 'object') return [];
 
   const transformed: PimTransformedFilter[] = [];
@@ -143,7 +137,7 @@ function transformPimFacets(facetResults: Record<string, PimFacetValue[]>, lang:
 // Fetch PIM facets (using search endpoint with include_faceting)
 // ===============================
 export const fetchPimFilters = async (
-  params: Record<string, any>
+  params: Record<string, any>,
 ): Promise<PimTransformedFilter[]> => {
   // Use search endpoint with include_faceting instead of separate facet endpoint
   const url = `${PIM_API_BASE_URL}${API_ENDPOINTS_PIM.SEARCH}`;
@@ -156,9 +150,10 @@ export const fetchPimFilters = async (
       // Map legacy field names to PIM field names
       const filterKey = mapFilterKey(legacyKey);
       // Support semicolon-separated values
-      filters[filterKey] = typeof value === 'string' && value.includes(';')
-        ? value.split(';')
-        : value;
+      filters[filterKey] =
+        typeof value === 'string' && value.includes(';')
+          ? value.split(';')
+          : value;
     }
   }
 

@@ -11,13 +11,15 @@ type CartButtonProps = {
   className?: string;
   iconClassName?: string;
   hideLabel?: boolean; // legacy flag: hides summary entirely
-  currency?: string;         // default "EUR"
-  locale?: string;           // default "it-IT"
+  currency?: string; // default "EUR"
+  locale?: string; // default "it-IT"
   summaryVariant?: 'full' | 'amount' | 'none';
 };
 
 const formatCurrency = (n: number, currency = 'EUR', locale = 'it-IT') =>
-  new Intl.NumberFormat(locale, { style: 'currency', currency }).format(Number(n || 0));
+  new Intl.NumberFormat(locale, { style: 'currency', currency }).format(
+    Number(n || 0),
+  );
 
 // --- Standard shopping cart icon (outline) ---
 const CartIcon: React.FC<{ className?: string }> = ({ className }) => (
@@ -48,7 +50,7 @@ const CartButton: React.FC<CartButtonProps> = ({
   summaryVariant = 'full',
 }) => {
   const { t } = useTranslation(lang, 'common');
-  const { openDrawer, setDrawerView } = useUI();
+  const { openDrawer, setDrawerView, hidePrices } = useUI();
   const { totalItems, totalUniqueItems, total, meta } = useCart();
 
   function handleCartOpen() {
@@ -58,7 +60,8 @@ const CartButton: React.FC<CartButtonProps> = ({
 
   const amount = formatCurrency(total || 0, currency, locale);
 
-  const resolvedVariant: 'full' | 'amount' | 'none' = hideLabel ? 'none' : summaryVariant;
+  const resolvedVariant: 'full' | 'amount' | 'none' =
+    hideLabel || hidePrices ? 'none' : summaryVariant;
 
   return (
     <button
@@ -87,13 +90,18 @@ const CartButton: React.FC<CartButtonProps> = ({
 
       {/* Icon with badge */}
       <div className="relative flex items-center">
-        <CartIcon className={cn(iconClassName, 'transition-transform group-hover:scale-105')} />
+        <CartIcon
+          className={cn(
+            iconClassName,
+            'transition-transform group-hover:scale-105',
+          )}
+        />
         {(totalUniqueItems ?? 0) > 0 && (
           <span
             className={cn(
               'min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center',
               'bg-[#E1E7EE] text-black text-[9px] font-bold leading-none',
-              'absolute -top-1.5 -right-1.5'
+              'absolute -top-1.5 -right-1.5',
             )}
           >
             {totalUniqueItems}

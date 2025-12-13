@@ -57,7 +57,8 @@ const Heading: React.FC<Props> = ({
     <Component
       className={cn(
         {
-          'text-15px sm:text-base font-semibold text-brand-dark': variant === 'base',
+          'text-15px sm:text-base font-semibold text-brand-dark':
+            variant === 'base',
           'text-base xl:text-lg xl:leading-7 font-semibold font-manrope text-brand-dark':
             variant === 'title',
           'font-semibold text-brand-dark text-xl': variant === 'titleMedium',

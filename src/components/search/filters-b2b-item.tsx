@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 import { IoIosArrowUp, IoIosArrowDown } from 'react-icons/io';
 import {
   Disclosure,
@@ -9,7 +9,6 @@ import {
   DisclosurePanel,
 } from '@headlessui/react';
 import { useTranslation } from 'src/app/i18n/client';
-import useQueryParam from '@utils/use-query-params';
 
 type FilterValue = {
   value: string;
@@ -24,19 +23,33 @@ type FiltersB2BItemProps = {
   values: FilterValue[];
 };
 
-export const FiltersB2BItem = ({ lang, filterKey, label, values }: FiltersB2BItemProps) => {
+export const FiltersB2BItem = ({
+  lang,
+  filterKey,
+  label,
+  values,
+}: FiltersB2BItemProps) => {
   const { t } = useTranslation(lang, 'common');
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { updateQueryparams } = useQueryParam(pathname ?? '/');
+  const router = useRouter();
   const [formState, setFormState] = useState<string[]>([]);
   const [expanded, setExpanded] = useState(false);
 
-  const queryKey = `filters-${filterKey}`; // ✅ THIS IS THE KEY USED IN URL
+  const queryKey = `filters-${filterKey}`;
   const queryParamValue = searchParams?.get(queryKey);
 
   useEffect(() => {
-    updateQueryparams(queryKey, formState.join(','));
+    const newValue = formState.join(',');
+    const url = new URL(location.href);
+
+    if (newValue) {
+      url.searchParams.set(queryKey, newValue);
+    } else {
+      url.searchParams.delete(queryKey);
+    }
+
+    router.push(`${pathname}${url.search}`);
   }, [formState]);
 
   useEffect(() => {
@@ -48,7 +61,7 @@ export const FiltersB2BItem = ({ lang, filterKey, label, values }: FiltersB2BIte
     setFormState(
       formState.includes(value)
         ? formState.filter((item) => item !== value)
-        : [...formState, value]
+        : [...formState, value],
     );
   }
 
@@ -61,7 +74,9 @@ export const FiltersB2BItem = ({ lang, filterKey, label, values }: FiltersB2BIte
         {({ open }) => (
           <div className="border rounded-md border-border-base">
             <DisclosureButton className="w-full flex items-center justify-between px-5 py-4">
-              <span className="text-brand-dark text-base font-semibold">{label}</span>
+              <span className="text-brand-dark text-base font-semibold">
+                {label}
+              </span>
               {open ? (
                 <IoIosArrowUp className="text-brand-dark text-opacity-80 text-lg" />
               ) : (
@@ -86,7 +101,9 @@ export const FiltersB2BItem = ({ lang, filterKey, label, values }: FiltersB2BIte
                       />
                       <span>{item.label}</span>
                     </span>
-                    <span className="text-13px text-brand-dark/70">{item.count}</span>
+                    <span className="text-13px text-brand-dark/70">
+                      {item.count}
+                    </span>
                   </label>
                 ))}
 

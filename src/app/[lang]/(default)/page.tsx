@@ -4,16 +4,20 @@ import { cookies } from 'next/headers';
 import BannerAllCarousel from '@components/common/banner-all-carousel';
 import B2BHomeProducts from '@components/product/feeds/b2b-home-products';
 import { fetchCmsB2BHomeData } from '@framework/product/get-b2b-cms';
-import { getLatestHomeTemplateVersion, getPublishedHomeTemplate } from '@/lib/db/home-templates';
+import {
+  getLatestHomeTemplateVersion,
+  getPublishedHomeTemplate,
+} from '@/lib/db/home-templates';
 import { HomePageWithPreview } from '@components/home/HomePageWithPreview';
 import {
   PAGE_CONTEXT_COOKIE,
+  ADDRESS_STATE_COOKIE,
   buildContextFromParams,
   contextToTags,
   ensureLanguageAttribute,
   mergeContexts,
   parseContextCookie,
-  type PageContext
+  type PageContext,
 } from '@/lib/page-context';
 
 // This page depends on external APIs. Force dynamic rendering so Docker/CI builds
@@ -21,7 +25,6 @@ import {
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const fetchCache = 'force-no-store';
-
 
 export const metadata: Metadata = {
   title: 'Home',
@@ -122,7 +125,6 @@ const flyerBreakpoints = {
   },
 };
 
-
 type HomePageSearchParams = {
   preview?: string | string[];
   tag?: string | string[];
@@ -145,7 +147,7 @@ const coerceParam = (value?: string | string[]) => {
 
 export default async function Page({
   params,
-  searchParams
+  searchParams,
 }: {
   params: any;
   searchParams?: Promise<HomePageSearchParams>;
@@ -155,7 +157,22 @@ export default async function Page({
   const previewParam = coerceParam(search?.preview);
   const isPreview = previewParam === 'true';
   const cookieStore = await cookies();
-  const storedContext = parseContextCookie(cookieStore.get(PAGE_CONTEXT_COOKIE)?.value);
+  const storedContext = parseContextCookie(
+    cookieStore.get(PAGE_CONTEXT_COOKIE)?.value,
+  );
+
+  // Read addressState from cookie (set by AddressProvider when user selects delivery address)
+  const addressStateCookie = cookieStore.get(ADDRESS_STATE_COOKIE)?.value;
+  const addressState = addressStateCookie
+    ? decodeURIComponent(addressStateCookie)
+    : undefined;
+
+  console.log('[Home Page] Address cookie debug:', {
+    cookieName: ADDRESS_STATE_COOKIE,
+    rawCookieValue: addressStateCookie,
+    decodedAddressState: addressState,
+    allCookies: cookieStore.getAll().map((c) => c.name),
+  });
 
   const queryContext = buildContextFromParams({
     campaign: coerceParam(search?.campaign),
@@ -165,10 +182,19 @@ export default async function Page({
     segment: coerceParam(search?.segment),
     region: coerceParam(search?.region),
     language: coerceParam(search?.language),
-    device: coerceParam(search?.device)
+    device: coerceParam(search?.device),
   });
 
-  const baseContext = mergeContexts(storedContext, queryContext);
+  // Build address context if user has selected a delivery address
+  const addressContext: PageContext | null = addressState
+    ? { addressState, source: 'address' }
+    : null;
+
+  const baseContext = mergeContexts(
+    storedContext,
+    queryContext,
+    addressContext,
+  );
   const combinedContext = ensureLanguageAttribute(baseContext, lang);
   const versionTags = contextToTags(combinedContext);
 
@@ -177,7 +203,9 @@ export default async function Page({
     if (isPreview) {
       homeTemplate = await getLatestHomeTemplateVersion({ tags: versionTags });
       if (!homeTemplate) {
-        console.warn('[Home Page] No draft version available, falling back to published template');
+        console.warn(
+          '[Home Page] No draft version available, falling back to published template',
+        );
         homeTemplate = await getPublishedHomeTemplate({ tags: versionTags });
       }
     } else {
@@ -196,11 +224,13 @@ export default async function Page({
     'context:',
     versionTags || 'default',
     'matchedBy:',
-    homeTemplate?.matchedBy ?? 'n/a'
+    homeTemplate?.matchedBy ?? 'n/a',
   );
 
   if (!homeTemplate && versionTags) {
-    console.warn(`[Home Page] No template found for context "${JSON.stringify(versionTags)}", rendering default layout`);
+    console.warn(
+      `[Home Page] No template found for context "${JSON.stringify(versionTags)}", rendering default layout`,
+    );
   }
 
   // Load CMS data as fallback or for carousel data
@@ -251,8 +281,10 @@ export default async function Page({
         />
       </Container>
 
-
-      <B2BHomeProducts lang={lang} homeCategoryFiltered={sliderTopData.home_category_filtered}/>
+      <B2BHomeProducts
+        lang={lang}
+        homeCategoryFiltered={sliderTopData.home_category_filtered}
+      />
 
       <Container>
         <BannerAllCarousel

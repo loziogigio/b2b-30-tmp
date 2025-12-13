@@ -45,8 +45,11 @@ export interface BuildSnapshotOptions {
   sortLabel: string;
 }
 
-export function buildCartExportSnapshot(options: BuildSnapshotOptions): ExportSnapshot | null {
-  const { items, meta, totals, filteredDiffers, filtersSummary, sortLabel } = options;
+export function buildCartExportSnapshot(
+  options: BuildSnapshotOptions,
+): ExportSnapshot | null {
+  const { items, meta, totals, filteredDiffers, filtersSummary, sortLabel } =
+    options;
   if (!items?.length) return null;
 
   const exportDate = new Date();
@@ -64,20 +67,32 @@ export function buildCartExportSnapshot(options: BuildSnapshotOptions): ExportSn
     vat: Number(meta?.vat ?? totals.vat ?? 0),
   };
   const transportCost =
-    meta && typeof meta.transportCost === 'number' ? Number(meta.transportCost) : undefined;
+    meta && typeof meta.transportCost === 'number'
+      ? Number(meta.transportCost)
+      : undefined;
   const documentTotal = Number(
-    meta?.totalDoc ?? summaryTotals.net + summaryTotals.vat + (transportCost ?? 0)
+    meta?.totalDoc ??
+      summaryTotals.net + summaryTotals.vat + (transportCost ?? 0),
   );
 
   const rows: ExportRowData[] = items.map((row, idx) => {
     const qty = Number(row.quantity ?? 0);
-    const unitNetValue = Number(row.priceDiscount ?? row.__cartMeta?.price_discount ?? row.price ?? 0);
+    const unitNetValue = Number(
+      row.priceDiscount ?? row.__cartMeta?.price_discount ?? row.price ?? 0,
+    );
     const unitGrossValue = Number(
-      row.priceGross ?? row.__cartMeta?.gross_price ?? row.gross_price ?? row.price_gross ?? row.price ?? 0
+      row.priceGross ??
+        row.__cartMeta?.gross_price ??
+        row.gross_price ??
+        row.price_gross ??
+        row.price ??
+        0,
     );
     const unitLabelRaw = row.uom ?? (row as any)?.unit ?? (row as any)?.um;
-    const mvRaw = (row as any)?.mvQty ?? (row as any)?.mv_qty ?? (row as any)?.mv;
-    const cfRaw = (row as any)?.cfQty ?? (row as any)?.cf_qty ?? (row as any)?.cf;
+    const mvRaw =
+      (row as any)?.mvQty ?? (row as any)?.mv_qty ?? (row as any)?.mv;
+    const cfRaw =
+      (row as any)?.cfQty ?? (row as any)?.cf_qty ?? (row as any)?.cf;
 
     return {
       sku: row.sku ?? '',
@@ -86,7 +101,10 @@ export function buildCartExportSnapshot(options: BuildSnapshotOptions): ExportSn
       quantity: qty,
       quantityFormatted: quantityFormatter.format(qty),
       packaging: {
-        unit: unitLabelRaw != null && unitLabelRaw !== '' ? String(unitLabelRaw) : undefined,
+        unit:
+          unitLabelRaw != null && unitLabelRaw !== ''
+            ? String(unitLabelRaw)
+            : undefined,
         mv: mvRaw != null && mvRaw !== '' ? String(mvRaw) : undefined,
         cf: cfRaw != null && cfRaw !== '' ? String(cfRaw) : undefined,
       },
@@ -95,14 +113,22 @@ export function buildCartExportSnapshot(options: BuildSnapshotOptions): ExportSn
       lineNet: unitNetValue * qty,
       lineGross: unitGrossValue * qty,
       image:
-        row.image && typeof row.image === 'string' && row.image.trim().length > 0
+        row.image &&
+        typeof row.image === 'string' &&
+        row.image.trim().length > 0
           ? row.image.trim()
           : undefined,
     };
   });
 
-  const totalsRows: Array<{ label: string; value: number }> = [{ label: 'Net total', value: summaryTotals.net }];
-  if (transportCost != null && Number.isFinite(transportCost) && transportCost !== 0) {
+  const totalsRows: Array<{ label: string; value: number }> = [
+    { label: 'Net total', value: summaryTotals.net },
+  ];
+  if (
+    transportCost != null &&
+    Number.isFinite(transportCost) &&
+    transportCost !== 0
+  ) {
     totalsRows.push({ label: 'Transport cost', value: transportCost });
   }
   totalsRows.push({ label: 'VAT', value: summaryTotals.vat });
@@ -115,11 +141,14 @@ export function buildCartExportSnapshot(options: BuildSnapshotOptions): ExportSn
       meta?.idCart != null
         ? String(meta.idCart)
         : meta && (meta as any)?.id_cart != null
-        ? String((meta as any)?.id_cart)
-        : 'N/A',
+          ? String((meta as any)?.id_cart)
+          : 'N/A',
     ],
     ['Customer ID', meta?.clientId != null ? String(meta.clientId) : 'N/A'],
-    ['Address code', meta?.addressCode != null ? String(meta.addressCode) : 'N/A'],
+    [
+      'Address code',
+      meta?.addressCode != null ? String(meta.addressCode) : 'N/A',
+    ],
     ['Exported at', exportDateLabel],
     ['Items (exported)', String(items.length)],
   ];
@@ -159,24 +188,32 @@ function toAbsoluteImage(src?: string) {
   return src;
 }
 
-export function renderCartPdfHtml(snapshot: ExportSnapshot, options: { includeImages?: boolean } = {}): string {
+export function renderCartPdfHtml(
+  snapshot: ExportSnapshot,
+  options: { includeImages?: boolean } = {},
+): string {
   const includeImages = options.includeImages !== false;
-  const currency = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' });
+  const currency = new Intl.NumberFormat('it-IT', {
+    style: 'currency',
+    currency: 'EUR',
+  });
   const rowsHtml = snapshot.rows
     .map((row) => {
       const packagingParts: string[] = [];
-      if (row.packaging.unit) packagingParts.push(escapeHtml(row.packaging.unit));
+      if (row.packaging.unit)
+        packagingParts.push(escapeHtml(row.packaging.unit));
       if (row.packaging.mv != null || row.packaging.cf != null) {
         packagingParts.push(
-          `<span class="muted">MV ${escapeHtml(row.packaging.mv ?? '-')}/CF ${escapeHtml(row.packaging.cf ?? '-')}</span>`
+          `<span class="muted">MV ${escapeHtml(row.packaging.mv ?? '-')}/CF ${escapeHtml(row.packaging.cf ?? '-')}</span>`,
         );
       }
       const packagingCell = packagingParts.join('<br/>') || '&nbsp;';
 
       const imgSrc = toAbsoluteImage(row.image);
-      const imageCell = includeImages && imgSrc
-        ? `<img src="${escapeHtml(imgSrc)}" alt="${escapeHtml(row.name || row.sku)}" class="item-image" loading="lazy" />`
-        : '<div class="image-placeholder">No image</div>';
+      const imageCell =
+        includeImages && imgSrc
+          ? `<img src="${escapeHtml(imgSrc)}" alt="${escapeHtml(row.name || row.sku)}" class="item-image" loading="lazy" />`
+          : '<div class="image-placeholder">No image</div>';
 
       return `
           <tr>
@@ -199,7 +236,7 @@ export function renderCartPdfHtml(snapshot: ExportSnapshot, options: { includeIm
           ${snapshot.totals
             .map(
               ({ label, value }) =>
-                `<tr><th>${escapeHtml(label)}</th><td>${escapeHtml(currency.format(value))}</td></tr>`
+                `<tr><th>${escapeHtml(label)}</th><td>${escapeHtml(currency.format(value))}</td></tr>`,
             )
             .join('')}
         </tbody>
@@ -209,7 +246,7 @@ export function renderCartPdfHtml(snapshot: ExportSnapshot, options: { includeIm
   const infoHtml = snapshot.info
     .map(
       ([label, value]) =>
-        `<tr><th>${escapeHtml(label)}</th><td>${escapeHtml(value)}</td></tr>`
+        `<tr><th>${escapeHtml(label)}</th><td>${escapeHtml(value)}</td></tr>`,
     )
     .join('');
 
@@ -404,10 +441,11 @@ export function renderCartExcelHtml(snapshot: ExportSnapshot): string {
   const rowsHtml = snapshot.rows
     .map((row) => {
       const packagingLines: string[] = [];
-      if (row.packaging.unit) packagingLines.push(escapeHtml(row.packaging.unit));
+      if (row.packaging.unit)
+        packagingLines.push(escapeHtml(row.packaging.unit));
       if (row.packaging.mv != null || row.packaging.cf != null) {
         packagingLines.push(
-          `MV ${escapeHtml(row.packaging.mv ?? '-')}/CF ${escapeHtml(row.packaging.cf ?? '-')}`
+          `MV ${escapeHtml(row.packaging.mv ?? '-')}/CF ${escapeHtml(row.packaging.cf ?? '-')}`,
         );
       }
       const packagingCell = packagingLines.join('<br/>') || '&nbsp;';
@@ -431,14 +469,14 @@ export function renderCartExcelHtml(snapshot: ExportSnapshot): string {
   const totalsHtml = snapshot.totals
     .map(
       ({ label, value }) =>
-        `<tr><th>${escapeHtml(label)}</th><td style="mso-number-format:'0.00'; text-align:right;">${formatNumber(value)}</td></tr>`
+        `<tr><th>${escapeHtml(label)}</th><td style="mso-number-format:'0.00'; text-align:right;">${formatNumber(value)}</td></tr>`,
     )
     .join('');
 
   const infoHtml = snapshot.info
     .map(
       ([label, value]) =>
-        `<tr><th>${escapeHtml(label)}</th><td>${escapeHtml(value)}</td></tr>`
+        `<tr><th>${escapeHtml(label)}</th><td>${escapeHtml(value)}</td></tr>`,
     )
     .join('');
 

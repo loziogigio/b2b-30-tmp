@@ -8,6 +8,7 @@ import { Metadata } from 'next';
 import ToasterProvider from 'src/app/provider/toaster-provider';
 import Providers from 'src/app/provider/provider';
 import { getServerHomeSettings } from '@/lib/home-settings/fetch-server';
+import { EliaDrawer } from '@components/elia/elia-drawer';
 
 // external
 import 'react-toastify/dist/ReactToastify.css';
@@ -33,12 +34,18 @@ const manrope = Manrope({
   variable: '--font-manrope',
 });
 
-export const metadata: Metadata = {
-  title: {
-    template: 'BoroBazar | %s',
-    default: 'BoroBazar',
-  },
-};
+// Dynamic metadata based on branding from home settings
+export async function generateMetadata(): Promise<Metadata> {
+  const homeSettings = await getServerHomeSettings();
+  const brandingTitle = homeSettings?.branding?.title || 'VINC - B2B';
+
+  return {
+    title: {
+      template: `${brandingTitle} | %s`,
+      default: brandingTitle,
+    },
+  };
+}
 
 // Force dynamic rendering for all pages to avoid timeout during Docker build
 export const dynamic = 'force-dynamic';
@@ -58,17 +65,16 @@ export default async function RootLayout({
   const { lang } = await params;
   const homeSettings = await getServerHomeSettings();
   const branding = homeSettings?.branding ?? {
-    title: 'B2B Store',
+    title: 'VINC - B2B',
     primaryColor: '#009f7f',
     secondaryColor: '#02b290',
     logo: undefined,
-    favicon: undefined
+    favicon: undefined,
   };
 
   return (
     <html lang={lang} dir={dir(lang)} suppressHydrationWarning={true}>
       <head>
-        <title>{branding.title}</title>
         {branding.favicon ? <link rel="icon" href={branding.favicon} /> : null}
       </head>
       <body
@@ -76,7 +82,7 @@ export default async function RootLayout({
         style={{
           // Ensure CSS variables available on first paint
           ['--color-brand' as string]: branding.primaryColor,
-          ['--color-brand-secondary' as string]: branding.secondaryColor
+          ['--color-brand-secondary' as string]: branding.secondaryColor,
         }}
         suppressHydrationWarning={true}
       >
@@ -85,6 +91,7 @@ export default async function RootLayout({
             {children}
             <ManagedModal lang={lang} />
             <ManagedDrawer lang={lang} />
+            <EliaDrawer />
             <ToasterProvider />
           </ManagedUIContext>
         </Providers>

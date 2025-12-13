@@ -1,8 +1,13 @@
 'use client';
-import { pageBuilderActions, usePageBuilderStore } from '@/lib/store/pageBuilderStore';
+import {
+  pageBuilderActions,
+  usePageBuilderStore,
+} from '@/lib/store/pageBuilderStore';
 
 const TagBadge = ({ label }: { label: string }) => (
-  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">{label}</span>
+  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+    {label}
+  </span>
 );
 
 const formatDate = (value?: string | Date | null) => {
@@ -18,7 +23,7 @@ const formatDate = (value?: string | Date | null) => {
 export default function PublishedVersionsPanel() {
   const { versions, loading } = usePageBuilderStore((state) => ({
     versions: state.versions,
-    loading: state.loading
+    loading: state.loading,
   }));
 
   if (loading && versions.length === 0) {
@@ -32,7 +37,8 @@ export default function PublishedVersionsPanel() {
   if (!versions.length) {
     return (
       <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 p-8 text-center text-sm text-slate-500">
-        No versions found for this page. Create or publish a version from the builder to see it here.
+        No versions found for this page. Create or publish a version from the
+        builder to see it here.
       </div>
     );
   }
@@ -55,7 +61,8 @@ export default function PublishedVersionsPanel() {
                 ) : null}
               </p>
               <p className="text-xs text-slate-500">
-                Status: {version.status} • Updated {formatDate(version.lastSavedAt)}
+                Status: {version.status} • Updated{' '}
+                {formatDate(version.lastSavedAt)}
               </p>
             </div>
             <button
@@ -69,24 +76,38 @@ export default function PublishedVersionsPanel() {
 
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             <div className="rounded border border-slate-100 p-3 text-sm text-slate-600">
-              <p className="text-xs uppercase tracking-wide text-slate-400">Campaign</p>
-              <p className="font-medium text-slate-800">{version.tags?.campaign ?? '—'}</p>
+              <p className="text-xs uppercase tracking-wide text-slate-400">
+                Campaign
+              </p>
+              <p className="font-medium text-slate-800">
+                {version.tags?.campaign ?? '—'}
+              </p>
             </div>
             <div className="rounded border border-slate-100 p-3 text-sm text-slate-600">
-              <p className="text-xs uppercase tracking-wide text-slate-400">Segment</p>
-              <p className="font-medium text-slate-800">{version.tags?.segment ?? '—'}</p>
+              <p className="text-xs uppercase tracking-wide text-slate-400">
+                Segment
+              </p>
+              <p className="font-medium text-slate-800">
+                {version.tags?.segment ?? '—'}
+              </p>
             </div>
           </div>
 
           <div className="mt-3 flex flex-wrap gap-2">
             {version.tags?.attributes
               ? Object.entries(version.tags.attributes).map(([key, value]) =>
-                  value ? <TagBadge key={key}>{`${key}: ${value}`}</TagBadge> : null
+                  value ? (
+                    <TagBadge key={key}>{`${key}: ${value}`}</TagBadge>
+                  ) : null,
                 )
               : null}
             <TagBadge label={`Priority: ${version.priority ?? 0}`} />
-            {version.activeFrom ? <TagBadge label={`From ${formatDate(version.activeFrom)}`} /> : null}
-            {version.activeTo ? <TagBadge label={`To ${formatDate(version.activeTo)}`} /> : null}
+            {version.activeFrom ? (
+              <TagBadge label={`From ${formatDate(version.activeFrom)}`} />
+            ) : null}
+            {version.activeTo ? (
+              <TagBadge label={`To ${formatDate(version.activeTo)}`} />
+            ) : null}
             <TagBadge label={`Blocks: ${version.blocksCount ?? 0}`} />
           </div>
 

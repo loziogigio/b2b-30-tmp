@@ -22,4 +22,3 @@ export function formatAddressB2B(address: any) {
   }
   return Object.values(formattedAddress).slice(2, 3).reverse().join(', ');
 }
-

@@ -22,18 +22,29 @@ export default function DocumentsClient({ lang }: { lang: string }) {
   const [sortKey, setSortKey] = useState<SortKey>('date');
   const [sortAsc, setSortAsc] = useState(false);
 
-  const { data = [], isLoading, isError, error } = useDocumentsListQuery(
+  const {
+    data = [],
+    isLoading,
+    isError,
+    error,
+  } = useDocumentsListQuery(
     {
       date_from: toErpNumericDate(from),
       date_to: toErpNumericDate(to),
       type: tab,
       ...ERP_STATIC, // { customer_code, ext_call, address_code }
     },
-    true
+    true,
   );
 
-  const { mutate: openDoc, isPending, variables, error: actionError } = useOpenDocumentAction();
-  const keyFor = (r: DocumentRow, kind: DocumentActionKind) => `${r.document}:${kind}`;
+  const {
+    mutate: openDoc,
+    isPending,
+    variables,
+    error: actionError,
+  } = useOpenDocumentAction();
+  const keyFor = (r: DocumentRow, kind: DocumentActionKind) =>
+    `${r.document}:${kind}`;
   const loadingKey = variables ? keyFor(variables.row, variables.kind) : null;
 
   const isDDT = tab === 'DDT';
@@ -45,7 +56,7 @@ export default function DocumentsClient({ lang }: { lang: string }) {
         !q ||
         r.destination.toLowerCase().includes(q) ||
         r.document.toLowerCase().includes(q) ||
-        r.number.toLowerCase().includes(q)
+        r.number.toLowerCase().includes(q),
     );
 
     list.sort((a, b) => {
@@ -59,7 +70,10 @@ export default function DocumentsClient({ lang }: { lang: string }) {
           return (Number(a.number) - Number(b.number)) * dir;
         case 'date':
         default:
-          return (new Date(a.dateISO).getTime() - new Date(b.dateISO).getTime()) * dir;
+          return (
+            (new Date(a.dateISO).getTime() - new Date(b.dateISO).getTime()) *
+            dir
+          );
       }
     });
     return list;
@@ -68,13 +82,21 @@ export default function DocumentsClient({ lang }: { lang: string }) {
   const sortBtn = (key: SortKey, label: React.ReactNode, extraClass = '') => (
     <th
       className={cn('cursor-pointer select-none', extraClass)}
-      onClick={() => (key === sortKey ? setSortAsc(!sortAsc) : (setSortKey(key), setSortAsc(false)))}
-      aria-sort={sortKey === key ? (sortAsc ? 'ascending' : 'descending') : 'none'}
+      onClick={() =>
+        key === sortKey
+          ? setSortAsc(!sortAsc)
+          : (setSortKey(key), setSortAsc(false))
+      }
+      aria-sort={
+        sortKey === key ? (sortAsc ? 'ascending' : 'descending') : 'none'
+      }
       title="Ordina"
     >
       <span className="inline-flex items-center gap-1">
         {label}
-        {sortKey === key ? <span className="text-xs">{sortAsc ? '▲' : '▼'}</span> : null}
+        {sortKey === key ? (
+          <span className="text-xs">{sortAsc ? '▲' : '▼'}</span>
+        ) : null}
       </span>
     </th>
   );
@@ -89,7 +111,9 @@ export default function DocumentsClient({ lang }: { lang: string }) {
               <button
                 className={cn(
                   'px-3 py-2 text-sm font-semibold',
-                  tab === 'F' ? 'bg-red-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'
+                  tab === 'F'
+                    ? 'bg-red-600 text-white'
+                    : 'bg-white text-gray-700 hover:bg-gray-50',
                 )}
                 onClick={() => setTab('F')}
               >
@@ -98,7 +122,9 @@ export default function DocumentsClient({ lang }: { lang: string }) {
               <button
                 className={cn(
                   'px-3 py-2 text-sm font-semibold border-l',
-                  tab === 'DDT' ? 'bg-red-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'
+                  tab === 'DDT'
+                    ? 'bg-red-600 text-white'
+                    : 'bg-white text-gray-700 hover:bg-gray-50',
                 )}
                 onClick={() => setTab('DDT')}
               >
@@ -119,7 +145,9 @@ export default function DocumentsClient({ lang }: { lang: string }) {
             <input
               type="date"
               value={from}
-              onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))}
+              onChange={(e) =>
+                setRange((r) => ({ ...r, from: e.target.value }))
+              }
               className="h-10 rounded-md border border-gray-300 px-2"
             />
             <span className="text-gray-600">A</span>
@@ -156,43 +184,87 @@ export default function DocumentsClient({ lang }: { lang: string }) {
         )}
 
         {/* ===== Desktop/Tablet: Tabella ===== */}
-        <div className="hidden sm:block overflow-x-auto rounded-md border border-gray-200 bg-white">
+        <div className="hidden sm:block overflow-x-auto rounded-md border border-gray-200 bg-white overflow-hidden">
           <div className="max-h-[60vh] overflow-y-auto">
-            <table className="min-w-[920px] w-full border-collapse text-sm">
-              <thead className="sticky top-0 z-10 bg-gray-50 text-gray-700">
-                <tr className="[&>th]:px-3 [&>th]:py-3 [&>th]:text-left [&>th]:font-semibold">
-                  {sortBtn('destination', 'Destinazione', 'w-[260px]')}
-                  {sortBtn('date', 'Data', 'w-36')}
-                  {sortBtn('document', 'Documento', 'w-44')}
-                  <th className="w-32">Tipo</th>
-                  {sortBtn('number', 'Numero', 'w-28')}
-                  {!isDDT && <th className="w-24 text-center">PDF</th>}
-                  <th className="w-40 text-center">Codice a barre PDF</th>
-                  {!isDDT && <th className="w-24 text-center">CSV</th>}
+            <table className="min-w-[920px] w-full text-sm">
+              <thead className="sticky top-0 z-10 bg-gray-200 text-gray-800 border-b border-gray-300">
+                <tr>
+                  {sortBtn(
+                    'destination',
+                    'Destinazione',
+                    'w-[260px] px-4 py-3 text-left font-semibold',
+                  )}
+                  {sortBtn(
+                    'date',
+                    'Data',
+                    'w-36 px-4 py-3 text-left font-semibold border-l border-gray-300',
+                  )}
+                  {sortBtn(
+                    'document',
+                    'Documento',
+                    'w-44 px-4 py-3 text-left font-semibold border-l border-gray-300',
+                  )}
+                  <th className="w-32 px-4 py-3 text-left font-semibold border-l border-gray-300">
+                    Tipo
+                  </th>
+                  {sortBtn(
+                    'number',
+                    'Numero',
+                    'w-28 px-4 py-3 text-right font-semibold border-l border-gray-300',
+                  )}
+                  {!isDDT && (
+                    <th className="w-24 px-4 py-3 text-center font-semibold border-l border-gray-300">
+                      PDF
+                    </th>
+                  )}
+                  <th className="w-40 px-4 py-3 text-center font-semibold border-l border-gray-300">
+                    Codice a barre PDF
+                  </th>
+                  {!isDDT && (
+                    <th className="w-24 px-4 py-3 text-center font-semibold border-l border-gray-300">
+                      CSV
+                    </th>
+                  )}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody>
                 {rows.map((r) => {
-                  const pdfLoading = loadingKey === keyFor(r, 'pdf') && isPending;
-                  const bcLoading = loadingKey === keyFor(r, 'barcode') && isPending;
-                  const csvLoading = loadingKey === keyFor(r, 'csv') && isPending;
+                  const pdfLoading =
+                    loadingKey === keyFor(r, 'pdf') && isPending;
+                  const bcLoading =
+                    loadingKey === keyFor(r, 'barcode') && isPending;
+                  const csvLoading =
+                    loadingKey === keyFor(r, 'csv') && isPending;
 
                   return (
-                    <tr key={r.document} className="hover:bg-gray-50">
-                      <td className="px-3 py-3 text-gray-900">{r.destination}</td>
-                      <td className="px-3 py-3 text-gray-900">{r.date_label}</td>
-                      <td className="px-3 py-3 font-medium text-gray-900">{r.document}</td>
-                      <td className="px-3 py-3">{r.doc_type}</td>
-                      <td className="px-3 py-3">{r.number}</td>
+                    <tr
+                      key={r.document}
+                      className="hover:bg-gray-50 border-b border-gray-100"
+                    >
+                      <td className="px-4 py-3 text-gray-900">
+                        {r.destination}
+                      </td>
+                      <td className="px-4 py-3 text-gray-900 border-l border-gray-100">
+                        {r.date_label}
+                      </td>
+                      <td className="px-4 py-3 font-medium text-gray-900 border-l border-gray-100">
+                        {r.document}
+                      </td>
+                      <td className="px-4 py-3 text-gray-700 border-l border-gray-100">
+                        {r.doc_type}
+                      </td>
+                      <td className="px-4 py-3 text-right text-gray-700 border-l border-gray-100">
+                        {r.number}
+                      </td>
 
                       {!isDDT && (
-                        <td className="px-3 py-3 text-center">
+                        <td className="px-4 py-3 text-center border-l border-gray-100">
                           <button
                             onClick={() => openDoc({ kind: 'pdf', row: r })}
                             disabled={pdfLoading}
                             className={cn(
                               'rounded px-2 py-1 text-red-600 hover:bg-red-50',
-                              pdfLoading && 'opacity-60 cursor-not-allowed'
+                              pdfLoading && 'opacity-60 cursor-not-allowed',
                             )}
                           >
                             {pdfLoading ? '...' : 'PDF'}
@@ -200,13 +272,13 @@ export default function DocumentsClient({ lang }: { lang: string }) {
                         </td>
                       )}
 
-                      <td className="px-3 py-3 text-center">
+                      <td className="px-4 py-3 text-center border-l border-gray-100">
                         <button
                           onClick={() => openDoc({ kind: 'barcode', row: r })}
                           disabled={bcLoading}
                           className={cn(
                             'rounded px-2 py-1 text-red-600 hover:bg-red-50',
-                            bcLoading && 'opacity-60 cursor-not-allowed'
+                            bcLoading && 'opacity-60 cursor-not-allowed',
                           )}
                         >
                           {bcLoading ? '...' : 'PDF▮▮'}
@@ -214,13 +286,13 @@ export default function DocumentsClient({ lang }: { lang: string }) {
                       </td>
 
                       {!isDDT && (
-                        <td className="px-3 py-3 text-center">
+                        <td className="px-4 py-3 text-center border-l border-gray-100">
                           <button
                             onClick={() => openDoc({ kind: 'csv', row: r })}
                             disabled={csvLoading}
                             className={cn(
                               'rounded px-2 py-1 text-red-600 hover:bg-red-50',
-                              csvLoading && 'opacity-60 cursor-not-allowed'
+                              csvLoading && 'opacity-60 cursor-not-allowed',
                             )}
                           >
                             {csvLoading ? '...' : 'CSV'}
@@ -254,16 +326,23 @@ export default function DocumentsClient({ lang }: { lang: string }) {
             const csvLoading = loadingKey === keyFor(r, 'csv') && isPending;
 
             return (
-              <div key={r.document} className="rounded-xl border bg-white p-3 shadow-sm">
+              <div
+                key={r.document}
+                className="rounded-xl border bg-white p-3 shadow-sm"
+              >
                 <div className="flex items-start justify-between">
                   <div className="min-w-0">
-                    <div className="font-semibold text-gray-900 truncate">{r.document}</div>
+                    <div className="font-semibold text-gray-900 truncate">
+                      {r.document}
+                    </div>
                     <div className="text-xs text-gray-500">
                       {r.date_label} • {r.doc_type} • n. {r.number}
                     </div>
                   </div>
                 </div>
-                <div className="mt-2 text-sm text-gray-700">{r.destination}</div>
+                <div className="mt-2 text-sm text-gray-700">
+                  {r.destination}
+                </div>
 
                 <div className="mt-3 flex flex-wrap gap-2">
                   {/* Solo Fatture: PDF */}
@@ -273,7 +352,7 @@ export default function DocumentsClient({ lang }: { lang: string }) {
                       disabled={pdfLoading}
                       className={cn(
                         'rounded-md border px-3 py-1.5 text-sm text-red-600',
-                        pdfLoading && 'opacity-60 cursor-not-allowed'
+                        pdfLoading && 'opacity-60 cursor-not-allowed',
                       )}
                     >
                       {pdfLoading ? 'PDF…' : 'PDF'}
@@ -286,7 +365,7 @@ export default function DocumentsClient({ lang }: { lang: string }) {
                     disabled={bcLoading}
                     className={cn(
                       'rounded-md border px-3 py-1.5 text-sm text-red-600',
-                      bcLoading && 'opacity-60 cursor-not-allowed'
+                      bcLoading && 'opacity-60 cursor-not-allowed',
                     )}
                   >
                     {bcLoading ? 'Barcode…' : 'PDF▮▮'}
@@ -299,7 +378,7 @@ export default function DocumentsClient({ lang }: { lang: string }) {
                       disabled={csvLoading}
                       className={cn(
                         'rounded-md border px-3 py-1.5 text-sm text-red-600',
-                        csvLoading && 'opacity-60 cursor-not-allowed'
+                        csvLoading && 'opacity-60 cursor-not-allowed',
                       )}
                     >
                       {csvLoading ? 'CSV…' : 'CSV'}

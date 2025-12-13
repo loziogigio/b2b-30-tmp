@@ -13,6 +13,7 @@ import {
 import { useCmsB2BMenuRawQuery } from '@framework/product/get-b2b-cms';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useTranslation } from 'src/app/i18n/client';
 
 // ---- helper: mount gate to keep SSR/first paint identical
 function useMounted() {
@@ -29,7 +30,11 @@ const Carousel = dynamic(() => import('@components/ui/carousel/carousel'), {
 });
 
 const CategoryScrollFilter: React.FC<{ lang: string }> = ({ lang }) => {
+  // Temporarily hidden - category slider disabled
+  return null;
+
   const mounted = useMounted(); // ⭐ gate client-only UI
+  const { t } = useTranslation(lang, 'common');
   const { data } = useCmsB2BMenuRawQuery({ staleTime: 5 * 60 * 1000 });
 
   const [path, setPath] = useState<MenuTreeNode[]>([]);
@@ -59,8 +64,8 @@ const CategoryScrollFilter: React.FC<{ lang: string }> = ({ lang }) => {
   }, [searchParams, tree]);
 
   const currentLevel = useMemo<MenuTreeNode[]>(
-    () => (path.length === 0 ? tree : path[path.length - 1]?.children ?? []),
-    [tree, path]
+    () => (path.length === 0 ? tree : (path[path.length - 1]?.children ?? [])),
+    [tree, path],
   );
 
   const toCategoryUrl = (node: MenuTreeNode) =>
@@ -80,7 +85,7 @@ const CategoryScrollFilter: React.FC<{ lang: string }> = ({ lang }) => {
 
   const activeIndex = useMemo(
     () => currentLevel.findIndex((x) => x.id === activeId),
-    [currentLevel, activeId]
+    [currentLevel, activeId],
   );
 
   useEffect(() => {
@@ -120,10 +125,13 @@ const CategoryScrollFilter: React.FC<{ lang: string }> = ({ lang }) => {
                   ? 'bg-blue-600 text-white border-blue-600'
                   : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
               }`}
-              title="All Categories"
-              onClick={() => { setActiveId(null); setPath([]); }}
+              title={t('all-categories')}
+              onClick={() => {
+                setActiveId(null);
+                setPath([]);
+              }}
             >
-              All Categories
+              {t('all-categories')}
             </Link>
           </SwiperSlide>
           {currentLevel.map((cat) => {

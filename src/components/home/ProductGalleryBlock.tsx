@@ -1,36 +1,34 @@
 'use client';
 
-import Link from 'next/link';
-import Image from 'next/image';
 import cn from 'classnames';
-
-type GalleryItem = {
-  id: string;
-  imageUrl: string;
-  title?: string;
-  subtitle?: string;
-  price?: string;
-  badge?: string;
-  linkUrl?: string;
-  openInNewTab?: boolean;
-};
+import { useMemo } from 'react';
+import { Product } from '@framework/types';
+import ProductCardB2B from '@components/product/product-cards/product-card-b2b';
+import ProductCardLoader from '@components/ui/loaders/product-card-loader';
+import { fetchErpPrices } from '@framework/erp/prices';
+import { useQuery } from '@tanstack/react-query';
+import { ERP_STATIC } from '@framework/utils/static';
+import { useUI } from '@contexts/ui.context';
 
 type ProductGalleryBlockProps = {
-  items: GalleryItem[];
+  products: Product[];
   columns: {
     desktop: number;
     tablet: number;
     mobile: number;
   };
   gap?: number;
-  showPrice?: boolean;
-  showBadge?: boolean;
-  showAddToCart?: boolean;
+  lang: string;
+  loading?: boolean;
 };
 
-const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(Math.max(value, min), max);
 
-const columnClass = (size: 'base' | 'sm' | 'md' | 'lg' | 'xl', count: number) => {
+const columnClass = (
+  size: 'base' | 'sm' | 'md' | 'lg' | 'xl',
+  count: number,
+) => {
   const clamped = clamp(Math.round(count), 1, 6);
   const prefix = size === 'base' ? '' : `${size}:`;
   switch (clamped) {
@@ -50,97 +48,131 @@ const columnClass = (size: 'base' | 'sm' | 'md' | 'lg' | 'xl', count: number) =>
 };
 
 export const ProductGalleryBlock = ({
-  items,
+  products,
   columns,
   gap = 16,
-  showPrice = true,
-  showBadge = true,
-  showAddToCart = false
+  lang,
+  loading = false,
 }: ProductGalleryBlockProps) => {
-  if (!Array.isArray(items) || items.length === 0) {
+  const { isAuthorized } = useUI();
+
+  // Collect entity_codes for ERP price lookup
+  const entity_codes = useMemo<string[]>(() => {
+    if (!Array.isArray(products)) return [];
+    return products
+      .map((p: any) => {
+        const variations = Array.isArray(p?.variations) ? p.variations : [];
+        if (variations.length === 1) return String(variations[0]?.id ?? '');
+        if (variations.length > 1) return ''; // skip multi-variation items for ERP lookup
+        return String(p?.id ?? '');
+      })
+      .filter((v) => v && v !== '');
+  }, [products]);
+
+  const erpEnabled = entity_codes.length > 0;
+
+  const erpPayload = {
+    entity_codes,
+    ...ERP_STATIC,
+  };
+
+  const { data: erpPricesData } = useQuery({
+    queryKey: ['erp-prices', erpPayload],
+    queryFn: () => fetchErpPrices(erpPayload),
+    enabled: isAuthorized && erpEnabled,
+  });
+
+  if (!Array.isArray(products) || products.length === 0) {
+    if (loading) {
+      // Show loading placeholders
+      const mobileCols = clamp(columns?.mobile ?? 1, 1, 4);
+      const tabletCols = clamp(
+        columns?.tablet ?? Math.max(mobileCols, 2),
+        mobileCols,
+        5,
+      );
+      const desktopCols = clamp(
+        columns?.desktop ?? Math.max(tabletCols, 4),
+        tabletCols,
+        6,
+      );
+
+      const gridClasses = cn(
+        'grid',
+        columnClass('base', mobileCols),
+        columnClass('sm', tabletCols),
+        columnClass('lg', desktopCols),
+      );
+
+      return (
+        <div className={gridClasses} style={{ gap }}>
+          {Array.from({ length: desktopCols }).map((_, idx) => (
+            <ProductCardLoader
+              key={`loader-${idx}`}
+              uniqueKey={`gallery-loader-${idx}`}
+            />
+          ))}
+        </div>
+      );
+    }
     return null;
   }
 
   const mobileCols = clamp(columns?.mobile ?? 1, 1, 4);
-  const tabletCols = clamp(columns?.tablet ?? Math.max(mobileCols, 2), mobileCols, 5);
-  const desktopCols = clamp(columns?.desktop ?? Math.max(tabletCols, 4), tabletCols, 6);
+  const tabletCols = clamp(
+    columns?.tablet ?? Math.max(mobileCols, 2),
+    mobileCols,
+    5,
+  );
+  const desktopCols = clamp(
+    columns?.desktop ?? Math.max(tabletCols, 4),
+    tabletCols,
+    6,
+  );
 
   const gridClasses = cn(
     'grid',
     columnClass('base', mobileCols),
     columnClass('sm', tabletCols),
-    columnClass('lg', desktopCols)
+    columnClass('lg', desktopCols),
   );
 
   return (
     <div className={gridClasses} style={{ gap }}>
-      {items.map((item) => {
-        const card = (
-          <article
-            className="group relative flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
-          >
-            <div className="relative aspect-[4/3] w-full bg-slate-100">
-              {item.imageUrl ? (
-                <Image
-                  src={item.imageUrl}
-                  alt={item.title || ''}
-                  fill
-                  className="object-cover transition-transform duration-500 group-hover:scale-105"
-                  sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 100vw"
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center text-slate-400">
-                  No image
-                </div>
-              )}
-              {showBadge && item.badge ? (
-                <span className="absolute left-4 top-4 rounded-full bg-sky-500 px-3 py-1 text-xs font-semibold text-white shadow">
-                  {item.badge}
-                </span>
-              ) : null}
-            </div>
-            <div className="flex flex-1 flex-col gap-2 px-5 py-4">
-              {item.title ? (
-                <h3 className="text-base font-semibold text-slate-800">{item.title}</h3>
-              ) : null}
-              {item.subtitle ? (
-                <p className="text-sm text-slate-500 line-clamp-2">{item.subtitle}</p>
-              ) : null}
-              {showPrice && item.price ? (
-                <div className="mt-auto text-lg font-semibold text-emerald-600">{item.price}</div>
-              ) : (
-                <div className="mt-auto" />
-              )}
-              {showAddToCart ? (
-                <button
-                  type="button"
-                  className="rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700"
-                >
-                  Add to cart
-                </button>
-              ) : null}
-            </div>
-          </article>
-        );
+      {products.map((product) => {
+        // Normalize: if exactly one variation, treat it as the product
+        const variations = Array.isArray(product?.variations)
+          ? product.variations
+          : [];
+        const isSingleVariation = variations.length === 1;
 
-        if (item.linkUrl) {
-          return (
-            <Link
-              key={item.id}
-              href={item.linkUrl}
-              target={item.openInNewTab ? '_blank' : undefined}
-              rel={item.openInNewTab ? 'noopener noreferrer' : undefined}
-              className="block h-full"
-            >
-              {card}
-            </Link>
-          );
-        }
+        // Merge the single variation over the parent so we keep any missing fields (image, brand, etc.)
+        const targetProduct = isSingleVariation
+          ? {
+              ...product,
+              ...variations[0],
+              id_parent: (product as any).id_parent ?? product.id,
+              parent_sku: (product as any).parent_sku ?? product.sku,
+              image: variations[0]?.image ?? product.image,
+              gallery:
+                (variations[0]?.gallery?.length
+                  ? variations[0].gallery
+                  : (product as any).gallery) ?? [],
+              variations: [], // flattened after normalization
+            }
+          : product;
+
+        // Effective key for ERP lookup
+        const erpKey = String(targetProduct?.id ?? product?.id ?? '');
+        const priceData = erpPricesData?.[erpKey];
 
         return (
-          <div key={item.id} className="h-full">
-            {card}
-          </div>
+          <ProductCardB2B
+            key={`gallery-${erpKey}`}
+            product={targetProduct}
+            lang={lang}
+            priceData={priceData}
+          />
         );
       })}
     </div>

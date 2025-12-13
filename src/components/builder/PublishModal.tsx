@@ -1,28 +1,34 @@
 'use client';
 
 import { Dialog } from '@headlessui/react';
-import { usePageBuilderStore, pageBuilderActions } from '@/lib/store/pageBuilderStore';
+import {
+  usePageBuilderStore,
+  pageBuilderActions,
+} from '@/lib/store/pageBuilderStore';
 
 const Field = ({
   label,
-  children
+  children,
 }: {
   label: string;
   children: React.ReactNode;
 }) => (
   <label className="flex flex-col gap-1 text-sm text-slate-600">
-    <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</span>
+    <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+      {label}
+    </span>
     {children}
   </label>
 );
 
 export default function PublishModal() {
-  const { isPublishModalOpen, selectedVersion, form, isPublishing } = usePageBuilderStore((state) => ({
-    isPublishModalOpen: state.isPublishModalOpen,
-    selectedVersion: state.selectedVersion,
-    form: state.form,
-    isPublishing: state.isPublishing
-  }));
+  const { isPublishModalOpen, selectedVersion, form, isPublishing } =
+    usePageBuilderStore((state) => ({
+      isPublishModalOpen: state.isPublishModalOpen,
+      selectedVersion: state.selectedVersion,
+      form: state.form,
+      isPublishing: state.isPublishing,
+    }));
 
   if (!isPublishModalOpen || !selectedVersion) {
     return null;
@@ -59,7 +65,9 @@ export default function PublishModal() {
                 <input
                   type="text"
                   value={form.campaign ?? ''}
-                  onChange={(event) => handleChange('campaign', event.target.value)}
+                  onChange={(event) =>
+                    handleChange('campaign', event.target.value)
+                  }
                   placeholder="e.g. google-ads-winter"
                   className="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
                 />
@@ -68,19 +76,23 @@ export default function PublishModal() {
                 <input
                   type="text"
                   value={form.segment ?? ''}
-                  onChange={(event) => handleChange('segment', event.target.value)}
+                  onChange={(event) =>
+                    handleChange('segment', event.target.value)
+                  }
                   placeholder="vip, new-customer, etc."
                   className="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
                 />
               </Field>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2">
               <Field label="Region">
                 <input
                   type="text"
                   value={form.region ?? ''}
-                  onChange={(event) => handleChange('region', event.target.value)}
+                  onChange={(event) =>
+                    handleChange('region', event.target.value)
+                  }
                   placeholder="us-east"
                   className="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
                 />
@@ -89,17 +101,35 @@ export default function PublishModal() {
                 <input
                   type="text"
                   value={form.language ?? ''}
-                  onChange={(event) => handleChange('language', event.target.value)}
+                  onChange={(event) =>
+                    handleChange('language', event.target.value)
+                  }
                   placeholder="en, it"
                   className="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
                 />
               </Field>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
               <Field label="Device">
                 <input
                   type="text"
                   value={form.device ?? ''}
-                  onChange={(event) => handleChange('device', event.target.value)}
+                  onChange={(event) =>
+                    handleChange('device', event.target.value)
+                  }
                   placeholder="mobile or desktop"
+                  className="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+                />
+              </Field>
+              <Field label="Address States (Province)">
+                <input
+                  type="text"
+                  value={form.addressStates ?? ''}
+                  onChange={(event) =>
+                    handleChange('addressStates', event.target.value)
+                  }
+                  placeholder="TO, MI, RM (comma-separated)"
                   className="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
                 />
               </Field>
@@ -110,7 +140,9 @@ export default function PublishModal() {
                 <input
                   type="number"
                   value={form.priority}
-                  onChange={(event) => handleChange('priority', Number(event.target.value))}
+                  onChange={(event) =>
+                    handleChange('priority', Number(event.target.value))
+                  }
                   min={0}
                   className="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
                 />
@@ -118,7 +150,9 @@ export default function PublishModal() {
               <Field label="Status">
                 <select
                   value={form.status ?? 'published'}
-                  onChange={(event) => handleChange('status', event.target.value)}
+                  onChange={(event) =>
+                    handleChange('status', event.target.value)
+                  }
                   className="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
                 >
                   <option value="published">Published</option>
@@ -132,7 +166,9 @@ export default function PublishModal() {
                 <input
                   type="datetime-local"
                   value={form.activeFrom ?? ''}
-                  onChange={(event) => handleChange('activeFrom', event.target.value)}
+                  onChange={(event) =>
+                    handleChange('activeFrom', event.target.value)
+                  }
                   className="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
                 />
               </Field>
@@ -140,7 +176,9 @@ export default function PublishModal() {
                 <input
                   type="datetime-local"
                   value={form.activeTo ?? ''}
-                  onChange={(event) => handleChange('activeTo', event.target.value)}
+                  onChange={(event) =>
+                    handleChange('activeTo', event.target.value)
+                  }
                   className="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
                 />
               </Field>
@@ -151,10 +189,15 @@ export default function PublishModal() {
                 id="builder-modal-default"
                 type="checkbox"
                 checked={form.isDefault}
-                onChange={(event) => handleChange('isDefault', event.target.checked)}
+                onChange={(event) =>
+                  handleChange('isDefault', event.target.checked)
+                }
                 className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-brand"
               />
-              <label htmlFor="builder-modal-default" className="text-sm text-slate-600">
+              <label
+                htmlFor="builder-modal-default"
+                className="text-sm text-slate-600"
+              >
                 Set as default version
               </label>
             </div>
@@ -162,7 +205,9 @@ export default function PublishModal() {
             <Field label="Comment">
               <textarea
                 value={form.comment ?? ''}
-                onChange={(event) => handleChange('comment', event.target.value)}
+                onChange={(event) =>
+                  handleChange('comment', event.target.value)
+                }
                 rows={3}
                 className="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
                 placeholder="Optional note for this publish action"

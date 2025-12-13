@@ -1,44 +1,44 @@
 // utils/transform/cart.ts
 
 export interface CartItem {
-    rowId: string;
-    cartId: string;
-    sku: string;
-    productId: string;
-    parentId?: string;
-    code: string;
-    name: string;
-    model?: string;
-    shortDescription?: string;
-    quantity: number;
-    price: number;
-    priceDiscount: number;
-    discount1?: string;
-    discount2?: string;
-    discount3?: string;
-    listingTypeDiscounts?: string;
-    totalGross: number;
-    totalNet: number;
-    image?: string;
-    link?: string;
-    uom: string;
-    packaging: any; // refine later
-  }
-  
-  export interface CartInfo {
-    idCart: string;
-    clientId: string;
-    addressCode: string;
-    transportCost: number;
-    transportFreeAbove: number;
-    totalNet: number;
-    totalGross: number;
-    vat: number;
-    totalDoc: number;
-    packaging: any; // refine later
-    items: CartItem[];
-  }
-  
+  rowId: string;
+  cartId: string;
+  sku: string;
+  productId: string;
+  parentId?: string;
+  code: string;
+  name: string;
+  model?: string;
+  shortDescription?: string;
+  quantity: number;
+  price: number;
+  priceDiscount: number;
+  discount1?: string;
+  discount2?: string;
+  discount3?: string;
+  listingTypeDiscounts?: string;
+  totalGross: number;
+  totalNet: number;
+  image?: string;
+  link?: string;
+  uom: string;
+  packaging: any; // refine later
+}
+
+export interface CartInfo {
+  idCart: string;
+  clientId: string;
+  addressCode: string;
+  transportCost: number;
+  transportFreeAbove: number;
+  totalNet: number;
+  totalGross: number;
+  vat: number;
+  totalDoc: number;
+  packaging: any; // refine later
+  items: CartItem[];
+}
+
 export function transformCartResponse(apiResponse: any): CartInfo {
   const message = apiResponse?.message?.data ?? {};
   const cartMeta = apiResponse?.message ?? {};
@@ -85,18 +85,17 @@ export function transformCartResponse(apiResponse: any): CartInfo {
   };
 }
 
-
 export type AddToCartInput = {
   item_id: string | number;
   quantity: number;
 
   // promo info (optional)
   promo_code?: string | number | null; // example uses "PET/25" or 0
-  promo_row?: string | number | null;  // example uses 162 or 0
+  promo_row?: string | number | null; // example uses 162 or 0
 
   // pricing (optional overrides; we’ll auto-fill from Item if missing)
-  price?: number;            // unit gross
-  price_discount?: number;   // unit net
+  price?: number; // unit gross
+  price_discount?: number; // unit net
   vat_perc?: number | string;
 
   // discounts (match exact API fields)
@@ -108,7 +107,7 @@ export type AddToCartInput = {
   discount6?: number;
 
   // packaging / list
-  qty_min_packing?: number;  // NOTE: exact field name from your example
+  qty_min_packing?: number; // NOTE: exact field name from your example
   listino_type?: string | number; // e.g. "1"
-  listino_code?: string;          // e.g. "VEND"
+  listino_code?: string; // e.g. "VEND"
 };

@@ -1,24 +1,24 @@
 // Product Detail specific block types
 
 export interface ProductInfoBlockConfig {
-  variant: "productInfo";
+  variant: 'productInfo';
   showImages?: boolean;
   showPrice?: boolean;
   showDescription?: boolean;
   showSpecifications?: boolean;
   showAvailability?: boolean;
-  layout?: "default" | "wide" | "compact";
+  layout?: 'default' | 'wide' | 'compact';
 }
 
 export interface ProductSuggestionsBlockConfig {
-  variant: "productSuggestions";
+  variant: 'productSuggestions';
   title?: string;
-  source: "search" | "related" | "manual";
+  source: 'search' | 'related' | 'manual';
   searchQuery?: string;
   searchFilters?: Record<string, string>;
   productIds?: string[];
   limit: number;
-  layout: "grid" | "slider";
+  layout: 'grid' | 'slider';
   columns?: {
     mobile: number;
     tablet: number;
@@ -27,23 +27,23 @@ export interface ProductSuggestionsBlockConfig {
 }
 
 export interface RichTextBlockConfig {
-  variant: "richText";
+  variant: 'richText';
   content: string;
-  width?: "full" | "contained";
-  textAlign?: "left" | "center" | "right";
-  padding?: "none" | "small" | "medium" | "large";
+  width?: 'full' | 'contained';
+  textAlign?: 'left' | 'center' | 'right';
+  padding?: 'none' | 'small' | 'medium' | 'large';
 }
 
 export interface CustomHTMLBlockConfig {
-  variant: "customHTML" | "customHtml";
+  variant: 'customHTML' | 'customHtml';
   html: string;
   containerClass?: string;
 }
 
 export interface SpacerBlockConfig {
-  variant: "spacer";
+  variant: 'spacer';
   height: number;
-  unit: "px" | "rem";
+  unit: 'px' | 'rem';
 }
 
 export interface YouTubeEmbedBlockConfig {
@@ -54,7 +54,7 @@ export interface YouTubeEmbedBlockConfig {
   height?: string;
 }
 
-export type ProductDataTableValueType = "text" | "html" | "image";
+export type ProductDataTableValueType = 'text' | 'html' | 'image';
 
 export interface ProductDataTableRowLinkConfig {
   url: string;
@@ -84,7 +84,7 @@ export interface ProductDataTableRowConfig {
 }
 
 export interface ProductDataTableBlockConfig {
-  variant: "productDataTable";
+  variant: 'productDataTable';
   title?: string;
   description?: string;
   /**
@@ -113,7 +113,7 @@ export type ProductDetailBlockConfig =
   | ProductDataTableBlockConfig;
 
 // Zone types for product detail page placement
-export type ProductDetailZone = "zone1" | "zone2" | "zone3" | "zone4";
+export type ProductDetailZone = 'zone1' | 'zone2' | 'zone3' | 'zone4';
 
 export interface PageBlock<TConfig = ProductDetailBlockConfig> {
   id: string;
@@ -141,12 +141,14 @@ export interface PageVersionAttributes {
   region?: string;
   language?: string;
   device?: string;
-  [key: string]: string | undefined;
+  addressStates?: string[]; // Array of province codes (e.g., ["TO", "MI", "RM"])
+  [key: string]: string | string[] | undefined;
 }
 
 export interface PageVersionTags {
   campaign?: string;
   segment?: string;
+  addressState?: string; // User's current address state/province (e.g., "TO")
   attributes?: PageVersionAttributes;
 }
 
@@ -154,7 +156,7 @@ export interface PageVersion {
   version: number;
   blocks: PageBlock[];
   seo?: PageSEOSettings;
-  status: "draft" | "published";
+  status: 'draft' | 'published';
   createdAt: string;
   lastSavedAt: string;
   publishedAt?: string;

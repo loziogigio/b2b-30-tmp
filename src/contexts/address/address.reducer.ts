@@ -1,9 +1,13 @@
 // src/contexts/address/address.reducer.ts
-import { AddressAction, AddressState, addressInitialState } from '@framework/acccount/types-b2b-account';
+import {
+  AddressAction,
+  AddressState,
+  addressInitialState,
+} from '@framework/acccount/types-b2b-account';
 
 export function addressReducer(
   state: AddressState = addressInitialState,
-  action: AddressAction
+  action: AddressAction,
 ): AddressState {
   switch (action.type) {
     case 'SET_SELECTED':

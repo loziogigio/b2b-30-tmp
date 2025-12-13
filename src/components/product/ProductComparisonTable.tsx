@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { HiOutlineInformationCircle, HiOutlineTrash } from "react-icons/hi";
-import { IoChevronBack, IoChevronForward } from "react-icons/io5";
-import cn from "classnames";
+import { HiOutlineInformationCircle, HiOutlineTrash } from 'react-icons/hi';
+import { IoChevronBack, IoChevronForward } from 'react-icons/io5';
+import cn from 'classnames';
 import PriceAndPromo from './price-and-promo';
 import type { ErpPriceData } from '@utils/transform/erp-prices';
 import { useModalAction } from '@components/common/modal/modal.context';
@@ -20,7 +20,7 @@ export interface ComparisonProduct {
   sku: string;
   title: string;
   model: string;
-  status?: "available" | "coming-soon" | "discontinued";
+  status?: 'available' | 'coming-soon' | 'discontinued';
   availabilityText?: string;
   imageUrl?: string;
   description?: string;
@@ -36,21 +36,39 @@ interface ProductComparisonTableProps {
   lang: string;
 }
 
-export function ProductComparisonTable({ products, onRemove, lang }: ProductComparisonTableProps) {
+export function ProductComparisonTable({
+  products,
+  onRemove,
+  lang,
+}: ProductComparisonTableProps) {
   const { t } = useTranslation(lang, 'common');
 
-  const statusStyles: Record<NonNullable<ComparisonProduct["status"]>, { label: string; className: string }> = {
-    available: { label: t('text-available'), className: "bg-emerald-50 text-emerald-700 border-emerald-100" },
-    "coming-soon": { label: t('text-coming-soon'), className: "bg-amber-50 text-amber-700 border-amber-100" },
-    discontinued: { label: t('text-discontinued'), className: "bg-rose-50 text-rose-700 border-rose-100" }
+  const statusStyles: Record<
+    NonNullable<ComparisonProduct['status']>,
+    { label: string; className: string }
+  > = {
+    available: {
+      label: t('text-available'),
+      className: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+    },
+    'coming-soon': {
+      label: t('text-coming-soon'),
+      className: 'bg-amber-50 text-amber-700 border-amber-100',
+    },
+    discontinued: {
+      label: t('text-discontinued'),
+      className: 'bg-rose-50 text-rose-700 border-rose-100',
+    },
   };
-  const hasAnyTags = products.some((product) => product.tags && product.tags.length > 0);
+  const hasAnyTags = products.some(
+    (product) => product.tags && product.tags.length > 0,
+  );
   const featureLabels = Array.from(
     new Set(
       products.flatMap((product) =>
-        product.features.map((feature) => feature.label)
-      )
-    )
+        product.features.map((feature) => feature.label),
+      ),
+    ),
   );
 
   // Refs and state for horizontal scrolling
@@ -95,7 +113,7 @@ export function ProductComparisonTable({ products, onRemove, lang }: ProductComp
   const { openModal } = useModalAction();
 
   // Open product detail modal
-  const handleProductClick = (product: ComparisonProduct, index: number) => {
+  const handleProductClick = (product: ComparisonProduct) => {
     // Use the original product object if available, otherwise use comparison product
     const productData = product._originalProduct || product;
     openModal('PRODUCT_VIEW', productData);
@@ -115,13 +133,14 @@ export function ProductComparisonTable({ products, onRemove, lang }: ProductComp
     if (!scrollContainerRef.current) return;
 
     const scrollAmount = 300;
-    const newScrollLeft = direction === 'left'
-      ? scrollContainerRef.current.scrollLeft - scrollAmount
-      : scrollContainerRef.current.scrollLeft + scrollAmount;
+    const newScrollLeft =
+      direction === 'left'
+        ? scrollContainerRef.current.scrollLeft - scrollAmount
+        : scrollContainerRef.current.scrollLeft + scrollAmount;
 
     scrollContainerRef.current.scrollTo({
       left: newScrollLeft,
-      behavior: 'smooth'
+      behavior: 'smooth',
     });
   };
 
@@ -202,14 +221,17 @@ export function ProductComparisonTable({ products, onRemove, lang }: ProductComp
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        <table className="min-w-[960px] border-collapse text-left">
+        <table className="w-full border-collapse text-left">
           <thead>
             <tr>
-              <th className="sticky left-0 bg-white/95 px-4 py-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <th className="sticky left-0 z-10 bg-white/95 backdrop-blur-sm min-w-[120px] w-[120px] md:min-w-[160px] md:w-auto px-3 md:px-4 py-4 text-[10px] md:text-xs font-semibold uppercase tracking-wide text-slate-500 border-r border-slate-100">
                 {t('text-specification')}
               </th>
               {products.map((product) => (
-                <th key={product.id} className="px-4 py-4 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <th
+                  key={product.id}
+                  className="min-w-[200px] md:min-w-[280px] px-3 md:px-4 py-4 text-center text-[10px] md:text-xs font-semibold uppercase tracking-wide text-slate-500"
+                >
                   {product.title}
                 </th>
               ))}
@@ -217,16 +239,23 @@ export function ProductComparisonTable({ products, onRemove, lang }: ProductComp
           </thead>
           <tbody className="text-sm text-slate-700">
             <tr className="border-t border-slate-100">
-              <th className="sticky left-0 bg-white px-4 py-5 text-sm font-semibold text-slate-600">{t('text-product')}</th>
-              {products.map((product, index) => {
-                const status = product.status ? statusStyles[product.status] : null;
+              <th className="sticky left-0 z-10 bg-white min-w-[120px] w-[120px] md:min-w-[160px] md:w-auto px-3 md:px-4 py-5 text-xs md:text-sm font-semibold text-slate-600 border-r border-slate-100">
+                {t('text-product')}
+              </th>
+              {products.map((product) => {
+                const status = product.status
+                  ? statusStyles[product.status]
+                  : null;
                 return (
-                  <td key={`${product.id}-product`} className="px-4 py-5 align-top">
-                    <div className="flex flex-col items-center gap-3 text-center">
+                  <td
+                    key={`${product.id}-product`}
+                    className="min-w-[200px] md:min-w-[280px] px-3 md:px-4 py-5 align-top"
+                  >
+                    <div className="flex flex-col items-center gap-2 md:gap-3 text-center">
                       <button
                         type="button"
-                        onClick={() => handleProductClick(product, index)}
-                        className="h-24 w-24 overflow-hidden rounded-2xl border border-slate-100 bg-slate-50 transition-all hover:border-brand hover:shadow-lg cursor-pointer"
+                        onClick={() => handleProductClick(product)}
+                        className="h-16 w-16 md:h-24 md:w-24 overflow-hidden rounded-xl md:rounded-2xl border border-slate-100 bg-slate-50 transition-all hover:border-brand hover:shadow-lg cursor-pointer"
                       >
                         {product.imageUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
@@ -237,29 +266,34 @@ export function ProductComparisonTable({ products, onRemove, lang }: ProductComp
                             loading="lazy"
                           />
                         ) : (
-                          <div className="flex h-full w-full items-center justify-center text-xs text-slate-400">
+                          <div className="flex h-full w-full items-center justify-center text-[10px] md:text-xs text-slate-400">
                             {t('text-no-image')}
                           </div>
                         )}
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleProductClick(product, index)}
-                        className="text-base font-semibold text-slate-900 hover:text-brand transition-colors cursor-pointer"
+                        onClick={() => handleProductClick(product)}
+                        className="text-xs md:text-base font-semibold text-slate-900 hover:text-brand transition-colors cursor-pointer line-clamp-2"
                       >
                         {product.title}
                       </button>
                       {status ? (
-                        <span className={cn("inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold", status.className)}>
+                        <span
+                          className={cn(
+                            'inline-flex items-center rounded-full border px-2 md:px-3 py-1 text-[10px] md:text-xs font-semibold',
+                            status.className,
+                          )}
+                        >
                           {product.availabilityText || status.label}
                         </span>
                       ) : product.availabilityText ? (
-                        <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
+                        <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 md:px-3 py-1 text-[10px] md:text-xs font-semibold text-slate-600">
                           {product.availabilityText}
                         </span>
                       ) : null}
                       {hasAnyTags && product.tags?.length ? (
-                        <div className="flex flex-wrap justify-center gap-2">
+                        <div className="hidden md:flex flex-wrap justify-center gap-2">
                           {product.tags.map((tag) => (
                             <span
                               key={tag}
@@ -271,7 +305,9 @@ export function ProductComparisonTable({ products, onRemove, lang }: ProductComp
                         </div>
                       ) : null}
                       {product.description ? (
-                        <p className="text-xs text-slate-500 line-clamp-3">{product.description}</p>
+                        <p className="hidden md:block text-xs text-slate-500 line-clamp-3">
+                          {product.description}
+                        </p>
                       ) : null}
                     </div>
                   </td>
@@ -279,55 +315,84 @@ export function ProductComparisonTable({ products, onRemove, lang }: ProductComp
               })}
             </tr>
 
-            <tr className={cn(
-              "border-t border-slate-100",
-              modelsDiffer && "bg-brand"
-            )}>
-              <th className={cn(
-                "sticky left-0 px-4 py-5 text-sm font-semibold",
-                modelsDiffer ? "bg-brand text-white" : "bg-white text-slate-600"
-              )}>{t('text-model')}</th>
+            <tr
+              className={cn(
+                'border-t border-slate-100',
+                modelsDiffer && 'bg-brand',
+              )}
+            >
+              <th
+                className={cn(
+                  'sticky left-0 z-10 min-w-[120px] w-[120px] md:min-w-[160px] md:w-auto px-3 md:px-4 py-5 text-xs md:text-sm font-semibold border-r border-slate-100',
+                  modelsDiffer
+                    ? 'bg-brand text-white border-r-brand'
+                    : 'bg-white text-slate-600',
+                )}
+              >
+                {t('text-model')}
+              </th>
               {products.map((product) => (
-                <td key={`${product.id}-model`} className="px-4 py-5 text-center">
-                  <span className={cn(
-                    "text-base font-semibold",
-                    modelsDiffer ? "text-white" : "text-slate-900"
-                  )}>{product.model}</span>
+                <td
+                  key={`${product.id}-model`}
+                  className="min-w-[200px] md:min-w-[280px] px-3 md:px-4 py-5 text-center"
+                >
+                  <span
+                    className={cn(
+                      'text-sm md:text-base font-semibold',
+                      modelsDiffer ? 'text-white' : 'text-slate-900',
+                    )}
+                  >
+                    {product.model}
+                  </span>
                 </td>
               ))}
             </tr>
 
-            <tr className={cn(
-              "border-t border-slate-100",
-              pricesDiffer && "bg-brand"
-            )}>
-              <th className={cn(
-                "sticky left-0 px-4 py-5 text-sm font-semibold",
-                pricesDiffer ? "bg-brand text-white" : "bg-white text-slate-600"
-              )}>{t('text-price')}</th>
+            <tr
+              className={cn(
+                'border-t border-slate-100',
+                pricesDiffer && 'bg-brand',
+              )}
+            >
+              <th
+                className={cn(
+                  'sticky left-0 z-10 min-w-[120px] w-[120px] md:min-w-[160px] md:w-auto px-3 md:px-4 py-5 text-xs md:text-sm font-semibold border-r border-slate-100',
+                  pricesDiffer
+                    ? 'bg-brand text-white border-r-brand'
+                    : 'bg-white text-slate-600',
+                )}
+              >
+                {t('text-price')}
+              </th>
               {products.map((product) => (
-                <td key={`${product.id}-price`} className="px-4 py-5 text-center">
+                <td
+                  key={`${product.id}-price`}
+                  className="min-w-[200px] md:min-w-[280px] px-3 md:px-4 py-5 text-center"
+                >
                   {product.priceData ? (
-                    <div className={pricesDiffer ? "text-white" : ""}>
-                      <PriceAndPromo
-                        name={product.title}
-                        sku={product.sku}
-                        priceData={product.priceData}
-                        withSchemaOrg={false}
-                      />
-                    </div>
+                    <PriceAndPromo
+                      name={product.title}
+                      sku={product.sku}
+                      priceData={product.priceData}
+                      withSchemaOrg={false}
+                      invertColors={pricesDiffer}
+                    />
                   ) : (
-                    <div className={cn(
-                      "rounded-2xl border border-dashed px-4 py-3 text-sm",
-                      pricesDiffer
-                        ? "border-white/30 bg-white/10 text-white"
-                        : "border-slate-200 bg-slate-50 text-slate-500"
-                    )}>
+                    <div
+                      className={cn(
+                        'rounded-2xl border border-dashed px-3 md:px-4 py-3 text-xs md:text-sm',
+                        pricesDiffer
+                          ? 'border-white/30 bg-white/10 text-white'
+                          : 'border-slate-200 bg-slate-50 text-slate-500',
+                      )}
+                    >
                       <span className="flex items-center justify-center gap-2">
-                        <HiOutlineInformationCircle className={cn(
-                          "h-4 w-4",
-                          pricesDiffer ? "text-white/70" : "text-slate-400"
-                        )} />
+                        <HiOutlineInformationCircle
+                          className={cn(
+                            'h-4 w-4',
+                            pricesDiffer ? 'text-white/70' : 'text-slate-400',
+                          )}
+                        />
                         {t('text-price-not-available')}
                       </span>
                     </div>
@@ -342,35 +407,50 @@ export function ProductComparisonTable({ products, onRemove, lang }: ProductComp
                 <tr
                   key={label}
                   className={cn(
-                    "border-t border-slate-100",
-                    hasDifference && "bg-brand"
+                    'border-t border-slate-100',
+                    hasDifference && 'bg-brand',
                   )}
                 >
-                  <th className={cn(
-                    "sticky left-0 px-4 py-4 text-sm font-semibold",
-                    hasDifference ? "bg-brand text-white" : "bg-white text-slate-600"
-                  )}>
+                  <th
+                    className={cn(
+                      'sticky left-0 z-10 min-w-[120px] w-[120px] md:min-w-[160px] md:w-auto px-3 md:px-4 py-4 text-xs md:text-sm font-semibold border-r border-slate-100',
+                      hasDifference
+                        ? 'bg-brand text-white border-r-brand'
+                        : 'bg-white text-slate-600',
+                    )}
+                  >
                     {label}
                   </th>
                   {products.map((product) => {
-                    const match = product.features.find((feature) => feature.label === label);
+                    const match = product.features.find(
+                      (feature) => feature.label === label,
+                    );
                     return (
-                      <td key={`${product.id}-${label}`} className="px-4 py-4 text-center">
+                      <td
+                        key={`${product.id}-${label}`}
+                        className="min-w-[200px] md:min-w-[280px] px-3 md:px-4 py-4 text-center"
+                      >
                         {match ? (
                           <span
                             className={cn(
-                              "text-sm font-medium",
-                              match.highlight
-                                ? "text-emerald-700 font-semibold"
-                                : hasDifference
-                                ? "text-white font-semibold"
-                                : "text-slate-700"
+                              'text-xs md:text-sm font-medium',
+                              hasDifference
+                                ? 'text-white font-semibold'
+                                : match.highlight
+                                  ? 'text-emerald-700 font-semibold'
+                                  : 'text-slate-700',
                             )}
                           >
                             {match.value}
                           </span>
                         ) : (
-                          <span className={hasDifference ? "text-white/50" : "text-slate-300"}>—</span>
+                          <span
+                            className={
+                              hasDifference ? 'text-white/50' : 'text-slate-300'
+                            }
+                          >
+                            —
+                          </span>
                         )}
                       </td>
                     );
@@ -379,19 +459,25 @@ export function ProductComparisonTable({ products, onRemove, lang }: ProductComp
               );
             })}
 
-
             {onRemove ? (
               <tr className="border-t border-slate-100">
-                <th className="sticky left-0 bg-white px-4 py-5 text-sm font-semibold text-slate-600">{t('text-remove')}</th>
+                <th className="sticky left-0 z-10 bg-white min-w-[120px] w-[120px] md:min-w-[160px] md:w-auto px-3 md:px-4 py-5 text-xs md:text-sm font-semibold text-slate-600 border-r border-slate-100">
+                  {t('text-remove')}
+                </th>
                 {products.map((product) => (
-                  <td key={`${product.id}-remove`} className="px-4 py-5 text-center">
+                  <td
+                    key={`${product.id}-remove`}
+                    className="min-w-[200px] md:min-w-[280px] px-3 md:px-4 py-5 text-center"
+                  >
                     <button
                       type="button"
                       onClick={() => onRemove(product.sku)}
-                      className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-500 transition hover:border-rose-200 hover:text-rose-600"
+                      className="inline-flex items-center gap-1 md:gap-2 rounded-full border border-slate-200 px-3 md:px-4 py-2 text-xs md:text-sm font-semibold text-slate-500 transition hover:border-rose-200 hover:text-rose-600"
                     >
                       <HiOutlineTrash className="h-4 w-4" />
-                      {t('text-remove')}
+                      <span className="hidden md:inline">
+                        {t('text-remove')}
+                      </span>
                     </button>
                   </td>
                 ))}

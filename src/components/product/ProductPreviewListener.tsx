@@ -28,7 +28,8 @@ const PREVIEW_DIRTY_KEY = 'hidros_preview_dirty';
 const PREVIEW_PRODUCT_KEY = 'hidros_preview_product';
 const PREVIEW_EXPIRY_MS = 30 * 60 * 1000; // 30 minutes
 
-const isWildcardProduct = (value: string | null | undefined) => !value || value === 'default';
+const isWildcardProduct = (value: string | null | undefined) =>
+  !value || value === 'default';
 
 /**
  * Client component that listens for preview blocks via postMessage
@@ -38,7 +39,8 @@ const isWildcardProduct = (value: string | null | undefined) => !value || value 
 const resolveAllowedOrigin = () => {
   const envOrigin =
     typeof process !== 'undefined'
-      ? process.env.NEXT_PUBLIC_B2B_BUILDER_URL || process.env.NEXT_PUBLIC_BUILDER_ORIGIN
+      ? process.env.NEXT_PUBLIC_B2B_BUILDER_URL ||
+        process.env.NEXT_PUBLIC_BUILDER_ORIGIN
       : undefined;
   if (envOrigin) {
     try {
@@ -53,7 +55,7 @@ const resolveAllowedOrigin = () => {
 export function ProductPreviewListener({
   children,
   allowedOrigin = resolveAllowedOrigin(),
-  currentProductId
+  currentProductId,
 }: ProductPreviewListenerProps) {
   const [previewState, setPreviewState] = useState<PreviewState | null>(() => {
     // On mount, try to restore preview from sessionStorage (handles refresh during editing)
@@ -88,7 +90,11 @@ export function ProductPreviewListener({
           const blocks = Array.isArray(parsed) ? parsed : parsed?.blocks;
           if (Array.isArray(blocks)) {
             const isDirty = dirtyFlag == null ? undefined : dirtyFlag === '1';
-            console.log('[Preview] Restored from sessionStorage:', blocks.length, 'blocks');
+            console.log(
+              '[Preview] Restored from sessionStorage:',
+              blocks.length,
+              'blocks',
+            );
             return { blocks, isDirty };
           }
         } else {
@@ -113,43 +119,56 @@ export function ProductPreviewListener({
     };
 
     const handleMessage = (event: MessageEvent) => {
-      console.log('[ProductPreviewListener] Message received from origin:', event.origin);
-
-      // Security: Verify origin
-      if (event.origin !== allowedOrigin) {
-        console.warn('[ProductPreviewListener] ❌ Origin rejected. Expected:', allowedOrigin, 'Got:', event.origin);
+      // Only process PREVIEW_UPDATE messages to avoid noise from other postMessages
+      const data = event.data as PreviewMessage;
+      if (data?.type !== 'PREVIEW_UPDATE') {
         return;
       }
 
-      console.log('[ProductPreviewListener] ✅ Origin verified. Message type:', event.data?.type);
+      // In development, also allow localhost origins for local testing
+      const isDev = process.env.NODE_ENV === 'development';
+      const isLocalhost =
+        event.origin.includes('localhost') ||
+        event.origin.includes('127.0.0.1');
+      const isAllowedOrigin =
+        event.origin === allowedOrigin || (isDev && isLocalhost);
 
-      // Check if this is a preview update message
-      const data = event.data as PreviewMessage;
-      if (data.type === 'PREVIEW_UPDATE' && Array.isArray(data.blocks)) {
-        console.log('[ProductPreviewListener] PREVIEW_UPDATE message received');
-        console.log('[ProductPreviewListener] - Blocks count:', data.blocks.length);
-        console.log('[ProductPreviewListener] - isDirty:', data.isDirty);
-        console.log('[ProductPreviewListener] - productId:', data.productId);
-        console.log('[ProductPreviewListener] - currentProductId:', currentProductId);
+      if (!isAllowedOrigin) {
+        if (isDev) {
+          console.warn(
+            '[ProductPreviewListener] ❌ Origin rejected. Expected:',
+            allowedOrigin,
+            'Got:',
+            event.origin,
+          );
+        }
+        return;
+      }
 
+      console.log(
+        '[ProductPreviewListener] ✅ PREVIEW_UPDATE received from:',
+        event.origin,
+      );
+      console.log(
+        '[ProductPreviewListener] - Blocks:',
+        data.blocks?.length,
+        '| isDirty:',
+        data.isDirty,
+        '| productId:',
+        data.productId,
+      );
+
+      if (Array.isArray(data.blocks)) {
         if (
           currentProductId &&
           data.productId &&
           data.productId !== 'default' &&
           data.productId !== currentProductId
         ) {
-          console.warn('[ProductPreviewListener] ❌ Product mismatch. Expected:', currentProductId, 'Got:', data.productId);
-          return;
-        }
-
-        console.log('[ProductPreviewListener] ✅ Received blocks via postMessage:', data.blocks.length);
-        if (data.blocks.length > 0) {
-          console.log('[ProductPreviewListener] First block type:', data.blocks[0].type);
-          console.log('[ProductPreviewListener] First block config keys:', Object.keys(data.blocks[0].config || {}));
+          return; // Product mismatch - silently ignore
         }
 
         const dirtyState = data.isDirty ?? true;
-        console.log('[ProductPreviewListener] Setting preview state with isDirty:', dirtyState);
         setPreviewState({ blocks: data.blocks, isDirty: dirtyState });
 
         // Persist to sessionStorage ONLY if dirty (unsaved changes)
@@ -157,8 +176,14 @@ export function ProductPreviewListener({
         try {
           if (dirtyState) {
             // Has unsaved changes - persist to sessionStorage for refresh recovery
-            sessionStorage.setItem(PREVIEW_STORAGE_KEY, JSON.stringify(data.blocks));
-            sessionStorage.setItem(PREVIEW_TIMESTAMP_KEY, Date.now().toString());
+            sessionStorage.setItem(
+              PREVIEW_STORAGE_KEY,
+              JSON.stringify(data.blocks),
+            );
+            sessionStorage.setItem(
+              PREVIEW_TIMESTAMP_KEY,
+              Date.now().toString(),
+            );
             sessionStorage.setItem(PREVIEW_DIRTY_KEY, '1');
             const productKey = !isWildcardProduct(data.productId)
               ? data.productId
@@ -168,17 +193,13 @@ export function ProductPreviewListener({
             } else {
               sessionStorage.removeItem(PREVIEW_PRODUCT_KEY);
             }
-            console.log('[ProductPreviewListener] ✅ Persisted unsaved blocks to sessionStorage');
           } else {
             // Saved version - clear sessionStorage so next reload uses server blocks
             clearStoredPreview();
-            console.log('[ProductPreviewListener] ✅ Cleared sessionStorage (blocks are saved)');
           }
-        } catch (error) {
-          console.warn('[ProductPreviewListener] ❌ Failed to update sessionStorage:', error);
+        } catch {
+          // Silently ignore sessionStorage errors
         }
-      } else {
-        console.log('[ProductPreviewListener] Ignoring message - not PREVIEW_UPDATE or invalid blocks');
       }
     };
 

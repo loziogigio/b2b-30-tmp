@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useParams } from 'next/navigation';
 import ProductCardWrapper from '@/components/product/product-card-wrapper';
@@ -14,8 +14,10 @@ const MOCK_PRODUCT = {
   brand: { name: 'ThermoFlow', id: '1' },
   model: 'TF-3000X',
   image: {
-    thumbnail: 'https://images.unsplash.com/photo-1620825141088-a824daf6a46b?auto=format&fit=crop&w=400&q=80',
-    original: 'https://images.unsplash.com/photo-1620825141088-a824daf6a46b?auto=format&fit=crop&w=800&q=80'
+    thumbnail:
+      'https://images.unsplash.com/photo-1620825141088-a824daf6a46b?auto=format&fit=crop&w=400&q=80',
+    original:
+      'https://images.unsplash.com/photo-1620825141088-a824daf6a46b?auto=format&fit=crop&w=800&q=80',
   },
   price: 299.99,
   sale_price: 249.99,
@@ -24,7 +26,8 @@ const MOCK_PRODUCT = {
   parent_sku: null,
   product_type: 'simple',
   unit: 'unit',
-  description: 'High-efficiency hydronic heating system for residential and commercial applications.'
+  description:
+    'High-efficiency hydronic heating system for residential and commercial applications.',
 };
 
 const MOCK_PRICE_DATA = {
@@ -33,7 +36,7 @@ const MOCK_PRICE_DATA = {
   buy_did: true,
   buy_did_last_date: '2024-12-15',
   packaging_option_default: { packaging_uom: 'pcs' },
-  product_label_action: { LABEL: 'In Stock' }
+  product_label_action: { LABEL: 'In Stock' },
 };
 
 export default function TestHomeSettingsPage() {
@@ -66,7 +69,9 @@ export default function TestHomeSettingsPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-          <h2 className="text-red-800 font-semibold mb-2">Error Loading Settings</h2>
+          <h2 className="text-red-800 font-semibold mb-2">
+            Error Loading Settings
+          </h2>
           <p className="text-red-600">{error}</p>
         </div>
       </div>
@@ -94,23 +99,33 @@ export default function TestHomeSettingsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             <div>
               <span className="font-medium text-blue-800">Card Variant:</span>
-              <span className="ml-2 text-blue-600">{settings.defaultCardVariant}</span>
+              <span className="ml-2 text-blue-600">
+                {settings.defaultCardVariant}
+              </span>
             </div>
             <div>
               <span className="font-medium text-blue-800">Border Width:</span>
-              <span className="ml-2 text-blue-600">{settings.cardStyle?.borderWidth}px</span>
+              <span className="ml-2 text-blue-600">
+                {settings.cardStyle?.borderWidth}px
+              </span>
             </div>
             <div>
               <span className="font-medium text-blue-800">Border Radius:</span>
-              <span className="ml-2 text-blue-600">{settings.cardStyle?.borderRadius}</span>
+              <span className="ml-2 text-blue-600">
+                {settings.cardStyle?.borderRadius}
+              </span>
             </div>
             <div>
               <span className="font-medium text-blue-800">Shadow Size:</span>
-              <span className="ml-2 text-blue-600">{settings.cardStyle?.shadowSize}</span>
+              <span className="ml-2 text-blue-600">
+                {settings.cardStyle?.shadowSize}
+              </span>
             </div>
             <div>
               <span className="font-medium text-blue-800">Hover Effect:</span>
-              <span className="ml-2 text-blue-600">{settings.cardStyle?.hoverEffect}</span>
+              <span className="ml-2 text-blue-600">
+                {settings.cardStyle?.hoverEffect}
+              </span>
             </div>
             <div>
               <span className="font-medium text-blue-800">Primary Color:</span>
@@ -119,7 +134,9 @@ export default function TestHomeSettingsPage() {
                   className="w-6 h-6 rounded border border-gray-300"
                   style={{ backgroundColor: settings.branding?.primaryColor }}
                 />
-                <span className="ml-2 text-blue-600">{settings.branding?.primaryColor}</span>
+                <span className="ml-2 text-blue-600">
+                  {settings.branding?.primaryColor}
+                </span>
               </div>
             </div>
           </div>
@@ -152,12 +169,12 @@ export default function TestHomeSettingsPage() {
                 sku: 'WF-002',
                 model: 'AQ-500',
                 price: 199.99,
-                sale_price: null
+                sale_price: null,
               }}
               priceData={{
                 ...MOCK_PRICE_DATA,
                 is_promo: false,
-                buy_did: false
+                buy_did: false,
               }}
             />
             <ProductCardWrapper
@@ -168,7 +185,7 @@ export default function TestHomeSettingsPage() {
                 name: 'Smart Thermostat Controller',
                 sku: 'THERM-003',
                 model: 'ST-2000',
-                price: 149.99
+                price: 149.99,
               }}
               priceData={MOCK_PRICE_DATA}
             />
@@ -195,7 +212,7 @@ export default function TestHomeSettingsPage() {
                 name: 'Commercial Grade Boiler Unit',
                 sku: 'BOIL-004',
                 model: 'CGB-8000',
-                price: 899.99
+                price: 899.99,
               }}
               priceData={MOCK_PRICE_DATA}
               forceVariant="horizontal"
@@ -217,7 +234,7 @@ export default function TestHomeSettingsPage() {
                   ...MOCK_PRODUCT,
                   id: `${i + 4}`,
                   name: `Product ${i}`,
-                  sku: `PROD-00${i + 4}`
+                  sku: `PROD-00${i + 4}`,
                 }}
                 priceData={MOCK_PRICE_DATA}
                 forceVariant="b2b"
@@ -244,7 +261,9 @@ export default function TestHomeSettingsPage() {
               http://localhost:3001/b2b/home-settings
             </a>
           </li>
-          <li>Change border width, border radius, shadow size, or hover effects</li>
+          <li>
+            Change border width, border radius, shadow size, or hover effects
+          </li>
           <li>Click "Save Settings"</li>
           <li>Refresh this page to see the changes applied</li>
           <li>Hover over the cards to see hover effects in action</li>

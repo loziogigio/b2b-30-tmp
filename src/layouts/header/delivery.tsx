@@ -5,6 +5,7 @@ import LocationIcon from '@components/icons/location-icon';
 import { useModalAction } from '@components/common/modal/modal.context';
 import { useDeliveryAddress } from '@contexts/address/address.context';
 import { useUI } from '@contexts/ui.context';
+import { useAddressQuery } from '@framework/acccount/fetch-account';
 import type { AddressB2B } from '@framework/acccount/types-b2b-account';
 
 interface DeliveryProps {
@@ -20,22 +21,30 @@ function makeTitle(r?: AddressB2B) {
 
 const Delivery: React.FC<DeliveryProps> = ({ lang, className }) => {
   const { t } = useTranslation(lang, 'common');
-  // const { isAuthorized } = useUI();
-  const isAuthorized = true;
+  const { isAuthorized } = useUI();
   const { openModal } = useModalAction();
 
-  // 🔹 get selected delivery address from context
+  // Get selected delivery address from context
   const { selected } = useDeliveryAddress();
+
+  // Fetch addresses to validate selected address belongs to current user
+  const { data: addresses, isLoading } = useAddressQuery(isAuthorized);
 
   function handleDeliveryView() {
     !isAuthorized ? openModal('LOGIN_VIEW') : openModal('DELIVERY_VIEW');
   }
 
+  // Only show selected address if it's in the current user's address list
+  const isSelectedValid =
+    selected && addresses?.some((addr) => addr.id === selected.id);
+
   const label = !isAuthorized
     ? t('text-address')
-    : selected
-    ? makeTitle(selected)
-    : t('text-home-address');
+    : isLoading
+      ? '...'
+      : isSelectedValid
+        ? makeTitle(selected)
+        : t('text-home-address');
 
   return (
     <div className={cn('delivery-address', className)}>

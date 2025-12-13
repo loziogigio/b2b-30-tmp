@@ -19,16 +19,21 @@ import { useUI } from '@contexts/ui.context';
 import { IoIosHeart, IoIosHeartEmpty } from 'react-icons/io';
 import { IoNotificationsOutline, IoNotifications } from 'react-icons/io5';
 import VariantsFilterBar from './variants-filter-bar';
+import { fetchErpPrices } from '@framework/erp/prices';
+import { ERP_STATIC } from '@framework/utils/static';
+import { useQuery } from '@tanstack/react-query';
 
-const AddToCart = dynamic(() => import('@components/product/add-to-cart'), { ssr: false });
+const AddToCart = dynamic(() => import('@components/product/add-to-cart'), {
+  ssr: false,
+});
 
 type GetPrice = (id: string | number) => ErpPriceData | undefined;
 
 interface Props {
   lang: string;
-  product: Product;                  // parent (or flattened single-variation)
+  product: Product & { variantCount?: number }; // parent with optional variant count from grouping
   getPrice: GetPrice;
-  priceData?: ErpPriceData;          // parent price (or single-variation)
+  priceData?: ErpPriceData; // parent price (or single-variation)
   className?: string;
   // show Search + Model tags controls only if variant count >= this value
   filterThreshold?: number;
@@ -40,7 +45,6 @@ interface Props {
 const GRID_PARENT_3 =
   'grid grid-cols-1 sm:grid-cols-[110px_1fr_128px] gap-3 sm:gap-4 items-start';
 
-
 /** 6 fixed columns (image | info | packaging | ordered | price | add) */
 const GRID =
   'grid grid-cols-1 sm:grid-cols-[110px_1.35fr_1.1fr_0.7fr_0.95fr_0.8fr] gap-3 sm:gap-4 items-stretch';
@@ -49,7 +53,7 @@ const GRID =
 const GRID_COL_DIVIDERS =
   'sm:[&>*]:border-gray-200 sm:[&>*:last-child]:border-r-0';
 
-const PARENT_IMG = 110;                 // px
+const PARENT_IMG = 110; // px
 const VARIANT_IMG = Math.round((PARENT_IMG * 2) / 3); // 73–74 px
 
 const Cell = ({ className, children }: any) => (
@@ -57,7 +61,6 @@ const Cell = ({ className, children }: any) => (
 );
 
 const Dash = () => <span className="text-gray-300">—</span>;
-
 
 export default function ProductRowB2B({
   lang,
@@ -89,15 +92,20 @@ export default function ProductRowB2B({
 
   const singleVar = variations?.length === 1 ? variations[0] : null;
 
-  const [reminderLoading, setReminderLoading] = useState<Record<string, boolean>>({});
+  const [reminderLoading, setReminderLoading] = useState<
+    Record<string, boolean>
+  >({});
 
   // update this helper so it can accept a specific item (variant)
   const openQuick = (item?: Product) => {
-    const payload = item ?? (singleVar ?? product);
-    const modal = item ? 'PRODUCT_VIEW' : (isVariable ? 'B2B_PRODUCT_VARIANTS_QUICK_VIEW' : 'PRODUCT_VIEW');
+    const payload = item ?? singleVar ?? product;
+    const modal = item
+      ? 'PRODUCT_VIEW'
+      : isVariable
+        ? 'B2B_PRODUCT_VARIANTS_QUICK_VIEW'
+        : 'PRODUCT_VIEW';
     openModal(modal, payload);
   };
-
 
   /** Se non ci sono varianti, mostriamo comunque una “riga variante”
    * senza immagine e con i dati del parent. Se c’è una sola variante,
@@ -118,6 +126,32 @@ export default function ProductRowB2B({
 
   const [showVars, setShowVars] = useState<boolean>(shouldShowRows ?? false);
 
+  // -------- Fetch ERP prices for variants when expanded --------
+  const variantIds = useMemo(() => {
+    if (!hasMultiple) return [];
+    return variations.map((v: any) => String(v?.id ?? '')).filter(Boolean);
+  }, [variations, hasMultiple]);
+
+  const { data: variantPricesMap = {} } = useQuery({
+    queryKey: ['erp-variant-prices-row', product.id, variantIds.join(',')],
+    queryFn: async () => {
+      if (!variantIds.length) return {};
+      const res = await fetchErpPrices({
+        ...ERP_STATIC,
+        entity_codes: variantIds,
+      });
+      return res as Record<string, ErpPriceData>;
+    },
+    enabled: isAuthorized && showVars && hasMultiple && variantIds.length > 0,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  // Combined price getter: check local variant prices first, then parent's getPrice
+  const getVariantPrice = (id: string | number): ErpPriceData | undefined => {
+    const strId = String(id);
+    return variantPricesMap[strId] ?? getPrice(strId);
+  };
+
   // -------- Filters (Search + Model tags) --------
   const modelOptions = useMemo(() => {
     const set = new Set<string>();
@@ -126,12 +160,16 @@ export default function ProductRowB2B({
       const m = String(v?.model ?? '').trim();
       if (m) set.add(m);
     });
-    return Array.from(set).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+    return Array.from(set).sort((a, b) =>
+      a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }),
+    );
   }, [variations]);
 
   const [selectedModels, setSelectedModels] = useState<string[]>([]);
   const toggleModel = (m: string) =>
-    setSelectedModels((prev) => (prev.includes(m) ? prev.filter((x) => x !== m) : [...prev, m]));
+    setSelectedModels((prev) =>
+      prev.includes(m) ? prev.filter((x) => x !== m) : [...prev, m],
+    );
 
   const [query, setQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement | null>(null);
@@ -144,20 +182,27 @@ export default function ProductRowB2B({
     }
     const q = query.trim().toLowerCase();
     if (!q) return list;
-    return list.filter((v) =>
-      (v.sku?.toLowerCase().includes(q)) ||
-      (v.name?.toLowerCase().includes(q)) ||
-      (v.model?.toLowerCase().includes(q))
+    return list.filter(
+      (v) =>
+        v.sku?.toLowerCase().includes(q) ||
+        v.name?.toLowerCase().includes(q) ||
+        v.model?.toLowerCase().includes(q),
     );
   }, [variantRows, selectedModels, query]);
 
   // Sorting
-  const [sortKey, setSortKey] = useState<'sku-asc' | 'price-asc' | 'price-desc'>('sku-asc');
+  const [sortKey, setSortKey] = useState<
+    'sku-asc' | 'price-asc' | 'price-desc'
+  >('sku-asc');
   const getSortPrice = (v: any): number => {
-    const pd = getPrice(v?.id as any);
+    const pd = getVariantPrice(v?.id as any);
     if (!pd) return Number.POSITIVE_INFINITY;
     const anyPD: any = pd;
-    const p = anyPD.price_discount ?? anyPD.net_price ?? anyPD.price ?? anyPD.gross_price;
+    const p =
+      anyPD.price_discount ??
+      anyPD.net_price ??
+      anyPD.price ??
+      anyPD.gross_price;
     const n = Number(p);
     return Number.isFinite(n) ? n : Number.POSITIVE_INFINITY;
   };
@@ -165,9 +210,16 @@ export default function ProductRowB2B({
     const arr = filteredVariants.slice();
     if (selectedModels.length > 0) {
       // align behavior with Quick View when tags are active
-      arr.sort((a, b) => String(a.model ?? '').localeCompare(String(b.model ?? ''), undefined, { numeric: true, sensitivity: 'base' }));
+      arr.sort((a, b) =>
+        String(a.model ?? '').localeCompare(String(b.model ?? ''), undefined, {
+          numeric: true,
+          sensitivity: 'base',
+        }),
+      );
     } else if (!isAuthorized || sortKey === 'sku-asc') {
-      arr.sort((a, b) => String(a.sku ?? a.id).localeCompare(String(b.sku ?? b.id)));
+      arr.sort((a, b) =>
+        String(a.sku ?? a.id).localeCompare(String(b.sku ?? b.id)),
+      );
     } else {
       arr.sort((a, b) => {
         const pa = getSortPrice(a);
@@ -193,7 +245,9 @@ export default function ProductRowB2B({
 
   /** ---------- RIGA PARENT (stesso grid) ---------- */
   return (
-    <div className={cn('border border-gray-200 rounded-md bg-white', className)}>
+    <div
+      className={cn('border border-gray-200 rounded-md bg-white', className)}
+    >
       <div className="p-2 sm:p-3">
         <div className={cn(GRID_PARENT_3, GRID_COL_DIVIDERS, 'items-start')}>
           {/* 1) Parent image */}
@@ -205,15 +259,22 @@ export default function ProductRowB2B({
               title={name ?? parentSku ?? 'Product'}
             >
               <Image
-                src={image?.thumbnail && image.thumbnail.trim() !== ''
-                  ? image.thumbnail
-                  : productPlaceholder}
+                src={
+                  image?.thumbnail && image.thumbnail.trim() !== ''
+                    ? image.thumbnail
+                    : productPlaceholder
+                }
                 alt={name ?? parentSku ?? 'Product'}
                 fill
                 sizes="140px"
                 className="object-cover"
               />
-
+              {/* PROMO badge - show if priceData.is_promo OR product.has_active_promo */}
+              {(priceData?.is_promo || product.has_active_promo) && (
+                <span className="absolute top-0 right-0 text-[10px] md:text-xs font-bold text-white uppercase bg-red-600 px-2 py-1">
+                  PROMO
+                </span>
+              )}
             </button>
           </Cell>
 
@@ -222,11 +283,12 @@ export default function ProductRowB2B({
             <div className="min-w-0">
               {parentSku && (
                 <div
-                  className="mt-0.5 text-[11px] sm:text-xs text-gray-600 uppercase truncate"
+                  className="mt-0.5 text-[11px] sm:text-xs text-gray-600 uppercase truncate flex items-center gap-2"
                   title={parentSku}
                 >
-                  <span className="text-[10px] md:text-xs font-bold text-white uppercase bg-brand px-2 py-2">{parentSku}</span>
-
+                  <span className="text-[10px] md:text-xs font-bold text-white uppercase bg-brand px-2 py-2">
+                    {parentSku}
+                  </span>
                 </div>
               )}
               <h3
@@ -236,14 +298,14 @@ export default function ProductRowB2B({
                 {name ?? parentSku ?? <Dash />}
               </h3>
 
-
-
               {description ? (
                 <p className="mt-1 text-xs sm:text-sm text-gray-700 line-clamp-2">
                   {description}
                 </p>
               ) : (
-                <div className="mt-1 text-xs text-gray-400"><Dash /></div>
+                <div className="mt-1 text-xs text-gray-400">
+                  <Dash />
+                </div>
               )}
             </div>
           </Cell>
@@ -267,13 +329,12 @@ export default function ProductRowB2B({
         </div>
       </div>
 
-
       {/* Toggle varianti (solo se > 1) */}
       {hasMultiple && (
         <div className="px-2 sm:px-2 pb-2 flex items-center justify-end">
           <button
             type="button"
-            onClick={() => setShowVars(v => !v)}
+            onClick={() => setShowVars((v) => !v)}
             className="text-sm text-blue-600 hover:underline"
           >
             {showVars
@@ -288,7 +349,8 @@ export default function ProductRowB2B({
       {(showVars || shouldShowRows) && (
         <div className="pl-2 sm:pl-3 pb-2 pr-2 divide-y-2 divide-gray-200">
           {/* Filters: always visible by default; can gate via prop if > 0 */}
-          {((filterThreshold ?? 0) <= 0) || ((variations?.length ?? 0) >= filterThreshold) ? (
+          {(filterThreshold ?? 0) <= 0 ||
+          (variations?.length ?? 0) >= filterThreshold ? (
             <VariantsFilterBar
               className="mb-2"
               query={query}
@@ -300,31 +362,48 @@ export default function ProductRowB2B({
               onToggleModel={toggleModel}
               onClearModels={() => setSelectedModels([])}
               isAuthorized={isAuthorized}
-              searchPlaceholder={t('search-variants', { defaultValue: 'Search SKU, name, model…' })}
-              showSearchAndSort={(variations?.length ?? 0) >= (searchSortThreshold ?? 0)}
+              searchPlaceholder={t('search-variants', {
+                defaultValue: 'Search SKU, name, model…',
+              })}
+              showSearchAndSort={
+                (variations?.length ?? 0) >= (searchSortThreshold ?? 0)
+              }
             />
           ) : null}
           {sortedVariants.map((v) => {
             const isPseudo = !!(v as any).__pseudo;
-            const vPrice: ErpPriceData | undefined = isPseudo ? priceData : getPrice(v.id);
+            const vPrice: ErpPriceData | undefined = isPseudo
+              ? priceData
+              : getVariantPrice(v.id);
             const vImg = v.image?.thumbnail ?? productPlaceholder;
             const targetSku = String(v.sku ?? sku ?? '').trim();
-            const isOutOfStock = vPrice ? Number(vPrice.availability) <= 0 : false;
-            const reminderActive = targetSku ? reminders.hasReminder(targetSku) : false;
-            const reminderBusy = targetSku ? !!reminderLoading[targetSku] : false;
+            const isOutOfStock = vPrice
+              ? Number(vPrice.availability) <= 0
+              : false;
+            const reminderActive = targetSku
+              ? reminders.hasReminder(targetSku)
+              : false;
+            const reminderBusy = targetSku
+              ? !!reminderLoading[targetSku]
+              : false;
 
             return (
-              <div key={v.id} className={cn(
-                'group relative transition-colors',
-                'hover:bg-gray-100 mb-2 sm:mb-0 '
-              )}>
+              <div
+                key={v.id}
+                className={cn(
+                  'group relative transition-colors',
+                  'hover:bg-gray-100 mb-2 sm:mb-0 ',
+                )}
+              >
                 {/* Stesse 5 colonne + divisori verticali per “effetto tabella” */}
                 <div className={cn(GRID, GRID_COL_DIVIDERS)}>
                   {/* 1) Immagine variante — align to right, with wishlist toggle above */}
                   <Cell className="!px-0 sm:justify-self-end justify-self-start">
-
                     {isPseudo ? (
-                      <div aria-hidden style={{ width: VARIANT_IMG, height: VARIANT_IMG }} />
+                      <div
+                        aria-hidden
+                        style={{ width: VARIANT_IMG, height: VARIANT_IMG }}
+                      />
                     ) : (
                       <button
                         type="button"
@@ -357,20 +436,32 @@ export default function ProductRowB2B({
                                 aria-label="Toggle reminder"
                                 className={cn(
                                   'p-1 rounded text-[18px] transition-colors',
-                                  reminderActive ? 'text-yellow-500' : 'text-gray-400 hover:text-yellow-500'
+                                  reminderActive
+                                    ? 'text-yellow-500'
+                                    : 'text-gray-400 hover:text-yellow-500',
                                 )}
                                 onClick={async (e) => {
                                   e.stopPropagation();
                                   if (!targetSku) return;
-                                  setReminderLoading((prev) => ({ ...prev, [targetSku]: true }));
+                                  setReminderLoading((prev) => ({
+                                    ...prev,
+                                    [targetSku]: true,
+                                  }));
                                   try {
                                     await reminders.toggle(targetSku);
                                   } finally {
-                                    setReminderLoading((prev) => ({ ...prev, [targetSku]: false }));
+                                    setReminderLoading((prev) => ({
+                                      ...prev,
+                                      [targetSku]: false,
+                                    }));
                                   }
                                 }}
                                 disabled={reminderBusy || !targetSku}
-                                title={reminderActive ? t('text-reminder-active') : t('text-reminder-notify')}
+                                title={
+                                  reminderActive
+                                    ? t('text-reminder-active')
+                                    : t('text-reminder-notify')
+                                }
                               >
                                 {reminderActive ? (
                                   <IoNotifications className="animate-pulse" />
@@ -388,7 +479,9 @@ export default function ProductRowB2B({
                               aria-label="Toggle wishlist"
                               className={cn(
                                 'p-1 rounded text-[18px] transition-colors',
-                                likes.isLiked(targetSku) ? 'text-[#6D727F]' : 'text-gray-400 hover:text-brand'
+                                likes.isLiked(targetSku)
+                                  ? 'text-[#6D727F]'
+                                  : 'text-gray-400 hover:text-brand',
                               )}
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -397,7 +490,11 @@ export default function ProductRowB2B({
                               }}
                               title={t('text-wishlist')}
                             >
-                              {likes.isLiked(targetSku) ? <IoIosHeart /> : <IoIosHeartEmpty />}
+                              {likes.isLiked(targetSku) ? (
+                                <IoIosHeart />
+                              ) : (
+                                <IoIosHeartEmpty />
+                              )}
                             </button>
                           </div>
                         </div>
@@ -423,36 +520,41 @@ export default function ProductRowB2B({
                       </div>
                       {v.model ? (
                         <div className="text-[13px] text-gray-700 mt-0.5 line-clamp-1">
-                          <span className="mr-1">{t('model', { defaultValue: 'model:' })}</span>
+                          <span className="mr-1">
+                            {t('model', { defaultValue: 'model:' })}
+                          </span>
                           <span
                             className={cn(
                               'inline-flex items-center rounded-md border px-2 py-0.5 align-middle',
                               'text-[11px] font-semibold tracking-wide',
-                              'bg-brand/10 text-brand-dark border-brand/30'
+                              'bg-brand/10 text-brand-dark border-brand/30',
                             )}
                           >
                             {v.model}
                           </span>
                         </div>
                       ) : (
-                        <div className="text-[13px] text-gray-400 mt-0.5">''</div>
+                        <div className="text-[13px] text-gray-400 mt-0.5">
+                          ''
+                        </div>
                       )}
 
                       {vPrice?.packaging_option_default && (
                         <div className="text-[13px] text-gray-700 mt-0.5 line-clamp-1">
-                          {vPrice
-                            && formatAvailability(
+                          {vPrice &&
+                            formatAvailability(
                               vPrice.availability,
-                              vPrice.packaging_option_default?.packaging_uom
+                              vPrice.packaging_option_default?.packaging_uom,
                             )}
                         </div>
                       )}
-
                     </div>
                   </Cell>
 
                   {/* 3) Packaging */}
-                  <Cell><PackagingGrid pd={vPrice} /></Cell>
+                  <Cell>
+                    <PackagingGrid pd={vPrice} />
+                  </Cell>
 
                   {/* 4) Ordered */}
                   <Cell>
@@ -461,7 +563,9 @@ export default function ProductRowB2B({
                         <span className="bg-gray-700 text-white px-2 py-0.5 rounded-full font-semibold text-[10px]">
                           {t('ordered', { defaultValue: 'ORDERED' })}
                         </span>
-                        <span className="text-xs text-gray-700">{vPrice.buy_did_last_date}</span>
+                        <span className="text-xs text-gray-700">
+                          {vPrice.buy_did_last_date}
+                        </span>
                       </div>
                     ) : (
                       <div className="text-center sm:text-right text-gray-300"></div>
@@ -469,7 +573,6 @@ export default function ProductRowB2B({
                   </Cell>
                   {/* 5) Ordered */}
                   <Cell>
-
                     {vPrice && (
                       <PriceAndPromo
                         name={name}
@@ -490,7 +593,13 @@ export default function ProductRowB2B({
                   <Cell>
                     <div className="flex flex-col justify-center items-end gap-2">
                       {isAuthorized && (
-                        <AddToCart product={isPseudo ? (product as any) : v} priceData={vPrice} variant="venus" lang={lang} className='justify-end' />
+                        <AddToCart
+                          product={isPseudo ? (product as any) : v}
+                          priceData={vPrice}
+                          variant="venus"
+                          lang={lang}
+                          className="justify-end"
+                        />
                       )}
                     </div>
                   </Cell>

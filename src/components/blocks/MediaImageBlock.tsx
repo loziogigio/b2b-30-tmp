@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import React from 'react';
 import SectionHeader from '@components/common/section-header';
@@ -6,8 +6,8 @@ import SectionHeader from '@components/common/section-header';
 interface MediaImageStyle {
   borderWidth?: number;
   borderColor?: string;
-  borderStyle?: "solid" | "dashed" | "dotted" | "none";
-  borderRadius?: "none" | "sm" | "md" | "lg" | "xl" | "2xl" | "full";
+  borderStyle?: 'solid' | 'dashed' | 'dotted' | 'none';
+  borderRadius?: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full';
   paddingX?: number;
   paddingY?: number;
   backgroundColor?: string;
@@ -22,7 +22,7 @@ interface MediaImageConfig {
   openInNewTab?: boolean;
   width?: string;
   maxWidth?: string;
-  alignment?: "left" | "center" | "right";
+  alignment?: 'left' | 'center' | 'right';
   style?: MediaImageStyle;
 }
 
@@ -38,20 +38,20 @@ const borderRadiusMap = {
   lg: '0.5rem',
   xl: '0.75rem',
   '2xl': '1rem',
-  full: '9999px'
+  full: '9999px',
 };
 
 export function MediaImageBlock({ config, lang = 'it' }: MediaImageBlockProps) {
   const {
     imageUrl,
-    alt = "Product image",
+    alt = 'Product image',
     title,
     linkUrl,
     openInNewTab = true,
-    width = "100%",
-    maxWidth = "800px",
-    alignment = "center",
-    style
+    width = '100%',
+    maxWidth = '800px',
+    alignment = 'center',
+    style,
   } = config;
 
   const defaultStyle: MediaImageStyle = {
@@ -62,7 +62,7 @@ export function MediaImageBlock({ config, lang = 'it' }: MediaImageBlockProps) {
     paddingX: 0,
     paddingY: 0,
     backgroundColor: 'transparent',
-    customCSS: ''
+    customCSS: '',
   };
 
   const styleOptions = { ...defaultStyle, ...(style || {}) };
@@ -78,16 +78,19 @@ export function MediaImageBlock({ config, lang = 'it' }: MediaImageBlockProps) {
   }
 
   const alignmentClasses = {
-    left: "mr-auto",
-    center: "mx-auto",
-    right: "ml-auto"
+    left: 'mr-auto',
+    center: 'mx-auto',
+    right: 'ml-auto',
   };
 
   // Build inline styles from style options
   const containerStyle: React.CSSProperties = {
-    borderWidth: styleOptions.borderWidth ? `${styleOptions.borderWidth}px` : '0',
+    borderWidth: styleOptions.borderWidth
+      ? `${styleOptions.borderWidth}px`
+      : '0',
     borderColor: styleOptions.borderColor,
-    borderStyle: styleOptions.borderStyle === 'none' ? 'none' : styleOptions.borderStyle,
+    borderStyle:
+      styleOptions.borderStyle === 'none' ? 'none' : styleOptions.borderStyle,
     borderRadius: borderRadiusMap[styleOptions.borderRadius || 'lg'],
     paddingLeft: styleOptions.paddingX ? `${styleOptions.paddingX}px` : '0',
     paddingRight: styleOptions.paddingX ? `${styleOptions.paddingX}px` : '0',
@@ -95,7 +98,7 @@ export function MediaImageBlock({ config, lang = 'it' }: MediaImageBlockProps) {
     paddingBottom: styleOptions.paddingY ? `${styleOptions.paddingY}px` : '0',
     backgroundColor: styleOptions.backgroundColor,
     width,
-    maxWidth: maxWidth === "none" ? undefined : maxWidth,
+    maxWidth: maxWidth === 'none' ? undefined : maxWidth,
   };
 
   const imageElement = (
@@ -104,7 +107,7 @@ export function MediaImageBlock({ config, lang = 'it' }: MediaImageBlockProps) {
       alt={alt}
       className="h-auto w-full object-contain transition-transform duration-300 hover:scale-[1.02]"
       style={{
-        borderRadius: borderRadiusMap[styleOptions.borderRadius || 'lg']
+        borderRadius: borderRadiusMap[styleOptions.borderRadius || 'lg'],
       }}
     />
   );
@@ -113,12 +116,14 @@ export function MediaImageBlock({ config, lang = 'it' }: MediaImageBlockProps) {
 
   const contentBlock = linkUrl ? (
     <>
-      {styleOptions.customCSS && <style dangerouslySetInnerHTML={{ __html: styleOptions.customCSS }} />}
+      {styleOptions.customCSS && (
+        <style dangerouslySetInnerHTML={{ __html: styleOptions.customCSS }} />
+      )}
       <div className={containerClass} style={containerStyle}>
         <a
           href={linkUrl}
-          target={openInNewTab ? "_blank" : undefined}
-          rel={openInNewTab ? "noopener noreferrer" : undefined}
+          target={openInNewTab ? '_blank' : undefined}
+          rel={openInNewTab ? 'noopener noreferrer' : undefined}
           className="block"
         >
           {imageElement}
@@ -127,7 +132,9 @@ export function MediaImageBlock({ config, lang = 'it' }: MediaImageBlockProps) {
     </>
   ) : (
     <>
-      {styleOptions.customCSS && <style dangerouslySetInnerHTML={{ __html: styleOptions.customCSS }} />}
+      {styleOptions.customCSS && (
+        <style dangerouslySetInnerHTML={{ __html: styleOptions.customCSS }} />
+      )}
       <div className={containerClass} style={containerStyle}>
         {imageElement}
       </div>

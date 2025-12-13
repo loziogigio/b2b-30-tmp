@@ -16,9 +16,9 @@ export type MenuTreeNode = {
   category_banner_image_mobile?: string | null;
 
   // NEW:
-  slug: string;       // e.g. "manutenzione-impianto"
-  path: string[];     // e.g. ["trattamento-impianti","manutenzione-impianto"]
-  code?: string|null; // parsed from node.url (?filters-category or ?category)
+  slug: string; // e.g. "manutenzione-impianto"
+  path: string[]; // e.g. ["trattamento-impianti","manutenzione-impianto"]
+  code?: string | null; // parsed from node.url (?filters-category or ?category)
 };
 
 const rmAccents = (s: string) =>
@@ -32,7 +32,7 @@ const slugify = (s: string) =>
     .replace(/--+/g, '-')
     .replace(/^-+|-+$/g, '');
 
-const getCodeFromUrl = (url?: string|null): string|null => {
+const getCodeFromUrl = (url?: string | null): string | null => {
   if (!url) return null;
   try {
     const q = url.includes('?') ? url.split('?')[1] : url;
@@ -64,16 +64,16 @@ export function buildB2BMenuTree(items: CmsB2BMenuItem[]): MenuTreeNode[] {
       name: i.name,
       description: i.description,
       category_menu_image: i.category_menu_image,
-      category_banner_image:  i.category_banner_image,
-      category_banner_image_mobile:  i.category_banner_image_mobile,
+      category_banner_image: i.category_banner_image,
+      category_banner_image_mobile: i.category_banner_image_mobile,
       label: i.label || i.title || i.name,
       url: i.url,
       isGroup: i.is_group === 1,
       order: i.order,
       lft: i.lft,
       children: [],
-      slug: '',            // set later
-      path: [],            // set later
+      slug: '', // set later
+      path: [], // set later
       code: getCodeFromUrl(i.url),
     };
     map.set(uniqueId, base);
@@ -116,8 +116,8 @@ export function buildB2BMenuTree(items: CmsB2BMenuItem[]): MenuTreeNode[] {
 /** DFS find by code, also returns the full path of nodes (chain) */
 export function findNodeByCode(
   roots: MenuTreeNode[],
-  code: string
-): { node: MenuTreeNode|null; chain: MenuTreeNode[] } {
+  code: string,
+): { node: MenuTreeNode | null; chain: MenuTreeNode[] } {
   const stack = roots.map((n) => ({ n, chain: [n] }));
   while (stack.length) {
     const { n, chain } = stack.pop()!;
@@ -127,10 +127,9 @@ export function findNodeByCode(
   return { node: null, chain: [] };
 }
 
-
 export function findNodeByPath(
   roots: MenuTreeNode[],
-  slugPath: string[]
+  slugPath: string[],
 ): MenuTreeNode | null {
   if (!slugPath.length) return null;
   let level = roots;

@@ -15,8 +15,8 @@ import { BannerCardItem } from '@framework/types-b2b';
 import {
   CategoryPill,
   CmsB2BMenuItem,
-  CmsB2BMenuResponseRaw,  // NOTE: make sure this type supports BOTH shapes (array OR {message: []})
-  mapMenuToPills,          // we'll use this to avoid duplicating mapping logic
+  CmsB2BMenuResponseRaw, // NOTE: make sure this type supports BOTH shapes (array OR {message: []})
+  mapMenuToPills, // we'll use this to avoid duplicating mapping logic
 } from '@utils/transform/b2b-cms-menu';
 
 /* =========================
@@ -36,7 +36,9 @@ export const fetchCmsB2BHomeData = async (): Promise<CmsB2BHomeData> => {
 
   const slider_top_transformed = transformSliderTop(data.slider_top || []);
   const home_brand_transformed = transformHomeBrand(data.home_brand || []);
-  const promo_banner_transformed = transformPromoBanner(data.promo_banner || []);
+  const promo_banner_transformed = transformPromoBanner(
+    data.promo_banner || [],
+  );
   const flyer_transformed = transformFlyer(data.flyer || []);
   const home_category_filtered = filterHomeCategory(data.home_category || []);
 
@@ -70,14 +72,16 @@ export const useCmsB2BHomeDataQuery = (options?: CmsB2BHomeQueryOptions) =>
 type CmsB2BMenuQueryData = { data: CategoryPill[] };
 
 export const fetchCmsB2BMenu = async (): Promise<CmsB2BMenuQueryData> => {
-  const raw = await get<CmsB2BMenuResponseRaw>(API_ENDPOINTS_B2B.CMS_B2B_CATEGORY);
+  const raw = await get<CmsB2BMenuResponseRaw>(
+    API_ENDPOINTS_B2B.CMS_B2B_CATEGORY,
+  );
 
   // Accept both API shapes: array OR { message: [] }
   const items: CmsB2BMenuItem[] = Array.isArray(raw)
     ? raw
     : Array.isArray(raw?.message)
-    ? raw.message!
-    : [];
+      ? raw.message!
+      : [];
 
   // filter disabled + map to pills (centralized mapper)
   const pills = mapMenuToPills(items.filter((i) => i.disable === 0));
@@ -103,13 +107,15 @@ export const useCmsB2BMenuQuery = (options?: CmsB2BMenuQueryOptions) =>
 ========================= */
 
 export const fetchCmsB2BMenuRaw = async (): Promise<CmsB2BMenuItem[]> => {
-  const raw = await get<CmsB2BMenuResponseRaw>(API_ENDPOINTS_B2B.CMS_B2B_CATEGORY);
+  const raw = await get<CmsB2BMenuResponseRaw>(
+    API_ENDPOINTS_B2B.CMS_B2B_CATEGORY,
+  );
 
   const items: CmsB2BMenuItem[] = Array.isArray(raw)
     ? raw
     : Array.isArray(raw?.message)
-    ? raw.message!
-    : [];
+      ? raw.message!
+      : [];
 
   // keep only enabled here too; tree builder can assume clean data
   return items.filter((i) => i.disable === 0);

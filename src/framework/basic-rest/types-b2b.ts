@@ -16,8 +16,6 @@ export type BannerCardItem = {
   };
 };
 
-
-
 export interface ProductImage {
   id: number;
   thumbnail: string;

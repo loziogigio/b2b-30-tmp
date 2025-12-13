@@ -14,17 +14,31 @@ export type RemindersSummary = {
 };
 
 type Action =
-  | { type: 'HYDRATE_REPLACE'; items: ReminderItem[]; summary?: RemindersSummary | null }
-  | { type: 'HYDRATE_MERGE'; items: ReminderItem[]; summary?: RemindersSummary | null }
+  | {
+      type: 'HYDRATE_REPLACE';
+      items: ReminderItem[];
+      summary?: RemindersSummary | null;
+    }
+  | {
+      type: 'HYDRATE_MERGE';
+      items: ReminderItem[];
+      summary?: RemindersSummary | null;
+    }
   | { type: 'SET_SUMMARY'; summary: RemindersSummary | null }
   | { type: 'REMINDER_ADD'; item: ReminderItem }
   | { type: 'REMINDER_REMOVE'; sku: string }
-  | { type: 'REMINDER_TOGGLE'; sku: string; active: boolean; createdAt?: string | null; expiresAt?: string | null }
+  | {
+      type: 'REMINDER_TOGGLE';
+      sku: string;
+      active: boolean;
+      createdAt?: string | null;
+      expiresAt?: string | null;
+    }
   | { type: 'RESET_REMINDERS' };
 
 export interface State {
-  items: ReminderItem[];           // flat list
-  index: Record<string, number>;   // sku -> index
+  items: ReminderItem[]; // flat list
+  index: Record<string, number>; // sku -> index
   isEmpty: boolean;
   summary: RemindersSummary | null;
 }
@@ -46,19 +60,31 @@ function rebuildIndex(items: ReminderItem[]) {
   return index;
 }
 
-function finalize(state: State, items: ReminderItem[], summary?: RemindersSummary | null): State {
+function finalize(
+  state: State,
+  items: ReminderItem[],
+  summary?: RemindersSummary | null,
+): State {
   const list = Array.isArray(items) ? items : ([] as ReminderItem[]);
   const idx = rebuildIndex(list);
   const totalCount = list.length;
-  const activeCount = list.filter(it => it.isActive).length;
+  const activeCount = list.filter((it) => it.isActive).length;
   return {
     ...state,
     items: list,
     index: idx,
     isEmpty: totalCount === 0,
     summary:
-      summary ?? state.summary
-        ? { ...(state.summary ?? { totalCount: 0, activeCount: 0, updatedAt: null }), totalCount, activeCount }
+      (summary ?? state.summary)
+        ? {
+            ...(state.summary ?? {
+              totalCount: 0,
+              activeCount: 0,
+              updatedAt: null,
+            }),
+            totalCount,
+            activeCount,
+          }
         : { totalCount, activeCount, updatedAt: null },
   };
 }
@@ -71,8 +97,13 @@ export function remindersReducer(state: State, action: Action): State {
     case 'HYDRATE_MERGE': {
       const map = new Map<string, ReminderItem>();
       for (const it of state.items) map.set(it.sku, it);
-      for (const it of action.items) map.set(it.sku, { ...(map.get(it.sku) || {}), ...it });
-      return finalize(state, Array.from(map.values()), action.summary ?? undefined);
+      for (const it of action.items)
+        map.set(it.sku, { ...(map.get(it.sku) || {}), ...it });
+      return finalize(
+        state,
+        Array.from(map.values()),
+        action.summary ?? undefined,
+      );
     }
     case 'SET_SUMMARY':
       return { ...state, summary: action.summary };

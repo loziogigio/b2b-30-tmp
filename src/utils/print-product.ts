@@ -226,9 +226,10 @@ export function printProductDetail(product: Product, priceData?: ErpPriceData) {
 
       <div class="product-section">
         <div class="product-image">
-          ${product.image?.original || product.image?.thumbnail
-            ? `<img src="${product.image.original || product.image.thumbnail}" alt="${product.name || 'Product'}" />`
-            : '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#cbd5e1;">No Image</div>'
+          ${
+            product.image?.original || product.image?.thumbnail
+              ? `<img src="${product.image.original || product.image.thumbnail}" alt="${product.name || 'Product'}" />`
+              : '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#cbd5e1;">No Image</div>'
           }
         </div>
 
@@ -238,65 +239,105 @@ export function printProductDetail(product: Product, priceData?: ErpPriceData) {
           ${product.description ? `<p class="description">${product.description}</p>` : ''}
 
           <div class="info-grid">
-            ${product.model ? `
+            ${
+              product.model
+                ? `
               <div class="info-item">
                 <div class="info-label">Model</div>
                 <div class="info-value">${product.model}</div>
               </div>
-            ` : ''}
+            `
+                : ''
+            }
 
-            ${product.brand?.name ? `
+            ${
+              product.brand?.name
+                ? `
               <div class="info-item">
                 <div class="info-label">Brand</div>
                 <div class="info-value">${product.brand.name}</div>
               </div>
-            ` : ''}
+            `
+                : ''
+            }
 
-            ${priceData ? `
+            ${
+              priceData
+                ? `
               <div class="info-item">
                 <div class="info-label">Availability</div>
                 <div class="info-value">${getAvailabilityDisplay(priceData)}</div>
               </div>
-            ` : ''}
+            `
+                : ''
+            }
 
-            ${priceData?.packaging_option_default?.packaging_uom ? `
+            ${
+              priceData?.packaging_option_default?.packaging_uom
+                ? `
               <div class="info-item">
                 <div class="info-label">Packaging</div>
                 <div class="info-value">${priceData.packaging_option_default.packaging_uom}</div>
               </div>
-            ` : ''}
+            `
+                : ''
+            }
           </div>
         </div>
       </div>
 
-      ${priceData && (priceData.price_discount || priceData.price) ? `
+      ${
+        priceData && (priceData.price_discount || priceData.price)
+          ? `
         <div class="price-box">
           <div class="price-label">Price</div>
           <div style="display:flex;align-items:baseline;gap:12px;">
-            ${priceData.gross_price && Number(priceData.gross_price) !== Number(priceData.price_discount || priceData.price) ? `
+            ${
+              priceData.gross_price &&
+              Number(priceData.gross_price) !==
+                Number(priceData.price_discount || priceData.price)
+                ? `
               <div style="text-decoration:line-through;color:#64748b;font-size:16px;">
                 € ${Number(priceData.gross_price).toFixed(2)}
               </div>
-            ` : ''}
+            `
+                : ''
+            }
             <div class="price-value" style="${priceData.is_promo ? 'color:#dc2626;' : ''}">
               € ${Number(priceData.price_discount || priceData.price).toFixed(2)}
             </div>
           </div>
           ${priceData.is_promo ? '<div style="display:inline-block;background:#dc2626;color:white;padding:4px 12px;border-radius:9999px;font-size:11px;margin-top:8px;font-weight:600;">PROMO</div>' : ''}
-          ${priceData.discount_description ? `
+          ${
+            priceData.discount_description
+              ? `
             <div style="color:#64748b;font-size:12px;margin-top:8px;line-height:1.5;">
-              ${String(priceData.discount_description).split(/<br\s*\/?>|\n|\|/gi).map(line => line.trim()).filter(Boolean).join('<br>')}
+              ${String(priceData.discount_description)
+                .split(/<br\s*\/?>|\n|\|/gi)
+                .map((line) => line.trim())
+                .filter(Boolean)
+                .join('<br>')}
             </div>
-          ` : ''}
-          ${priceData.count_promo && priceData.count_promo > 0 ? `
+          `
+              : ''
+          }
+          ${
+            priceData.count_promo && priceData.count_promo > 0
+              ? `
             <div style="background:#fef2f2;border:1px solid #fecaca;color:#dc2626;padding:8px 12px;border-radius:6px;font-size:11px;margin-top:8px;font-weight:600;">
               +${priceData.count_promo} additional promotion${priceData.count_promo > 1 ? 's' : ''} available
             </div>
-          ` : ''}
+          `
+              : ''
+          }
         </div>
-      ` : ''}
+      `
+          : ''
+      }
 
-      ${product.features && Object.keys(product.features).length > 0 ? `
+      ${
+        product.features && Object.keys(product.features).length > 0
+          ? `
         <div class="features-section">
           <h2 class="section-title">Technical Specifications</h2>
           <table class="features-table">
@@ -309,17 +350,21 @@ export function printProductDetail(product: Product, priceData?: ErpPriceData) {
             <tbody>
               ${Object.entries(product.features as Record<string, any>)
                 .sort(([keyA], [keyB]) => keyA.localeCompare(keyB))
-                .map(([key, value]) => `
+                .map(
+                  ([key, value]) => `
                   <tr>
                     <td><strong>${key}</strong></td>
                     <td>${value}</td>
                   </tr>
-                `).join('')
-              }
+                `,
+                )
+                .join('')}
             </tbody>
           </table>
         </div>
-      ` : ''}
+      `
+          : ''
+      }
 
       <div class="footer">
         This document was automatically generated on ${new Date().toLocaleDateString('it-IT')} at ${new Date().toLocaleTimeString('it-IT')}

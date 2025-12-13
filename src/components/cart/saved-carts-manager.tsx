@@ -1,6 +1,13 @@
 'use client';
 
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import cn from 'classnames';
 import { useQuery } from '@tanstack/react-query';
 import Button from '@components/ui/button';
@@ -65,7 +72,10 @@ const ensureCartId = (id: unknown) => {
 const SavedCartsManager: React.FC<SavedCartsManagerProps> = ({ lang }) => {
   const { t } = useTranslation(lang, 'common');
   const { meta, getCart, items: activeItems } = useCart();
-  const activeCartId = useMemo(() => ensureCartId(meta?.idCart), [meta?.idCart]);
+  const activeCartId = useMemo(
+    () => ensureCartId(meta?.idCart),
+    [meta?.idCart],
+  );
 
   const [label, setLabel] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
@@ -84,8 +94,8 @@ const SavedCartsManager: React.FC<SavedCartsManagerProps> = ({ lang }) => {
 
   const hasCustomerContext = Boolean(
     ERP_STATIC.customer_code &&
-    ERP_STATIC.address_code &&
-    ERP_STATIC.customer_code !== '0'
+      ERP_STATIC.address_code &&
+      ERP_STATIC.customer_code !== '0',
   );
 
   const savedCartsQuery = useQuery({
@@ -99,7 +109,10 @@ const SavedCartsManager: React.FC<SavedCartsManagerProps> = ({ lang }) => {
     refetchOnWindowFocus: false,
   });
 
-  const carts = useMemo(() => savedCartsQuery.data ?? [], [savedCartsQuery.data]);
+  const carts = useMemo(
+    () => savedCartsQuery.data ?? [],
+    [savedCartsQuery.data],
+  );
 
   const activeCartRecord = useMemo(() => {
     if (!Number.isFinite(activeCartId)) return null;
@@ -119,50 +132,53 @@ const SavedCartsManager: React.FC<SavedCartsManagerProps> = ({ lang }) => {
     return details[Number(activeCartId)]?.items?.length ?? 0;
   }, [activeItems, activeCartId, details]);
 
-  const prefetchCartDetails = useCallback(async (cartId: number, force = false) => {
-    const snapshot = detailsRef.current[cartId];
-    if (!force && snapshot?.items && !snapshot.error) {
-      return snapshot.items;
-    }
+  const prefetchCartDetails = useCallback(
+    async (cartId: number, force = false) => {
+      const snapshot = detailsRef.current[cartId];
+      if (!force && snapshot?.items && !snapshot.error) {
+        return snapshot.items;
+      }
 
-    setDetails((prev) => {
-      const current = prev[cartId];
-      return {
-        ...prev,
-        [cartId]: {
-          items: current?.items,
-          loading: true,
-          error: undefined,
-        },
-      };
-    });
-
-    try {
-      const { items } = await fetchCartData({ cartId });
-      setDetails((prev) => ({
-        ...prev,
-        [cartId]: {
-          items,
-          loading: false,
-        },
-      }));
-      return items;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
       setDetails((prev) => {
         const current = prev[cartId];
         return {
           ...prev,
           [cartId]: {
             items: current?.items,
-            loading: false,
-            error: message,
+            loading: true,
+            error: undefined,
           },
         };
       });
-      throw error;
-    }
-  }, []);
+
+      try {
+        const { items } = await fetchCartData({ cartId });
+        setDetails((prev) => ({
+          ...prev,
+          [cartId]: {
+            items,
+            loading: false,
+          },
+        }));
+        return items;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        setDetails((prev) => {
+          const current = prev[cartId];
+          return {
+            ...prev,
+            [cartId]: {
+              items: current?.items,
+              loading: false,
+              error: message,
+            },
+          };
+        });
+        throw error;
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!Number.isFinite(activeCartId)) return;
@@ -206,7 +222,7 @@ const SavedCartsManager: React.FC<SavedCartsManagerProps> = ({ lang }) => {
         setSaving(false);
       }
     },
-    [label, meta?.idCart, savedCartsQuery, t]
+    [label, meta?.idCart, savedCartsQuery, t],
   );
 
   const handleActivate = useCallback(
@@ -224,7 +240,7 @@ const SavedCartsManager: React.FC<SavedCartsManagerProps> = ({ lang }) => {
         setActivatingId(null);
       }
     },
-    [getCart, savedCartsQuery]
+    [getCart, savedCartsQuery],
   );
 
   const handleDeactivate = useCallback(
@@ -244,7 +260,7 @@ const SavedCartsManager: React.FC<SavedCartsManagerProps> = ({ lang }) => {
         setDeactivatingId(null);
       }
     },
-    [activeCartId, getCart, savedCartsQuery]
+    [activeCartId, getCart, savedCartsQuery],
   );
 
   const togglePreview = useCallback(
@@ -260,12 +276,13 @@ const SavedCartsManager: React.FC<SavedCartsManagerProps> = ({ lang }) => {
         try {
           await prefetchCartDetails(cartId);
         } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
+          const message =
+            error instanceof Error ? error.message : String(error);
           setActionError(message);
         }
       }
     },
-    [details, expandedId, prefetchCartDetails]
+    [details, expandedId, prefetchCartDetails],
   );
 
   if (!hasCustomerContext) {
@@ -284,7 +301,10 @@ const SavedCartsManager: React.FC<SavedCartsManagerProps> = ({ lang }) => {
           </p>
         </div>
         {canSaveCurrentCart ? (
-          <form onSubmit={handleSave} className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+          <form
+            onSubmit={handleSave}
+            className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center"
+          >
             <Input
               lang={lang}
               name="savedCartName"
@@ -306,7 +326,9 @@ const SavedCartsManager: React.FC<SavedCartsManagerProps> = ({ lang }) => {
         ) : (
           <div className="w-full rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-13px text-gray-600 sm:w-auto">
             {activeCartRecord?.label?.trim()
-              ? t('text-cart-already-saved', { name: activeCartRecord.label.trim() })
+              ? t('text-cart-already-saved', {
+                  name: activeCartRecord.label.trim(),
+                })
               : t('text-cart-already-saved-generic')}
           </div>
         )}
@@ -330,12 +352,20 @@ const SavedCartsManager: React.FC<SavedCartsManagerProps> = ({ lang }) => {
         aria-expanded={isListOpen}
       >
         <div className="flex flex-col">
-          <span className="text-base font-semibold text-gray-900">{t('text-saved-carts')}</span>
-          <span className="text-11px text-gray-500">{t('text-saved-carts-refresh-hint')}</span>
+          <span className="text-base font-semibold text-gray-900">
+            {t('text-saved-carts')}
+          </span>
+          <span className="text-11px text-gray-500">
+            {t('text-saved-carts-refresh-hint')}
+          </span>
         </div>
         <span className="flex items-center gap-2 text-sm font-semibold text-indigo-600">
           {isListOpen ? t('text-hide-saved-carts') : t('text-show-saved-carts')}
-          {isListOpen ? <IoChevronUp className="h-5 w-5" /> : <IoChevronDown className="h-5 w-5" />}
+          {isListOpen ? (
+            <IoChevronUp className="h-5 w-5" />
+          ) : (
+            <IoChevronDown className="h-5 w-5" />
+          )}
         </span>
       </button>
 
@@ -377,20 +407,28 @@ const SavedCartsManager: React.FC<SavedCartsManagerProps> = ({ lang }) => {
                   </tr>
                 ) : savedCartsQuery.isLoading ? (
                   <tr>
-                    <td colSpan={5} className="px-4 py-6 text-center text-gray-500">
+                    <td
+                      colSpan={5}
+                      className="px-4 py-6 text-center text-gray-500"
+                    >
                       {t('text-loading-saved-carts')}
                     </td>
                   </tr>
                 ) : !carts.length ? (
                   <tr>
-                    <td colSpan={5} className="px-4 py-6 text-center text-gray-500">
+                    <td
+                      colSpan={5}
+                      className="px-4 py-6 text-center text-gray-500"
+                    >
                       {t('text-no-saved-carts')}
                     </td>
                   </tr>
                 ) : (
                   carts.map((cart) => {
                     const cartDetails = details[cart.cartId];
-                    const isActive = Number.isFinite(activeCartId) && cart.cartId === activeCartId;
+                    const isActive =
+                      Number.isFinite(activeCartId) &&
+                      cart.cartId === activeCartId;
                     const isExpanded = expandedId === cart.cartId;
                     const itemsCount = cartDetails?.items?.length;
 
@@ -417,7 +455,9 @@ const SavedCartsManager: React.FC<SavedCartsManagerProps> = ({ lang }) => {
                             {formatDate(cart.updatedAt)}
                           </td>
                           <td className="px-4 py-3 text-right font-semibold text-gray-900">
-                            {cartDetails?.loading && !itemsCount ? '…' : itemsCount ?? '—'}
+                            {cartDetails?.loading && !itemsCount
+                              ? '…'
+                              : (itemsCount ?? '—')}
                           </td>
                           <td className="px-4 py-3 text-right font-semibold text-gray-900">
                             {formatCurrency(cart.documentTotal)}
@@ -430,16 +470,21 @@ const SavedCartsManager: React.FC<SavedCartsManagerProps> = ({ lang }) => {
                                 className="!h-8 !py-0 px-3 text-12px"
                                 onClick={() => togglePreview(cart.cartId)}
                               >
-                                {isExpanded ? t('text-hide-preview') : t('text-preview-cart')}
+                                {isExpanded
+                                  ? t('text-hide-preview')
+                                  : t('text-preview-cart')}
                               </Button>
                               {isActive ? (
                                 <Button
                                   type="button"
                                   className={cn('!h-8 !py-0 px-3 text-12px', {
-                                    '!bg-gray-300 !text-gray-600 cursor-not-allowed': deactivatingId === cart.cartId,
+                                    '!bg-gray-300 !text-gray-600 cursor-not-allowed':
+                                      deactivatingId === cart.cartId,
                                   })}
                                   disabled={deactivatingId === cart.cartId}
-                                  onClick={() => handleDeactivate(cart.cartId, cart.label)}
+                                  onClick={() =>
+                                    handleDeactivate(cart.cartId, cart.label)
+                                  }
                                 >
                                   {deactivatingId === cart.cartId
                                     ? t('text-deactivating-cart')
@@ -449,7 +494,8 @@ const SavedCartsManager: React.FC<SavedCartsManagerProps> = ({ lang }) => {
                                 <Button
                                   type="button"
                                   className={cn('!h-8 !py-0 px-3 text-12px', {
-                                    '!bg-gray-300 !text-gray-600 cursor-not-allowed': activatingId === cart.cartId,
+                                    '!bg-gray-300 !text-gray-600 cursor-not-allowed':
+                                      activatingId === cart.cartId,
                                   })}
                                   disabled={activatingId === cart.cartId}
                                   onClick={() => handleActivate(cart.cartId)}
@@ -493,7 +539,12 @@ const SavedCartsManager: React.FC<SavedCartsManagerProps> = ({ lang }) => {
                                         <span>{t('text-line-total')}</span>
                                         <span>
                                           {formatCurrency(
-                                            Number(item.quantity ?? 0) * Number(item.price_discount ?? item.price ?? 0)
+                                            Number(item.quantity ?? 0) *
+                                              Number(
+                                                item.price_discount ??
+                                                  item.price ??
+                                                  0,
+                                              ),
                                           )}
                                         </span>
                                       </div>

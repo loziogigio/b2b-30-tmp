@@ -1,62 +1,64 @@
-import { StreamEvent } from './types'
+import { StreamEvent } from './types';
 
 // Use the B2B API endpoint from environment
-const API_URL = process.env.NEXT_PUBLIC_B2B_PUBLIC_REST_API_ENDPOINT || 'http://localhost:8000/api/v1'
+const API_URL =
+  process.env.NEXT_PUBLIC_B2B_PUBLIC_REST_API_ENDPOINT ||
+  'http://localhost:8000/api/v1';
 
 export class EliaClient {
-  private baseUrl: string
+  private baseUrl: string;
 
   constructor(baseUrl: string = API_URL) {
-    this.baseUrl = baseUrl
+    this.baseUrl = baseUrl;
   }
 
   /**
    * Stream search with Server-Sent Events
    */
   async *streamSearch(message: string): AsyncGenerator<StreamEvent> {
-    const url = `${this.baseUrl}/elia/stream?message=${encodeURIComponent(message)}`
+    const url = `${this.baseUrl}/elia/stream?message=${encodeURIComponent(message)}`;
 
     const response = await fetch(url, {
       headers: {
-        'Accept': 'text/event-stream',
-        'Authorization': `Bearer ${this.getToken()}`
-      }
-    })
+        Accept: 'text/event-stream',
+        Authorization: `Bearer ${this.getToken()}`,
+      },
+    });
 
     if (!response.ok) {
-      throw new Error(`Stream failed: ${response.statusText}`)
+      throw new Error(`Stream failed: ${response.statusText}`);
     }
 
-    const reader = response.body?.getReader()
-    const decoder = new TextDecoder()
+    const reader = response.body?.getReader();
+    const decoder = new TextDecoder();
 
     if (!reader) {
-      throw new Error('No response body')
+      throw new Error('No response body');
     }
 
     try {
       while (true) {
-        const { done, value } = await reader.read()
+        const { done, value } = await reader.read();
 
-        if (done) break
+        if (done) break;
 
-        const chunk = decoder.decode(value)
-        const lines = chunk.split('\n')
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
 
         for (const line of lines) {
           if (line.startsWith('data: ')) {
-            const data = line.slice(6)
+            const data = line.slice(6);
             try {
-              const event: StreamEvent = JSON.parse(data)
-              yield event
+              const event: StreamEvent = JSON.parse(data);
+              yield event;
             } catch (e) {
-              console.error('Failed to parse SSE data:', e)
+              console.error('Failed to parse SSE data:', e);
             }
           }
         }
       }
     } finally {
-      reader.releaseLock()
+      reader.releaseLock();
     }
   }
 
@@ -68,28 +70,29 @@ export class EliaClient {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.getToken()}`
+        Authorization: `Bearer ${this.getToken()}`,
       },
-      body: JSON.stringify({ message, context })
-    })
+      body: JSON.stringify({ message, context }),
+    });
 
     if (!response.ok) {
-      throw new Error(`Search failed: ${response.statusText}`)
+      throw new Error(`Search failed: ${response.statusText}`);
     }
 
-    return response.json()
+    return response.json();
   }
 
   private getToken(): string {
     if (typeof window !== 'undefined') {
       // Try to get token from localStorage
-      const token = localStorage.getItem('auth_token') ||
-                    localStorage.getItem('access_token') ||
-                    localStorage.getItem('token')
-      return token || ''
+      const token =
+        localStorage.getItem('auth_token') ||
+        localStorage.getItem('access_token') ||
+        localStorage.getItem('token');
+      return token || '';
     }
-    return ''
+    return '';
   }
 }
 
-export const eliaClient = new EliaClient()
+export const eliaClient = new EliaClient();

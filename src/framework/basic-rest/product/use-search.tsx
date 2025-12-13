@@ -3,7 +3,11 @@ import { useQuery } from '@tanstack/react-query';
 
 type SearchQueryKey = [string, QueryOptionsType];
 
-export const fetchSearchedProducts = async ({ queryKey }: { queryKey: SearchQueryKey }) => {
+export const fetchSearchedProducts = async ({
+  queryKey,
+}: {
+  queryKey: SearchQueryKey;
+}) => {
   const [, options] = queryKey;
   const text = (options?.text as string | undefined)?.trim();
 

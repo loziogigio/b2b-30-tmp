@@ -28,7 +28,7 @@ const extractTags = (payload: ResolvePayload): PageVersionTags | undefined => {
     ...(payload.attributes ?? {}),
     region: payload.region,
     language: payload.language,
-    device: payload.device
+    device: payload.device,
   });
 
   const tags: PageVersionTags = {};
@@ -60,24 +60,26 @@ const parseQuery = (request: NextRequest): ResolvePayload => {
     device: search.get('device'),
     language: search.get('language'),
     preview: search.get('preview') === 'true',
-    includeDraft: search.get('includeDraft') === 'true'
+    includeDraft: search.get('includeDraft') === 'true',
   };
 };
 
-const respond = (data: any, status = 200) => NextResponse.json(data, { status });
+const respond = (data: any, status = 200) =>
+  NextResponse.json(data, { status });
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: { slug: string } },
 ) {
   const payload = await parseBody(request);
   const tags = extractTags(payload);
-  const includeDraft = payload.preview === true || payload.includeDraft === true;
+  const includeDraft =
+    payload.preview === true || payload.includeDraft === true;
 
   const version = await resolvePageVersion(params.slug, {
     tags,
     includeDraft,
-    respectActiveWindow: true
+    respectActiveWindow: true,
   });
 
   if (!version) {
@@ -89,16 +91,17 @@ export async function POST(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: { slug: string } },
 ) {
   const payload = parseQuery(request);
   const tags = extractTags(payload);
-  const includeDraft = payload.preview === true || payload.includeDraft === true;
+  const includeDraft =
+    payload.preview === true || payload.includeDraft === true;
 
   const version = await resolvePageVersion(params.slug, {
     tags,
     includeDraft,
-    respectActiveWindow: true
+    respectActiveWindow: true,
   });
 
   if (!version) {

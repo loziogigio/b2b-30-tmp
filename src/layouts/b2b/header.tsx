@@ -21,22 +21,38 @@ import {
   HiOutlineUserCircle,
   HiOutlineMenuAlt3,
   HiOutlineArrowUp,
-  HiOutlineSwitchHorizontal
+  HiOutlineSwitchHorizontal,
+  HiOutlineLogin,
+  HiOutlineEye,
+  HiOutlineEyeOff,
 } from 'react-icons/hi';
 
-const Delivery = dynamic(() => import('@layouts/header/delivery'), { ssr: false });
-const CartButton = dynamic(() => import('@components/cart/cart-button'), { ssr: false });
-const B2BHeaderMenu = dynamic(() => import('@layouts/header/b2b-header-menu'), { ssr: false });
+const Delivery = dynamic(() => import('@layouts/header/delivery'), {
+  ssr: false,
+});
+const CartButton = dynamic(() => import('@components/cart/cart-button'), {
+  ssr: false,
+});
+const B2BHeaderMenu = dynamic(() => import('@layouts/header/b2b-header-menu'), {
+  ssr: false,
+});
 
 const promoButtons = [
-  { label: 'Promozioni', color: 'bg-[#a52a2a] text-white', href: '/search?filters-has_active_promo=true' },
-  { label: 'Novità', color: 'bg-brand text-white', href: '/search?filters-is_new=true' },
+  {
+    label: 'Promozioni',
+    color: 'bg-[#a52a2a] text-white',
+    href: '/search?filters-has_active_promo=true',
+  },
+  {
+    label: 'Nuovi arrivi',
+    color: 'bg-brand text-white',
+    href: '/search?filters-attribute_is_new_b=true',
+  },
 ];
 
 const quickLinks = [
   { label: 'i miei ordini', href: '/account/orders' },
   { label: 'confronta', href: ROUTES.PRODUCT_COMPARE },
-  { label: 'importa', href: ROUTES.BUNDLE },
 ];
 
 interface HeaderProps {
@@ -45,15 +61,16 @@ interface HeaderProps {
 
 function Header({ lang }: HeaderProps) {
   const { t } = useTranslation(lang, 'common');
-  const { isAuthorized } = useUI();
+  const { isAuthorized, hidePrices, toggleHidePrices } = useUI();
   const { summary } = useLikes();
   const { skus: compareSkus } = useCompareList();
   const router = useRouter();
   const { openModal } = useModalAction();
   const { settings } = useHomeSettings();
   const brandingTitle = useMemo(
-    () => settings?.branding?.title || siteSettings?.site_header?.title || 'Hidros',
-    [settings?.branding?.title]
+    () =>
+      settings?.branding?.title || siteSettings?.site_header?.title || 'Hidros',
+    [settings?.branding?.title],
   );
 
   const [isElevated, setIsElevated] = useState(false);
@@ -85,18 +102,91 @@ function Header({ lang }: HeaderProps) {
     <>
       <div
         className={cn(
-          'sticky top-0 z-40 border-b border-slate-200 bg-white transition-shadow',
-          isElevated && 'shadow-sm'
+          'md:sticky md:top-0 z-40 border-b border-slate-200 bg-white transition-shadow',
+          isElevated && 'shadow-sm',
         )}
       >
         <Container className="flex items-stretch h-16">
-          {/* Left 20% - Logo */}
-          <div className="w-[20%] flex items-center">
+          {/* Left - Logo (flexible width on mobile, fixed on desktop) */}
+          <div className="flex-1 lg:flex-none lg:w-[20%] flex items-center">
             <Logo className="h-12 w-auto" />
           </div>
 
-          {/* Center 60% - Search + Radio */}
-          <div className="w-[60%] flex items-center justify-center gap-3 px-4">
+          {/* Mobile icons - show all when logged in, login icon when not */}
+          <div className="flex items-center gap-2 lg:hidden">
+            {isAuthorized ? (
+              <>
+                <button
+                  type="button"
+                  onClick={toggleHidePrices}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 hover:border-brand hover:text-brand text-slate-600 shrink-0"
+                  aria-label={
+                    hidePrices
+                      ? t('text-show-prices', { defaultValue: 'Show prices' })
+                      : t('text-hide-prices', { defaultValue: 'Hide prices' })
+                  }
+                  title={
+                    hidePrices
+                      ? t('text-show-prices', { defaultValue: 'Show prices' })
+                      : t('text-hide-prices', { defaultValue: 'Hide prices' })
+                  }
+                >
+                  {hidePrices ? (
+                    <HiOutlineEyeOff className="h-4 w-4" />
+                  ) : (
+                    <HiOutlineEye className="h-4 w-4" />
+                  )}
+                </button>
+
+                <Link
+                  href={`/${lang}/search?source=likes&page_size=12`}
+                  aria-label={t('text-wishlist', { defaultValue: 'Wishlist' })}
+                  className="relative inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 hover:border-brand hover:text-brand text-slate-600 shrink-0"
+                >
+                  <HiOutlineHeart className="h-4 w-4" />
+                  {summary?.totalCount ? (
+                    <span className="absolute -top-1 -right-1 rounded-full bg-[#E1E7EE] px-1 text-[9px] font-semibold text-black">
+                      {summary.totalCount}
+                    </span>
+                  ) : null}
+                </Link>
+
+                <Link
+                  href={`/${lang}${ROUTES.PRODUCT_COMPARE}`}
+                  aria-label="Product compare"
+                  className="relative inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 hover:border-brand hover:text-brand text-slate-600 shrink-0"
+                >
+                  <HiOutlineSwitchHorizontal className="h-4 w-4" />
+                  {compareSkus.length ? (
+                    <span className="absolute -top-1 -right-1 rounded-full bg-[#E1E7EE] px-1 text-[9px] font-semibold text-black">
+                      {compareSkus.length}
+                    </span>
+                  ) : null}
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={handleAccount}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 hover:border-brand hover:text-brand text-slate-600"
+                  aria-label={t('text-account', { defaultValue: 'Account' })}
+                >
+                  <HiOutlineUserCircle className="h-4 w-4" />
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={handleAccount}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 hover:border-brand hover:text-brand text-slate-600"
+                aria-label={t('text-sign-in', { defaultValue: 'Sign in' })}
+              >
+                <HiOutlineLogin className="h-5 w-5" />
+              </button>
+            )}
+          </div>
+
+          {/* Center 60% - Search + Radio (hidden on mobile) */}
+          <div className="hidden lg:flex lg:w-[60%] items-center justify-center gap-3 px-4">
             <div className="w-full">
               <Suspense fallback={null}>
                 <SearchB2B
@@ -113,7 +203,7 @@ function Header({ lang }: HeaderProps) {
                 window.open(
                   '/radio-player.html',
                   'RadioPlayer',
-                  'width=450,height=500,resizable=yes,scrollbars=no,status=no,menubar=no,toolbar=no,location=no'
+                  'width=450,height=500,resizable=yes,scrollbars=no,status=no,menubar=no,toolbar=no,location=no',
                 );
               }}
               className="shrink-0 hover:opacity-80 transition-opacity cursor-pointer"
@@ -127,49 +217,86 @@ function Header({ lang }: HeaderProps) {
             </button>
           </div>
 
-          {/* Right 20% - Buttons */}
-          <div className="w-[20%] flex items-center justify-end gap-3 text-slate-600">
-            <Link
-              href={`/${lang}/search?source=likes&page_size=12`}
-              aria-label={t('text-wishlist', { defaultValue: 'Wishlist' })}
-              className="relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 hover:border-brand hover:text-brand shrink-0"
-            >
-              <HiOutlineHeart className="h-5 w-5" />
-              {summary?.totalCount ? (
-                <span className="absolute -top-1 -right-1 rounded-full bg-[#E1E7EE] px-1.5 text-[10px] font-semibold text-black">
-                  {summary.totalCount}
-                </span>
-              ) : null}
-            </Link>
+          {/* Right - Buttons (hidden on mobile, shown on desktop) */}
+          <div className="hidden lg:flex lg:w-[20%] items-center justify-end gap-3 text-slate-600">
+            {isAuthorized ? (
+              <>
+                <button
+                  type="button"
+                  onClick={toggleHidePrices}
+                  className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 hover:border-brand hover:text-brand shrink-0"
+                  aria-label={
+                    hidePrices
+                      ? t('text-show-prices', { defaultValue: 'Show prices' })
+                      : t('text-hide-prices', { defaultValue: 'Hide prices' })
+                  }
+                  title={
+                    hidePrices
+                      ? t('text-show-prices', { defaultValue: 'Show prices' })
+                      : t('text-hide-prices', { defaultValue: 'Hide prices' })
+                  }
+                >
+                  {hidePrices ? (
+                    <HiOutlineEyeOff className="h-5 w-5" />
+                  ) : (
+                    <HiOutlineEye className="h-5 w-5" />
+                  )}
+                </button>
 
-            <Link
-              href={`/${lang}${ROUTES.PRODUCT_COMPARE}`}
-              aria-label="Product compare"
-              className="relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 hover:border-brand hover:text-brand shrink-0"
-            >
-              <HiOutlineSwitchHorizontal className="h-5 w-5" />
-              {compareSkus.length ? (
-                <span className="absolute -top-1 -right-1 rounded-full bg-[#E1E7EE] px-1.5 text-[10px] font-semibold text-black">
-                  {compareSkus.length}
-                </span>
-              ) : null}
-            </Link>
+                <Link
+                  href={`/${lang}/search?source=likes&page_size=12`}
+                  aria-label={t('text-wishlist', { defaultValue: 'Wishlist' })}
+                  className="relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 hover:border-brand hover:text-brand shrink-0"
+                >
+                  <HiOutlineHeart className="h-5 w-5" />
+                  {summary?.totalCount ? (
+                    <span className="absolute -top-1 -right-1 rounded-full bg-[#E1E7EE] px-1.5 text-[10px] font-semibold text-black">
+                      {summary.totalCount}
+                    </span>
+                  ) : null}
+                </Link>
 
-            <button
-              type="button"
-              onClick={handleAccount}
-              className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
-              aria-label={isAuthorized ? t('text-account') : t('text-sign-in')}
-            >
-              <HiOutlineUserCircle className="h-6 w-6" />
-            </button>
+                <Link
+                  href={`/${lang}${ROUTES.PRODUCT_COMPARE}`}
+                  aria-label="Product compare"
+                  className="relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 hover:border-brand hover:text-brand shrink-0"
+                >
+                  <HiOutlineSwitchHorizontal className="h-5 w-5" />
+                  {compareSkus.length ? (
+                    <span className="absolute -top-1 -right-1 rounded-full bg-[#E1E7EE] px-1.5 text-[10px] font-semibold text-black">
+                      {compareSkus.length}
+                    </span>
+                  ) : null}
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={handleAccount}
+                  className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+                  aria-label={t('text-account')}
+                >
+                  <HiOutlineUserCircle className="h-6 w-6" />
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => openModal('LOGIN_VIEW')}
+                className="inline-flex items-center gap-2 rounded-full bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand/90 transition-colors"
+              >
+                <HiOutlineLogin className="h-5 w-5" />
+                <span>{t('text-sign-in', { defaultValue: 'Accedi' })}</span>
+              </button>
+            )}
           </div>
         </Container>
       </div>
 
-      <header className="border-b border-slate-200 bg-white text-slate-900">
-        <div className="bg-white border-b border-slate-200">
+      {/* Second header bar - navigation always visible, account features only when logged in */}
+      <header className="md:sticky md:top-16 z-30 border-b border-slate-200 bg-white text-slate-900">
+        <div className="bg-white">
           <Container className="flex flex-wrap items-center justify-between gap-4 py-3 text-sm font-medium">
+            {/* Left side - always visible */}
             <div className="flex flex-wrap items-center gap-3">
               <B2BHeaderMenu
                 lang={lang}
@@ -189,28 +316,38 @@ function Header({ lang }: HeaderProps) {
                 <Link
                   key={btn.label}
                   href={`/${lang}${btn.href}`}
-                  className={cn('rounded-full px-4 py-2 text-sm font-semibold shadow-sm', btn.color)}
+                  className={cn(
+                    'rounded-full px-4 py-2 text-sm font-semibold shadow-sm',
+                    btn.color,
+                  )}
                 >
                   {btn.label}
                 </Link>
               ))}
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
-              {quickLinks.map((link) => (
-                <Link
-                  key={link.label}
-                  href={`/${lang}${link.href}`}
-                  className="rounded border border-slate-300 px-4 py-2 text-slate-700 hover:border-brand hover:text-brand"
-                >
-                  {link.label}
-                </Link>
-              ))}
-              <Suspense fallback={null}>
-                <Delivery lang={lang} />
-              </Suspense>
-              <CartButton lang={lang} summaryVariant="amount" className="ml-3" />
-            </div>
+            {/* Right side - only show when logged in */}
+            {isAuthorized && (
+              <div className="hidden lg:flex flex-wrap items-center gap-3">
+                {quickLinks.map((link) => (
+                  <Link
+                    key={link.label}
+                    href={`/${lang}${link.href}`}
+                    className="rounded border border-slate-300 px-4 py-2 text-slate-700 hover:border-brand hover:text-brand"
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+                <Suspense fallback={null}>
+                  <Delivery lang={lang} />
+                </Suspense>
+                <CartButton
+                  lang={lang}
+                  summaryVariant="amount"
+                  className="ml-3"
+                />
+              </div>
+            )}
           </Container>
         </div>
       </header>
@@ -219,8 +356,10 @@ function Header({ lang }: HeaderProps) {
         <button
           type="button"
           onClick={scrollToTop}
-          className="fixed bottom-6 right-6 z-40 inline-flex items-center gap-2 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white shadow-lg hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
-          aria-label={t('text-scroll-to-top', { defaultValue: 'Scroll to top' })}
+          className="fixed bottom-20 md:bottom-6 right-4 md:right-6 z-40 inline-flex items-center gap-2 rounded-full bg-brand px-4 py-2 text-sm font-semibold text-white shadow-lg hover:bg-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+          aria-label={t('text-scroll-to-top', {
+            defaultValue: 'Scroll to top',
+          })}
         >
           <HiOutlineArrowUp className="h-4 w-4" />
           <span>{t('text-top', { defaultValue: 'Top' })}</span>

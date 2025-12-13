@@ -1,6 +1,14 @@
-"use client";
+'use client';
 
-import { Fragment, createElement, useEffect, useState, type CSSProperties, type ReactNode } from 'react';
+import {
+  Fragment,
+  createElement,
+  useEffect,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from 'react';
+import { sanitizeHtml } from '@/lib/sanitize-html';
 import type { CustomHTMLBlockConfig } from '@/lib/types/blocks';
 
 interface CustomHTMLBlockProps {
@@ -21,29 +29,32 @@ const BOOLEAN_ATTRIBUTES = new Set([
   'playsinline',
   'readonly',
   'required',
-  'selected'
+  'selected',
 ]);
 
 const ATTRIBUTE_RENAMES: Record<string, string> = {
-  allowfullscreen: 'allowFullScreen'
+  allowfullscreen: 'allowFullScreen',
 };
 
 const toCamelCase = (value: string) =>
   value.replace(/-([a-z0-9])/gi, (_, char: string) => char.toUpperCase());
 
 const styleStringToObject = (styleString: string): CSSProperties => {
-  const style: CSSProperties = {};
+  const style: Record<string, string> = {};
   styleString
     .split(';')
     .map((item) => item.trim())
     .filter(Boolean)
     .forEach((declaration) => {
-      const [property, rawValue] = declaration.split(':');
-      if (!property || rawValue === undefined) return;
-      const name = toCamelCase(property.trim());
-      style[name as keyof CSSProperties] = rawValue.trim();
+      const colonIndex = declaration.indexOf(':');
+      if (colonIndex === -1) return;
+      const property = declaration.slice(0, colonIndex).trim();
+      const rawValue = declaration.slice(colonIndex + 1).trim();
+      if (!property || !rawValue) return;
+      const name = toCamelCase(property);
+      style[name] = rawValue;
     });
-  return style;
+  return style as CSSProperties;
 };
 
 const convertNodeToReact = (node: ChildNode, key: string): ReactNode => {
@@ -65,7 +76,11 @@ const convertNodeToReact = (node: ChildNode, key: string): ReactNode => {
       let name = ATTRIBUTE_RENAMES[attr.name] ?? attr.name;
       const value = attr.value;
 
-      if (name.includes('-') && !name.startsWith('data-') && !name.startsWith('aria-')) {
+      if (
+        name.includes('-') &&
+        !name.startsWith('data-') &&
+        !name.startsWith('aria-')
+      ) {
         name = toCamelCase(name);
       }
 
@@ -99,7 +114,7 @@ const convertNodeToReact = (node: ChildNode, key: string): ReactNode => {
     return createElement(
       element.tagName.toLowerCase(),
       { ...props, key },
-      children.length > 0 ? children : undefined
+      children.length > 0 ? children : undefined,
     );
   }
 
@@ -111,8 +126,11 @@ const parseHtmlToNodes = (html: string): ReactNode[] => {
     return [];
   }
 
+  // Sanitize HTML to prevent XSS attacks
+  const sanitizedHtml = sanitizeHtml(html);
+
   const template = document.createElement('template');
-  template.innerHTML = html;
+  template.innerHTML = sanitizedHtml;
 
   return Array.from(template.content.childNodes)
     .map((node, index) => convertNodeToReact(node, `custom-html-${index}`))
@@ -132,7 +150,13 @@ export function CustomHTMLBlock({ config }: CustomHTMLBlockProps) {
   }
 
   if (containerClass && containerClass.trim().length > 0) {
-    return <div className={containerClass}>{nodes.map((node, index) => <Fragment key={index}>{node}</Fragment>)}</div>;
+    return (
+      <div className={containerClass}>
+        {nodes.map((node, index) => (
+          <Fragment key={index}>{node}</Fragment>
+        ))}
+      </div>
+    );
   }
 
   return (

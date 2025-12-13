@@ -32,7 +32,13 @@ function getYouTubeVideoId(url: string): string | null {
 }
 
 export function YouTubeEmbedBlock({ config }: YouTubeEmbedBlockProps) {
-  const { url, title, autoplay = false, width = "100%", height = "450px" } = config;
+  const {
+    url,
+    title,
+    autoplay = false,
+    width = '100%',
+    height = '450px',
+  } = config;
 
   const videoId = getYouTubeVideoId(url);
 
@@ -57,16 +63,20 @@ export function YouTubeEmbedBlock({ config }: YouTubeEmbedBlockProps) {
         className="relative overflow-hidden rounded-lg shadow-lg"
         style={{
           width,
-          paddingBottom: height === "responsive" ? "56.25%" : undefined,
-          height: height === "responsive" ? 0 : height
+          paddingBottom: height === 'responsive' ? '56.25%' : undefined,
+          height: height === 'responsive' ? 0 : height,
         }}
       >
         <iframe
           src={embedUrl}
-          title={title || "YouTube video"}
+          title={title || 'YouTube video'}
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowFullScreen
-          className={height === "responsive" ? "absolute left-0 top-0 h-full w-full" : "h-full w-full"}
+          className={
+            height === 'responsive'
+              ? 'absolute left-0 top-0 h-full w-full'
+              : 'h-full w-full'
+          }
           style={{ border: 0 }}
         />
       </div>

@@ -2,7 +2,9 @@ import axios from 'axios';
 import { getToken } from './get-token';
 
 const http = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_B2B_PUBLIC_REST_API_ENDPOINT || 'http://localhost:8000/api/v1',
+  baseURL:
+    process.env.NEXT_PUBLIC_B2B_PUBLIC_REST_API_ENDPOINT ||
+    'http://localhost:8000/api/v1',
   timeout: 30000,
   headers: {
     Accept: 'application/json',
@@ -29,7 +31,7 @@ const get = async <T = any>(url: string, params?: Record<string, any>) => {
 const post = async <T = any>(
   url: string,
   data?: Record<string, any>,
-  config?: Record<string, any>
+  config?: Record<string, any>,
 ) => {
   const response = await http.post<T>(url, data, config);
   return response.data;
@@ -38,12 +40,11 @@ const post = async <T = any>(
 const del = async <T = any>(
   url: string,
   data?: Record<string, any>,
-  config?: Record<string, any>
+  config?: Record<string, any>,
 ) => {
-  const response = await http.delete<T>(url,  config);
+  const response = await http.delete<T>(url, config);
   return response.data;
 };
 
-
-export { get, post , del };
+export { get, post, del };
 export default http;

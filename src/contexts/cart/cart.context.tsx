@@ -4,11 +4,14 @@ import React, { useCallback } from 'react';
 import { cartReducer, State, initialState } from './cart.reducer';
 import { CartSummary, Item, getItem, inStock } from './cart.utils';
 import { useLocalStorage } from '@utils/use-local-storage';
-import { addOrUpdateCartItem, deleteCart, fetchCartData } from '@framework/cart/b2b-cart';
+import {
+  addOrUpdateCartItem,
+  deleteCart,
+  fetchCartData,
+} from '@framework/cart/b2b-cart';
 import { AddToCartInput } from '@utils/transform/cart';
 
 // Mapped API getter that returns Item[]
-
 
 interface CartProviderState extends State {
   addItemToCart: (item: Item, quantity: number) => void;
@@ -22,10 +25,11 @@ interface CartProviderState extends State {
   hydrateFromServer: (serverItems: Item[], mode?: 'replace' | 'merge') => void;
   getCart: (mode?: 'replace' | 'merge') => Promise<void>;
   setCartSummary: (meta: CartSummary | null) => void;
-
 }
 
-export const cartContext = React.createContext<CartProviderState | undefined>(undefined);
+export const cartContext = React.createContext<CartProviderState | undefined>(
+  undefined,
+);
 cartContext.displayName = 'CartContext';
 
 export const useCart = () => {
@@ -38,7 +42,10 @@ export const useCart = () => {
 
 export function CartProvider(props: React.PropsWithChildren<any>) {
   // Keep localStorage for persistence, but DO NOT seed the initial render from it.
-  const [savedCart, saveCart] = useLocalStorage('borobazar-cart', JSON.stringify(initialState));
+  const [savedCart, saveCart] = useLocalStorage(
+    'vinc-b2b-cart',
+    JSON.stringify(initialState),
+  );
 
   // Hydration-safe: start from a fixed state (matches server HTML).
   const [state, dispatch] = React.useReducer(cartReducer, initialState);
@@ -88,16 +95,21 @@ export function CartProvider(props: React.PropsWithChildren<any>) {
   const setItemQuantity = (item: Item, quantity: number) =>
     dispatch({ type: 'SET_ITEM_QUANTITY', item, quantity });
 
-
-
   // ---- Selectors
-  const isInCart = useCallback((id: Item['id']) => !!getItem(state.items, id), [state.items]);
-  const getItemFromCart = useCallback((id: Item['id']) => getItem(state.items, id), [state.items]);
-  const isInStock = useCallback((id: Item['id']) => inStock(state.items, id), [state.items]);
+  const isInCart = useCallback(
+    (id: Item['id']) => !!getItem(state.items, id),
+    [state.items],
+  );
+  const getItemFromCart = useCallback(
+    (id: Item['id']) => getItem(state.items, id),
+    [state.items],
+  );
+  const isInStock = useCallback(
+    (id: Item['id']) => inStock(state.items, id),
+    [state.items],
+  );
 
   // ---- Hydration helper (merge/replace)
-
-
 
   const hydrateFromServer = React.useCallback(
     (serverItems: Item[], mode: 'replace' | 'merge' = 'replace') => {
@@ -107,21 +119,22 @@ export function CartProvider(props: React.PropsWithChildren<any>) {
         dispatch({ type: 'HYDRATE_MERGE', items: serverItems });
       }
     },
-    []
+    [],
   );
 
   const setCartSummary = React.useCallback((meta: CartSummary | null) => {
     dispatch({ type: 'SET_META', meta });
   }, []);
 
-
-
   // ---- Public API: fetch cart from server and hydrate
-  const getCart = React.useCallback(async (mode: 'replace' | 'merge' = 'replace') => {
-    const { items, summary } = await fetchCartData();
-    hydrateFromServer(items, mode);
-    setCartSummary(summary);
-  }, [hydrateFromServer, setCartSummary]);
+  const getCart = React.useCallback(
+    async (mode: 'replace' | 'merge' = 'replace') => {
+      const { items, summary } = await fetchCartData();
+      hydrateFromServer(items, mode);
+      setCartSummary(summary);
+    },
+    [hydrateFromServer, setCartSummary],
+  );
 
   const addToCartServer = React.useCallback(
     async (input: AddToCartInput, sourceItem?: Item) => {
@@ -131,7 +144,7 @@ export function CartProvider(props: React.PropsWithChildren<any>) {
       setCartSummary(fresh.summary);
       return fresh;
     },
-    [state.items, state.meta, hydrateFromServer, setCartSummary]
+    [state.items, state.meta, hydrateFromServer, setCartSummary],
   );
 
   // ---- NEW: resetCart that calls backend DELETE_CART and re-syncs
@@ -150,7 +163,7 @@ export function CartProvider(props: React.PropsWithChildren<any>) {
         dispatch({ type: 'RESET_CART' });
       }
     },
-    [hydrateFromServer, setCartSummary]
+    [hydrateFromServer, setCartSummary],
   );
 
   const value = React.useMemo(
@@ -167,7 +180,7 @@ export function CartProvider(props: React.PropsWithChildren<any>) {
       hydrateFromServer,
       getCart,
       setCartSummary,
-      addToCartServer
+      addToCartServer,
     }),
     [
       getItemFromCart,
@@ -178,7 +191,7 @@ export function CartProvider(props: React.PropsWithChildren<any>) {
       setCartSummary,
       addToCartServer,
       resetCart,
-    ]
+    ],
   );
 
   return <cartContext.Provider value={value} {...props} />;

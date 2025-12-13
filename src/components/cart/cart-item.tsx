@@ -3,6 +3,7 @@ import Link from '@components/ui/link';
 import Image from '@components/ui/image';
 import { IoIosCloseCircle } from 'react-icons/io';
 import { useCart } from '@contexts/cart/cart.context';
+import { useUI } from '@contexts/ui.context';
 import usePrice from '@framework/product/use-price';
 import { ROUTES } from '@utils/routes';
 import AddToCart from '@components/product/add-to-cart';
@@ -19,13 +20,14 @@ const getUnitNet = (it: any) =>
       it?.price_discount ??
       it?.__cartMeta?.price_discount ??
       it?.price ??
-      0
+      0,
   );
 
 const getQty = (it: any) => Number(it?.quantity ?? 0);
 
 const CartItem: React.FC<CartItemProps> = ({ lang, item }) => {
   const { isInStock, clearItemFromCart } = useCart();
+  const { hidePrices } = useUI();
   const outOfStock = !isInStock(item.id);
 
   const qty = getQty(item);
@@ -35,10 +37,12 @@ const CartItem: React.FC<CartItemProps> = ({ lang, item }) => {
   const { price: unitPrice } = usePrice({ amount: unit, currencyCode: 'EUR' });
   const { price: linePrice } = usePrice({ amount: line, currencyCode: 'EUR' });
 
-  const normalizedLang = (lang ?? 'it').trim().replace(/^\/+|\/+$|\s+/g, '') || 'it';
-  const skuValue = typeof item?.sku === 'string' && item.sku.trim() !== ''
-    ? encodeURIComponent(item.sku.trim())
-    : '';
+  const normalizedLang =
+    (lang ?? 'it').trim().replace(/^\/+|\/+$|\s+/g, '') || 'it';
+  const skuValue =
+    typeof item?.sku === 'string' && item.sku.trim() !== ''
+      ? encodeURIComponent(item.sku.trim())
+      : '';
   const productHref = skuValue
     ? `/${normalizedLang}${ROUTES.PRODUCT}?sku=${skuValue}`
     : `/${normalizedLang}${ROUTES.PRODUCT}`;
@@ -79,18 +83,22 @@ const CartItem: React.FC<CartItemProps> = ({ lang, item }) => {
             {item?.name}
           </Link>
           {/* qty × unit */}
-          <div className="mt-0.5 text-[11px] text-gray-600">
-            {qty} × {unitPrice}
-          </div>
+          {!hidePrices && (
+            <div className="mt-0.5 text-[11px] text-gray-600">
+              {qty} × {unitPrice}
+            </div>
+          )}
 
           {/* compact counter */}
-          <UpdateCart  item={item} lang={''}  />
+          <UpdateCart item={item} lang={''} />
         </div>
 
         {/* line total */}
-        <div className="shrink-0 text-right text-sm font-semibold text-brand-dark md:text-base">
-          {linePrice}
-        </div>
+        {!hidePrices && (
+          <div className="shrink-0 text-right text-sm font-semibold text-brand-dark md:text-base">
+            {linePrice}
+          </div>
+        )}
       </div>
     </div>
   );

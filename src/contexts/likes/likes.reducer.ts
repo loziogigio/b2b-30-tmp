@@ -12,17 +12,26 @@ export type LikesSummary = {
 };
 
 type Action =
-  | { type: 'HYDRATE_REPLACE'; items: LikeItem[]; summary?: LikesSummary | null }
+  | {
+      type: 'HYDRATE_REPLACE';
+      items: LikeItem[];
+      summary?: LikesSummary | null;
+    }
   | { type: 'HYDRATE_MERGE'; items: LikeItem[]; summary?: LikesSummary | null }
   | { type: 'SET_SUMMARY'; summary: LikesSummary | null }
   | { type: 'LIKE_ADD'; item: LikeItem }
   | { type: 'LIKE_REMOVE'; sku: string }
-  | { type: 'LIKE_TOGGLE'; sku: string; liked: boolean; likedAt?: string | null }
+  | {
+      type: 'LIKE_TOGGLE';
+      sku: string;
+      liked: boolean;
+      likedAt?: string | null;
+    }
   | { type: 'RESET_LIKES' };
 
 export interface State {
-  items: LikeItem[];              // flat list
-  index: Record<string, number>;  // sku -> index
+  items: LikeItem[]; // flat list
+  index: Record<string, number>; // sku -> index
   isEmpty: boolean;
   summary: LikesSummary | null;
 }
@@ -44,7 +53,11 @@ function rebuildIndex(items: LikeItem[]) {
   return index;
 }
 
-function finalize(state: State, items: LikeItem[], summary?: LikesSummary | null): State {
+function finalize(
+  state: State,
+  items: LikeItem[],
+  summary?: LikesSummary | null,
+): State {
   const list = Array.isArray(items) ? items : ([] as LikeItem[]);
   const idx = rebuildIndex(list);
   const totalCount = list.length;
@@ -54,8 +67,11 @@ function finalize(state: State, items: LikeItem[], summary?: LikesSummary | null
     index: idx,
     isEmpty: totalCount === 0,
     summary:
-      summary ?? state.summary
-        ? { ...(state.summary ?? { totalCount: 0, updatedAt: null }), totalCount }
+      (summary ?? state.summary)
+        ? {
+            ...(state.summary ?? { totalCount: 0, updatedAt: null }),
+            totalCount,
+          }
         : { totalCount, updatedAt: null },
   };
 }
@@ -68,8 +84,13 @@ export function likesReducer(state: State, action: Action): State {
     case 'HYDRATE_MERGE': {
       const map = new Map<string, LikeItem>();
       for (const it of state.items) map.set(it.sku, it);
-      for (const it of action.items) map.set(it.sku, { ...(map.get(it.sku) || {}), ...it });
-      return finalize(state, Array.from(map.values()), action.summary ?? undefined);
+      for (const it of action.items)
+        map.set(it.sku, { ...(map.get(it.sku) || {}), ...it });
+      return finalize(
+        state,
+        Array.from(map.values()),
+        action.summary ?? undefined,
+      );
     }
     case 'SET_SUMMARY':
       return { ...state, summary: action.summary };
@@ -89,10 +110,17 @@ export function likesReducer(state: State, action: Action): State {
         // ensure present
         if (i != null) {
           const next = [...state.items];
-          next[i] = { ...next[i], isActive: true, likedAt: action.likedAt ?? next[i].likedAt ?? null };
+          next[i] = {
+            ...next[i],
+            isActive: true,
+            likedAt: action.likedAt ?? next[i].likedAt ?? null,
+          };
           return finalize(state, next);
         }
-        return finalize(state, [{ sku: action.sku, isActive: true, likedAt: action.likedAt ?? null }, ...state.items]);
+        return finalize(state, [
+          { sku: action.sku, isActive: true, likedAt: action.likedAt ?? null },
+          ...state.items,
+        ]);
       }
       // unlike: remove if present
       if (i != null) {

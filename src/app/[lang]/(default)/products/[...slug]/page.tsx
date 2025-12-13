@@ -4,7 +4,7 @@ import { ProductDetailWithPreview } from '@components/product/ProductDetailWithP
 
 export default async function Page({
   params,
-  searchParams
+  searchParams,
 }: {
   params: Promise<any>;
   searchParams?: Promise<{ preview?: string }>;
@@ -15,15 +15,17 @@ export default async function Page({
 
   // Join slug segments to handle SKUs with slashes (e.g., po27011/2zc)
   // With catch-all route [...slug], the slug param is an array
-  const slug = Array.isArray(slugSegments) ? slugSegments.join('/') : slugSegments;
+  const slug = Array.isArray(slugSegments)
+    ? slugSegments.join('/')
+    : slugSegments;
 
   // Try new simplified template matching first (sku/parentSku based)
   // For now, we'll use slug as both sku and parentSku
   // In production, fetch real product data to get the actual parentSku
   let blocks = await getProductDetailBlocksNew(
-    slug,      // productSku
-    slug,      // parentSku (fallback to slug for now)
-    isPreview
+    slug, // productSku
+    slug, // parentSku (fallback to slug for now)
+    isPreview,
   );
 
   // If no blocks found with new system, fallback to old system
@@ -32,7 +34,7 @@ export default async function Page({
       slug,
       undefined, // categoryIds
       undefined, // tags
-      isPreview
+      isPreview,
     );
   }
 

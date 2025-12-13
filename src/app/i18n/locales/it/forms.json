@@ -55,5 +55,13 @@
   "contact-title-required": "Il titolo di contatto è obbligatorio",
   "default-type-required": "Il tipo predefinito è obbligatorio",
   "contact-number-required": "Il numero di contatto è obbligatorio",
-  "text-subscription-success-msg": "Grazie per esserti iscritto alla nostra newsletter"
+  "text-subscription-success-msg": "Grazie per esserti iscritto alla nostra newsletter",
+
+  "label-company-name": "Ragione Sociale *",
+  "company-name-required": "La ragione sociale è obbligatoria",
+  "label-vat-number": "Partita IVA *",
+  "vat-number-required": "La partita IVA è obbligatoria",
+  "label-sdi-code": "Codice SDI",
+  "label-notes": "Note aggiuntive",
+  "city-required": "Il comune è obbligatorio"
 }

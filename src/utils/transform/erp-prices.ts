@@ -25,11 +25,11 @@ export interface PackagingOptionLegacy {
 }
 
 export interface SupplierArrival {
-  article_code: string;            // CodiceInternoArticolo
-  expected_date?: string;          // YYYY-MM-DD (from DataArrivoPrevista)
-  confirmed_date?: string;         // YYYY-MM-DD (from DataArrivoConfermata)
-  week_number?: number;            // NumeroDellaSettimana
-  expected_qty?: number;           // QuantitaArrivoPrevista
+  article_code: string; // CodiceInternoArticolo
+  expected_date?: string; // YYYY-MM-DD (from DataArrivoPrevista)
+  confirmed_date?: string; // YYYY-MM-DD (from DataArrivoConfermata)
+  week_number?: number; // NumeroDellaSettimana
+  expected_qty?: number; // QuantitaArrivoPrevista
 }
 export interface ProductLabelAction {
   LABEL: string;
@@ -50,7 +50,7 @@ export interface ImprovingPromo {
   promo_title: string;
   promo_row: number;
   start_promo_date: string; // ISO string
-  end_promo_date: string;   // ISO string
+  end_promo_date: string; // ISO string
   discount_extra: number[];
   num_promo: number;
   num_promo_canvas: number;
@@ -98,7 +98,7 @@ export interface ErpPriceData {
   discount_extra?: number[];
   num_promo?: number;
   num_promo_canvas?: number;
-  discount_description:string;
+  discount_description: string;
 
   pricelist_type?: string;
   pricelist_code?: string;
@@ -110,7 +110,7 @@ export interface ErpPriceData {
 const fmtErpDate = (s?: string): string | undefined => {
   if (!s) return undefined;
   const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  if (m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`; // DD/MM/YYYY -> YYYY-MM-DD
+  if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`; // DD/MM/YYYY -> YYYY-MM-DD
   return s; // already ISO-ish
 };
 
@@ -120,26 +120,27 @@ const mapSupplierArrivals = (arr: any[]): SupplierArrival[] =>
         article_code: String(r?.CodiceInternoArticolo ?? ''),
         expected_date: fmtErpDate(r?.DataArrivoPrevista),
         confirmed_date: fmtErpDate(r?.DataArrivoConfermata),
-        week_number: r?.NumeroDellaSettimana != null ? Number(r.NumeroDellaSettimana) : undefined,
+        week_number:
+          r?.NumeroDellaSettimana != null
+            ? Number(r.NumeroDellaSettimana)
+            : undefined,
         expected_qty: Number(r?.QuantitaArrivoPrevista ?? 0),
       }))
     : [];
 
-
-
-export function transformErpPricesResponse(response: any): Record<string, ErpPriceData> {
+export function transformErpPricesResponse(
+  response: any,
+): Record<string, ErpPriceData> {
   if (response?.status !== 'success' || !response.data) return {};
 
   const transformed: Record<string, ErpPriceData> = {};
 
-  
-
   for (const [entityCode, raw] of Object.entries<any>(response.data)) {
     const promoRaw = raw.improving_promo ?? null;
     const supplierRaw =
-    raw?.product_label_action?.order_supplier_available ??
-    raw?.order_suplier_available ??
-    [];
+      raw?.product_label_action?.order_supplier_available ??
+      raw?.order_suplier_available ??
+      [];
     const supplierArrivals = mapSupplierArrivals(supplierRaw);
 
     transformed[entityCode] = {
@@ -183,41 +184,45 @@ export function transformErpPricesResponse(response: any): Record<string, ErpPri
 
       order_suplier_available: supplierArrivals,
       prod_substitution: raw.prod_substitution ?? [],
-      
 
-      improving_promo: raw.is_promo && promoRaw
-        ? {
-            is_improving_promo: raw.is_improving_promo ?? false,
-            is_improving_promo_net_price: raw.is_improving_promo_net_price ?? false,
-            promo_price: promoRaw.PrezzoNettoConPromo ?? raw.price_discount ?? raw.price,
-            promo_code: promoRaw.CodicePromozione ?? '',
-            promo_title: promoRaw.TitoloPromozione ?? '',
-            promo_row: promoRaw.RigaPromozione ?? 0,
-            start_promo_date: formatPromoDate(promoRaw.DataInizioValitita),
-            end_promo_date: formatPromoDate(promoRaw.DataFineValidita),
-            discount_extra: [
-              promoRaw.ScontoExtra1 ?? 0,
-              promoRaw.ScontoExtra2 ?? 0,
-              promoRaw.ScontoExtra3 ?? 0,
-            ],
-            num_promo: raw.num_promo ?? 0,
-            num_promo_canvas: raw.num_promo_canvas ?? 0,
-            promozionale: raw.promozionale ?? false,
-            is_promo: raw.is_promo ?? false,
-            promo: raw.promo ?? false,
-          }
-        : undefined,
+      improving_promo:
+        raw.is_promo && promoRaw
+          ? {
+              is_improving_promo: raw.is_improving_promo ?? false,
+              is_improving_promo_net_price:
+                raw.is_improving_promo_net_price ?? false,
+              promo_price:
+                promoRaw.PrezzoNettoConPromo ?? raw.price_discount ?? raw.price,
+              promo_code: promoRaw.CodicePromozione ?? '',
+              promo_title: promoRaw.TitoloPromozione ?? '',
+              promo_row: promoRaw.RigaPromozione ?? 0,
+              start_promo_date: formatPromoDate(promoRaw.DataInizioValitita),
+              end_promo_date: formatPromoDate(promoRaw.DataFineValidita),
+              discount_extra: [
+                promoRaw.ScontoExtra1 ?? 0,
+                promoRaw.ScontoExtra2 ?? 0,
+                promoRaw.ScontoExtra3 ?? 0,
+              ],
+              num_promo: raw.num_promo ?? 0,
+              num_promo_canvas: raw.num_promo_canvas ?? 0,
+              promozionale: raw.promozionale ?? false,
+              is_promo: raw.is_promo ?? false,
+              promo: raw.promo ?? false,
+            }
+          : undefined,
 
       product_label_action: raw.product_label_action
         ? {
             LABEL: raw.product_label_action.LABEL ?? '',
             ADD_TO_CART: raw.product_label_action.ADD_TO_CART ?? false,
             availability: raw.product_label_action.quantity_available ?? 0,
-            is_managed_substitutes: raw.product_label_action.is_managed_substitutes ?? false,
-            is_managed_supplier_order: raw.product_label_action.is_managed_supplier_order ?? false,
+            is_managed_substitutes:
+              raw.product_label_action.is_managed_substitutes ?? false,
+            is_managed_supplier_order:
+              raw.product_label_action.is_managed_supplier_order ?? false,
             order_supplier_available: supplierArrivals,
-            case:raw.case?? 0,
-            substitute_available:raw.substitute_available?? false
+            case: raw.case ?? 0,
+            substitute_available: raw.substitute_available ?? false,
           }
         : undefined,
     };

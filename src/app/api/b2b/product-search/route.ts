@@ -17,7 +17,7 @@ export async function GET(request: Request) {
 
   const params = transformSearchParams({
     search: query || { text },
-    per_page: perPage
+    per_page: perPage,
   });
 
   try {
@@ -25,6 +25,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ items });
   } catch (error) {
     console.error('[product-search] Failed to fetch products', error);
-    return NextResponse.json({ items: [], error: 'Failed to fetch products' }, { status: 500 });
+    return NextResponse.json(
+      { items: [], error: 'Failed to fetch products' },
+      { status: 500 },
+    );
   }
 }

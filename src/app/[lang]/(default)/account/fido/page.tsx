@@ -1,8 +1,8 @@
 import FidoClient from './fido.client';
 
-type Props = { params: { lang: string } };
+type Props = { params: Promise<{ lang: string }> };
 
-export default function Page({ params }: Props) {
-  const lang = params.lang ?? 'it';
-  return <FidoClient lang={lang} />;
+export default async function Page({ params }: Props) {
+  const { lang } = await params;
+  return <FidoClient lang={lang ?? 'it'} />;
 }

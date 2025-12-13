@@ -1,10 +1,14 @@
-import type { RawAddressesResponse, RawAddress, AddressB2B } from '@framework/acccount/types-b2b-account';
+import type {
+  RawAddressesResponse,
+  RawAddress,
+  AddressB2B,
+} from '@framework/acccount/types-b2b-account';
 
 function normalize(r: RawAddress): AddressB2B {
-  const title = r.Citta || r.Comune
-  ? `${r.IndirizzoEsteso} - ${r.Citta || r.Comune}`
-  : r.IndirizzoEsteso;
-
+  const title =
+    r.Citta || r.Comune
+      ? `${r.IndirizzoEsteso} - ${r.Citta || r.Comune}`
+      : r.IndirizzoEsteso;
 
   return {
     id: r.Codice,

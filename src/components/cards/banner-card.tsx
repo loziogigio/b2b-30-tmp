@@ -41,10 +41,13 @@ type NormalizedImage = {
 
 const FALLBACK_DIMENSIONS = {
   width: 1920,
-  height: 1080
+  height: 1080,
 };
 
-function normalizeImageSource(image: any, fallbackAlt: string): NormalizedImage | null {
+function normalizeImageSource(
+  image: any,
+  fallbackAlt: string,
+): NormalizedImage | null {
   if (!image) return null;
 
   if (typeof image === 'string') {
@@ -52,7 +55,7 @@ function normalizeImageSource(image: any, fallbackAlt: string): NormalizedImage 
       url: image,
       width: FALLBACK_DIMENSIONS.width,
       height: FALLBACK_DIMENSIONS.height,
-      alt: fallbackAlt
+      alt: fallbackAlt,
     };
   }
 
@@ -62,7 +65,7 @@ function normalizeImageSource(image: any, fallbackAlt: string): NormalizedImage 
         url: image.url,
         width: image.width || FALLBACK_DIMENSIONS.width,
         height: image.height || FALLBACK_DIMENSIONS.height,
-        alt: image.alt || fallbackAlt
+        alt: image.alt || fallbackAlt,
       };
     }
 
@@ -77,7 +80,10 @@ function normalizeImageSource(image: any, fallbackAlt: string): NormalizedImage 
   return null;
 }
 
-function resolveResponsiveImage(banner: any, deviceWidth: number): NormalizedImage | null {
+function resolveResponsiveImage(
+  banner: any,
+  deviceWidth: number,
+): NormalizedImage | null {
   const title = banner?.title || '';
 
   const desktopSource =
@@ -105,32 +111,41 @@ const borderRadiusMap: Record<CardStyleOptions['borderRadius'], string> = {
   lg: '0.5rem',
   xl: '0.75rem',
   '2xl': '1rem',
-  full: '9999px'
+  full: '9999px',
 };
 
-const shadowMap: Record<Exclude<CardStyleOptions['shadowSize'], 'none'>, string> = {
+const shadowMap: Record<
+  Exclude<CardStyleOptions['shadowSize'], 'none'>,
+  string
+> = {
   sm: '0 1px 2px 0 rgb(0 0 0 / 0.05)',
   md: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
   lg: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
   xl: '0 20px 25px -5px rgb(0 0 0 / 0.1)',
-  '2xl': '0 25px 50px -12px rgb(0 0 0 / 0.25)'
+  '2xl': '0 25px 50px -12px rgb(0 0 0 / 0.25)',
 };
 
-const hoverShadowMap: Record<Exclude<CardStyleOptions['hoverShadowSize'], undefined>, string> = {
+const hoverShadowMap: Record<
+  Exclude<CardStyleOptions['hoverShadowSize'], undefined>,
+  string
+> = {
   sm: shadowMap.sm,
   md: shadowMap.md,
   lg: shadowMap.lg,
   xl: shadowMap.xl,
-  '2xl': shadowMap['2xl']
+  '2xl': shadowMap['2xl'],
 };
 
 const DEFAULT_OVERLAY_COLOR = '#0f172a';
 const DEFAULT_OVERLAY_OPACITY = 0.65;
 
-const overlayPositionMap: Record<NonNullable<BannerOverlayConfig['position']>, string> = {
+const overlayPositionMap: Record<
+  NonNullable<BannerOverlayConfig['position']>,
+  string
+> = {
   top: 'items-start justify-start pt-6',
   middle: 'items-center justify-center',
-  bottom: 'items-end justify-end pb-6'
+  bottom: 'items-end justify-end pb-6',
 };
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
@@ -151,13 +166,15 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
   return {
     r: (value >> 16) & 255,
     g: (value >> 8) & 255,
-    b: value & 255
+    b: value & 255,
   };
 }
 
 function resolveOverlayBackground(color?: string, opacity?: number) {
   const effectiveOpacity =
-    typeof opacity === 'number' && opacity >= 0 && opacity <= 1 ? opacity : DEFAULT_OVERLAY_OPACITY;
+    typeof opacity === 'number' && opacity >= 0 && opacity <= 1
+      ? opacity
+      : DEFAULT_OVERLAY_OPACITY;
 
   if (!color) {
     return `rgba(15, 23, 42, ${effectiveOpacity})`;
@@ -205,18 +222,21 @@ const BannerCard: React.FC<BannerProps> = ({
     hoverEffect: 'none',
     hoverScale: 1.02,
     hoverShadowSize: 'lg',
-    hoverBackgroundColor: ''
+    hoverBackgroundColor: '',
   };
 
   const styleOptions: CardStyleOptions | null = useMemo(() => {
     if (!banner?.cardStyle) return null;
     return {
       ...defaultStyle,
-      ...(banner.cardStyle as Partial<CardStyleOptions>)
+      ...(banner.cardStyle as Partial<CardStyleOptions>),
     };
   }, [banner?.cardStyle]);
 
-  const selectedImage = resolveResponsiveImage(banner, width ?? FALLBACK_DIMENSIONS.width);
+  const selectedImage = resolveResponsiveImage(
+    banner,
+    width ?? FALLBACK_DIMENSIONS.width,
+  );
   if (!selectedImage?.url) {
     // Nothing to render if image is missing
     return null;
@@ -227,7 +247,7 @@ const BannerCard: React.FC<BannerProps> = ({
     const base = computeMediaCardStyle(styleOptions);
     return {
       ...base,
-      borderRadius: borderRadiusMap[styleOptions.borderRadius]
+      borderRadius: borderRadiusMap[styleOptions.borderRadius],
     } satisfies CSSProperties;
   }, [styleOptions]);
 
@@ -257,14 +277,18 @@ const BannerCard: React.FC<BannerProps> = ({
     }
 
     const className = `banner-card-style-${hashStyleValue(JSON.stringify(styleOptions))}`;
-    const css = hoverDeclarations.length ? `.${className}:hover { ${hoverDeclarations.join(' ')} }` : '';
+    const css = hoverDeclarations.length
+      ? `.${className}:hover { ${hoverDeclarations.join(' ')} }`
+      : '';
     return { className, css };
   }, [styleOptions]);
 
   const shouldRenderHoverTint =
-    Boolean(styleOptions?.hoverBackgroundColor) && styleOptions?.hoverEffect !== 'shadow';
+    Boolean(styleOptions?.hoverBackgroundColor) &&
+    styleOptions?.hoverEffect !== 'shadow';
 
-  const overlayConfig = (banner?.overlay as BannerOverlayConfig | undefined) ?? null;
+  const overlayConfig =
+    (banner?.overlay as BannerOverlayConfig | undefined) ?? null;
   const overlayShouldRender = Boolean(overlayConfig && banner?.title);
   const overlayPosition: NonNullable<BannerOverlayConfig['position']> =
     overlayConfig?.position === 'top' || overlayConfig?.position === 'middle'
@@ -274,15 +298,13 @@ const BannerCard: React.FC<BannerProps> = ({
   const overlayBackground = overlayShouldRender
     ? resolveOverlayBackground(
         overlayConfig?.backgroundColor || DEFAULT_OVERLAY_COLOR,
-        overlayConfig?.backgroundOpacity
+        overlayConfig?.backgroundOpacity,
       )
     : undefined;
   const overlayTextColor = overlayConfig?.textColor || '#ffffff';
 
   const href =
-    banner?.link ??
-    banner?.linkUrl ??
-    (slug ? `/${lang}${slug}` : undefined);
+    banner?.link ?? banner?.linkUrl ?? (slug ? `/${lang}${slug}` : undefined);
 
   const linkProps: Record<string, any> = {};
   if (banner?.openInNewTab) {
@@ -296,7 +318,7 @@ const BannerCard: React.FC<BannerProps> = ({
         'relative flex h-full w-full justify-center',
         classNameInner,
         forceFullHeight && 'min-h-full',
-        hoverData.className
+        hoverData.className,
       )}
       style={cardBaseStyle}
     >
@@ -311,7 +333,7 @@ const BannerCard: React.FC<BannerProps> = ({
             'rounded-xl': styleOptions.borderRadius === 'xl',
             'rounded-2xl': styleOptions.borderRadius === '2xl',
             'rounded-full': styleOptions.borderRadius === 'full',
-          }
+          },
         )}
       >
         {shouldRenderHoverTint ? (
@@ -319,7 +341,7 @@ const BannerCard: React.FC<BannerProps> = ({
             className="pointer-events-none absolute inset-0 z-[1] opacity-0 transition-opacity duration-200 group-hover:opacity-100"
             style={{
               backgroundColor: styleOptions?.hoverBackgroundColor,
-              mixBlendMode: 'multiply'
+              mixBlendMode: 'multiply',
             }}
           />
         ) : null}
@@ -343,12 +365,14 @@ const BannerCard: React.FC<BannerProps> = ({
               'rounded-xl': styleOptions.borderRadius === 'xl',
               'rounded-2xl': styleOptions.borderRadius === '2xl',
               'rounded-full': styleOptions.borderRadius === 'full',
-            }
+            },
           )}
           style={{
-            borderRadius: styleOptions ? borderRadiusMap[styleOptions.borderRadius] : undefined,
+            borderRadius: styleOptions
+              ? borderRadiusMap[styleOptions.borderRadius]
+              : undefined,
             height: forceFullHeight ? '100%' : undefined,
-            width: forceFullHeight ? '100%' : undefined
+            width: forceFullHeight ? '100%' : undefined,
           }}
         />
         {overlayShouldRender ? (
@@ -358,22 +382,25 @@ const BannerCard: React.FC<BannerProps> = ({
               className="pointer-events-none absolute inset-x-0 bottom-0 z-10 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
               style={{
                 height: '75%',
-                background: 'linear-gradient(180deg, rgba(217, 217, 217, 0) 0%, #737373 100%)',
-                borderRadius: styleOptions ? borderRadiusMap[styleOptions.borderRadius] : undefined
+                background:
+                  'linear-gradient(180deg, rgba(217, 217, 217, 0) 0%, #737373 100%)',
+                borderRadius: styleOptions
+                  ? borderRadiusMap[styleOptions.borderRadius]
+                  : undefined,
               }}
             />
             {/* Text overlay - visible only on hover */}
             <div
               className={cn(
                 'pointer-events-none absolute inset-0 z-20 flex px-6 text-center opacity-0 transition-opacity duration-300 group-hover:opacity-100',
-                overlayPositionClass
+                overlayPositionClass,
               )}
             >
               <div
                 className="mx-auto w-full max-w-xl rounded-[17px] px-5 py-2 text-base font-semibold leading-tight"
                 style={{
                   backgroundColor: overlayBackground,
-                  color: overlayTextColor
+                  color: overlayTextColor,
                 }}
               >
                 {banner.title}
@@ -389,8 +416,17 @@ const BannerCard: React.FC<BannerProps> = ({
   );
 
   return (
-    <div className={cn('mx-auto w-full', !noPadding && 'p-2.5', className, forceFullHeight && 'h-full')}>
-      {hoverData.css ? <style dangerouslySetInnerHTML={{ __html: hoverData.css }} /> : null}
+    <div
+      className={cn(
+        'mx-auto w-full',
+        !noPadding && 'p-2.5',
+        className,
+        forceFullHeight && 'h-full',
+      )}
+    >
+      {hoverData.css ? (
+        <style dangerouslySetInnerHTML={{ __html: hoverData.css }} />
+      ) : null}
       {href ? (
         <Link
           href={href}
@@ -401,7 +437,10 @@ const BannerCard: React.FC<BannerProps> = ({
           {imageNode}
         </Link>
       ) : (
-        <div className={cn('group block', forceFullHeight && 'h-full')} aria-label={title}>
+        <div
+          className={cn('group block', forceFullHeight && 'h-full')}
+          aria-label={title}
+        >
           {imageNode}
         </div>
       )}

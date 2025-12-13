@@ -7,8 +7,16 @@ import { ROUTES } from '@utils/routes';
 import Button from '@components/ui/button';
 import ThumbnailCarousel from '@components/ui/carousel/thumbnail-carousel';
 import Image from '@components/ui/image';
-import { IoArrowRedoOutline, IoNotificationsOutline, IoNotifications } from 'react-icons/io5';
-import { HiOutlineSwitchHorizontal, HiOutlineCheckCircle } from 'react-icons/hi';
+import {
+  IoArrowRedoOutline,
+  IoArrowForwardOutline,
+  IoNotificationsOutline,
+  IoNotifications,
+} from 'react-icons/io5';
+import {
+  HiOutlineSwitchHorizontal,
+  HiOutlineCheckCircle,
+} from 'react-icons/hi';
 import SocialShareBox from '@components/ui/social-share-box';
 import { IoIosHeart, IoIosHeartEmpty } from 'react-icons/io';
 import {
@@ -79,7 +87,9 @@ export default function ProductPopup({ lang }: { lang: string }) {
   function navigateToProductPage() {
     // Close entire modal stack (ProductPopup + any parent like Variants Quick View)
     closeAll();
-    router.push(`/${lang}${ROUTES.PRODUCT}?sku=${encodeURIComponent(product?.sku ?? '')}`);
+    router.push(
+      `/${lang}${ROUTES.PRODUCT}?sku=${encodeURIComponent(product?.sku ?? '')}`,
+    );
   }
 
   // Ensure we know initial like status with a lightweight bulk check
@@ -98,6 +108,15 @@ export default function ProductPopup({ lang }: { lang: string }) {
 
   const canAdd = erpPrice?.product_label_action?.ADD_TO_CART ?? true;
   const isOutOfStock = erpPrice ? Number(erpPrice.availability) <= 0 : false;
+
+  // Check if we have a valid price
+  const anyPD = erpPrice as any;
+  const price =
+    anyPD?.price_discount ??
+    anyPD?.net_price ??
+    anyPD?.gross_price ??
+    anyPD?.price_gross;
+  const hasValidPrice = erpPrice && price != null && Number(price) > 0;
 
   const handleToggleReminder = async () => {
     try {
@@ -127,7 +146,7 @@ export default function ProductPopup({ lang }: { lang: string }) {
             ) : (
               <div className="flex items-center justify-center w-auto">
                 <Image
-                  src={product?.image?.original ?? '/product-placeholder.svg'}
+                  src={product?.image?.original || '/product-placeholder.svg'}
                   alt={product?.name ?? 'Product'}
                   width={900}
                   height={680}
@@ -139,14 +158,26 @@ export default function ProductPopup({ lang }: { lang: string }) {
 
           {/* Right column */}
           <div className="flex flex-col col-span-5 shrink-0 xl:col-span-6 xl:ltr:pl-2 xl:rtl:pr-2">
-            {/* Title + SKU */}
+            {/* Title + SKU + View Product Link */}
             <div className="pb-1">
-              <div className="md:mb-2.5 block -mt-1.5">
-                {product?.sku ? (
-                  <span className="text-[10px] md:text-xs font-bold text-white uppercase bg-brand px-2 py-2">
-                    {product.sku}
-                  </span>
-                ) : null}
+              <div className="md:mb-2.5 -mt-1.5">
+                <div className="flex items-center justify-between pr-8">
+                  {product?.sku ? (
+                    <span className="text-[10px] md:text-xs font-bold text-white uppercase bg-brand px-2 py-2">
+                      {product.sku}
+                    </span>
+                  ) : (
+                    <span />
+                  )}
+                  <button
+                    type="button"
+                    onClick={navigateToProductPage}
+                    className="inline-flex items-center px-4 py-2 rounded-md bg-brand text-brand-light text-sm font-medium transition-all hover:bg-brand/90"
+                  >
+                    {t('text-view-product').toLowerCase()}
+                    <IoArrowForwardOutline className="ml-2 text-base" />
+                  </button>
+                </div>
                 <h2
                   className="mt-2 text-lg font-medium transition-colors duration-300 text-brand-dark md:text-xl xl:text-2xl cursor-pointer"
                   onClick={navigateToProductPage}
@@ -159,39 +190,47 @@ export default function ProductPopup({ lang }: { lang: string }) {
 
             {/* Short description */}
             {product?.description ? (
-              <div className="mt-2 text-sm text-brand-dark">{product.description}</div>
+              <div className="mt-2 text-sm text-brand-dark">
+                {product.description}
+              </div>
             ) : null}
 
             {/* Info block (status/ETA/brand) */}
             <B2BInfoBlock product={product} priceData={erpPrice} lang={lang} />
 
-            {/* 3-up row: Packaging | Price | AddToCart */}
-            <div className="mt-2 grid grid-cols-1 gap-1 md:grid-cols-3">
-              <div>
-                <PackagingGrid pd={erpPrice} />
-              </div>
+            {/* 3-up row: Packaging | Price | AddToCart - only show when we have valid price */}
+            {hasValidPrice && (
+              <div className="mt-2 grid grid-cols-1 gap-1 md:grid-cols-3">
+                <div>
+                  <PackagingGrid pd={erpPrice} />
+                </div>
 
-              <div className="flex items-center justify-center">
-                {erpPrice ? <PriceAndPromo priceData={erpPrice} /> : null}
-              </div>
+                <div className="flex items-center justify-center">
+                  <PriceAndPromo priceData={erpPrice} />
+                </div>
 
-              <div className="flex items-center justify-center md:justify-end">
-                <AddToCart
-                  lang={lang}
-                  product={product}
-                  priceData={erpPrice}
-                  className="justify-center md:justify-end"
-                  disabled={!canAdd}
-                />
+                <div className="flex items-center justify-center md:justify-end">
+                  <AddToCart
+                    lang={lang}
+                    product={product}
+                    priceData={erpPrice}
+                    className="justify-center md:justify-end"
+                    disabled={!canAdd}
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Wishlist / Reminder / Compare / Share */}
             <div className="pt-3 md:pt-4">
               <div
                 className={cn(
                   'grid gap-2.5',
-                  isAuthorized && isOutOfStock ? 'grid-cols-4' : isAuthorized ? 'grid-cols-3' : 'grid-cols-2'
+                  isAuthorized && isOutOfStock
+                    ? 'grid-cols-4'
+                    : isAuthorized
+                      ? 'grid-cols-3'
+                      : 'grid-cols-2',
                 )}
               >
                 {isAuthorized && isOutOfStock && (
@@ -200,7 +239,11 @@ export default function ProductPopup({ lang }: { lang: string }) {
                     onClick={handleToggleReminder}
                     loading={addToReminderLoader}
                     className={`group hover:text-yellow-500 ${hasReminder ? 'text-yellow-500' : ''}`}
-                    title={hasReminder ? t('text-reminder-active') : t('text-reminder-notify')}
+                    title={
+                      hasReminder
+                        ? t('text-reminder-active')
+                        : t('text-reminder-notify')
+                    }
                   >
                     {hasReminder ? (
                       <IoNotifications className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 transition-all animate-pulse text-yellow-500" />
@@ -212,35 +255,37 @@ export default function ProductPopup({ lang }: { lang: string }) {
                 )}
 
                 {isAuthorized && (
-                <Button
-                  variant="border"
-                  onClick={async () => {
-                    try {
-                      setAddToWishlistLoader(true);
-                      if (!sku) return;
-                      await likes.toggle(sku);
-                    } finally {
-                      setAddToWishlistLoader(false);
-                    }
-                  }}
-                  loading={addToWishlistLoader}
-                  className={`group hover:text-brand ${favorite ? 'text-brand' : ''}`}
-                  title={t('text-wishlist')}
-                >
-                  {favorite ? (
-                    <IoIosHeart className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 transition-all text-[#6D727F]" />
-                  ) : (
-                    <IoIosHeartEmpty className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 transition-all group-hover:text-brand" />
-                  )}
-                  {t('text-wishlist')}
-                </Button>
+                  <Button
+                    variant="border"
+                    onClick={async () => {
+                      try {
+                        setAddToWishlistLoader(true);
+                        if (!sku) return;
+                        await likes.toggle(sku);
+                      } finally {
+                        setAddToWishlistLoader(false);
+                      }
+                    }}
+                    loading={addToWishlistLoader}
+                    className={`group hover:text-brand ${favorite ? 'text-brand' : ''}`}
+                    title={t('text-wishlist')}
+                  >
+                    {favorite ? (
+                      <IoIosHeart className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 transition-all text-[#6D727F]" />
+                    ) : (
+                      <IoIosHeartEmpty className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 transition-all group-hover:text-brand" />
+                    )}
+                    {t('text-wishlist')}
+                  </Button>
                 )}
 
                 <Button
                   variant="border"
                   className={cn(
                     'hover:text-emerald-600',
-                    isInCompare ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : ''
+                    isInCompare
+                      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                      : '',
                   )}
                   onClick={handleAddToCompare}
                   title="Confronta"
@@ -265,7 +310,9 @@ export default function ProductPopup({ lang }: { lang: string }) {
                   </Button>
                   <SocialShareBox
                     className={`absolute z-10 ltr:right-0 rtl:left-0 w-[300px] md:min-w-[400px] transition-all duration-300 ${
-                      shareButtonStatus ? 'visible opacity-100 top-full' : 'opacity-0 invisible top-[130%]'
+                      shareButtonStatus
+                        ? 'visible opacity-100 top-full'
+                        : 'opacity-0 invisible top-[130%]'
                     }`}
                     shareUrl={productUrl}
                     lang={lang}
@@ -275,7 +322,7 @@ export default function ProductPopup({ lang }: { lang: string }) {
             </div>
           </div>
         </div>
-      </div>      
+      </div>
     </div>
   );
 }

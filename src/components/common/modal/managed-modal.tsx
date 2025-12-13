@@ -28,10 +28,10 @@ const CategoryPopup = dynamic(
   () => import('@components/category/category-popup'),
 );
 const B2BProductVariantsQuickView = dynamic(
-  () => import('@components/product/b2b-product-variants-quick-view')
+  () => import('@components/product/b2b-product-variants-quick-view'),
 );
 const RadioPlayerModal = dynamic(
-  () => import('@components/radio/radio-player-modal')
+  () => import('@components/radio/radio-player-modal'),
 );
 
 export default function ManagedModal({ lang }: { lang: string }) {
@@ -62,7 +62,9 @@ export default function ManagedModal({ lang }: { lang: string }) {
       {view === 'PHONE_NUMBER' && <PhoneNumberPopup lang={lang} />}
       {view === 'DELIVERY_VIEW' && <DeliveryAddresses lang={lang} />}
 
-      {view === 'B2B_PRODUCT_VARIANTS_QUICK_VIEW' && <B2BProductVariantsQuickView lang={lang} />}
+      {view === 'B2B_PRODUCT_VARIANTS_QUICK_VIEW' && (
+        <B2BProductVariantsQuickView lang={lang} />
+      )}
     </Modal>
   );
 }

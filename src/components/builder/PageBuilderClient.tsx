@@ -1,7 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { pageBuilderActions, usePageBuilderStore } from '@/lib/store/pageBuilderStore';
+import {
+  pageBuilderActions,
+  usePageBuilderStore,
+} from '@/lib/store/pageBuilderStore';
 import PublishedVersionsPanel from './PublishedVersionsPanel';
 import PublishModal from './PublishModal';
 
@@ -10,14 +13,18 @@ interface PageBuilderClientProps {
 }
 
 const InputLabel = ({ label }: { label: string }) => (
-  <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</label>
+  <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+    {label}
+  </label>
 );
 
-export default function PageBuilderClient({ initialSlug = 'home' }: PageBuilderClientProps) {
+export default function PageBuilderClient({
+  initialSlug = 'home',
+}: PageBuilderClientProps) {
   const { slug, loading, error } = usePageBuilderStore((state) => ({
     slug: state.slug,
     loading: state.loading,
-    error: state.error
+    error: state.error,
   }));
   const [pendingSlug, setPendingSlug] = useState(initialSlug);
 
@@ -35,7 +42,10 @@ export default function PageBuilderClient({ initialSlug = 'home' }: PageBuilderC
   return (
     <div className="space-y-8">
       <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3 md:flex-row md:items-end">
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-col gap-3 md:flex-row md:items-end"
+        >
           <div className="flex-1">
             <InputLabel label="Page slug" />
             <input
@@ -57,7 +67,8 @@ export default function PageBuilderClient({ initialSlug = 'home' }: PageBuilderC
         {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
         {!error && slug ? (
           <p className="mt-3 text-xs text-slate-500">
-            Viewing versions for <span className="font-medium text-slate-700">{slug}</span>
+            Viewing versions for{' '}
+            <span className="font-medium text-slate-700">{slug}</span>
           </p>
         ) : null}
       </div>

@@ -11,7 +11,13 @@ import UpdateCart from '@components/product/update-cart';
 import Link from 'next/link';
 import { ROUTES } from '@utils/routes';
 
-export type SortKey = 'rowId' | 'sku' | 'name' | 'priceDiscount' | 'quantity' | 'lineTotal';
+export type SortKey =
+  | 'rowId'
+  | 'sku'
+  | 'name'
+  | 'priceDiscount'
+  | 'quantity'
+  | 'lineTotal';
 
 type Props = {
   rows: Item[];
@@ -28,13 +34,17 @@ type Props = {
 };
 
 const defaultCurrency = (n: number) =>
-  new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n);
+  new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(
+    n,
+  );
 
 const unitNet = (r: Item) =>
   Number(r.__cartMeta?.price_discount ?? r.price_discount ?? r.price ?? 0);
 
 const unitGross = (r: Item) =>
-  Number(r.__cartMeta?.gross_price ?? r.price_gross ?? r.gross_price ?? r.price ?? 0);
+  Number(
+    r.__cartMeta?.gross_price ?? r.price_gross ?? r.gross_price ?? r.price ?? 0,
+  );
 
 export default function CartDesktopTable({
   rows,
@@ -52,18 +62,27 @@ export default function CartDesktopTable({
       className={cn('cursor-pointer select-none', extraClass)}
       onClick={() => onRequestSort?.(key)}
       role="button"
-      aria-sort={sortKey === key ? (sortAsc ? 'ascending' : 'descending') : 'none'}
+      aria-sort={
+        sortKey === key ? (sortAsc ? 'ascending' : 'descending') : 'none'
+      }
       title="Sort"
     >
       <span className="inline-flex items-center gap-1">
         {label}
-        {sortKey === key ? <span className="text-xs">{sortAsc ? '▲' : '▼'}</span> : null}
+        {sortKey === key ? (
+          <span className="text-xs">{sortAsc ? '▲' : '▼'}</span>
+        ) : null}
       </span>
     </th>
   );
 
   return (
-    <div className={cn('hidden md:block overflow-x-auto rounded-md border border-gray-200 bg-white', className)}>
+    <div
+      className={cn(
+        'hidden md:block overflow-x-auto rounded-md border border-gray-200 bg-white',
+        className,
+      )}
+    >
       <table className="min-w-[920px] w-full border-collapse text-sm">
         <thead className="bg-gray-50 text-gray-700 sticky top-0 z-10">
           <tr className="[&>th]:px-3 [&>th]:py-3 [&>th]:text-left [&>th]:font-semibold">
@@ -86,40 +105,50 @@ export default function CartDesktopTable({
             const priceData: Partial<PriceSlice> = {
               // final/net price
               price_discount: Number(
-                r?.price_discount ?? r?.price ?? r?.net_price ?? unitNet(r) ?? 0
+                r?.price_discount ??
+                  r?.price ??
+                  r?.net_price ??
+                  unitNet(r) ??
+                  0,
               ),
-            
+
               // original/gross price (optional)
               gross_price:
                 r?.gross_price != null
                   ? Number(r.gross_price)
                   : r?.price_gross != null
-                  ? Number(r.price_gross)
-                  : undefined,
-            
+                    ? Number(r.price_gross)
+                    : undefined,
+
               is_promo: isPromo,
-            
+
               // human-readable discount text (optional)
-              discount_description: r?.listing_type_discounts ??  '',
-            
+              discount_description: r?.listing_type_discounts ?? '',
+
               // number of promos (optional)
               count_promo: Number(
                 r?.count_promo ??
                   (Array.isArray(r?.promos) ? r.promos.length : 0) ??
-                  0
+                  0,
               ),
             };
 
-            const normalizedLang = (lang ?? 'it').trim().replace(/^\/+|\/+$|\s+/g, '') || 'it';
+            const normalizedLang =
+              (lang ?? 'it').trim().replace(/^\/+|\/+$|\s+/g, '') || 'it';
             const langPrefix = `/${normalizedLang}`;
-            const rawLink = typeof (r as any)?.link === 'string' ? (r as any).link.trim() : '';
-            const skuValue = typeof r.sku === 'string' && r.sku.trim() !== ''
-              ? encodeURIComponent(r.sku.trim())
-              : '';
+            const rawLink =
+              typeof (r as any)?.link === 'string'
+                ? (r as any).link.trim()
+                : '';
+            const skuValue =
+              typeof r.sku === 'string' && r.sku.trim() !== ''
+                ? encodeURIComponent(r.sku.trim())
+                : '';
 
             const toLangHref = (base: string) => {
               if (!base) return '';
-              if (base.startsWith('http://') || base.startsWith('https://')) return base;
+              if (base.startsWith('http://') || base.startsWith('https://'))
+                return base;
               if (base.startsWith(langPrefix)) return base;
               if (base.startsWith('/')) return `${langPrefix}${base}`;
               return `${langPrefix}/${base}`;
@@ -128,12 +157,14 @@ export default function CartDesktopTable({
             const productHref = rawLink
               ? toLangHref(rawLink)
               : skuValue
-              ? `${langPrefix}${ROUTES.PRODUCT}?sku=${skuValue}`
-              : langPrefix;
+                ? `${langPrefix}${ROUTES.PRODUCT}?sku=${skuValue}`
+                : langPrefix;
 
             return (
               <tr key={String(r.id)} className="hover:bg-gray-50">
-                <td className="px-3 py-3 text-gray-600">{(r as any).rowId ?? r.id}</td>
+                <td className="px-3 py-3 text-gray-600">
+                  {(r as any).rowId ?? r.id}
+                </td>
 
                 <td className="px-3 py-3">
                   <div className="flex items-center gap-3">
@@ -143,9 +174,16 @@ export default function CartDesktopTable({
                       title={r.name ?? r.sku ?? 'Product detail'}
                     >
                       {r.image ? (
-                        <Image src={r.image} alt={r.name ?? ''} fill className="object-cover" />
+                        <Image
+                          src={r.image}
+                          alt={r.name ?? ''}
+                          fill
+                          className="object-cover"
+                        />
                       ) : null}
-                      <span className="sr-only">Visit {r.name ?? r.sku ?? 'product'}</span>
+                      <span className="sr-only">
+                        Visit {r.name ?? r.sku ?? 'product'}
+                      </span>
                     </Link>
                     <div className="min-w-0">
                       <Link
@@ -163,19 +201,24 @@ export default function CartDesktopTable({
                         {r.name}
                       </Link>
                       <div className="truncate text-[12px] text-gray-700">
-                        {r.model ? <span className="font-semibold">MODELLO:</span> : null} {r.model || '-'}
+                        {r.model ? (
+                          <span className="font-semibold">MODELLO:</span>
+                        ) : null}{' '}
+                        {r.model || '-'}
                       </div>
                     </div>
                   </div>
                 </td>
 
                 <td className="px-3 py-3">
-                  <PackagingGrid options={r.packaging_options_all}/>
+                  <PackagingGrid options={r.packaging_options_all} />
                 </td>
 
                 <td className="px-3 py-3 text-center">
                   {isPromo ? (
-                    <span className="rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-semibold text-white">{r.promo_code}</span>
+                    <span className="rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-semibold text-white">
+                      {r.promo_code}
+                    </span>
                   ) : (
                     <span className="text-gray-400">—</span>
                   )}
@@ -183,18 +226,20 @@ export default function CartDesktopTable({
 
                 <td className="px-3 py-3">
                   <div className="flex flex-col">
-                    <PriceAndPromo priceData={priceData}/>
+                    <PriceAndPromo priceData={priceData} />
                   </div>
                 </td>
 
                 <td className="px-3 py-3">
                   <div className="mx-auto flex w-full max-w-[160px] items-center justify-center gap-1">
                     {/* <AddToCart  priceData={priceData}/> */}
-                    <UpdateCart  item={r} lang={''}  />
+                    <UpdateCart item={r} lang={''} />
                   </div>
                 </td>
 
-                <td className="px-3 py-3 text-right font-semibold">{formatCurrency(line)}</td>
+                <td className="px-3 py-3 text-right font-semibold">
+                  {formatCurrency(line)}
+                </td>
               </tr>
             );
           })}

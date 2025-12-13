@@ -2,6 +2,7 @@
 'use client';
 
 import * as React from 'react';
+import { usePathname } from 'next/navigation';
 import AddressGridB2B from '@components/address/address-grid-b2b';
 import { useModalAction } from '@components/common/modal/modal.context';
 import CloseButton from '@components/ui/close-button';
@@ -14,6 +15,7 @@ import type { AddressB2B } from '@framework/acccount/types-b2b-account';
 const DeliveryAddresses: React.FC<{ lang: string }> = ({ lang }) => {
   const { t } = useTranslation(lang, 'common');
   const { closeModal } = useModalAction();
+  const pathname = usePathname();
 
   // Global delivery-address store
   const { selected, setSelectedAddress } = useDeliveryAddress();
@@ -21,16 +23,35 @@ const DeliveryAddresses: React.FC<{ lang: string }> = ({ lang }) => {
   // Fetch list (already normalized)
   const { data: addresses = [], isLoading, error } = useAddressQuery();
 
+  // Check if we're on the home page
+  const isHomePage = pathname === `/${lang}` || pathname === `/${lang}/`;
+
+  // Helper to handle address selection with page refresh for home page
+  const handleAddressChange = React.useCallback(
+    (addr: AddressB2B | null, shouldCloseModal = false) => {
+      setSelectedAddress(addr);
+      if (shouldCloseModal) {
+        closeModal();
+      }
+      // Full page reload after a short delay to ensure cookie is set
+      // This is needed because the home page template is server-rendered based on cookie
+      if (isHomePage && addr?.address?.state) {
+        setTimeout(() => {
+          window.location.reload();
+        }, 150);
+      }
+    },
+    [setSelectedAddress, closeModal, isHomePage],
+  );
+
   // Choose a sensible default if nothing is selected yet
   React.useEffect(() => {
     if (!addresses.length) return;
     if (!selected) {
-      const fallback =
-        addresses.find(a => a.isLegalSeat) ??
-        addresses[0];
-      setSelectedAddress(fallback);
+      const fallback = addresses.find((a) => a.isLegalSeat) ?? addresses[0];
+      handleAddressChange(fallback, false);
     }
-  }, [addresses, selected, setSelectedAddress]);
+  }, [addresses, selected, handleAddressChange]);
 
   // Render
   return (
@@ -64,8 +85,7 @@ const DeliveryAddresses: React.FC<{ lang: string }> = ({ lang }) => {
             address={addresses}
             initialSelectedId={selected?.id}
             onSelect={(addr?: AddressB2B) => {
-              setSelectedAddress(addr ?? null); // ✅ persist in context (and localStorage via provider)
-              closeModal();                      // optional: close after choosing
+              handleAddressChange(addr ?? null, true); // persist + close modal + refresh if on home
             }}
           />
         </div>

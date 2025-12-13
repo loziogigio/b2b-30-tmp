@@ -15,7 +15,7 @@ function toErpPayload(p: DocumentsListParams) {
   return {
     date_from: p.date_from,
     date_to: p.date_to,
-    ...ERP_STATIC
+    ...ERP_STATIC,
   };
 }
 
@@ -25,19 +25,44 @@ function pickListEndpoint(type?: DocumentsListParams['type']) {
     : API_ENDPOINTS_B2B.GET_INVOICES;
 }
 
-export async function fetchDocumentsList(params: DocumentsListParams): Promise<DocumentRow[]> {
+export async function fetchDocumentsList(
+  params: DocumentsListParams,
+): Promise<DocumentRow[]> {
   const payload = toErpPayload(params);
   const endpoint = pickListEndpoint(params.type);
-  const res = await post<RawDocumentItem[]>(endpoint, payload);
-  if (!Array.isArray(res)) throw new Error('Unexpected ERP response for documents list.');
+  const raw = await post<{ message?: RawDocumentItem[] } | RawDocumentItem[]>(
+    endpoint,
+    payload,
+  );
+
+  // Handle both wrapped (message: [...]) and direct ([...]) response formats
+  const res: RawDocumentItem[] | undefined = Array.isArray(raw)
+    ? raw
+    : Array.isArray((raw as any)?.message)
+      ? (raw as any).message
+      : undefined;
+
+  if (!Array.isArray(res))
+    throw new Error('Unexpected ERP response for documents list.');
   return transformDocumentsList(res);
 }
 
-export const useDocumentsListQuery = (params: DocumentsListParams, enabled = true) =>
+export const useDocumentsListQuery = (
+  params: DocumentsListParams,
+  enabled = true,
+) =>
   useQuery<DocumentRow[], Error>({
-    queryKey: [pickListEndpoint(params.type), params],
+    queryKey: [
+      pickListEndpoint(params.type),
+      params.type,
+      params.date_from,
+      params.date_to,
+    ],
     queryFn: () => fetchDocumentsList(params),
     enabled,
+    staleTime: 1000 * 60 * 5, // 5 minutes - don't refetch if data is fresh
+    gcTime: 1000 * 60 * 10, // 10 minutes - keep in cache
+    refetchOnWindowFocus: false, // don't refetch when user returns to tab
   });
 
 // ---------- AZIONI SUI DOCUMENTI (PDF / BARCODE / CSV) ----------
@@ -60,11 +85,11 @@ function pickActionEndpoint(kind: DocumentActionKind) {
 /** Payload standard per i 3 servizi */
 function toActionPayload(r: DocumentRow) {
   return {
-    scope: r.scope,            // es. "F"
-    year: r.year,              // es. 2025
-    number: r.number_raw,      // es. 90540
-    type: r.type_bar_code,     // es. "I" ( = type_bar_code )
-    ext_call:true
+    scope: r.scope, // es. "F"
+    year: r.year, // es. 2025
+    number: r.number_raw, // es. 90540
+    type: r.type_bar_code, // es. "I" ( = type_bar_code )
+    ext_call: true,
     // ...ERP_STATIC
   };
 }
@@ -72,11 +97,14 @@ function toActionPayload(r: DocumentRow) {
 /** Restituisce l'URL del documento per l'azione richiesta */
 export async function fetchDocumentUrl(
   kind: DocumentActionKind,
-  row: DocumentRow
+  row: DocumentRow,
 ): Promise<string> {
   const payload = toActionPayload(row);
   const endpoint = pickActionEndpoint(kind);
-  const res = await post<{ success: boolean; message?: string }>(endpoint, payload);
+  const res = await post<{ success: boolean; message?: string }>(
+    endpoint,
+    payload,
+  );
   if (!res?.success || !res?.message) {
     throw new Error('Documento non disponibile.');
   }
@@ -84,26 +112,31 @@ export async function fetchDocumentUrl(
 }
 
 /** Esegue la chiamata e apre in una nuova tab */
-export async function openDocument(kind: DocumentActionKind, row: DocumentRow): Promise<void> {
-    // Guardrail: DDT → solo barcode
-    if (row.doc_type === 'DDT' && kind !== 'barcode') {
-      throw new Error('Per i DDT è disponibile solo il PDF con codice a barre.');
-    }
-  
-    const url = await fetchDocumentUrl(kind, row);
-  
-    if (typeof window !== 'undefined' && url) {
-      // 👇 apre sempre in una nuova tab
-      window.open(url, '_blank', 'noopener,noreferrer');
-    }
+export async function openDocument(
+  kind: DocumentActionKind,
+  row: DocumentRow,
+): Promise<void> {
+  // Guardrail: DDT → solo barcode
+  if (row.doc_type === 'DDT' && kind !== 'barcode') {
+    throw new Error('Per i DDT è disponibile solo il PDF con codice a barre.');
   }
-  
+
+  const url = await fetchDocumentUrl(kind, row);
+
+  if (typeof window !== 'undefined' && url) {
+    // 👇 apre sempre in una nuova tab
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
+}
 
 /** Hook di comodo per aprire un documento (gestisce loading/error via React Query) */
 export function useOpenDocumentAction() {
   return useMutation({
     mutationKey: ['open-document'],
-    mutationFn: async (vars: { kind: DocumentActionKind; row: DocumentRow }) => {
+    mutationFn: async (vars: {
+      kind: DocumentActionKind;
+      row: DocumentRow;
+    }) => {
       await openDocument(vars.kind, vars.row);
     },
   });

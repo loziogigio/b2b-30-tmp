@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import Button from '@components/ui/button';
 import Input from '@components/ui/form/input';
 import Logo from '@components/ui/logo';
@@ -17,6 +18,10 @@ const defaultValues = {
 const ForgetPasswordForm = ({ lang }: { lang: string }) => {
   const { t } = useTranslation(lang);
   const { closeModal, openModal } = useModalAction();
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const {
     register,
     handleSubmit,
@@ -29,9 +34,73 @@ const ForgetPasswordForm = ({ lang }: { lang: string }) => {
     return openModal('LOGIN_VIEW');
   }
 
-  const onSubmit = (values: FormValues) => {
-    console.log(values, 'token');
+  const onSubmit = async (values: FormValues) => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: values.email }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        setError(data.message || t('common:error-reset-password'));
+        return;
+      }
+
+      setIsSuccess(true);
+    } catch (err) {
+      setError(t('common:error-reset-password'));
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  // Success state
+  if (isSuccess) {
+    return (
+      <div className="w-full px-5 py-6 mx-auto rounded-lg sm:p-8 bg-brand-light sm:w-96 md:w-450px">
+        <CloseButton onClick={closeModal} />
+        <div className="text-center pt-2.5">
+          <div onClick={closeModal}>
+            <Logo />
+          </div>
+          <div className="w-16 h-16 mx-auto mt-6 mb-4 rounded-full bg-green-100 flex items-center justify-center">
+            <svg
+              className="w-8 h-8 text-green-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 13l4 4L19 7"
+              />
+            </svg>
+          </div>
+          <h4 className="text-xl font-semibold text-brand-dark mb-3">
+            {t('common:reset-password-sent-title')}
+          </h4>
+          <p className="text-sm text-body mb-6">
+            {t('common:reset-password-sent-description')}
+          </p>
+          <Button
+            onClick={handleSignIn}
+            variant="formButton"
+            className="w-full h-11 md:h-12"
+          >
+            {t('common:text-back-to-login')}
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full px-5 py-6 mx-auto rounded-lg sm:p-8 bg-brand-light sm:w-96 md:w-450px">
@@ -66,10 +135,16 @@ const ForgetPasswordForm = ({ lang }: { lang: string }) => {
           lang={lang}
         />
 
+        {error && (
+          <p className="mb-4 text-sm text-red-500 text-center">{error}</p>
+        )}
+
         <Button
           type="submit"
           variant="formButton"
           className="w-full mt-0 h-11 md:h-12"
+          loading={isLoading}
+          disabled={isLoading}
         >
           {t('common:text-reset-password')}
         </Button>

@@ -2,21 +2,20 @@
 
 import { useState } from 'react';
 import Input from '@components/ui/form/input';
-import PasswordInput from '@components/ui/form/password-input';
 import Button from '@components/ui/button';
 import { useForm } from 'react-hook-form';
 import Logo from '@components/ui/logo';
-import { useSignUpMutation, SignUpInputType } from '@framework/auth/use-signup';
-import Link from '@components/ui/link';
 import Image from '@components/ui/image';
 import { useModalAction } from '@components/common/modal/modal.context';
-import Switch from '@components/ui/switch';
 import CloseButton from '@components/ui/close-button';
 import cn from 'classnames';
-import { ROUTES } from '@utils/routes';
 import { useTranslation } from 'src/app/i18n/client';
+import {
+  useRegistrationRequestMutation,
+  RegistrationRequestInputType,
+} from '@framework/auth/use-registration-request';
 
-interface SignUpFormProps {
+interface RegistrationRequestFormProps {
   lang: string;
   isPopup?: boolean;
   className?: string;
@@ -26,28 +25,89 @@ export default function SignUpForm({
   lang,
   isPopup = true,
   className,
-}: SignUpFormProps) {
+}: RegistrationRequestFormProps) {
   const { t } = useTranslation(lang);
-  const { mutate: signUp, isPending } = useSignUpMutation();
+  const { mutate: submitRequest, isPending } = useRegistrationRequestMutation();
   const { closeModal, openModal } = useModalAction();
-  const [remember, setRemember] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<SignUpInputType>();
+    reset,
+  } = useForm<RegistrationRequestInputType>();
+
   function handleSignIn() {
     return openModal('LOGIN_VIEW');
   }
-  function onSubmit({ name, email, password, remember_me }: SignUpInputType) {
-    signUp({
-      name,
-      email,
-      password,
-      remember_me,
+
+  function onSubmit(data: RegistrationRequestInputType) {
+    submitRequest(data, {
+      onSuccess: () => {
+        setIsSubmitted(true);
+        reset();
+      },
     });
-    console.log(name, email, password, 'sign form values');
   }
+
+  // Success state after submission
+  if (isSubmitted) {
+    return (
+      <div
+        className={cn(
+          'flex bg-brand-light mx-auto rounded-lg md:w-[720px] lg:w-[920px] xl:w-[1000px] 2xl:w-[1200px]',
+          className,
+        )}
+      >
+        {isPopup && <CloseButton onClick={closeModal} />}
+        <div className="flex w-full mx-auto overflow-hidden rounded-lg bg-brand-light">
+          <div className="md:w-1/2 lg:w-[55%] xl:w-[60%] registration hidden md:block relative">
+            <Image
+              src="/assets/images/login-desk.svg"
+              alt="B2B shop counter"
+              fill
+              className="object-contain"
+            />
+          </div>
+          <div className="w-full md:w-1/2 lg:w-[45%] xl:w-[40%] py-10 px-4 sm:px-8 md:px-6 lg:px-8 xl:px-12 rounded-md shadow-dropDown flex flex-col justify-center items-center text-center">
+            <div className="mb-6">
+              <Logo />
+            </div>
+            <div className="w-16 h-16 mb-4 rounded-full bg-green-100 flex items-center justify-center">
+              <svg
+                className="w-8 h-8 text-green-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+            </div>
+            <h4 className="text-xl font-semibold text-brand-dark sm:text-2xl mb-3">
+              {t('common:registration-request-sent')}
+            </h4>
+            <p className="text-sm text-body mb-6 max-w-sm">
+              {t('common:registration-request-sent-description')}
+            </p>
+            <Button
+              onClick={closeModal}
+              className="w-full max-w-xs tracking-normal h-11 md:h-12"
+              variant="formButton"
+            >
+              {t('common:text-close')}
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className={cn(
@@ -55,16 +115,14 @@ export default function SignUpForm({
         className,
       )}
     >
-      {isPopup === true && <CloseButton onClick={closeModal} />}
+      {isPopup && <CloseButton onClick={closeModal} />}
       <div className="flex w-full mx-auto overflow-hidden rounded-lg bg-brand-light">
         <div className="md:w-1/2 lg:w-[55%] xl:w-[60%] registration hidden md:block relative">
           <Image
-            src="/assets/images/registration.png"
-            alt="sign up"
+            src="/assets/images/login-desk.svg"
+            alt="B2B shop counter"
             fill
-            sizes="(max-width: 768px) 100vw,
-              (max-width: 1200px) 50vw,
-              33vw"
+            className="object-contain"
           />
         </div>
         <div className="w-full md:w-1/2 lg:w-[45%] xl:w-[40%] py-6 sm:py-10 px-4 sm:px-8 md:px-6 lg:px-8 xl:px-12 rounded-md shadow-dropDown flex flex-col justify-center">
@@ -72,9 +130,12 @@ export default function SignUpForm({
             <div onClick={closeModal}>
               <Logo />
             </div>
-            <h4 className="text-xl font-semibold text-brand-dark sm:text-2xl sm:pt-3 ">
-              {t('common:text-sign-up-for-free')}
+            <h4 className="text-xl font-semibold text-brand-dark sm:text-2xl sm:pt-3">
+              {t('common:registration-request-title')}
             </h4>
+            <p className="mt-2 text-sm text-body">
+              {t('common:registration-request-subtitle')}
+            </p>
             <div className="mt-3 mb-1 text-sm text-center sm:text-base text-body">
               {t('common:text-already-registered')}
               <button
@@ -91,15 +152,15 @@ export default function SignUpForm({
             className="flex flex-col justify-center"
             noValidate
           >
-            <div className="flex flex-col space-y-4">
+            <div className="flex flex-col space-y-3">
               <Input
-                label={t('forms:label-name') as string}
+                label={t('forms:label-company-name') as string}
                 type="text"
                 variant="solid"
-                {...register('name', {
-                  required: 'forms:name-required',
+                {...register('company_name', {
+                  required: t('forms:company-name-required') as string,
                 })}
-                error={errors.name?.message}
+                error={errors.company_name?.message}
                 lang={lang}
               />
               <Input
@@ -107,58 +168,85 @@ export default function SignUpForm({
                 type="email"
                 variant="solid"
                 {...register('email', {
-                  required: `${t('forms:email-required')}`,
+                  required: t('forms:email-required') as string,
                   pattern: {
                     value:
                       /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/,
-                    message: t('forms:email-error'),
+                    message: t('forms:email-error') as string,
                   },
                 })}
                 error={errors.email?.message}
                 lang={lang}
               />
-              <PasswordInput
-                label={t('forms:label-password')}
-                error={errors.password?.message}
-                {...register('password', {
-                  required: `${t('forms:password-required')}`,
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Input
+                  label={t('forms:label-city') as string}
+                  type="text"
+                  variant="solid"
+                  {...register('city', {
+                    required: t('forms:city-required') as string,
+                  })}
+                  error={errors.city?.message}
+                  lang={lang}
+                />
+                <Input
+                  label={t('forms:label-phone') as string}
+                  type="tel"
+                  variant="solid"
+                  {...register('phone', {
+                    required: t('forms:phone-required') as string,
+                  })}
+                  error={errors.phone?.message}
+                  lang={lang}
+                />
+              </div>
+              <Input
+                label={t('forms:label-address') as string}
+                type="text"
+                variant="solid"
+                {...register('address', {
+                  required: t('forms:address-required') as string,
                 })}
+                error={errors.address?.message}
                 lang={lang}
               />
-              <div className="flex items-center justify-center">
-                <div className="flex items-center shrink-0">
-                  <label className="relative inline-block cursor-pointer switch">
-                    <Switch checked={remember} onChange={setRemember} />
-                  </label>
-
-                  <label
-                    onClick={() => setRemember(!remember)}
-                    className="mt-1 text-sm cursor-pointer shrink-0 text-heading ltr:pl-2.5 rtl:pr-2.5"
-                  >
-                    {t('forms:label-remember-me')}
-                  </label>
-                </div>
-                <div
-                  className="flex ltr:ml-auto rtl:mr-auto mt-[2px]"
-                  onClick={closeModal}
-                >
-                  <Link
-                    href={`/${lang}${ROUTES.PRIVACY}`}
-                    className="text-sm ltr:text-right rtl:text-left text-heading ltr:pl-3 lg:rtl:pr-3 hover:no-underline hover:text-brand-dark focus:outline-none focus:text-brand-dark"
-                  >
-                    {t('common:text-privacy-and-policy')}
-                  </Link>
-                </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Input
+                  label={t('forms:label-vat-number') as string}
+                  type="text"
+                  variant="solid"
+                  {...register('vat_number', {
+                    required: t('forms:vat-number-required') as string,
+                  })}
+                  error={errors.vat_number?.message}
+                  lang={lang}
+                />
+                <Input
+                  label={t('forms:label-sdi-code') as string}
+                  type="text"
+                  variant="solid"
+                  {...register('sdi_code')}
+                  error={errors.sdi_code?.message}
+                  lang={lang}
+                />
               </div>
-              <div className="relative">
+              <Input
+                label={t('forms:label-notes') as string}
+                type="text"
+                variant="solid"
+                {...register('notes')}
+                error={errors.notes?.message}
+                lang={lang}
+              />
+              <div className="relative pt-2">
                 <Button
                   type="submit"
                   loading={isPending}
                   disabled={isPending}
-                  className="w-full mt-2 tracking-normal h-11 md:h-12 font-15px md:font-15px"
+                  className="w-full tracking-normal h-11 md:h-12 font-15px md:font-15px"
                   variant="formButton"
                 >
-                  {t('common:text-register')}
+                  {t('common:registration-request-submit')}
                 </Button>
               </div>
             </div>

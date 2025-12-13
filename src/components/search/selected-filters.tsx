@@ -8,11 +8,18 @@ import useQueryParam from '@utils/use-query-params';
 
 type Props = {
   lang: string;
-  allowedKeys?: string[]; // e.g., ['filters-promo_type', 'filters-id_brand']
+  allowedKeys?: string[]; // e.g., ['filters-promo_type', 'filters-brand_id']
   labelMap?: Record<string, Record<string, string>>; // key -> (value -> label)
 };
 
-export default function SelectedFilters({ lang, allowedKeys, labelMap }: Props) {
+export default function SelectedFilters({
+  lang,
+  allowedKeys,
+  labelMap,
+}: Props) {
+  // Temporarily hidden - filter chips disabled
+  return null;
+
   const { t } = useTranslation(lang, 'common');
 
   const { push } = useRouter();
@@ -62,7 +69,7 @@ export default function SelectedFilters({ lang, allowedKeys, labelMap }: Props) 
                   <FilteredItem
                     itemKey={key ? key : ' '}
                     key={`${key}-${item}`}
-                    itemValue={(labelMap?.[key]?.[String(item)]) ?? (item as any)}
+                    itemValue={labelMap?.[key]?.[String(item)] ?? (item as any)}
                     onClick={() => handleArrayUpdate(key, item)}
                   />
                 ));
@@ -71,7 +78,9 @@ export default function SelectedFilters({ lang, allowedKeys, labelMap }: Props) 
                   <FilteredItem
                     itemKey={key ? key : ' '}
                     key={`${key}-${value}`}
-                    itemValue={(labelMap?.[key]?.[String(value)]) ?? (value as any)}
+                    itemValue={
+                      labelMap?.[key]?.[String(value)] ?? (value as any)
+                    }
                     onClick={() => {
                       clearQueryParam([key]);
                     }}

@@ -4,13 +4,17 @@
 import React, { useMemo, useState } from 'react';
 import Container from '@components/ui/container';
 import CategoryBreadcrumb from '@components/ui/category-breadcrumb';
-import { useCmsB2BMenuRawQuery } from '@framework/product/get-b2b-cms';
-import { buildB2BMenuTree, findNodeByPath, type MenuTreeNode } from '@utils/transform/b2b-menu-tree';
+import {
+  usePimMenuQuery,
+  findNodeByPath,
+  type MenuTreeNode,
+} from '@framework/product/get-pim-menu';
 import { useTranslation } from 'src/app/i18n/client';
 import ProductsCarousel from '@components/product/products-carousel';
 import { usePimProductListQuery } from '@framework/product/get-pim-product';
 import BannerCard from '@components/cards/banner-card';
-
+import CategoryChildrenCarousel from './category-children-carousel';
+import CategorySubcategoriesGrid from './category-subcategories-grid';
 
 const NUM_ITEM = 6;
 const MAX_ROWS = 5;
@@ -31,7 +35,7 @@ function hasHero(n?: MenuTreeNode | null) {
     n &&
       (n.category_banner_image ||
         n.category_banner_image_mobile ||
-        (n.description && n.description.trim().length > 0))
+        (n.description && n.description.trim().length > 0)),
   );
 }
 
@@ -47,44 +51,52 @@ function pickHeroNode(current: MenuTreeNode | null, pathNodes: MenuTreeNode[]) {
    TOP HERO (banner + description)
    - Uses BannerCard for responsive image
 ========================= */
-function CategoryHero({ node, lang }: { node: MenuTreeNode | null; lang: string }) {
+function CategoryHero({
+  node,
+  lang,
+}: {
+  node: MenuTreeNode | null;
+  lang: string;
+}) {
   if (!node) return null;
 
-
-// helpers — keep in this file or move to a utils module
-function normalizePath(p?: string) {
-  if (!p) return '';
-  return p.startsWith('/') ? p : `/${p}`;
-}
-
-function hrefFromNode(node: MenuTreeNode, lang: string) {
-  // 1) If CMS already gives a usable url, trust it (and prefix lang if not absolute)
-  if (node.url) {
-    const isAbsolute = /^https?:\/\//i.test(node.url);
-    return isAbsolute ? node.url : `/${lang}${normalizePath(node.url)}`;
+  // helpers — keep in this file or move to a utils module
+  function normalizePath(p?: string) {
+    if (!p) return '';
+    return p.startsWith('/') ? p : `/${p}`;
   }
 
-  // 2) If we have a path array, join segments
-  if (node.path && node.path.length) {
-    return `/${lang}/${node.path.map(encodeURIComponent).join('/')}`;
+  function hrefFromNode(node: MenuTreeNode, lang: string) {
+    // 1) If CMS already gives a usable url, trust it (and prefix lang if not absolute)
+    if (node.url) {
+      const isAbsolute = /^https?:\/\//i.test(node.url);
+      return isAbsolute ? node.url : `/${lang}${normalizePath(node.url)}`;
+    }
+
+    // 2) If we have a path array, join segments
+    if (node.path && node.path.length) {
+      return `/${lang}/${node.path.map(encodeURIComponent).join('/')}`;
+    }
+
+    // 3) Fallback to slug
+    if (node.slug) {
+      return `/${lang}/${encodeURIComponent(node.slug)}`;
+    }
+
+    // 4) Ultimate fallback
+    return `/${lang}`;
   }
-
-  // 3) Fallback to slug
-  if (node.slug) {
-    return `/${lang}/${encodeURIComponent(node.slug)}`;
-  }
-
-  // 4) Ultimate fallback
-  return `/${lang}`;
-}
-
-
 
   const desktopSrc = node.category_banner_image || undefined;
-  const mobileSrc = node.category_banner_image_mobile || node.category_banner_image || undefined;
+  const mobileSrc =
+    node.category_banner_image_mobile ||
+    node.category_banner_image ||
+    undefined;
 
   const hasImage = Boolean(desktopSrc || mobileSrc);
-  const hasDescription = Boolean(node.description && node.description.trim().length > 0);
+  const hasDescription = Boolean(
+    node.description && node.description.trim().length > 0,
+  );
 
   if (!hasImage && !hasDescription) return null;
 
@@ -117,9 +129,8 @@ function hrefFromNode(node: MenuTreeNode, lang: string) {
               banner={banner}
               variant="rounded"
               effectActive
-              className="rounded-xl border border-border-base overflow-hidden"
-              // Use height utility to control banner height responsively
-              classNameInner="h-40 sm:h-56 md:h-64"
+              className="rounded-xl overflow-hidden max-w-full"
+              classNameInner="w-full h-auto"
             />
           </div>
         )}
@@ -135,13 +146,24 @@ function hrefFromNode(node: MenuTreeNode, lang: string) {
   );
 }
 
-
-export default function CategoryPage({ lang, slug }: { lang: string; slug: string[] }) {
+export default function CategoryPage({
+  lang,
+  slug,
+}: {
+  lang: string;
+  slug: string[];
+}) {
   const { t } = useTranslation(lang, 'common');
-  const { data, isLoading, isError } = useCmsB2BMenuRawQuery({ staleTime: 5 * 60 * 1000 });
+  const { data, isLoading, isError } = usePimMenuQuery({
+    location: 'header',
+    staleTime: 5 * 60 * 1000,
+  });
 
-  const tree = useMemo(() => buildB2BMenuTree(data ?? []), [data]);
-  const current = useMemo(() => (slug.length ? findNodeByPath(tree, slug) : null), [tree, slug]);
+  const tree = useMemo(() => data?.menuItems ?? [], [data]);
+  const current = useMemo(
+    () => (slug.length ? findNodeByPath(tree, slug) : null),
+    [tree, slug],
+  );
 
   // Build breadcrumb path nodes
   const pathNodes: MenuTreeNode[] = useMemo(() => {
@@ -169,7 +191,7 @@ export default function CategoryPage({ lang, slug }: { lang: string; slug: strin
   // Parent for hero (fallback to current)
   const heroNode: MenuTreeNode | null = useMemo(
     () => pickHeroNode(current, pathNodes),
-    [current, pathNodes]
+    [current, pathNodes],
   );
 
   const [rowsToShow, setRowsToShow] = useState(MAX_ROWS);
@@ -187,10 +209,21 @@ export default function CategoryPage({ lang, slug }: { lang: string; slug: strin
     );
   }
 
+  // Handle case when category not found in tree
+  if (slug.length && !current && tree.length > 0) {
+    return (
+      <Container>
+        <div className="py-8 text-sm text-gray-500">
+          {t('category-not-found', { defaultValue: 'Category not found.' })}
+        </div>
+      </Container>
+    );
+  }
+
   return (
     <div className="bg-white">
       {/* ⬇️ HERO on top (parent if available, else current) */}
-      <CategoryHero node={heroNode} />
+      <CategoryHero node={heroNode} lang={lang} />
 
       {/* Breadcrumbs + title */}
       <Container className="py-2">
@@ -198,42 +231,90 @@ export default function CategoryPage({ lang, slug }: { lang: string; slug: strin
           lang={lang}
           categories={pathNodes}
           allLabel={t('all-categories', { defaultValue: 'All Categories' })}
-          onAllCategoriesClick={() => { window.location.href = `/${lang}/category`; }}
-          onCategorySelect={(node) => { window.location.href = `/${lang}/category/${node.path.join('/')}`; }}
+          onAllCategoriesClick={() => {
+            window.location.href = `/${lang}/category`;
+          }}
+          onCategorySelect={(node) => {
+            window.location.href = `/${lang}/category/${node.path.join('/')}`;
+          }}
         />
       </Container>
 
-      {/* Rows (category carousels) */}
+      {/* Category content */}
       <div className="py-4">
         {(() => {
           // 1) Leaf: show its own carousel and stop
-          if (slug.length && current && !(current.isGroup && (current.children?.length ?? 0) > 0)) {
+          if (
+            slug.length &&
+            current &&
+            !(current.isGroup && (current.children?.length ?? 0) > 0)
+          ) {
             return <CategoryLeafCarousel lang={lang} node={current} />;
           }
 
-          // 2) Top level or non-leaf group → rows with cap + show more
+          // 2) Check if current node's children are ALL leaves (no subcategories)
+          // If so, display them in a grid instead of iterating carousels
+          if (current && current.children && current.children.length > 0) {
+            const allChildrenAreLeaves = current.children.every(
+              (child) => !child.children || child.children.length === 0,
+            );
+
+            if (allChildrenAreLeaves) {
+              return (
+                <Container>
+                  <CategorySubcategoriesGrid
+                    lang={lang}
+                    parentNode={current}
+                    subcategories={current.children}
+                    showViewAll={false}
+                  />
+                </Container>
+              );
+            }
+          }
+
+          // 3) Top level or group with children that have subcategories → show carousel for each group
           const source = visibleRows.length ? visibleRows : rows;
           const list = source.length ? source : tree;
 
-          const grid = list.map((child) => {
+          // Determine if we're at LEVEL 0 (top-level, no slug)
+          // LEVEL 0: max 4 cards + "Non ti basta?"
+          // LEVEL 1+: show ALL children, no "Non ti basta?"
+          const isTopLevel = slug.length === 0;
+
+          const sections = list.map((child) => {
             const childHas = (child.children?.length ?? 0) > 0;
             const childIsGroup = child.isGroup && childHas;
-            return childIsGroup ? (
-              <CategoryChildCarousel key={child.id} lang={lang} child={child} />
-            ) : (
+
+            // If child is a group with subcategories, show children category carousel
+            if (childIsGroup) {
+              return (
+                <CategoryChildrenCarousel
+                  key={child.id}
+                  lang={lang}
+                  parentNode={child}
+                  isTopLevel={isTopLevel}
+                />
+              );
+            }
+
+            // Otherwise show leaf carousel (products)
+            return (
               <CategoryLeafCarousel key={child.id} lang={lang} node={child} />
             );
           });
 
           return (
             <>
-              {grid}
+              {sections}
               {totalRows > rowsToShow && (
                 <Container>
                   <div className="mt-2 flex justify-center">
                     <button
                       type="button"
-                      onClick={() => setRowsToShow((n) => Math.min(n + MAX_ROWS, totalRows))}
+                      onClick={() =>
+                        setRowsToShow((n) => Math.min(n + MAX_ROWS, totalRows))
+                      }
                       className="rounded-md border border-gray-200 px-4 py-2 text-sm hover:bg-gray-50"
                     >
                       {t('show-more', { defaultValue: 'Show more' })}
@@ -267,44 +348,16 @@ function extractSearchText(url: string | undefined, fallback: string): string {
 }
 
 /* =========================
-   ROW: Child is a group (non-leaf)
-========================= */
-function CategoryChildCarousel({ lang, child }: { lang: string; child: MenuTreeNode }) {
-  const searchQuery = extractSearchText(child.url, child.slug);
-
-  const { data, isLoading, error } = usePimProductListQuery({
-    limit: NUM_ITEM,
-    q: searchQuery,
-  });
-
-  if (isLoading || error) return null;
-
-  // small icon before title inside the carousel header
-  const imgSrc = child.category_menu_image || undefined;
-
-  return (
-    <Container className="mb-6">
-      <ProductsCarousel
-        sectionHeading={child.label}
-        categorySlug={`category/${child.path.join('/')}`}
-        products={data}
-        loading={isLoading}
-        limit={NUM_ITEM}
-        uniqueKey={`cat-child-${child.id}`}
-        lang={lang}
-        carouselBreakpoint={breakpoints}
-        headerImageSrc={imgSrc}        // small square before title
-        headerImageAlt={child.label}
-      />
-    </Container>
-  );
-}
-
-/* =========================
    ROW: Leaf (show 1 slider of products)
 ========================= */
-function CategoryLeafCarousel({ lang, node }: { lang: string; node: MenuTreeNode }) {
-  const searchQuery = extractSearchText(node.url, node.slug);
+function CategoryLeafCarousel({
+  lang,
+  node,
+}: {
+  lang: string;
+  node: MenuTreeNode;
+}) {
+  const searchQuery = extractSearchText(node.url ?? undefined, node.slug);
 
   const { data, isLoading, error } = usePimProductListQuery({
     limit: NUM_ITEM,
@@ -315,9 +368,9 @@ function CategoryLeafCarousel({ lang, node }: { lang: string; node: MenuTreeNode
 
   const safeUrl = node.url
     ? (() => {
-      const raw = node.url.startsWith('/') ? node.url : `/${node.url}`;
-      return raw;
-    })()
+        const raw = node.url.startsWith('/') ? node.url : `/${node.url}`;
+        return raw;
+      })()
     : `category/${node.path.join('/')}`;
 
   return (

@@ -5,7 +5,8 @@ import { USFlag } from '@components/icons/language/USFlag';
 import { DEFlag } from '@components/icons/language/DEFlag';
 import { ESFlag } from '@components/icons/language/ESFlag';
 import { ITFlag } from '@components/icons/language/ITFlag';
-const siteLogo = 'https://hidros.s3.eu-de.cloud-object-storage.appdomain.cloud/hidros/eshop/mymb_settings/logoHidrosPoint.png';
+const siteLogo =
+  'https://hidros.s3.eu-de.cloud-object-storage.appdomain.cloud/hidros/eshop/mymb_settings/logoHidrosPoint.png';
 
 export const siteSettings = {
   name: 'Hidros B2B',

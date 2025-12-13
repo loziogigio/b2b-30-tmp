@@ -78,21 +78,27 @@ export interface LikeAnalyticsResponse {
   generated_at: string;
 }
 
-
 // Convenience alias
 const EP = API_ENDPOINTS_B2B.LIKES;
 
 // Global user identifier required by Likes API
 // Include project code from env (prefers NEXT_PUBLIC_, falls back to NEXT_PROJECT_CODE)
-const PROJECT_CODE = (process.env.NEXT_PUBLIC_PROJECT_CODE || process.env.NEXT_PROJECT_CODE || 'APP') as string;
-const getUserId = () => `${PROJECT_CODE}-${ERP_STATIC.customer_code}-${ERP_STATIC.address_code}`;
+const PROJECT_CODE = (process.env.NEXT_PUBLIC_PROJECT_CODE ||
+  process.env.NEXT_PROJECT_CODE ||
+  'APP') as string;
+const getUserId = () =>
+  `${PROJECT_CODE}-${ERP_STATIC.customer_code}-${ERP_STATIC.address_code}`;
 
 // Core like operations
-export async function addLike(sku: string): Promise<{ success?: boolean } | void> {
+export async function addLike(
+  sku: string,
+): Promise<{ success?: boolean } | void> {
   return post(EP.ROOT, { user_id: getUserId(), sku });
 }
 
-export async function removeLike(sku: string): Promise<{ success?: boolean; message?: string } | void> {
+export async function removeLike(
+  sku: string,
+): Promise<{ success?: boolean; message?: string } | void> {
   // Send body with DELETE via axios config
   return del(EP.ROOT, undefined, { data: { user_id: getUserId(), sku } });
 }
@@ -101,12 +107,21 @@ export async function toggleLike(sku: string): Promise<LikeToggleResponse> {
 }
 
 // Status endpoints
-export async function getLikeStatus(sku: string, userId: string = getUserId()): Promise<LikeStatusResponse> {
+export async function getLikeStatus(
+  sku: string,
+  userId: string = getUserId(),
+): Promise<LikeStatusResponse> {
   return get<LikeStatusResponse>(EP.STATUS(userId, sku));
 }
 
-export async function getBulkLikeStatus(skus: string[], userId: string = getUserId()): Promise<BulkLikeStatusResponse> {
-  return post<BulkLikeStatusResponse>(EP.BULK_STATUS, { user_id: userId, skus });
+export async function getBulkLikeStatus(
+  skus: string[],
+  userId: string = getUserId(),
+): Promise<BulkLikeStatusResponse> {
+  return post<BulkLikeStatusResponse>(EP.BULK_STATUS, {
+    user_id: userId,
+    skus,
+  });
 }
 
 // User likes
@@ -115,11 +130,16 @@ export async function getUserLikes(
   pageSize = 20,
   userId: string = getUserId(),
 ): Promise<UserLikesResponse> {
-  const qs = new URLSearchParams({ page: String(page), page_size: String(pageSize) }).toString();
+  const qs = new URLSearchParams({
+    page: String(page),
+    page_size: String(pageSize),
+  }).toString();
   return get<UserLikesResponse>(`${EP.USER(userId)}?${qs}`);
 }
 
-export async function getUserLikesSummary(userId: string = getUserId()): Promise<UserLikesSummary> {
+export async function getUserLikesSummary(
+  userId: string = getUserId(),
+): Promise<UserLikesSummary> {
   return get<UserLikesSummary>(EP.USER_SUMMARY(userId));
 }
 
@@ -127,7 +147,7 @@ export async function getUserLikesSummary(userId: string = getUserId()): Promise
 export async function getPopularProducts(
   limit = 10,
   days = 30,
-  includeProductInfo = false
+  includeProductInfo = false,
 ): Promise<PopularProductsResponse[]> {
   const qs = new URLSearchParams({
     limit: String(limit),
@@ -140,7 +160,7 @@ export async function getPopularProducts(
 export async function getTrendingProducts(
   timePeriod: '1d' | '7d' | '30d' | '90d' | string = '7d',
   limit = 20,
-  includeProductInfo = false
+  includeProductInfo = false,
 ): Promise<TrendingProductsResponse[]> {
   const qs = new URLSearchParams({
     time_period: String(timePeriod),
@@ -154,7 +174,7 @@ export async function getTrendingProductsPage(
   timePeriod: '1d' | '7d' | '30d' | '90d' | string = '7d',
   page = 1,
   pageSize = 24,
-  includeProductInfo = false
+  includeProductInfo = false,
 ): Promise<TrendingProductsPageResponse> {
   const qs = new URLSearchParams({
     time_period: String(timePeriod),
@@ -166,21 +186,38 @@ export async function getTrendingProductsPage(
 }
 
 // Analytics and stats
-export async function getLikesAnalytics(timePeriod: '1d' | '7d' | '30d' | '90d' | string = '30d'):
-  Promise<LikeAnalyticsResponse> {
-  const qs = new URLSearchParams({ time_period: String(timePeriod) }).toString();
+export async function getLikesAnalytics(
+  timePeriod: '1d' | '7d' | '30d' | '90d' | string = '30d',
+): Promise<LikeAnalyticsResponse> {
+  const qs = new URLSearchParams({
+    time_period: String(timePeriod),
+  }).toString();
   return get<LikeAnalyticsResponse>(`${EP.ANALYTICS}?${qs}`);
 }
 
-export async function getProductLikeStats(sku: string): Promise<{ sku: string; total_likes: number; message?: string }> {
-  return get<{ sku: string; total_likes: number; message?: string }>(EP.STATS(sku));
+export async function getProductLikeStats(
+  sku: string,
+): Promise<{ sku: string; total_likes: number; message?: string }> {
+  return get<{ sku: string; total_likes: number; message?: string }>(
+    EP.STATS(sku),
+  );
 }
 
 // Utilities
-export async function clearAllUserLikes(userId: string = getUserId()): Promise<{ success?: boolean; message?: string; likes_cleared?: number } | void> {
+export async function clearAllUserLikes(userId: string = getUserId()): Promise<{
+  success?: boolean;
+  message?: string;
+  likes_cleared?: number;
+} | void> {
   return del(EP.CLEAR_ALL(userId));
 }
 
-export async function likesHealthCheck(): Promise<{ status: string; service: string; mongodb: string; redis: string; timestamp: string }> {
+export async function likesHealthCheck(): Promise<{
+  status: string;
+  service: string;
+  mongodb: string;
+  redis: string;
+  timestamp: string;
+}> {
   return get(EP.HEALTH);
 }

@@ -7,7 +7,11 @@ import { API_ENDPOINTS_B2B } from '@framework/utils/api-endpoints-b2b';
 import { ERP_STATIC } from '@framework/utils/static';
 import { useCart } from '@contexts/cart/cart.context';
 import { mapServerCart } from '@utils/adapter/cart-adapter';
-import { sameLine, type CartSummary, type Item } from '@contexts/cart/cart.utils';
+import {
+  sameLine,
+  type CartSummary,
+  type Item,
+} from '@contexts/cart/cart.utils';
 import { AddToCartInput } from '@utils/transform/cart';
 import { useUI } from '@contexts/ui.context';
 
@@ -20,7 +24,7 @@ export interface FetchCartOptions {
 }
 
 export const fetchCartData = async (
-  options?: FetchCartOptions
+  options?: FetchCartOptions,
 ): Promise<{ items: Item[]; summary: CartSummary }> => {
   const res = await post<any>(API_ENDPOINTS_B2B.GET_CART, {
     id_cart: options?.cartId ?? ERP_STATIC.id_cart,
@@ -34,7 +38,8 @@ export const fetchCartData = async (
 
 export const useCartQuery = () => {
   const { isAuthorized } = useUI();
-  const enabled = isAuthorized && !!ERP_STATIC.customer_code && !!ERP_STATIC.address_code;
+  const enabled =
+    isAuthorized && !!ERP_STATIC.customer_code && !!ERP_STATIC.address_code;
   return useQuery({
     queryKey: ['b2b-cart'],
     queryFn: () => fetchCartData(),
@@ -45,9 +50,8 @@ export const useCartQuery = () => {
   });
 };
 
-
 // delete the whole cart (id_cart)
-export async function deleteCart(id_cart: number | string){
+export async function deleteCart(id_cart: number | string) {
   const base = {
     id_cart,
     client_id: ERP_STATIC.customer_code,
@@ -59,7 +63,7 @@ export async function deleteCart(id_cart: number | string){
     ...base,
     id_cart: String(id_cart),
   });
-};
+}
 
 /**
  * Add or update cart line:
@@ -67,7 +71,7 @@ export async function deleteCart(id_cart: number | string){
  * - Else → /wrapper/add_to_cart or /wrapper/add_to_cart_promo with FULL BODY like your examples
  */
 // helper to extract the server row id
-const getRowId = (it: any) => it.rowId ?? it.row_id ;
+const getRowId = (it: any) => it.rowId ?? it.row_id;
 
 /**
  * Add / Update / Remove cart line
@@ -78,7 +82,7 @@ export async function addOrUpdateCartItem(
   input: AddToCartInput,
   cartItems: Item[],
   summary: CartSummary | null | undefined,
-  sourceItem?: Item
+  sourceItem?: Item,
 ) {
   // basic guards
   if (input.quantity == null || Number.isNaN(Number(input.quantity))) {
@@ -111,14 +115,12 @@ export async function addOrUpdateCartItem(
         ...base,
         row_id: String(getRowId(it)),
         id_cart: String(id_cart),
-      })
+      }),
     );
 
     // Return single result if one row, otherwise all results
     return removes.length === 1 ? removes[0] : Promise.all(removes);
   }
-
-
 
   if (matches.length > 0) {
     const cart_rows = matches.map((it) => ({

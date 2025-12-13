@@ -34,18 +34,30 @@ type Props = {
   onStep: (delta: number) => void;
 };
 
-export default function ProductImageLightbox({ images, index, onClose, onStep }: Props) {
+export default function ProductImageLightbox({
+  images,
+  index,
+  onClose,
+  onStep,
+}: Props) {
   const [zoom, setZoom] = React.useState(1);
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const [tx, setTx] = React.useState(0);
   const [ty, setTy] = React.useState(0);
-  const panRef = React.useRef({ startX: 0, startY: 0, startTx: 0, startTy: 0, panning: false });
+  const panRef = React.useRef({
+    startX: 0,
+    startY: 0,
+    startTx: 0,
+    startTy: 0,
+    panning: false,
+  });
   const total = images.length;
   const current = images[index];
 
   // Check if current slide is interactive (video or 3D)
-  const isInteractive = current?.mediaType === 'video' || current?.mediaType === '3d-model';
+  const isInteractive =
+    current?.mediaType === 'video' || current?.mediaType === '3d-model';
 
   // Load model-viewer if there are any 3D models
   const has3DModel = images.some((img) => img.mediaType === '3d-model');
@@ -69,13 +81,25 @@ export default function ProductImageLightbox({ images, index, onClose, onStep }:
     const handleKey = (event: KeyboardEvent) => {
       if (!total) return;
       switch (event.key) {
-        case 'Escape': onClose(); break;
-        case 'ArrowRight': onStep(1); break;
-        case 'ArrowLeft': onStep(-1); break;
+        case 'Escape':
+          onClose();
+          break;
+        case 'ArrowRight':
+          onStep(1);
+          break;
+        case 'ArrowLeft':
+          onStep(-1);
+          break;
         case '+':
-        case '=': setZoom((prev) => Math.min(prev + 0.25, 4)); break;
-        case '-': setZoom((prev) => Math.max(prev - 0.25, 0.5)); break;
-        case '0': setZoom(1); break;
+        case '=':
+          setZoom((prev) => Math.min(prev + 0.25, 4));
+          break;
+        case '-':
+          setZoom((prev) => Math.max(prev - 0.25, 0.5));
+          break;
+        case '0':
+          setZoom(1);
+          break;
       }
     };
     window.addEventListener('keydown', handleKey);
@@ -115,7 +139,11 @@ export default function ProductImageLightbox({ images, index, onClose, onStep }:
       return next;
     });
   };
-  const resetZoom = () => { setZoom(1); setTx(0); setTy(0); };
+  const resetZoom = () => {
+    setZoom(1);
+    setTx(0);
+    setTy(0);
+  };
 
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     // Ignore pan start when interacting with UI controls inside the container (arrows, etc.)
@@ -126,7 +154,9 @@ export default function ProductImageLightbox({ images, index, onClose, onStep }:
     // Start panning immediately on press
     e.preventDefault();
     e.stopPropagation();
-    try { (e.currentTarget as any).setPointerCapture?.(e.pointerId); } catch {}
+    try {
+      (e.currentTarget as any).setPointerCapture?.(e.pointerId);
+    } catch {}
     panRef.current = {
       startX: e.clientX,
       startY: e.clientY,
@@ -146,7 +176,9 @@ export default function ProductImageLightbox({ images, index, onClose, onStep }:
     setTx(clamped.x);
     setTy(clamped.y);
   };
-  const endPan = () => { panRef.current.panning = false; };
+  const endPan = () => {
+    panRef.current.panning = false;
+  };
 
   return (
     <div
@@ -156,10 +188,19 @@ export default function ProductImageLightbox({ images, index, onClose, onStep }:
       aria-label="Product gallery lightbox"
       onClick={onClose}
     >
-      <div className="flex h-full w-full max-w-6xl flex-col" onClick={(event) => event.stopPropagation()}>
+      <div
+        className="flex h-full w-full max-w-6xl flex-col"
+        onClick={(event) => event.stopPropagation()}
+      >
         <div className="flex items-center justify-between px-4 py-3">
           <span className="text-sm font-medium opacity-70">
-            {current.alt ?? (current.mediaType === 'video' ? 'Video' : current.mediaType === '3d-model' ? '3D Model' : 'Product image')} · {index + 1} / {total}
+            {current.alt ??
+              (current.mediaType === 'video'
+                ? 'Video'
+                : current.mediaType === '3d-model'
+                  ? '3D Model'
+                  : 'Product image')}{' '}
+            · {index + 1} / {total}
           </span>
           <button
             type="button"
@@ -180,8 +221,17 @@ export default function ProductImageLightbox({ images, index, onClose, onStep }:
               style={{
                 aspectRatio: '1 / 1',
                 touchAction: isInteractive ? 'auto' : 'none',
-                cursor: isInteractive ? 'default' : (panRef.current.panning ? 'grabbing' : 'grab'),
-                backgroundColor: current.mediaType === 'video' ? '#000' : current.mediaType === '3d-model' ? '#e5e7eb' : '#fff'
+                cursor: isInteractive
+                  ? 'default'
+                  : panRef.current.panning
+                    ? 'grabbing'
+                    : 'grab',
+                backgroundColor:
+                  current.mediaType === 'video'
+                    ? '#000'
+                    : current.mediaType === '3d-model'
+                      ? '#e5e7eb'
+                      : '#fff',
               }}
               onPointerDown={isInteractive ? undefined : onPointerDown}
               onPointerMove={isInteractive ? undefined : onPointerMove}
@@ -192,7 +242,8 @@ export default function ProductImageLightbox({ images, index, onClose, onStep }:
               {/* Video content */}
               {current.mediaType === 'video' && current.videoUrl ? (
                 <div className="absolute inset-0">
-                  {(current.videoUrl.includes('youtube.com') || current.videoUrl.includes('youtu.be')) ? (
+                  {current.videoUrl.includes('youtube.com') ||
+                  current.videoUrl.includes('youtu.be') ? (
                     <iframe
                       src={`https://www.youtube.com/embed/${current.videoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&]+)/)?.[1]}?rel=0&autoplay=1`}
                       title={current.label || 'Video'}
@@ -226,8 +277,13 @@ export default function ProductImageLightbox({ images, index, onClose, onStep }:
                 </div>
               ) : (
                 /* Image content (default) */
-                <div className="absolute inset-0 flex items-center justify-center select-none"
-                  style={{ transform: `translate(${tx}px, ${ty}px) scale(${zoom})`, transformOrigin: 'center center' }}>
+                <div
+                  className="absolute inset-0 flex items-center justify-center select-none"
+                  style={{
+                    transform: `translate(${tx}px, ${ty}px) scale(${zoom})`,
+                    transformOrigin: 'center center',
+                  }}
+                >
                   <Image
                     src={current.original}
                     alt={current.alt ?? 'Product image enlarged'}
@@ -240,7 +296,10 @@ export default function ProductImageLightbox({ images, index, onClose, onStep }:
               {/* Overlay arrows to change image */}
               <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); onStep(-1); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onStep(-1);
+                }}
                 aria-label="Previous image"
                 data-nopan="true"
                 className="absolute left-2 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-black/30 hover:bg-black/40 text-white flex items-center justify-center"
@@ -249,7 +308,10 @@ export default function ProductImageLightbox({ images, index, onClose, onStep }:
               </button>
               <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); onStep(1); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onStep(1);
+                }}
                 aria-label="Next image"
                 data-nopan="true"
                 className="absolute right-2 top-1/2 -translate-y-1/2 z-10 w-9 h-9 rounded-full bg-black/30 hover:bg-black/40 text-white flex items-center justify-center"
@@ -287,12 +349,17 @@ export default function ProductImageLightbox({ images, index, onClose, onStep }:
                   }}
                   className={`relative w-16 h-16 rounded-md overflow-hidden border ${i === index ? 'border-amber-500' : 'border-border-base'} bg-white`}
                   aria-label={`Show ${img.mediaType === 'video' ? 'video' : img.mediaType === '3d-model' ? '3D model' : 'image'} ${i + 1}`}
-                  title={img.alt ?? `${img.mediaType === 'video' ? 'Video' : img.mediaType === '3d-model' ? '3D Model' : 'Image'} ${i + 1}`}
+                  title={
+                    img.alt ??
+                    `${img.mediaType === 'video' ? 'Video' : img.mediaType === '3d-model' ? '3D Model' : 'Image'} ${i + 1}`
+                  }
                 >
                   {img.mediaType === '3d-model' ? (
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-gray-100 via-gray-200 to-gray-300">
                       <IoCubeOutline className="w-6 h-6 text-gray-500" />
-                      <span className="text-[10px] font-bold text-gray-500 mt-0.5">3D</span>
+                      <span className="text-[10px] font-bold text-gray-500 mt-0.5">
+                        3D
+                      </span>
                     </div>
                   ) : (
                     <>

@@ -2,27 +2,57 @@
 
 import cn from 'classnames';
 import Link from 'next/link';
-import { usePathname, useParams, useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
 import { useUI } from '@contexts/ui.context';
+import { useTranslation } from 'src/app/i18n/client';
 
-type MenuItem = { label: string; href: (lang: string) => string; match: (pathname: string) => boolean };
+type MenuItem = {
+  labelKey: string;
+  href: (lang: string) => string;
+  match: (pathname: string) => boolean;
+};
 
 const MENU: MenuItem[] = [
-  { label: 'Profile',          href: (l) => `/${l}/account/profile`,          match: (p) => /\/account\/profile(?:$|\/)/.test(p) },
-  { label: 'Change Password',  href: (l) => `/${l}/account/change-password`,   match: (p) => /\/account\/change-password(?:$|\/)/.test(p) },
-  { label: 'My Documents',     href: (l) => `/${l}/account/documents`,         match: (p) => /\/account\/documents(?:$|\/)/.test(p) },
-  { label: 'My Orders',        href: (l) => `/${l}/account/orders`,            match: (p) => /\/account\/orders(?:$|\/)/.test(p) },
-  // { label: 'Downloads',        href: (l) => `/${l}/account/downloads`,         match: (p) => /\/account\/downloads(?:$|\/)/.test(p) },
-  { label: 'Deadlines',        href: (l) => `/${l}/account/deadlines`,         match: (p) => /\/account\/deadlines(?:$|\/)/.test(p) },
-  { label: 'Fido',             href: (l) => `/${l}/account/fido`,              match: (p) => /\/account\/fido(?:$|\/)/.test(p) },
-  { label: 'Need Help',        href: (l) => `/${l}/account/need-help`,         match: (p) => /\/account\/need-help(?:$|\/)/.test(p) },
+  {
+    labelKey: 'text-profile',
+    href: (l) => `/${l}/account/profile`,
+    match: (p) => /\/account\/profile(?:$|\/)/.test(p),
+  },
+  {
+    labelKey: 'text-change-password',
+    href: (l) => `/${l}/account/change-password`,
+    match: (p) => /\/account\/change-password(?:$|\/)/.test(p),
+  },
+  {
+    labelKey: 'text-my-documents',
+    href: (l) => `/${l}/account/documents`,
+    match: (p) => /\/account\/documents(?:$|\/)/.test(p),
+  },
+  {
+    labelKey: 'text-my-orders',
+    href: (l) => `/${l}/account/orders`,
+    match: (p) => /\/account\/orders(?:$|\/)/.test(p),
+  },
+  {
+    labelKey: 'text-deadlines',
+    href: (l) => `/${l}/account/deadlines`,
+    match: (p) => /\/account\/deadlines(?:$|\/)/.test(p),
+  },
+  {
+    labelKey: 'text-fido',
+    href: (l) => `/${l}/account/fido`,
+    match: (p) => /\/account\/fido(?:$|\/)/.test(p),
+  },
 ];
 
-export default function SidebarMenu() {
+interface SidebarMenuProps {
+  lang: string;
+}
+
+export default function SidebarMenu({ lang }: SidebarMenuProps) {
+  const { t } = useTranslation(lang, 'common');
   const pathname = usePathname();
-  const params = useParams<{ lang?: string }>();
-  const lang = (params?.lang as string) || 'en';
   const router = useRouter();
   const { unauthorize } = useUI();
 
@@ -32,8 +62,12 @@ export default function SidebarMenu() {
       Cookies.remove('auth_token');
       // Clear persisted app state that should reset on logout
       if (typeof window !== 'undefined') {
-        try { window.localStorage.removeItem('erp-static'); } catch {}
-        try { window.localStorage.removeItem('likes-state'); } catch {}
+        try {
+          window.localStorage.removeItem('erp-static');
+        } catch {}
+        try {
+          window.localStorage.removeItem('likes-state');
+        } catch {}
       }
     } catch {}
     // Update UI auth state and redirect to home
@@ -48,7 +82,7 @@ export default function SidebarMenu() {
           const href = item.href(lang);
           const isActive = item.match(pathname || '');
           return (
-            <li key={item.label}>
+            <li key={item.labelKey}>
               <Link
                 href={href}
                 aria-current={isActive ? 'page' : undefined}
@@ -56,10 +90,10 @@ export default function SidebarMenu() {
                   'block rounded-xl px-4 py-2 text-sm hover:bg-gray-50',
                   isActive
                     ? 'border-l-4 border-teal-500 bg-teal-50/70 font-medium text-gray-900'
-                    : 'text-gray-700'
+                    : 'text-gray-700',
                 )}
               >
-                {item.label}
+                {t(item.labelKey)}
               </Link>
             </li>
           );
@@ -71,7 +105,7 @@ export default function SidebarMenu() {
           onClick={handleLogout}
           className="block w-full rounded-xl px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50"
         >
-          Logout
+          {t('text-logout')}
         </button>
       </div>
     </nav>

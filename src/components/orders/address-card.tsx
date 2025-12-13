@@ -1,10 +1,14 @@
 'use client';
 
-import { Address } from "@framework/order/order-static-data";
+import { Address } from '@framework/order/order-static-data';
 
-
-
-export default function AddressCard({ title, a }: { title: string; a: Address }) {
+export default function AddressCard({
+  title,
+  a,
+}: {
+  title: string;
+  a: Address;
+}) {
   return (
     <div>
       <p className="mb-1 text-sm font-semibold text-gray-900">{title}</p>

@@ -1,14 +1,17 @@
-import { AiOutlineCheckCircle, AiOutlineLoading3Quarters } from 'react-icons/ai'
-import { cn } from '@/lib/utils'
+import {
+  AiOutlineCheckCircle,
+  AiOutlineLoading3Quarters,
+} from 'react-icons/ai';
+import { cn } from '@/lib/utils';
 
 interface ThinkingStep {
-  step: string
-  message: string
-  completed: boolean
+  step: string;
+  message: string;
+  completed: boolean;
 }
 
 interface ThinkingStepsProps {
-  steps: ThinkingStep[]
+  steps: ThinkingStep[];
 }
 
 export function ThinkingSteps({ steps }: ThinkingStepsProps) {
@@ -19,8 +22,8 @@ export function ThinkingSteps({ steps }: ThinkingStepsProps) {
           <div
             key={index}
             className={cn(
-              "flex items-center gap-3 text-sm transition-all duration-200",
-              step.completed ? "opacity-60" : "opacity-100"
+              'flex items-center gap-3 text-sm transition-all duration-200',
+              step.completed ? 'opacity-60' : 'opacity-100',
             )}
           >
             {step.completed ? (
@@ -28,15 +31,17 @@ export function ThinkingSteps({ steps }: ThinkingStepsProps) {
             ) : (
               <AiOutlineLoading3Quarters className="w-4 h-4 text-blue-600 animate-spin flex-shrink-0" />
             )}
-            <span className={cn(
-              "transition-colors",
-              step.completed ? "text-gray-600" : "text-blue-900 font-medium"
-            )}>
+            <span
+              className={cn(
+                'transition-colors',
+                step.completed ? 'text-gray-600' : 'text-blue-900 font-medium',
+              )}
+            >
               {step.message}
             </span>
           </div>
         ))}
       </div>
     </div>
-  )
+  );
 }

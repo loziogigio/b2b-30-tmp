@@ -14,13 +14,30 @@ export interface LoginInputType {
 async function login(input: LoginInputType) {
   // API expects { username, password }
   const body = { username: input.email, password: input.password } as any;
-  const res = await post<any>(API_ENDPOINTS_B2B.LOGIN, body);
-  // token may be under message.token
-  const token = res?.message?.token || res?.token || '';
-  return { raw: res, token };
+  try {
+    const res = await post<any>(API_ENDPOINTS_B2B.LOGIN, body);
+    // Check if login was successful
+    if (
+      res?.success === false ||
+      (res?.ReturnCode !== undefined && res?.ReturnCode !== 0)
+    ) {
+      throw new Error(res?.message || res?.Message || 'Credenziali non valide');
+    }
+    // token may be under message.token
+    const token = res?.message?.token || res?.token || '';
+    return { raw: res, token };
+  } catch (error: any) {
+    // Handle axios error response
+    const errorMessage =
+      error?.response?.data?.message ||
+      error?.response?.data?.Message ||
+      error?.message ||
+      'Credenziali non valide';
+    throw new Error(errorMessage);
+  }
 }
-export const useLoginMutation = () => {
-  const { authorize, closeModal } = useUI();
+export const useLoginMutation = (onSuccessCallback?: () => void) => {
+  const { authorize } = useUI();
   return useMutation({
     mutationFn: (input: LoginInputType) => login(input),
     onSuccess: (data) => {
@@ -28,12 +45,21 @@ export const useLoginMutation = () => {
         Cookies.set('auth_token', data.token);
       }
       // Map ERP session defaults
-      applyLoginToErpStatic(data?.raw, data?.raw?.user_profile_settings?.username || '');
+      applyLoginToErpStatic(
+        data?.raw,
+        data?.raw?.user_profile_settings?.username || '',
+      );
       authorize();
-      closeModal();
+      // Call optional callback (e.g., to close modal from the component)
+      onSuccessCallback?.();
+      // Reload page after short delay to ensure address cookie is synced
+      // This allows server to render personalized content based on user's address
+      setTimeout(() => {
+        window.location.reload();
+      }, 300);
     },
-    onError: (data) => {
-      console.log(data, 'login error response');
+    onError: () => {
+      // Error handling is done in the component via mutation options
     },
   });
 };

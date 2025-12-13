@@ -29,7 +29,9 @@ export default function ManagedDrawer({ lang }: { lang: string }) {
 
   return (
     <Drawer
-      rootClassName={drawerView === 'ORDER_DETAILS' ? 'order-details-drawer' : ''}
+      rootClassName={
+        drawerView === 'ORDER_DETAILS' ? 'order-details-drawer' : ''
+      }
       open={displayDrawer}
       placement={dir === 'rtl' ? 'left' : 'right'}
       onClose={closeDrawer}
@@ -38,11 +40,12 @@ export default function ManagedDrawer({ lang }: { lang: string }) {
       contentWrapperStyle={contentWrapperCSS}
       {...motionProps}
     >
-
       {drawerView === 'CART_SIDEBAR' && (
         <>
           {/* optional tiny syncing indicator */}
-          {isFetching ? <div className="px-4 py-2 text-xs text-gray-500">Syncing cart…</div> : null}
+          {isFetching ? (
+            <div className="px-4 py-2 text-xs text-gray-500">Syncing cart…</div>
+          ) : null}
           <Cart lang={lang} />
         </>
       )}

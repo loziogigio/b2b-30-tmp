@@ -15,12 +15,19 @@ export interface State {
   displayCart: boolean;
   displaySearch: boolean;
   displayMobileSearch: boolean;
+  displayCategories: boolean;
   displayDrawer: boolean;
   drawerView: string | null;
   toastText: string;
   isStickyheader: boolean;
+  hidePrices: boolean;
   data?: any;
 }
+
+const getHidePricesFromStorage = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  return localStorage.getItem('hidePrices') === 'true';
+};
 
 const initialState = {
   isAuthorized: getToken() ? true : false,
@@ -29,81 +36,92 @@ const initialState = {
   displayCart: false,
   displaySearch: false,
   displayMobileSearch: false,
+  displayCategories: false,
   displayDrawer: false,
   drawerView: null,
   toastText: '',
   isStickyheader: false,
+  hidePrices: getHidePricesFromStorage(),
   data: null,
 };
 
 type Action =
   | {
-    type: 'SET_AUTHORIZED';
-  }
+      type: 'SET_AUTHORIZED';
+    }
   | {
-    type: 'SET_UNAUTHORIZED';
-  }
+      type: 'SET_UNAUTHORIZED';
+    }
   | {
-    type: 'OPEN_SIDEBAR';
-  }
+      type: 'OPEN_SIDEBAR';
+    }
   | {
-    type: 'CLOSE_SIDEBAR';
-  }
+      type: 'CLOSE_SIDEBAR';
+    }
   | {
-    type: 'OPEN_SHOP';
-  }
+      type: 'OPEN_SHOP';
+    }
   | {
-    type: 'CLOSE_SHOP';
-  }
+      type: 'CLOSE_SHOP';
+    }
   | {
-    type: 'OPEN_CART';
-  }
+      type: 'OPEN_CART';
+    }
   | {
-    type: 'CLOSE_CART';
-  }
+      type: 'CLOSE_CART';
+    }
   | {
-    type: 'OPEN_SEARCH';
-  }
+      type: 'OPEN_SEARCH';
+    }
   | {
-    type: 'CLOSE_SEARCH';
-  }
+      type: 'CLOSE_SEARCH';
+    }
   | {
-    type: 'OPEN_MOBILE_SEARCH';
-  }
+      type: 'OPEN_MOBILE_SEARCH';
+    }
   | {
-    type: 'CLOSE_MOBILE_SEARCH';
-  }
+      type: 'CLOSE_MOBILE_SEARCH';
+    }
   | {
-    type: 'SET_TOAST_TEXT';
-    text: ToastText;
-  }
+      type: 'OPEN_CATEGORIES';
+    }
   | {
-    type: 'OPEN_FILTER';
-  }
+      type: 'CLOSE_CATEGORIES';
+    }
   | {
-    type: 'CLOSE_FILTER';
-  }
+      type: 'SET_TOAST_TEXT';
+      text: ToastText;
+    }
   | {
-    type: 'OPEN_DRAWER';
-    data: null;
-  }
+      type: 'OPEN_FILTER';
+    }
   | {
-    type: 'CLOSE_DRAWER';
-  }
+      type: 'CLOSE_FILTER';
+    }
   | {
-    type: 'SET_DRAWER_VIEW';
-    view: DRAWER_VIEWS;
-  }
+      type: 'OPEN_DRAWER';
+      data: null;
+    }
   | {
-    type: 'SET_USER_AVATAR';
-    value: string;
-  }
+      type: 'CLOSE_DRAWER';
+    }
   | {
-    type: 'ENABLE_STICKY_HEADER';
-  }
+      type: 'SET_DRAWER_VIEW';
+      view: DRAWER_VIEWS;
+    }
   | {
-    type: 'DISABLE_STICKY_HEADER';
-  };
+      type: 'SET_USER_AVATAR';
+      value: string;
+    }
+  | {
+      type: 'ENABLE_STICKY_HEADER';
+    }
+  | {
+      type: 'DISABLE_STICKY_HEADER';
+    }
+  | {
+      type: 'TOGGLE_HIDE_PRICES';
+    };
 
 type DRAWER_VIEWS = 'CART_SIDEBAR' | 'MOBILE_MENU' | 'ORDER_DETAILS';
 type ToastText = string;
@@ -188,6 +206,18 @@ function uiReducer(state: State, action: Action) {
         displayMobileSearch: false,
       };
     }
+    case 'OPEN_CATEGORIES': {
+      return {
+        ...state,
+        displayCategories: true,
+      };
+    }
+    case 'CLOSE_CATEGORIES': {
+      return {
+        ...state,
+        displayCategories: false,
+      };
+    }
     case 'OPEN_FILTER': {
       return {
         ...state,
@@ -244,6 +274,16 @@ function uiReducer(state: State, action: Action) {
         isStickyheader: false,
       };
     }
+    case 'TOGGLE_HIDE_PRICES': {
+      const newValue = !state.hidePrices;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('hidePrices', String(newValue));
+      }
+      return {
+        ...state,
+        hidePrices: newValue,
+      };
+    }
   }
 }
 
@@ -282,6 +322,12 @@ export function UIProvider(props: React.PropsWithChildren<any>) {
     state.displayMobileSearch
       ? dispatch({ type: 'CLOSE_MOBILE_SEARCH' })
       : dispatch({ type: 'OPEN_MOBILE_SEARCH' });
+  const openCategories = () => dispatch({ type: 'OPEN_CATEGORIES' });
+  const closeCategories = () => dispatch({ type: 'CLOSE_CATEGORIES' });
+  const toggleCategories = () =>
+    state.displayCategories
+      ? dispatch({ type: 'CLOSE_CATEGORIES' })
+      : dispatch({ type: 'OPEN_CATEGORIES' });
   const openDrawer = (data?: any) => dispatch({ type: 'OPEN_DRAWER', data });
   const closeDrawer = () => dispatch({ type: 'CLOSE_DRAWER' });
 
@@ -292,6 +338,7 @@ export function UIProvider(props: React.PropsWithChildren<any>) {
     dispatch({ type: 'SET_DRAWER_VIEW', view });
   const enableStickyHeader = () => dispatch({ type: 'ENABLE_STICKY_HEADER' });
   const disableStickyHeader = () => dispatch({ type: 'DISABLE_STICKY_HEADER' });
+  const toggleHidePrices = () => dispatch({ type: 'TOGGLE_HIDE_PRICES' });
 
   const value = React.useMemo(
     () => ({
@@ -317,10 +364,14 @@ export function UIProvider(props: React.PropsWithChildren<any>) {
       openMobileSearch,
       closeMobileSearch,
       toggleMobileSearch,
+      openCategories,
+      closeCategories,
+      toggleCategories,
       setDrawerView,
       setUserAvatar,
       enableStickyHeader,
       disableStickyHeader,
+      toggleHidePrices,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [state],

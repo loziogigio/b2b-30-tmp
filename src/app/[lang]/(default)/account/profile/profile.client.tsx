@@ -3,16 +3,27 @@
 
 import * as React from 'react';
 import { useTranslation } from 'src/app/i18n/client';
-import { useCustomerQuery, useAddressQuery } from '@framework/acccount/fetch-account';
+import {
+  useCustomerQuery,
+  useAddressQuery,
+} from '@framework/acccount/fetch-account';
 import AddressGridB2B from '@components/address/address-grid-b2b'; // <- display-only version
 // import { useDeliveryAddress } from '@contexts/address/address.context'; // not needed here
 
 export default function ProfileCard({ lang }: { lang: string }) {
   const { t } = useTranslation(lang, 'common');
-  const readOnly = true
+  const readOnly = true;
 
-  const { data: customer, isLoading: loadingCustomer, error: errorCustomer } = useCustomerQuery(true);
-  const { data: addresses = [], isLoading: loadingAddresses, error: errorAddresses } = useAddressQuery(true);
+  const {
+    data: customer,
+    isLoading: loadingCustomer,
+    error: errorCustomer,
+  } = useCustomerQuery(true);
+  const {
+    data: addresses = [],
+    isLoading: loadingAddresses,
+    error: errorAddresses,
+  } = useAddressQuery(true);
 
   const loading = loadingCustomer || loadingAddresses;
   const error = errorCustomer || errorAddresses;
@@ -33,7 +44,8 @@ export default function ProfileCard({ lang }: { lang: string }) {
 
         {error && (
           <div className="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-            {t('text-something-wrong') ?? 'Something went wrong'} — {String(error.message)}
+            {t('text-something-wrong') ?? 'Something went wrong'} —{' '}
+            {String(error.message)}
           </div>
         )}
 
@@ -44,36 +56,64 @@ export default function ProfileCard({ lang }: { lang: string }) {
               <table className="w-full text-sm [&_td]:py-2">
                 <tbody>
                   <tr>
-                    <td className="w-44 text-gray-500">{t('CUSTOM_CODE') ?? 'Customer Code'}</td>
-                    <td className="font-medium text-gray-900">{customer.code}</td>
+                    <td className="w-44 text-gray-500">
+                      {t('CUSTOM_CODE') ?? 'Customer Code'}
+                    </td>
+                    <td className="font-medium text-gray-900">
+                      {customer.code}
+                    </td>
                   </tr>
                   <tr>
-                    <td className="text-gray-500">{t('COMPANY_NAME') ?? 'Company Name'}</td>
-                    <td className="font-medium text-gray-900">{customer.businessName ?? '—'}</td>
+                    <td className="text-gray-500">
+                      {t('COMPANY_NAME') ?? 'Company Name'}
+                    </td>
+                    <td className="font-medium text-gray-900">
+                      {customer.businessName ?? '—'}
+                    </td>
                   </tr>
                   <tr>
-                    <td className="text-gray-500">{t('SURNAME') ?? 'Surname'}</td>
-                    <td className="font-medium text-gray-900">{customer.lastName ?? '—'}</td>
+                    <td className="text-gray-500">
+                      {t('SURNAME') ?? 'Surname'}
+                    </td>
+                    <td className="font-medium text-gray-900">
+                      {customer.lastName ?? '—'}
+                    </td>
                   </tr>
                   <tr>
-                    <td className="text-gray-500">{t('FIRST_NAME') ?? 'First Name'}</td>
-                    <td className="font-medium text-gray-900">{customer.firstName ?? '—'}</td>
+                    <td className="text-gray-500">
+                      {t('FIRST_NAME') ?? 'First Name'}
+                    </td>
+                    <td className="font-medium text-gray-900">
+                      {customer.firstName ?? '—'}
+                    </td>
                   </tr>
                   <tr>
-                    <td className="text-gray-500">{t('TAX_CODE') ?? 'Tax Code'}</td>
-                    <td className="font-medium text-gray-900">{customer.taxCode ?? '—'}</td>
+                    <td className="text-gray-500">
+                      {t('TAX_CODE') ?? 'Tax Code'}
+                    </td>
+                    <td className="font-medium text-gray-900">
+                      {customer.taxCode ?? '—'}
+                    </td>
                   </tr>
                   <tr>
-                    <td className="text-gray-500">{t('VAT_NUMBER') ?? 'VAT Number'}</td>
-                    <td className="font-medium text-gray-900">{customer.vatNumber ?? '—'}</td>
+                    <td className="text-gray-500">
+                      {t('VAT_NUMBER') ?? 'VAT Number'}
+                    </td>
+                    <td className="font-medium text-gray-900">
+                      {customer.vatNumber ?? '—'}
+                    </td>
                   </tr>
                   <tr>
                     <td className="text-gray-500">PEC</td>
-                    <td className="font-medium text-gray-900">{customer.pec ?? '—'}</td>
+                    <td className="font-medium text-gray-900">
+                      {customer.pec ?? '—'}
+                    </td>
                   </tr>
                   <tr>
                     <td className="text-gray-500">SDI</td>
-                    <td className="font-medium text-gray-900">{customer.sdi ?? '—'}</td>
+                    <td className="font-medium text-gray-900">
+                      {customer.sdi ?? '—'}
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -87,7 +127,11 @@ export default function ProfileCard({ lang }: { lang: string }) {
 
               {addresses.length > 0 ? (
                 <div className="overflow-y-auto pr-1">
-                  <AddressGridB2B lang={lang} address={addresses} readOnly={readOnly} />
+                  <AddressGridB2B
+                    lang={lang}
+                    address={addresses}
+                    readOnly={readOnly}
+                  />
                 </div>
               ) : (
                 <div className="rounded-md border border-gray-200 p-3 text-sm text-gray-600">

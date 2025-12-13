@@ -7,7 +7,6 @@ import { transformPaymentDeadline } from '@utils/transform/b2b-payment-deadline'
 import { transformExposition } from '@utils/transform/b2b-exposition';
 
 import type {
-  Address,
   RawPaymentDeadlineResponse,
   PaymentDeadlineSummary,
   RawExposition,
@@ -25,9 +24,24 @@ const buildPayload = () => ({ ...ERP_STATIC });
 
 // ===== Exposition (OBJECT) =====
 export async function fetchExposition(): Promise<Exposition> {
-  const res = await post<RawExposition>(API_ENDPOINTS_B2B.GET_EXPOSITION, buildPayload());
-  if (!res || typeof res !== 'object') {
+  const raw = await post<{ message?: RawExposition } | RawExposition>(
+    API_ENDPOINTS_B2B.GET_EXPOSITION,
+    buildPayload(),
+  );
+  if (!raw || typeof raw !== 'object') {
     throw new Error('Unexpected ERP response for exposition.');
+  }
+
+  // Handle both wrapped (message: {...}) and direct ({...}) response formats
+  const res: RawExposition | undefined =
+    (raw as any)?.message?.ReturnCode !== undefined
+      ? (raw as any).message
+      : (raw as RawExposition)?.ReturnCode !== undefined
+        ? (raw as RawExposition)
+        : undefined;
+
+  if (!res || typeof res !== 'object') {
+    throw new Error('Unexpected ERP response format for exposition.');
   }
   if (typeof res.ReturnCode === 'number' && res.ReturnCode !== 0) {
     throw new Error(res.Message || 'ERP returned an error for exposition.');
@@ -39,16 +53,30 @@ export const useExpositionQuery = (enabled = true) =>
     queryKey: [API_ENDPOINTS_B2B.GET_EXPOSITION],
     queryFn: fetchExposition,
     enabled,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    gcTime: 1000 * 60 * 10, // 10 minutes
+    refetchOnWindowFocus: false,
   });
 
 // ===== Payment Deadline (OBJECT -> {items:[]}) =====
 export async function fetchPaymentDeadline(): Promise<PaymentDeadlineSummary> {
-  const res = await post<RawPaymentDeadlineResponse>(
-    API_ENDPOINTS_B2B.GET_PAYMENT_DEADLINE,
-    buildPayload()
-  );
-  if (!res || typeof res !== 'object') {
+  const raw = await post<
+    { message?: RawPaymentDeadlineResponse } | RawPaymentDeadlineResponse
+  >(API_ENDPOINTS_B2B.GET_PAYMENT_DEADLINE, buildPayload());
+  if (!raw || typeof raw !== 'object') {
     throw new Error('Unexpected ERP response for payment deadline.');
+  }
+
+  // Handle both wrapped (message: {...}) and direct ({...}) response formats
+  const res: RawPaymentDeadlineResponse | undefined =
+    (raw as any)?.message?.CodiceValuta !== undefined
+      ? (raw as any).message
+      : (raw as RawPaymentDeadlineResponse)?.CodiceValuta !== undefined
+        ? (raw as RawPaymentDeadlineResponse)
+        : undefined;
+
+  if (!res || typeof res !== 'object') {
+    throw new Error('Unexpected ERP response format for payment deadline.');
   }
   return transformPaymentDeadline(res);
 }
@@ -57,14 +85,24 @@ export const usePaymentDeadlineQuery = (enabled = true) =>
     queryKey: [API_ENDPOINTS_B2B.GET_PAYMENT_DEADLINE],
     queryFn: fetchPaymentDeadline,
     enabled,
+    staleTime: 1000 * 60 * 5, // 5 minutes - don't refetch if data is fresh
+    gcTime: 1000 * 60 * 10, // 10 minutes - keep in cache
+    refetchOnWindowFocus: false, // don't refetch when user returns to tab
   });
 
-
 export async function fetchAddresses(): Promise<AddressB2B[]> {
-  const res = await post<RawAddressesResponse>(
-    API_ENDPOINTS_B2B.GET_ADDRESSES,
-    buildPayload()
-  );
+  const raw = await post<
+    { message?: RawAddressesResponse } | RawAddressesResponse
+  >(API_ENDPOINTS_B2B.GET_ADDRESSES, buildPayload());
+
+  // Handle both wrapped (message.ListaIndirizzi) and direct (ListaIndirizzi) response formats
+  const res: RawAddressesResponse | undefined = (raw as any)?.message
+    ?.ListaIndirizzi
+    ? (raw as any).message
+    : (raw as RawAddressesResponse)?.ListaIndirizzi
+      ? (raw as RawAddressesResponse)
+      : undefined;
+
   if (!res || typeof res !== 'object' || !Array.isArray(res.ListaIndirizzi)) {
     throw new Error('Unexpected ERP response for addresses.');
   }
@@ -76,14 +114,29 @@ export const useAddressQuery = (enabled = true) =>
     queryKey: [API_ENDPOINTS_B2B.GET_ADDRESSES],
     queryFn: fetchAddresses,
     enabled,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    gcTime: 1000 * 60 * 10, // 10 minutes
+    refetchOnWindowFocus: false,
   });
-
 
 // ===== Customer (OBJECT) =====
 export async function fetchCustomer(): Promise<CustomerProfile> {
-  const res = await post<RawCustomerResponse>(API_ENDPOINTS_B2B.GET_CUSTOMER, buildPayload());
-  if (!res || typeof res !== 'object') {
+  const raw = await post<
+    { message?: RawCustomerResponse } | RawCustomerResponse
+  >(API_ENDPOINTS_B2B.GET_CUSTOMER, buildPayload());
+  if (!raw || typeof raw !== 'object') {
     throw new Error('Unexpected ERP response for customer.');
+  }
+
+  // Handle both wrapped (message.Codice) and direct (Codice) response formats
+  const res: RawCustomerResponse | undefined = (raw as any)?.message?.Codice
+    ? (raw as any).message
+    : (raw as RawCustomerResponse)?.Codice
+      ? (raw as RawCustomerResponse)
+      : undefined;
+
+  if (!res || typeof res !== 'object') {
+    throw new Error('Unexpected ERP response format for customer.');
   }
   if (typeof res.ReturnCode === 'number' && res.ReturnCode !== 0) {
     throw new Error(res.Message || 'ERP returned an error for customer.');
@@ -96,4 +149,7 @@ export const useCustomerQuery = (enabled = true) =>
     queryKey: [API_ENDPOINTS_B2B.GET_CUSTOMER],
     queryFn: fetchCustomer,
     enabled,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    gcTime: 1000 * 60 * 10, // 10 minutes
+    refetchOnWindowFocus: false,
   });

@@ -1,13 +1,3 @@
-// Legacy B2B facet fields
-export const FACET_FIELDS: string[] = [
-    'promo_type',
-    'new',
-    'id_brand',
-    // 'family_lev3',
-    // 'family_lev2',
-    // 'family_lev1'
-  ];
-
 // PIM facet fields (from SEARCH_AND_FACETING.md)
 export const PIM_FACET_FIELDS: string[] = [
   'category_ancestors',
@@ -38,4 +28,3 @@ export const BOOLEAN_LABELS: Record<string, string> = {
   true: 'Sì',
   false: 'No',
 };
-  

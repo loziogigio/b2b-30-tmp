@@ -1,11 +1,8 @@
-// app/[lang]/account/fido/page.tsx
+import DeadlinesClient from './deadlines.client';
 
-import DeadlinesClient from "./deadlines.client";
+type Props = { params: Promise<{ lang: string }> };
 
-
-type Props = { params: { lang: string } };
-
-export default function Page({ params }: Props) {
-  const lang = params.lang ?? 'it';
-  return <DeadlinesClient lang={lang} />;
+export default async function Page({ params }: Props) {
+  const { lang } = await params;
+  return <DeadlinesClient lang={lang ?? 'it'} />;
 }

@@ -5,7 +5,7 @@ import ProductsPageContent from './products-page-content';
 
 export default async function Page({
   params,
-  searchParams
+  searchParams,
 }: {
   params: Promise<{ lang: string }>;
   searchParams?: Promise<{ sku?: string; preview?: string }>;
@@ -23,9 +23,9 @@ export default async function Page({
   // SKU provided via query param - show product detail
   // Try new simplified template matching first (sku/parentSku based)
   let blocks = await getProductDetailBlocksNew(
-    sku,      // productSku
-    sku,      // parentSku (fallback to sku for now)
-    isPreview
+    sku, // productSku
+    sku, // parentSku (fallback to sku for now)
+    isPreview,
   );
 
   // If no blocks found with new system, fallback to old system
@@ -34,7 +34,7 @@ export default async function Page({
       sku,
       undefined, // categoryIds
       undefined, // tags
-      isPreview
+      isPreview,
     );
   }
 

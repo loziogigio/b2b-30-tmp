@@ -7,10 +7,11 @@ type PublishPayload = {
   versionNumber?: number | string;
   campaign?: string | null;
   segment?: string | null;
-  attributes?: Record<string, string | undefined | null>;
+  attributes?: Record<string, string | string[] | undefined | null>;
   region?: string | null;
   language?: string | null;
   device?: string | null;
+  addressStates?: string[] | null; // Array of province codes (e.g., ["TO", "MI", "RM"])
   priority?: number | string | null;
   isDefault?: boolean;
   activeFrom?: string | null;
@@ -31,7 +32,7 @@ const toSummary = (version: any) => ({
   createdAt: version.createdAt,
   lastSavedAt: version.lastSavedAt,
   publishedAt: version.publishedAt,
-  blocksCount: Array.isArray(version.blocks) ? version.blocks.length : 0
+  blocksCount: Array.isArray(version.blocks) ? version.blocks.length : 0,
 });
 
 const parseBody = async (request: NextRequest): Promise<PublishPayload> => {
@@ -46,12 +47,27 @@ const parseBody = async (request: NextRequest): Promise<PublishPayload> => {
 const buildTags = (payload: PublishPayload): PageVersionTags | undefined => {
   const campaign = normalizeValue(payload.campaign);
   const segment = normalizeValue(payload.segment);
-  const attributes = normalizeAttributes({
+
+  // Build base attributes (string values only)
+  const baseAttributes = normalizeAttributes({
     ...(payload.attributes ?? {}),
     region: payload.region,
     language: payload.language,
-    device: payload.device
+    device: payload.device,
   });
+
+  // Handle addressStates array separately
+  const hasAddressStates =
+    Array.isArray(payload.addressStates) && payload.addressStates.length > 0;
+
+  // Combine base attributes with addressStates
+  const attributes =
+    baseAttributes || hasAddressStates
+      ? {
+          ...baseAttributes,
+          ...(hasAddressStates ? { addressStates: payload.addressStates } : {}),
+        }
+      : undefined;
 
   const tags: PageVersionTags = {};
   if (campaign) tags.campaign = campaign;
@@ -60,11 +76,12 @@ const buildTags = (payload: PublishPayload): PageVersionTags | undefined => {
   return Object.keys(tags).length > 0 ? tags : undefined;
 };
 
-const respond = (body: any, status = 200) => NextResponse.json(body, { status });
+const respond = (body: any, status = 200) =>
+  NextResponse.json(body, { status });
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: { slug: string } },
 ) {
   const versions = await getPageVersions(params.slug);
   if (!versions.length) {
@@ -72,13 +89,13 @@ export async function GET(
   }
   return respond({
     slug: params.slug,
-    versions: versions.map((version) => toSummary(version))
+    versions: versions.map((version) => toSummary(version)),
   });
 }
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: { slug: string } },
 ) {
   const payload = await parseBody(request);
   const versionNumber = Number(payload.versionNumber);
@@ -104,7 +121,7 @@ export async function POST(
     activeFrom: payload.activeFrom ?? undefined,
     activeTo: payload.activeTo ?? undefined,
     comment: payload.comment ?? undefined,
-    status: payload.status
+    status: payload.status,
   });
 
   if (!updated) {

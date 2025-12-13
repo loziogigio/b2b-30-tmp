@@ -76,7 +76,7 @@ const ProductsCarousel: React.FC<ProductsCarouselProps> = ({
   const { width } = useWindowSize();
   const dir = getDirection(lang);
   const [sliderEnd, setSliderEnd] = useState(false);
-  const normalizedSlug = categorySlug ? `/${lang}/${categorySlug}` : '#'
+  const normalizedSlug = categorySlug ? `/${lang}/${categorySlug}` : '#';
 
   // ---- ERP: collect entity_codes from the *effective* product id ----
   const entity_codes = useMemo<string[]>(() => {
@@ -96,7 +96,7 @@ const ProductsCarousel: React.FC<ProductsCarouselProps> = ({
 
   const erpPayload = {
     entity_codes,
-    ...ERP_STATIC
+    ...ERP_STATIC,
   };
 
   const { data: erpPricesData, isLoading: isLoadingErpPrices } = useQuery({
@@ -113,7 +113,11 @@ const ProductsCarousel: React.FC<ProductsCarouselProps> = ({
         className,
       )}
     >
-      <Link href={normalizedSlug} aria-label={`See all ${sectionHeading}`} className="block">
+      <Link
+        href={normalizedSlug}
+        aria-label={`See all ${sectionHeading}`}
+        className="block"
+      >
         <div className="mb-5 flex cursor-pointer flex-wrap items-center justify-between md:mb-6 group">
           {/* ⬇️ Title row with optional image before the title */}
           <div className="flex items-center gap-3">
@@ -136,7 +140,6 @@ const ProductsCarousel: React.FC<ProductsCarouselProps> = ({
         </div>
       </Link>
 
-
       {error ? (
         <div className="2xl:ltr:pr-10 2xl:rtl:pl-10">
           <Alert message={error} />
@@ -154,8 +157,8 @@ const ProductsCarousel: React.FC<ProductsCarouselProps> = ({
           <Carousel
             breakpoints={carouselBreakpoint || breakpoints}
             className="-mx-1.5 md:-mx-2 xl:-mx-2.5 -mt-4"
-            prevButtonClassName="ltr:-left-2 rtl:-right-2 md:ltr:-left-1 md:rtl:-right-1.5 lg:ltr:-left-2 rtl:-right-2 xl:ltr:-left-2.5 xl:rtl:-right-2.5 2xl:ltr:left-5 2xl:rtl:right-5 -top-12 3xl:top-auto 3xl:-translate-y-2"
-            nextButtonClassName="xl:rtl:-translate-x-2.5 xl:lrt:translate-x-2.5 end-2 xl:end-40 -top-12 3xl:top-auto transform 2xl:translate-x-0 3xl:-translate-y-2 4xl:end-14"
+            prevButtonClassName="!left-3 md:!left-4 lg:!left-6 top-1/2 -translate-y-1/2 z-30"
+            nextButtonClassName="!right-3 md:!right-4 lg:!right-6 top-1/2 -translate-y-1/2 z-30"
             lang={lang}
             onSlideChange={(swiper) =>
               swiper.isEnd ? setSliderEnd(true) : setSliderEnd(false)
@@ -175,21 +178,25 @@ const ProductsCarousel: React.FC<ProductsCarouselProps> = ({
                 {Array.isArray(products) &&
                   products.map((p: any) => {
                     // Normalize: if exactly one variation, treat it as the product
-                    const variations = Array.isArray(p?.variations) ? p.variations : [];
+                    const variations = Array.isArray(p?.variations)
+                      ? p.variations
+                      : [];
                     const isSingleVariation = variations.length === 1;
 
                     // Merge the single variation over the parent so we keep any missing fields (image, brand, etc.)
                     const targetProduct = isSingleVariation
                       ? {
-                        ...p,
-                        ...variations[0],
-                        id_parent: p.id_parent ?? p.id,
-                        parent_sku: p.parent_sku ?? p.sku,
-                        image: variations[0]?.image ?? p.image,
-                        gallery:
-                          (variations[0]?.gallery?.length ? variations[0].gallery : p.gallery) ?? [],
-                        variations: [], // flattened after normalization
-                      }
+                          ...p,
+                          ...variations[0],
+                          id_parent: p.id_parent ?? p.id,
+                          parent_sku: p.parent_sku ?? p.sku,
+                          image: variations[0]?.image ?? p.image,
+                          gallery:
+                            (variations[0]?.gallery?.length
+                              ? variations[0].gallery
+                              : p.gallery) ?? [],
+                          variations: [], // flattened after normalization
+                        }
                       : p;
 
                     // Effective key for ERP lookup + React key
@@ -211,7 +218,10 @@ const ProductsCarousel: React.FC<ProductsCarouselProps> = ({
                   })}
 
                 {/* See all */}
-                <SwiperSlide key="see-all" className="p-2.5 flex items-center justify-center">
+                <SwiperSlide
+                  key="see-all"
+                  className="p-2.5 flex items-center justify-center"
+                >
                   <SeeAll href={categorySlug} lang={lang} />
                 </SwiperSlide>
 
@@ -220,7 +230,6 @@ const ProductsCarousel: React.FC<ProductsCarouselProps> = ({
                   <SwiperSlide key="spacer" aria-hidden="true" />
                 ) : null}
               </>
-
             )}
           </Carousel>
         </div>

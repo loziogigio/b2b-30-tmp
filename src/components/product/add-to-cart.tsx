@@ -24,7 +24,7 @@ function CounterPlaceholder({ className }: { className?: string }) {
     <div
       className={cn(
         'w-full h-10 rounded-md border border-gray-200 bg-gray-100 animate-pulse',
-        className
+        className,
       )}
       aria-busy="true"
       aria-live="polite"
@@ -55,33 +55,32 @@ const buildAddPayload = (args: {
 }) => {
   const { itemId, qty, priceData, promo_code, promo_row } = args;
 
-// Merge base discounts with extras (fill first empty slots)
-const mergeDiscounts = (baseArr: any[], extraArr: any[], slots = 6) => {
-  const base = (baseArr ?? []).slice(0, slots).map((n) => Number(n) || 0);
-  const extras = (extraArr ?? []).map((n) => Number(n) || 0);
+  // Merge base discounts with extras (fill first empty slots)
+  const mergeDiscounts = (baseArr: any[], extraArr: any[], slots = 6) => {
+    const base = (baseArr ?? []).slice(0, slots).map((n) => Number(n) || 0);
+    const extras = (extraArr ?? []).map((n) => Number(n) || 0);
 
-  // fill first zero slots with non-zero extras (negative or positive)
-  for (const v of extras) {
-    if (v === 0) continue;                 // change to `if (v <= 0) continue;` if you truly want only >0
-    const idx = base.findIndex((x) => x === 0);
-    if (idx === -1) break;
-    base[idx] = v;
-  }
+    // fill first zero slots with non-zero extras (negative or positive)
+    for (const v of extras) {
+      if (v === 0) continue; // change to `if (v <= 0) continue;` if you truly want only >0
+      const idx = base.findIndex((x) => x === 0);
+      if (idx === -1) break;
+      base[idx] = v;
+    }
 
-  while (base.length < slots) base.push(0);
-  return base.slice(0, slots);
-};
+    while (base.length < slots) base.push(0);
+    return base.slice(0, slots);
+  };
 
-const rawDiscounts = Array.isArray((priceData as any)?.discount)
-  ? (priceData as any).discount
-  : [];
+  const rawDiscounts = Array.isArray((priceData as any)?.discount)
+    ? (priceData as any).discount
+    : [];
 
-const extraDiscounts = Array.isArray((priceData as any)?.discount_extra)
-  ? (priceData as any).discount_extra
-  : [];
+  const extraDiscounts = Array.isArray((priceData as any)?.discount_extra)
+    ? (priceData as any).discount_extra
+    : [];
 
-const [d1, d2, d3, d4, d5, d6] = mergeDiscounts(rawDiscounts, extraDiscounts);
-
+  const [d1, d2, d3, d4, d5, d6] = mergeDiscounts(rawDiscounts, extraDiscounts);
 
   return {
     item_id: itemId,
@@ -99,19 +98,19 @@ const [d1, d2, d3, d4, d5, d6] = mergeDiscounts(rawDiscounts, extraDiscounts);
     discount4: d4,
     discount5: d5,
     discount6: d6,
-    
 
     // packaging + list
-    qty_min_packing: Number(priceData?.packaging_option_default?.qty_x_packaging ?? 1),
+    qty_min_packing: Number(
+      priceData?.packaging_option_default?.qty_x_packaging ?? 1,
+    ),
     listino_type: String((priceData as any)?.listino_type ?? '1'),
     listino_code: String((priceData as any)?.listino_code ?? 'VEND'),
 
     // promo
     promo_code: promo_code ?? (priceData as any)?.promo_code ?? 0,
-    promo_row:  promo_row  ?? (priceData as any)?.promo_row  ?? 0,
+    promo_row: promo_row ?? (priceData as any)?.promo_row ?? 0,
   };
 };
-
 
 export default function AddToCart({
   lang,
@@ -135,12 +134,24 @@ export default function AddToCart({
   const effectivePriceData = (priceData ?? meta) as ErpPriceData | undefined;
 
   // Derive scalers even if data is missing (use safe fallbacks)
-  const step = Math.max(Number(effectivePriceData?.packaging_option_default?.qty_x_packaging ?? 1), 1);
-  const multiple = Math.max(Number(effectivePriceData?.packaging_option_smallest?.qty_x_packaging ?? 1), 1);
-  const { toUnits, fromUnits } = useMemo(() => makeScaler(step, multiple), [step, multiple]);
+  const step = Math.max(
+    Number(effectivePriceData?.packaging_option_default?.qty_x_packaging ?? 1),
+    1,
+  );
+  const multiple = Math.max(
+    Number(effectivePriceData?.packaging_option_smallest?.qty_x_packaging ?? 1),
+    1,
+  );
+  const { toUnits, fromUnits } = useMemo(
+    () => makeScaler(step, multiple),
+    [step, multiple],
+  );
 
   const availability = effectivePriceData?.availability;
-  const availabilityU = typeof availability === 'number' && availability > 0 ? toUnits(availability) : Infinity;
+  const availabilityU =
+    typeof availability === 'number' && availability > 0
+      ? toUnits(availability)
+      : Infinity;
 
   // Local cart item (safe even without priceData)
   const payloadForCart = useMemo(
@@ -163,10 +174,13 @@ export default function AddToCart({
         listino_code: (effectivePriceData as any)?.listino_code,
       },
     }),
-    [product, effectivePriceData]
+    [product, effectivePriceData],
   );
 
-  const item = useMemo(() => generateCartItem(payloadForCart, variation), [payloadForCart, variation]);
+  const item = useMemo(
+    () => generateCartItem(payloadForCart, variation),
+    [payloadForCart, variation],
+  );
   const cartEntry = isInCart(item?.id) ? getItemFromCart(item.id) : null;
 
   const currentQty = Number(cartEntry?.quantity ?? 0);
@@ -178,7 +192,12 @@ export default function AddToCart({
 
   const [isSyncing, setIsSyncing] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => { if (debounceRef.current) clearTimeout(debounceRef.current); }, []);
+  useEffect(
+    () => () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    },
+    [],
+  );
 
   const snapToMultipleU = (rawU: number) => {
     if (!Number.isFinite(rawU) || rawU <= 0) return 0;
@@ -233,7 +252,8 @@ export default function AddToCart({
     }
     let targetU = toUnits(rawNum);
     targetU = snapToMultipleU(targetU);
-    if (Number.isFinite(availabilityU)) targetU = Math.min(targetU, availabilityU);
+    if (Number.isFinite(availabilityU))
+      targetU = Math.min(targetU, availabilityU);
     setDraft(String(fromUnits(targetU)));
     scheduleSync(targetU);
   };
@@ -242,10 +262,14 @@ export default function AddToCart({
   const outOfStock = outByErp || disabled;
 
   const numericDraft = parseFloat(draft.replace(',', '.'));
-  const hasQty = (Number.isFinite(numericDraft) && numericDraft > 0) || currentQty > 0;
+  const hasQty =
+    (Number.isFinite(numericDraft) && numericDraft > 0) || currentQty > 0;
   const variant: 'neutral' | 'green' | 'red' =
-    hasQty && (effectivePriceData as any)?.is_promo ? 'red' :
-    hasQty ? 'green' : 'neutral';
+    hasQty && (effectivePriceData as any)?.is_promo
+      ? 'red'
+      : hasQty
+        ? 'green'
+        : 'neutral';
 
   // 2) ONLY DECIDE WHAT TO RENDER HERE (NO EARLY-RETURN BEFORE HOOKS)
   const renderPlaceholder = !effectivePriceData && showPlaceholder;

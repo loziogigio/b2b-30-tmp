@@ -23,11 +23,13 @@ module.exports = {
         headers: [
           {
             key: 'Permissions-Policy',
-            value: 'clipboard-read=(self "http://localhost:3001" "http://149.81.163.109:3001"), clipboard-write=(self "http://localhost:3001" "http://149.81.163.109:3001")',
+            value:
+              'clipboard-read=(self "http://localhost:3001" "http://149.81.163.109:3001"), clipboard-write=(self "http://localhost:3001" "http://149.81.163.109:3001")',
           },
           {
             key: 'Content-Security-Policy',
-            value: "frame-ancestors 'self' http://localhost:3001 http://149.81.163.109:3001",
+            value:
+              "frame-ancestors 'self' http://localhost:3001 http://149.81.163.109:3001",
           },
         ],
       },
@@ -44,7 +46,7 @@ module.exports = {
         source: '/:lang/shop',
         destination: '/:lang/search',
         permanent: true,
-      },      
+      },
     ];
   },
   images: {

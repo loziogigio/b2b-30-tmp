@@ -66,9 +66,25 @@ All API calls must use `/src/framework/basic-rest/` with React Query, never dire
 
 Use contexts only for truly global state (cart, likes, ui). Prefer React Query for server state.
 
+### 6. Centralize Utilities
+
+Common utility functions should be in `/src/utils/` and imported where needed. Never duplicate utility functions across files.
+
+**Available utilities:**
+
+- `slugify` - URL-safe slug generation for paths, navigation
+
+```typescript
+// ✅ DO - Import from shared utils
+import { slugify } from '@utils/slugify';
+
+// ❌ DON'T - Define the same function in multiple files
+function slugify(input: string) { ... } // Duplicated!
+```
+
 ---
 
-**Last Updated:** 2025-01-10
+**Last Updated:** 2025-12-13
 
 Project Structure
 
@@ -127,7 +143,7 @@ export const Button = ({ variant, size = 'md', onClick, children }: ButtonProps)
     lg: 'px-6 py-3 text-lg'
   };
   return (
-    <button 
+    <button
       className={`rounded ${variantClasses[variant]} ${sizeClasses[size]}`}
       onClick={onClick}
     >
@@ -218,10 +234,15 @@ export interface ProductFilter {
 
 ```typescript
 // In ProductCard.tsx
-type Product = { id: string; name: string; price: number; };
+type Product = { id: string; name: string; price: number };
 
 // In ProductList.tsx
-interface Product { id: string; name: string; price: number; currency: string; }
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  currency: string;
+}
 // ^ Inconsistent!
 ```
 
@@ -247,10 +268,10 @@ import { useProduct } from '@framework/product/get-product';
 
 const ProductDetail = ({ id }: { id: string }) => {
   const { data: product, isLoading, error } = useProduct(id);
-  
+
   if (isLoading) return <Spinner />;
   if (error) return <ErrorMessage error={error} />;
-  
+
   return <div>{product.name}</div>;
 };
 ```
@@ -260,13 +281,13 @@ const ProductDetail = ({ id }: { id: string }) => {
 ```typescript
 const ProductDetail = ({ id }) => {
   const [product, setProduct] = useState(null);
-  
+
   useEffect(() => {
     fetch(`/api/products/${id}`)
       .then(res => res.json())
       .then(data => setProduct(data));
   }, [id]);
-  
+
   return <div>{product?.name}</div>;
 };
 ```
@@ -349,6 +370,172 @@ export const CartProvider = ({ children }) => {
 - `ui` - UI state (modals, drawers)
 - `home-settings` - Dynamic page config
 
+### 5. Authentication & Cookie Management
+
+The application uses a cookie-based authentication system that is cluster-safe (cookies are stored in the browser, any server can read them).
+
+#### Cookie Utilities
+
+All cookie operations are centralized in `/src/utils/cookies.ts`:
+
+```typescript
+import {
+  setCookie,
+  deleteCookie,
+  getCookie,
+  clearAllCookies,
+} from '@utils/cookies';
+
+// Set a cookie (expires in 30 days)
+setCookie('my_cookie', 'value', 30);
+
+// Delete a cookie (handles all edge cases)
+deleteCookie('my_cookie');
+
+// Get cookie value
+const value = getCookie('my_cookie');
+
+// Clear all cookies (used during logout)
+clearAllCookies();
+```
+
+#### Key Cookies
+
+| Cookie              | Purpose                                                          | Set By          |
+| ------------------- | ---------------------------------------------------------------- | --------------- |
+| `auth_token`        | Authentication token                                             | Login API       |
+| `b2b_address_state` | User's delivery address province (for home page personalization) | Address context |
+
+#### Login Flow
+
+1. User submits credentials via login form
+2. `/api/auth/login` validates and returns `auth_token` cookie via Set-Cookie header
+3. Client refreshes page to ensure SSR picks up new auth state
+
+```typescript
+// src/framework/basic-rest/auth/use-login.tsx
+const { mutate: login } = useLoginMutation(lang);
+
+login({ email, password, remember_me: true });
+// onSuccess: authorize() → window.location.reload()
+```
+
+#### Logout Flow
+
+The logout flow uses a **GET redirect pattern** to ensure cookies are reliably deleted for SSR:
+
+```
+┌─────────────┐    POST /api/auth/logout    ┌─────────────────┐
+│   Client    │ ───────────────────────────▶│   API Route     │
+│             │                             │   (Set-Cookie   │
+│             │◀─────────────────────────── │    headers)     │
+│             │    JSON response            └─────────────────┘
+│             │
+│             │    GET /api/auth/logout?lang=it
+│             │ ───────────────────────────▶┌─────────────────┐
+│             │                             │   API Route     │
+│             │◀─────────────────────────── │   302 Redirect  │
+│             │    Redirect to /it          │   + Set-Cookie  │
+└─────────────┘    (cookies deleted)        └─────────────────┘
+```
+
+**Why GET redirect?** The browser processes Set-Cookie headers **before** following a 302 redirect, ensuring cookies are deleted before the home page is rendered.
+
+```typescript
+// src/framework/basic-rest/auth/use-logout.tsx
+onSuccess: async () => {
+  resetSelectedAddress();
+  unauthorize();
+  queryClient.clear();
+  localStorage.clear();
+  clearAllCookies();
+  // Navigate via GET redirect - browser deletes cookies BEFORE following redirect
+  window.location.href = `/api/auth/logout?lang=${lang}`;
+};
+```
+
+```typescript
+// src/app/api/auth/logout/route.ts
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const lang = searchParams.get('lang') || 'it';
+
+  const response = NextResponse.redirect(new URL(`/${lang}`, request.url));
+
+  // Delete auth cookies via Set-Cookie headers
+  response.cookies.set('auth_token', '', {
+    path: '/',
+    expires: new Date(0),
+    maxAge: 0,
+  });
+  response.cookies.set(ADDRESS_STATE_COOKIE, '', {
+    path: '/',
+    expires: new Date(0),
+    maxAge: 0,
+  });
+
+  return response;
+}
+```
+
+#### Address State Personalization
+
+The home page displays different templates based on the user's delivery address province:
+
+```
+User selects address → Cookie b2b_address_state=TO → Server renders Version 2
+User logs out        → Cookie deleted              → Server renders Version 1 (default)
+```
+
+The `AddressProvider` context syncs the address state both client-side and via server API:
+
+```typescript
+// src/contexts/address/address.context.tsx
+useEffect(() => {
+  const addressState = state.selected?.address?.state || null;
+
+  // Set cookie client-side
+  setAddressStateCookie(addressState);
+
+  // Sync via server API for reliable SSR
+  void syncAddressCookieWithServer(addressState);
+}, [state.selected]);
+```
+
+The server API at `/api/address-state` sets the cookie via response headers to ensure SSR consistency:
+
+```typescript
+// src/app/api/address-state/route.ts
+export async function POST(request: NextRequest) {
+  const { addressState } = await request.json();
+  const response = NextResponse.json({ success: true });
+
+  if (addressState) {
+    response.cookies.set(ADDRESS_STATE_COOKIE, addressState, {
+      path: '/',
+      maxAge: 86400 * 30, // 30 days
+    });
+  } else {
+    response.cookies.set(ADDRESS_STATE_COOKIE, '', {
+      path: '/',
+      expires: new Date(0),
+      maxAge: 0,
+    });
+  }
+
+  return response;
+}
+```
+
+#### Cluster Deployment Considerations
+
+This architecture is **cluster-safe**:
+
+- Cookies are stored in the browser, not server memory
+- Any server in the cluster can read cookies from the request
+- No sticky sessions required
+- No shared session store needed
+
 ## Best Practices
 
 ### Performance
@@ -380,7 +567,7 @@ export const useProducts = () => {
         console.error('Failed to fetch products:', error);
         throw error; // React Query handles this
       }
-    }
+    },
   });
 };
 ```
@@ -477,7 +664,7 @@ const ProductSchema = z.object({
   id: z.string(),
   name: z.string(),
   price: z.number().positive(),
-  inStock: z.boolean()
+  inStock: z.boolean(),
 });
 
 export const useProduct = (id: string) => {
@@ -486,7 +673,7 @@ export const useProduct = (id: string) => {
     queryFn: async () => {
       const data = await httpClient.get(`/products/${id}`);
       return ProductSchema.parse(data); // Runtime validation
-    }
+    },
   });
 };
 ```
@@ -501,15 +688,15 @@ export const useProduct = (id: string) => {
 // utils/create-http-client.ts
 export const createHttpClient = (baseURL: string) => {
   const client = axios.create({ baseURL });
-  
+
   client.interceptors.response.use(
-    response => response.data,
-    error => {
+    (response) => response.data,
+    (error) => {
       // Centralized error handling
       return Promise.reject(error);
-    }
+    },
   );
-  
+
   return client;
 };
 

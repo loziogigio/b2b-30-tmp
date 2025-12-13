@@ -66,7 +66,9 @@ export default function useQueryParam(pathname: string = '/') {
       }
     } catch {
       // Fallback to empty URL if parsing failed
-      try { target = new URL('http://dummy.local'); } catch {}
+      try {
+        target = new URL('http://dummy.local');
+      } catch {}
     }
 
     if (!target) return params;

@@ -47,7 +47,7 @@ export default function VariantsFilterBar({
               className={cn(
                 'w-full h-10 sm:h-11 rounded-md border px-3 pr-9 text-sm bg-white',
                 'border-gray-300 placeholder-gray-500',
-                'focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand'
+                'focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand',
               )}
             />
             {query && (
@@ -92,7 +92,7 @@ export default function VariantsFilterBar({
               'px-2 py-1 rounded-md border text-xs font-medium transition-colors',
               selectedModels.includes(m)
                 ? 'bg-brand text-white border-brand'
-                : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
+                : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400',
             )}
             onClick={() => onToggleModel(m)}
           >

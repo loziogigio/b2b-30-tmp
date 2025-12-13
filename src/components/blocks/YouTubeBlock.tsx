@@ -13,10 +13,10 @@ interface YouTubeBlockProps {
 export function YouTubeBlock({ config }: YouTubeBlockProps) {
   const {
     url,
-    title = "Product Video",
+    title = 'Product Video',
     autoplay = false,
-    width = "100%",
-    height = "450px"
+    width = '100%',
+    height = '450px',
   } = config;
 
   if (!url) {
@@ -33,7 +33,7 @@ export function YouTubeBlock({ config }: YouTubeBlockProps) {
   const getVideoId = (videoUrl: string): string | null => {
     const patterns = [
       /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&?/]+)/,
-      /^([a-zA-Z0-9_-]{11})$/
+      /^([a-zA-Z0-9_-]{11})$/,
     ];
 
     for (const pattern of patterns) {
@@ -59,7 +59,7 @@ export function YouTubeBlock({ config }: YouTubeBlockProps) {
   }
 
   // Build embed URL with autoplay parameter
-  const embedUrl = `https://www.youtube.com/embed/${videoId}${autoplay ? "?autoplay=1" : ""}`;
+  const embedUrl = `https://www.youtube.com/embed/${videoId}${autoplay ? '?autoplay=1' : ''}`;
 
   return (
     <div className="my-6 mx-auto" style={{ maxWidth: width }}>

@@ -1,13 +1,13 @@
-import Image from 'next/image'
-import { AiOutlineStar, AiOutlineInbox } from 'react-icons/ai'
-import type { ProductResult } from '@/lib/elia/types'
+import Image from 'next/image';
+import { AiOutlineStar, AiOutlineInbox } from 'react-icons/ai';
+import type { ProductResult } from '@/lib/elia/types';
 
 interface ProductCardProps {
-  product: ProductResult
+  product: ProductResult;
 }
 
 export function ProductCard({ product }: ProductCardProps) {
-  const relevancePercent = Math.round(product.relevance_score * 100)
+  const relevancePercent = Math.round(product.relevance_score * 100);
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow duration-200 cursor-pointer group">
@@ -56,7 +56,9 @@ export function ProductCard({ product }: ProductCardProps) {
             €{product.price.toFixed(2)}
           </span>
 
-          <span className={`text-xs ${product.stock > 0 ? 'text-green-600' : 'text-red-600'}`}>
+          <span
+            className={`text-xs ${product.stock > 0 ? 'text-green-600' : 'text-red-600'}`}
+          >
             {product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}
           </span>
         </div>
@@ -64,16 +66,20 @@ export function ProductCard({ product }: ProductCardProps) {
         {/* Attributes */}
         {Object.keys(product.attributes).length > 0 && (
           <div className="mt-3 flex flex-wrap gap-1">
-            {Object.entries(product.attributes).map(([key, value]) =>
-              value && (
-                <span key={key} className="text-xs px-2 py-1 bg-gray-100 rounded text-gray-600">
-                  {value}
-                </span>
-              )
+            {Object.entries(product.attributes).map(
+              ([key, value]) =>
+                value && (
+                  <span
+                    key={key}
+                    className="text-xs px-2 py-1 bg-gray-100 rounded text-gray-600"
+                  >
+                    {value}
+                  </span>
+                ),
             )}
           </div>
         )}
       </div>
     </div>
-  )
+  );
 }

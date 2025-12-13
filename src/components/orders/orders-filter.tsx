@@ -6,9 +6,9 @@ type StatusOption = { value: 'T' | 'NE' | 'E' | 'IA'; label: string };
 type DestinationOption = { value: string; label: string };
 
 const STATUS: StatusOption[] = [
-  { value: 'T',  label: 'Tutti' },
+  { value: 'T', label: 'Tutti' },
   { value: 'NE', label: 'Da evadere' },
-  { value: 'E',  label: 'Evaso' },
+  { value: 'E', label: 'Evaso' },
   { value: 'IA', label: 'In accettazione' },
 ];
 
@@ -36,15 +36,15 @@ type Props = {
   destinations?: DestinationOption[];
   // initial values (optional)
   initial?: {
-    from?: string;       // yyyy-mm-dd
-    to?: string;         // yyyy-mm-dd
+    from?: string; // yyyy-mm-dd
+    to?: string; // yyyy-mm-dd
     type?: 'T' | 'NE' | 'E' | 'IA';
     address_code?: string;
   };
   // called when user presses "Search"
   onApply: (payload: {
-    date_from: string;   // DDMMYYYY
-    date_to: string;     // DDMMYYYY
+    date_from: string; // DDMMYYYY
+    date_to: string; // DDMMYYYY
     type: 'T' | 'NE' | 'E' | 'IA';
     address_code: string;
   }) => void;
@@ -61,7 +61,9 @@ export default function OrdersFilter({
   const defaults = useMemo(() => lastMonthRange(), []);
   const [from, setFrom] = useState<string>(initial?.from || '');
   const [to, setTo] = useState<string>(initial?.to || '');
-  const [type, setType] = useState<'T' | 'NE' | 'E' | 'IA'>(initial?.type || 'T');
+  const [type, setType] = useState<'T' | 'NE' | 'E' | 'IA'>(
+    initial?.type || 'T',
+  );
   const [address, setAddress] = useState<string>(initial?.address_code || '');
 
   // set default "last month" once if not provided

@@ -17,8 +17,7 @@ import 'swiper/css/pagination';
 import { Swiper as SwiperTypes } from 'swiper/types';
 import type { SwiperOptions } from 'swiper/types'; // << add this
 
-
-type CarouselPropsType =  Partial<SwiperOptions> & { 
+type CarouselPropsType = Partial<SwiperOptions> & {
   lang: string;
   className?: string;
   buttonGroupClassName?: string;
@@ -107,23 +106,34 @@ export default function Carousel({
         <div
           className={`flex items-center w-full absolute top-2/4 z-10 bg-transparent pointer-events-none ${buttonGroupClassName}`}
         >
-
           {prevActivateId.length > 0 ? (
-            <div className={`${prevButtonClasses} pointer-events-auto`}  id={prevActivateId}>
+            <div
+              className={`${prevButtonClasses} pointer-events-auto`}
+              id={prevActivateId}
+            >
               {dir === 'rtl' ? <IoIosArrowForward /> : <IoIosArrowBack />}
             </div>
           ) : (
-            <div ref={prevRef} className={`${prevButtonClasses} pointer-events-auto`} >
+            <div
+              ref={prevRef}
+              className={`${prevButtonClasses} pointer-events-auto`}
+            >
               {dir === 'rtl' ? <IoIosArrowForward /> : <IoIosArrowBack />}
             </div>
           )}
 
           {nextActivateId.length > 0 ? (
-            <div className={`${nextButtonClasses} pointer-events-auto`} id={nextActivateId}>
+            <div
+              className={`${nextButtonClasses} pointer-events-auto`}
+              id={nextActivateId}
+            >
               {dir === 'rtl' ? <IoIosArrowBack /> : <IoIosArrowForward />}
             </div>
           ) : (
-            <div ref={nextRef} className={`${nextButtonClasses} pointer-events-auto`}>
+            <div
+              ref={nextRef}
+              className={`${nextButtonClasses} pointer-events-auto`}
+            >
               {dir === 'rtl' ? <IoIosArrowBack /> : <IoIosArrowForward />}
             </div>
           )}

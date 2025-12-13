@@ -9,11 +9,18 @@ export function exportToExcel(products: ComparisonProduct[]) {
 
   // Collect all unique feature labels
   const featureLabels = Array.from(
-    new Set(products.flatMap((p) => p.features.map((f) => f.label)))
+    new Set(products.flatMap((p) => p.features.map((f) => f.label))),
   );
 
   // Build CSV header
-  const headers = ['SKU', 'Product', 'Model', 'Price', 'Availability', ...featureLabels];
+  const headers = [
+    'SKU',
+    'Product',
+    'Model',
+    'Price',
+    'Availability',
+    ...featureLabels,
+  ];
 
   // Build CSV rows
   const rows = products.map((product) => {
@@ -25,7 +32,7 @@ export function exportToExcel(products: ComparisonProduct[]) {
       product.title,
       product.model,
       priceDisplay,
-      product.availabilityText || '—'
+      product.availabilityText || '—',
     ];
 
     // Add feature values in the same order as headers
@@ -40,7 +47,9 @@ export function exportToExcel(products: ComparisonProduct[]) {
   // Convert to CSV
   const csvContent = [
     headers.join(','),
-    ...rows.map((row) => row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(','))
+    ...rows.map((row) =>
+      row.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(','),
+    ),
   ].join('\n');
 
   // Download
@@ -70,7 +79,7 @@ export async function exportToPDF(products: ComparisonProduct[]) {
   const doc = new jsPDF({
     orientation: 'landscape',
     unit: 'mm',
-    format: 'a4'
+    format: 'a4',
   });
 
   // Add title
@@ -83,7 +92,7 @@ export async function exportToPDF(products: ComparisonProduct[]) {
 
   // Collect all unique feature labels
   const featureLabels = Array.from(
-    new Set(products.flatMap((p) => p.features.map((f) => f.label)))
+    new Set(products.flatMap((p) => p.features.map((f) => f.label))),
   );
 
   // Build table data
@@ -92,18 +101,21 @@ export async function exportToPDF(products: ComparisonProduct[]) {
   const rows = [
     ['SKU', ...products.map((p) => p.sku)],
     ['Model', ...products.map((p) => p.model)],
-    ['Price', ...products.map((p) => {
-      const price = p.priceData?.price_discount || p.priceData?.price;
-      return price != null ? `€ ${price.toFixed(2)}` : '—';
-    })],
+    [
+      'Price',
+      ...products.map((p) => {
+        const price = p.priceData?.price_discount || p.priceData?.price;
+        return price != null ? `€ ${price.toFixed(2)}` : '—';
+      }),
+    ],
     ['Availability', ...products.map((p) => p.availabilityText || '—')],
     ...featureLabels.map((label) => [
       label,
       ...products.map((product) => {
         const feature = product.features.find((f) => f.label === label);
         return feature?.value || '—';
-      })
-    ])
+      }),
+    ]),
   ];
 
   // Generate table using autoTable (extended on jsPDF prototype)
@@ -115,15 +127,15 @@ export async function exportToPDF(products: ComparisonProduct[]) {
     styles: {
       fontSize: 8,
       cellPadding: 3,
-      overflow: 'linebreak'
+      overflow: 'linebreak',
     },
     headStyles: {
       fillColor: [71, 85, 105], // slate-600
-      fontStyle: 'bold'
+      fontStyle: 'bold',
     },
     columnStyles: {
-      0: { fontStyle: 'bold', fillColor: [248, 250, 252] } // First column
-    }
+      0: { fontStyle: 'bold', fillColor: [248, 250, 252] }, // First column
+    },
   });
 
   // Download

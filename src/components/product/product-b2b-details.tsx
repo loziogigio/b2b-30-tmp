@@ -9,8 +9,16 @@ import ThumbnailCarousel from '@components/ui/carousel/thumbnail-carousel';
 import Image from '@components/ui/image';
 import Button from '@components/ui/button';
 import { IoIosHeart, IoIosHeartEmpty } from 'react-icons/io';
-import { IoNotificationsOutline, IoNotifications, IoArrowRedoOutline } from 'react-icons/io5';
-import { HiOutlineSwitchHorizontal, HiOutlineCheckCircle, HiOutlinePrinter } from 'react-icons/hi';
+import {
+  IoNotificationsOutline,
+  IoNotifications,
+  IoArrowRedoOutline,
+} from 'react-icons/io5';
+import {
+  HiOutlineSwitchHorizontal,
+  HiOutlineCheckCircle,
+  HiOutlinePrinter,
+} from 'react-icons/hi';
 import TagLabel from '@components/ui/tag-label';
 import LabelIcon from '@components/icons/label-icon';
 import SocialShareBox from '@components/ui/social-share-box';
@@ -44,7 +52,6 @@ import { printProductDetail } from '@utils/print-product';
 
 // OldB2BInfoBlock removed (extracted to ./details/b2b-info-block)
 
-
 // GalleryImage type retained for local typing in this file
 type GalleryImage = {
   id?: string | number;
@@ -57,26 +64,40 @@ type GalleryImage = {
   label?: string;
 };
 
-
 import type { PageBlock } from '@/lib/types/blocks';
 import { BlockRenderer } from '@/components/blocks/BlockRenderer';
 
-const ProductB2BDetails: React.FC<{ lang: string; search: any; blocks?: PageBlock[]; showZoneLabels?: boolean }> = ({ lang, search, blocks = [], showZoneLabels = false }) => {
+const ProductB2BDetails: React.FC<{
+  lang: string;
+  search: any;
+  blocks?: PageBlock[];
+  showZoneLabels?: boolean;
+}> = ({ lang, search, blocks = [], showZoneLabels = false }) => {
   const { t } = useTranslation(lang, 'common');
   const pathname = useParams();
   const { width } = useWindowSize();
 
   // Filter blocks by zone
-  const zone1Blocks = blocks.filter(b => b.zone === 'zone1');
-  const zone2Blocks = blocks.filter(b => b.zone === 'zone2');
-  const zone3Blocks = blocks.filter(b => b.zone === 'zone3');
-  const zone4Blocks = blocks.filter(b => b.zone === 'zone4');
+  const zone1Blocks = blocks.filter((b) => b.zone === 'zone1');
+  const zone2Blocks = blocks.filter((b) => b.zone === 'zone2');
+  const zone3Blocks = blocks.filter((b) => b.zone === 'zone3');
+  const zone4Blocks = blocks.filter((b) => b.zone === 'zone4');
 
   // Zone label component for preview mode
-  const ZoneLabel = ({ zone, color, label }: { zone: string; color: string; label: string }) => {
+  const ZoneLabel = ({
+    zone,
+    color,
+    label,
+  }: {
+    zone: string;
+    color: string;
+    label: string;
+  }) => {
     if (!showZoneLabels) return null;
     return (
-      <div className={`mb-2 flex items-center gap-2 rounded-md border-2 border-dashed border-${color}-300 bg-${color}-50/50 px-3 py-2`}>
+      <div
+        className={`mb-2 flex items-center gap-2 rounded-md border-2 border-dashed border-${color}-300 bg-${color}-50/50 px-3 py-2`}
+      >
         <div className={`h-2 w-2 rounded-full bg-${color}-500`}></div>
         <span className={`text-xs font-bold text-${color}-700`}>{label}</span>
       </div>
@@ -92,13 +113,14 @@ const ProductB2BDetails: React.FC<{ lang: string; search: any; blocks?: PageBloc
         sku: skuToSearch,
       },
     },
-    { enabled: skuToSearch.length > 0 }
+    { enabled: skuToSearch.length > 0 },
   );
 
   const first = pimResults?.[0];
-  const data = Array.isArray(first?.variations) && first.variations.length > 0
-    ? first.variations[0]
-    : first;
+  const data =
+    Array.isArray(first?.variations) && first.variations.length > 0
+      ? first.variations[0]
+      : first;
 
   // ---- ERP prices (entity_codes must be string[]) ----
   const entityCodes = [String(data?.id ?? '')].filter(Boolean); // string[]
@@ -131,6 +153,15 @@ const ProductB2BDetails: React.FC<{ lang: string; search: any; blocks?: PageBloc
   // Check if product is out of stock
   const isOutOfStock = erpPrice ? Number(erpPrice.availability) <= 0 : false;
 
+  // Check if we have a valid price
+  const anyPD = erpPrice as any;
+  const price =
+    anyPD?.price_discount ??
+    anyPD?.net_price ??
+    anyPD?.gross_price ??
+    anyPD?.price_gross;
+  const hasValidPrice = erpPrice && price != null && Number(price) > 0;
+
   const galleryItems = React.useMemo<GalleryImage[]>(() => {
     if (!data) return [];
 
@@ -149,7 +180,8 @@ const ProductB2BDetails: React.FC<{ lang: string; search: any; blocks?: PageBloc
       });
     } else {
       // Fallback to main image
-      const fallback = data.image?.original ?? data.image?.thumbnail ?? productPlaceholder;
+      const fallback =
+        data.image?.original ?? data.image?.thumbnail ?? productPlaceholder;
       items.push({
         id: data.id ?? 'primary',
         original: fallback,
@@ -167,7 +199,9 @@ const ProductB2BDetails: React.FC<{ lang: string; search: any; blocks?: PageBloc
           // Extract YouTube thumbnail if it's a YouTube video
           let thumbnail = productPlaceholder;
           if (m.url?.includes('youtube.com') || m.url?.includes('youtu.be')) {
-            const videoId = m.url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&]+)/)?.[1];
+            const videoId = m.url.match(
+              /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&]+)/,
+            )?.[1];
             if (videoId) {
               thumbnail = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
             }
@@ -216,7 +250,7 @@ const ProductB2BDetails: React.FC<{ lang: string; search: any; blocks?: PageBloc
         return next;
       });
     },
-    [galleryItems.length]
+    [galleryItems.length],
   );
 
   const productUrl = `${process.env.NEXT_PUBLIC_WEBSITE_URL}${ROUTES.PRODUCT}/${pathname.slug}`;
@@ -300,7 +334,10 @@ const ProductB2BDetails: React.FC<{ lang: string; search: any; blocks?: PageBloc
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center">
-              <div className="relative w-full rounded-md border border-border-base bg-white" style={{ aspectRatio: '1 / 1' }}>
+              <div
+                className="relative w-full rounded-md border border-border-base bg-white"
+                style={{ aspectRatio: '1 / 1' }}
+              >
                 <Image
                   src={productPlaceholder}
                   alt={data?.name ?? 'Product'}
@@ -329,7 +366,9 @@ const ProductB2BDetails: React.FC<{ lang: string; search: any; blocks?: PageBloc
           <div className="mt-3 flex flex-col items-start justify-start gap-4 text-sm text-brand-dark">
             {/* Left: Short Description */}
             {data?.description ? (
-              <p className="leading-relaxed text-gray-700">{data.description}</p>
+              <p className="leading-relaxed text-gray-700">
+                {data.description}
+              </p>
             ) : null}
           </div>
 
@@ -337,39 +376,43 @@ const ProductB2BDetails: React.FC<{ lang: string; search: any; blocks?: PageBloc
 
           <B2BInfoBlock product={data} priceData={erpPrice} lang={lang} />
 
+          {/* === 3-up row: Packaging | Price | AddToCart - only show when we have valid price === */}
+          {hasValidPrice && (
+            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+              {/* col 1: packaging */}
+              <div className="">
+                <PackagingGrid pd={erpPrice} />
+              </div>
 
+              {/* col 2: price/promo (centered) */}
+              <div className="flex items-center justify-center ">
+                <PriceAndPromo priceData={erpPrice} />
+              </div>
 
-          {/* === 3-up row: Packaging | Price | AddToCart === */}
-          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-            {/* col 1: packaging */}
-            <div className="">
-              <PackagingGrid pd={erpPrice} />
+              {/* col 3: add to cart (right-aligned on md+) */}
+              <div className="flex items-center justify-center  md:justify-end">
+                {isAuthForPrices && (
+                  <AddToCart
+                    lang={lang}
+                    product={data}
+                    priceData={erpPrice}
+                    className="justify-center md:justify-end"
+                    disabled={!erpPrice?.product_label_action?.ADD_TO_CART}
+                  />
+                )}
+              </div>
             </div>
-
-            {/* col 2: price/promo (centered) */}
-            <div className="flex items-center justify-center ">
-              {erpPrice ? <PriceAndPromo priceData={erpPrice} /> : null}
-            </div>
-
-            {/* col 3: add to cart (right-aligned on md+) */}
-            <div className="flex items-center justify-center  md:justify-end">
-              {isAuthForPrices && (
-                <AddToCart
-                  lang={lang}
-                  product={data}
-                  priceData={erpPrice}
-                  className="justify-center md:justify-end"
-                  disabled={!erpPrice?.product_label_action?.ADD_TO_CART}
-                />
-              )}
-            </div>
-          </div>
+          )}
 
           {/* Wishlist / Reminder / Compare / Share / Print */}
           <div className="pt-3 md:pt-4">
             <div
               className={`grid gap-2.5 ${
-                isAuthorized ? (isOutOfStock ? 'grid-cols-5' : 'grid-cols-4') : 'grid-cols-3'
+                isAuthorized
+                  ? isOutOfStock
+                    ? 'grid-cols-5'
+                    : 'grid-cols-4'
+                  : 'grid-cols-3'
               }`}
             >
               {/* Reminder Button - only show when out of stock */}
@@ -413,7 +456,9 @@ const ProductB2BDetails: React.FC<{ lang: string; search: any; blocks?: PageBloc
                 disabled={!sku}
                 className={cn(
                   'group hover:text-emerald-600',
-                  isInCompare ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : ''
+                  isInCompare
+                    ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                    : '',
                 )}
               >
                 {isInCompare ? (
@@ -435,8 +480,11 @@ const ProductB2BDetails: React.FC<{ lang: string; search: any; blocks?: PageBloc
                   {t('text-share')}
                 </Button>
                 <SocialShareBox
-                  className={`absolute z-10 ltr:right-0 rtl:left-0 w-[300px] md:min-w-[400px] transition-all duration-300 ${shareButtonStatus ? 'visible opacity-100 top-full' : 'opacity-0 invisible top-[130%]'
-                    }`}
+                  className={`absolute z-10 ltr:right-0 rtl:left-0 w-[300px] md:min-w-[400px] transition-all duration-300 ${
+                    shareButtonStatus
+                      ? 'visible opacity-100 top-full'
+                      : 'opacity-0 invisible top-[130%]'
+                  }`}
                   shareUrl={productUrl}
                   lang={lang}
                 />
@@ -489,7 +537,11 @@ const ProductB2BDetails: React.FC<{ lang: string; search: any; blocks?: PageBloc
           <ZoneLabel zone="zone3" color="purple" label="New Tab" />
         </div>
       )}
-      <ProductB2BDetailsTab lang={lang} product={data} zone3Blocks={zone3Blocks} />
+      <ProductB2BDetailsTab
+        lang={lang}
+        product={data}
+        zone3Blocks={zone3Blocks}
+      />
 
       {/* Zone 4: Below tabs (full width) */}
       {zone4Blocks.length > 0 && (

@@ -15,12 +15,25 @@ import {
 import { BsFiletypePdf, BsFiletypeXlsx } from 'react-icons/bs';
 import { ImSpinner2 } from 'react-icons/im';
 
-type SortKey = 'rowId' | 'sku' | 'name' | 'priceDiscount' | 'quantity' | 'lineTotal';
+type SortKey =
+  | 'rowId'
+  | 'sku'
+  | 'name'
+  | 'priceDiscount'
+  | 'quantity'
+  | 'lineTotal';
 
 const unitNet = (r: Item) =>
   Number(r.priceDiscount ?? r.__cartMeta?.price_discount ?? r.price ?? 0);
 const unitGross = (r: Item) =>
-  Number(r.priceGross ?? r.__cartMeta?.gross_price ?? r.gross_price ?? r.price_gross ?? r.price ?? 0);
+  Number(
+    r.priceGross ??
+      r.__cartMeta?.gross_price ??
+      r.gross_price ??
+      r.price_gross ??
+      r.price ??
+      0,
+  );
 
 const SORT_LABELS: Record<SortKey, string> = {
   rowId: 'Row',
@@ -49,10 +62,11 @@ export default function CartTableB2B({ lang = 'it' }: { lang?: string }) {
 
     if (query.trim()) {
       const q = query.toLowerCase();
-      list = list.filter((r) =>
-        (r.sku ?? '').toLowerCase().includes(q) ||
-        (r.name ?? '').toLowerCase().includes(q) ||
-        (r.model ?? '').toLowerCase().includes(q)
+      list = list.filter(
+        (r) =>
+          (r.sku ?? '').toLowerCase().includes(q) ||
+          (r.name ?? '').toLowerCase().includes(q) ||
+          (r.model ?? '').toLowerCase().includes(q),
       );
     }
 
@@ -65,7 +79,10 @@ export default function CartTableB2B({ lang = 'it' }: { lang?: string }) {
 
       switch (sortKey) {
         case 'rowId':
-          return ((Number(a.rowId ?? a.id) || 0) - (Number(b.rowId ?? b.id) || 0)) * dir;
+          return (
+            ((Number(a.rowId ?? a.id) || 0) - (Number(b.rowId ?? b.id) || 0)) *
+            dir
+          );
         case 'sku':
           return (a.sku ?? '').localeCompare(b.sku ?? '') * dir;
         case 'name':
@@ -85,8 +102,14 @@ export default function CartTableB2B({ lang = 'it' }: { lang?: string }) {
   }, [baseRows, query, onlyPromo, sortKey, sortAsc]);
 
   const totals = useMemo(() => {
-    const net = baseRows.reduce((s, r) => s + unitNet(r) * Number(r.quantity ?? 0), 0);
-    const gross = baseRows.reduce((s, r) => s + unitGross(r) * Number(r.quantity ?? 0), 0);
+    const net = baseRows.reduce(
+      (s, r) => s + unitNet(r) * Number(r.quantity ?? 0),
+      0,
+    );
+    const gross = baseRows.reduce(
+      (s, r) => s + unitGross(r) * Number(r.quantity ?? 0),
+      0,
+    );
     const vat = net * 0.22; // demo VAT
     return { net, gross, vat, doc: net + vat };
   }, [baseRows]);
@@ -111,7 +134,8 @@ export default function CartTableB2B({ lang = 'it' }: { lang?: string }) {
   };
 
   const inc = (r: Item) => setItemQuantity(r, Number(r.quantity ?? 0) + 1);
-  const dec = (r: Item) => setItemQuantity(r, Math.max(0, Number(r.quantity ?? 0) - 1));
+  const dec = (r: Item) =>
+    setItemQuantity(r, Math.max(0, Number(r.quantity ?? 0) - 1));
 
   const handleDeleteCart = async () => {
     if (!resetCart) return;
@@ -316,7 +340,10 @@ export default function CartTableB2B({ lang = 'it' }: { lang?: string }) {
             className="h-10 rounded-md border border-gray-300 px-2"
             value={`${sortKey}:${sortAsc ? 'asc' : 'desc'}`}
             onChange={(e) => {
-              const [k, dir] = e.target.value.split(':') as [SortKey, 'asc' | 'desc'];
+              const [k, dir] = e.target.value.split(':') as [
+                SortKey,
+                'asc' | 'desc',
+              ];
               setSortKey(k);
               setSortAsc(dir === 'asc');
             }}
@@ -341,14 +368,18 @@ export default function CartTableB2B({ lang = 'it' }: { lang?: string }) {
             disabled={isExportingPdf || !baseRows.length}
             className={cn(
               'flex h-10 w-10 items-center justify-center rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50',
-              (isExportingPdf || !baseRows.length) && 'cursor-not-allowed opacity-60'
+              (isExportingPdf || !baseRows.length) &&
+                'cursor-not-allowed opacity-60',
             )}
             title="Export cart as PDF"
           >
             {isExportingPdf ? (
               <ImSpinner2 className="h-4 w-4 animate-spin" aria-hidden="true" />
             ) : (
-              <BsFiletypePdf className="h-5 w-5 text-red-600" aria-hidden="true" />
+              <BsFiletypePdf
+                className="h-5 w-5 text-red-600"
+                aria-hidden="true"
+              />
             )}
             <span className="sr-only">Export PDF</span>
           </button>
@@ -359,14 +390,18 @@ export default function CartTableB2B({ lang = 'it' }: { lang?: string }) {
             disabled={isExportingExcel || !baseRows.length}
             className={cn(
               'flex h-10 w-10 items-center justify-center rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50',
-              (isExportingExcel || !baseRows.length) && 'cursor-not-allowed opacity-60'
+              (isExportingExcel || !baseRows.length) &&
+                'cursor-not-allowed opacity-60',
             )}
             title="Export cart as Excel"
           >
             {isExportingExcel ? (
               <ImSpinner2 className="h-4 w-4 animate-spin" aria-hidden="true" />
             ) : (
-              <BsFiletypeXlsx className="h-5 w-5 text-emerald-600" aria-hidden="true" />
+              <BsFiletypeXlsx
+                className="h-5 w-5 text-emerald-600"
+                aria-hidden="true"
+              />
             )}
             <span className="sr-only">Export Excel</span>
           </button>
@@ -380,7 +415,7 @@ export default function CartTableB2B({ lang = 'it' }: { lang?: string }) {
               'h-10 rounded-md px-3 font-semibold border',
               isDeleting
                 ? 'opacity-60 cursor-not-allowed'
-                : 'border-red-600 text-red-600 hover:bg-red-50'
+                : 'border-red-600 text-red-600 hover:bg-red-50',
             )}
             title="Delete entire cart"
           >

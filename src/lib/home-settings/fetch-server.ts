@@ -2,7 +2,12 @@ import { cache } from 'react';
 import { DEFAULT_HOME_SETTINGS } from '@/lib/home-settings/defaults';
 import type { HomeSettings } from '@/lib/home-settings/types';
 
-const rawStorefrontUrl = process.env.VINC_STOREFRONT_URL || 'http://localhost:3001';
+// Use private URL for server-side calls (internal Docker network)
+// Falls back to public URL for local development
+const rawPimApiUrl =
+  process.env.PIM_API_PRIVATE_URL ||
+  process.env.NEXT_PUBLIC_PIM_API_URL ||
+  'http://localhost:3001';
 
 function resolveBaseUrl(raw: string): string {
   try {
@@ -19,21 +24,27 @@ function resolveBaseUrl(raw: string): string {
   }
 }
 
-const VINC_STOREFRONT_BASE = resolveBaseUrl(rawStorefrontUrl);
+const PIM_API_BASE = resolveBaseUrl(rawPimApiUrl);
 
 async function fetchHomeSettingsOnce(): Promise<HomeSettings> {
   try {
-    const url = new URL('/api/b2b/home-settings', `${VINC_STOREFRONT_BASE}/`).toString();
+    const url = new URL(
+      '/api/b2b/home-settings',
+      `${PIM_API_BASE}/`,
+    ).toString();
 
     const response = await fetch(url, {
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
       next: {
-        revalidate: 300
-      }
+        revalidate: 300,
+      },
     }).catch((fetchError) => {
-      console.warn('[HomeSettings] Network error, using defaults:', fetchError.message);
+      console.warn(
+        '[HomeSettings] Network error, using defaults:',
+        fetchError.message,
+      );
       return null;
     });
 
@@ -42,13 +53,17 @@ async function fetchHomeSettingsOnce(): Promise<HomeSettings> {
     }
 
     if (!response.ok) {
-      console.warn(`[HomeSettings] Response ${response.status}, using defaults`);
+      console.warn(
+        `[HomeSettings] Response ${response.status}, using defaults`,
+      );
       return DEFAULT_HOME_SETTINGS;
     }
 
     const contentType = response.headers.get('content-type') || '';
     if (!contentType.toLowerCase().includes('application/json')) {
-      console.warn(`[HomeSettings] Unexpected content-type "${contentType}" from ${VINC_STOREFRONT_BASE}, using defaults.`);
+      console.warn(
+        `[HomeSettings] Unexpected content-type "${contentType}" from ${PIM_API_BASE}, using defaults.`,
+      );
       return DEFAULT_HOME_SETTINGS;
     }
 
@@ -58,12 +73,12 @@ async function fetchHomeSettingsOnce(): Promise<HomeSettings> {
       ...data,
       branding: {
         ...DEFAULT_HOME_SETTINGS.branding,
-        ...(data.branding ?? {})
+        ...(data.branding ?? {}),
       },
       cardStyle: {
         ...DEFAULT_HOME_SETTINGS.cardStyle,
-        ...(data.cardStyle ?? {})
-      }
+        ...(data.cardStyle ?? {}),
+      },
     };
   } catch (error) {
     console.error('[HomeSettings] server fetch failed, using defaults:', error);
@@ -77,7 +92,10 @@ export async function getServerHomeSettings(): Promise<HomeSettings> {
   try {
     return await cachedFetch();
   } catch (error) {
-    console.error('[HomeSettings] Unexpected error from cached fetch, using defaults:', error);
+    console.error(
+      '[HomeSettings] Unexpected error from cached fetch, using defaults:',
+      error,
+    );
     return DEFAULT_HOME_SETTINGS;
   }
 }

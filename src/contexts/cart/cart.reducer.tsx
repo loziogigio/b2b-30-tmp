@@ -10,7 +10,7 @@ import {
   calculateUniqueItems,
   calculateItemTotals,
   calculateTotalItems,
-  calculateTotal
+  calculateTotal,
 } from './cart.utils';
 
 interface Metadata {
@@ -28,7 +28,6 @@ type Action =
   | { type: 'SET_META'; meta: CartSummary | null }
   | { type: 'HYDRATE_REPLACE'; items: Item[] }
   | { type: 'HYDRATE_MERGE'; items: Item[] };
-
 
 export interface State {
   items: Item[];
@@ -54,7 +53,8 @@ export function cartReducer(state: State, action: Action): State {
     case 'HYDRATE_MERGE': {
       const merged = new Map<string | number, Item>();
       for (const it of state.items) merged.set(it.id, it);
-      for (const it of action.items) merged.set(it.id, { ...(merged.get(it.id) || {}), ...it });
+      for (const it of action.items)
+        merged.set(it.id, { ...(merged.get(it.id) || {}), ...it });
       return generateFinalState(state, Array.from(merged.values()));
     }
     case 'SET_META':

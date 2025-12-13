@@ -20,26 +20,33 @@ export default function LikedProductsProductsCarousel({
   carouselBreakpoint,
   limitSkus = 24,
   sectionTitle,
-  className
+  className,
 }: Props) {
   const { t } = useTranslation(lang, 'common');
   const likes = useLikes();
   const { isAuthorized } = useUI();
 
-  const skuList = useMemo(() => (likes?.items || []).map((it) => it.sku).filter(Boolean), [likes?.items]);
+  const skuList = useMemo(
+    () => (likes?.items || []).map((it) => it.sku).filter(Boolean),
+    [likes?.items],
+  );
   const hasLikes = skuList.length > 0;
 
   // Join SKUs for PIM search filter
   const skusToSearch = skuList.slice(0, limitSkus);
 
-  const { data = [], isLoading, error } = usePimProductListQuery(
+  const {
+    data = [],
+    isLoading,
+    error,
+  } = usePimProductListQuery(
     {
       limit: limitSkus,
       filters: {
         sku: skusToSearch,
       },
     },
-    { enabled: hasLikes }
+    { enabled: hasLikes },
   );
 
   if (!isAuthorized || !hasLikes || error) return null;

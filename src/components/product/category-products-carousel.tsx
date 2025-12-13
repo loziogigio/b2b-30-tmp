@@ -14,7 +14,7 @@ interface Props {
 export default function CategoryProductsCarousel({
   category,
   lang,
-  carouselBreakpoint
+  carouselBreakpoint,
 }: Props) {
   const { data, isLoading, error } = useProductListQuery({
     address_code: '',

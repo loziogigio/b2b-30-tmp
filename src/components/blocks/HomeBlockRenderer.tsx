@@ -30,18 +30,34 @@ interface HomeBlockRendererProps {
  * Convert simplified itemsToShow to Swiper.js breakpoints
  */
 const toNumber = (value: unknown, fallback: number) => {
-  const parsed = typeof value === 'string' ? Number.parseFloat(value) : typeof value === 'number' ? value : NaN;
+  const parsed =
+    typeof value === 'string'
+      ? Number.parseFloat(value)
+      : typeof value === 'number'
+        ? value
+        : NaN;
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 };
 
-const convertToBreakpoints = (itemsToShow: { desktop: number | string; tablet: number | string; mobile: number | string }) => {
+const convertToBreakpoints = (itemsToShow: {
+  desktop: number | string;
+  tablet: number | string;
+  mobile: number | string;
+}) => {
+  const desktop = toNumber(itemsToShow.desktop, 5);
+  const tablet = toNumber(itemsToShow.tablet, 3);
+  const mobile = toNumber(itemsToShow.mobile, 1.25);
+
   return {
-    1536: { slidesPerView: toNumber(itemsToShow.desktop, 3), spaceBetween: 20 },
-    1280: { slidesPerView: toNumber(itemsToShow.desktop, 3), spaceBetween: 20 },
-    1024: { slidesPerView: toNumber(itemsToShow.desktop, 3), spaceBetween: 20 },
-    768: { slidesPerView: toNumber(itemsToShow.tablet, 2), spaceBetween: 16 },
-    520: { slidesPerView: toNumber(itemsToShow.tablet, 2), spaceBetween: 12 },
-    0: { slidesPerView: toNumber(itemsToShow.mobile, 1), spaceBetween: 5 }
+    '1921': { slidesPerView: desktop, spaceBetween: 20 },
+    '1780': { slidesPerView: desktop, spaceBetween: 20 },
+    '1536': { slidesPerView: desktop, spaceBetween: 20 },
+    '1280': { slidesPerView: desktop, spaceBetween: 20 },
+    '1024': { slidesPerView: desktop, spaceBetween: 16 },
+    '768': { slidesPerView: tablet, spaceBetween: 16 },
+    '640': { slidesPerView: tablet, spaceBetween: 12 },
+    '360': { slidesPerView: mobile, spaceBetween: 8 },
+    '0': { slidesPerView: mobile, spaceBetween: 5 },
   };
 };
 
@@ -77,7 +93,10 @@ const getBreakpoints = (config: any) => {
 const formatCurrency = (value: number | undefined | null, lang: string) => {
   if (value == null) return undefined;
   try {
-    return new Intl.NumberFormat(lang, { style: 'currency', currency: 'EUR' }).format(value);
+    return new Intl.NumberFormat(lang, {
+      style: 'currency',
+      currency: 'EUR',
+    }).format(value);
   } catch {
     return `€${value.toFixed(2)}`;
   }
@@ -101,7 +120,10 @@ const extractSearchText = (urlOrQuery: string | undefined): string => {
   return trimmed;
 };
 
-const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({ block, lang }) => {
+const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({
+  block,
+  lang,
+}) => {
   // Hero With Widgets Block (80/20 layout)
   if (block.type === 'hero-with-widgets') {
     const slides = block.config?.slides || [];
@@ -113,12 +135,16 @@ const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({ block, lang }) =>
     const transformedData = slides.map((slide: any) => ({
       id: slide.id,
       image: slide.imageDesktop?.url || slide.image?.url || '',
-      mobileImage: slide.imageMobile?.url || slide.image?.mobile?.url || slide.imageDesktop?.url || '',
+      mobileImage:
+        slide.imageMobile?.url ||
+        slide.image?.mobile?.url ||
+        slide.imageDesktop?.url ||
+        '',
       alt: slide.imageDesktop?.alt || slide.image?.alt || '',
       title: slide.title || '',
       description: slide.description || '',
       link: slide.link?.url || '',
-      openInNewTab: slide.link?.openInNewTab || false
+      openInNewTab: slide.link?.openInNewTab || false,
     }));
 
     return (
@@ -157,7 +183,7 @@ const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({ block, lang }) =>
             backgroundOpacity:
               typeof slide.overlay?.backgroundOpacity === 'number'
                 ? slide.overlay.backgroundOpacity
-                : 0.65
+                : 0.65,
           }
         : undefined;
 
@@ -170,9 +196,15 @@ const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({ block, lang }) =>
         link: slide.link?.url || '',
         openInNewTab: slide.link?.openInNewTab || false,
         ...(overlayConfig ? { overlay: overlayConfig } : {}),
-        ...(cardStyle ? { cardStyle } : {})
+        ...(cardStyle ? { cardStyle } : {}),
       };
     });
+
+    // Improved arrow styling for media carousels
+    const mediaPrevButtonClassName =
+      '!left-3 md:!left-4 lg:!left-6 top-1/2 -translate-y-1/2 z-30 !w-10 !h-10 md:!w-12 md:!h-12 !bg-white/90 hover:!bg-white !shadow-lg !text-gray-800';
+    const mediaNextButtonClassName =
+      '!right-3 md:!right-4 lg:!right-6 top-1/2 -translate-y-1/2 z-30 !w-10 !h-10 md:!w-12 md:!h-12 !bg-white/90 hover:!bg-white !shadow-lg !text-gray-800';
 
     return (
       <Container className={block.config?.className || 'mb-6 xl:mb-8 pt-1'}>
@@ -183,13 +215,17 @@ const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({ block, lang }) =>
           breakpoints={getBreakpoints(block.config)}
           title={block.config?.title}
           itemKeyPrefix={`carousel-hero-${block.id}`}
+          prevButtonClassName={mediaPrevButtonClassName}
+          nextButtonClassName={mediaNextButtonClassName}
         />
       </Container>
     );
   }
 
   // Media Carousel Blocks (Promo/Brand/Flyer)
-  if (['carousel-promo', 'carousel-brand', 'carousel-flyer'].includes(block.type)) {
+  if (
+    ['carousel-promo', 'carousel-brand', 'carousel-flyer'].includes(block.type)
+  ) {
     // Use manual items configuration
     const items = block.config?.items || [];
     const cardStyle = block.config?.cardStyle;
@@ -206,7 +242,7 @@ const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({ block, lang }) =>
           title: item.title || '',
           link: item.link?.url || '',
           openInNewTab: item.link?.openInNewTab || false,
-          ...(cardStyle ? { cardStyle } : {})
+          ...(cardStyle ? { cardStyle } : {}),
         };
       }
 
@@ -218,11 +254,17 @@ const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({ block, lang }) =>
         title: item.title || '',
         link: item.link?.url || '',
         openInNewTab: item.link?.openInNewTab || false,
-        ...(cardStyle ? { cardStyle } : {})
+        ...(cardStyle ? { cardStyle } : {}),
       };
     });
 
     const wrapperClass = block.config?.className || 'mb-6 xl:mb-8 pt-1';
+
+    // Improved arrow styling for media carousels
+    const mediaPrevButtonClassName =
+      '!left-3 md:!left-4 lg:!left-6 top-1/2 -translate-y-1/2 z-30 !w-10 !h-10 md:!w-12 md:!h-12 !bg-white/90 hover:!bg-white !shadow-lg !text-gray-800';
+    const mediaNextButtonClassName =
+      '!right-3 md:!right-4 lg:!right-6 top-1/2 -translate-y-1/2 z-30 !w-10 !h-10 md:!w-12 md:!h-12 !bg-white/90 hover:!bg-white !shadow-lg !text-gray-800';
 
     return (
       <Container className={wrapperClass}>
@@ -235,6 +277,8 @@ const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({ block, lang }) =>
           itemKeyPrefix={`${block.type}-${block.id}`}
           title={block.config?.title}
           style={block.config?.style}
+          prevButtonClassName={mediaPrevButtonClassName}
+          nextButtonClassName={mediaNextButtonClassName}
         />
       </Container>
     );
@@ -242,7 +286,8 @@ const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({ block, lang }) =>
 
   // Product Carousel Block
   if (block.type === 'carousel-products') {
-    const dataSource: 'search' | 'liked' | 'trending' = block.config?.dataSource || 'search';
+    const dataSource: 'search' | 'liked' | 'trending' =
+      block.config?.dataSource || 'search';
     const rawSearch = block.config?.searchQuery ?? '';
     const searchQuery = extractSearchText(rawSearch);
     const limit = toNumber(block.config?.limit, 12);
@@ -255,7 +300,9 @@ const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({ block, lang }) =>
         <Container className={className}>
           <LikedProductsProductsCarousel
             lang={lang}
-            carouselBreakpoint={Object.keys(breakpoints).length ? breakpoints : undefined}
+            carouselBreakpoint={
+              Object.keys(breakpoints).length ? breakpoints : undefined
+            }
             limitSkus={limit}
             sectionTitle={sectionTitle}
           />
@@ -268,7 +315,9 @@ const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({ block, lang }) =>
         <Container className={className}>
           <TrendingProductsCarousel
             lang={lang}
-            carouselBreakpoint={Object.keys(breakpoints).length ? breakpoints : undefined}
+            carouselBreakpoint={
+              Object.keys(breakpoints).length ? breakpoints : undefined
+            }
             limitSkus={limit}
             sectionTitle={sectionTitle}
           />
@@ -278,12 +327,16 @@ const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({ block, lang }) =>
 
     const enabled = Boolean(searchQuery);
 
-    const { data: fetchedProducts, isLoading, error } = usePimProductListQuery(
+    const {
+      data: fetchedProducts,
+      isLoading,
+      error,
+    } = usePimProductListQuery(
       {
         limit,
-        q: searchQuery
+        q: searchQuery,
       },
-      { enabled }
+      { enabled, groupByParent: true }, // Group variants by parent
     );
 
     const products = fetchedProducts ?? [];
@@ -302,14 +355,20 @@ const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({ block, lang }) =>
           <div className="relative">
             <ProductsCarousel
               sectionHeading={sectionTitle || 'Featured Products'}
-              categorySlug={searchQuery ? `shop?text=${encodeURIComponent(searchQuery)}` : undefined}
+              categorySlug={
+                searchQuery
+                  ? `shop?text=${encodeURIComponent(searchQuery)}`
+                  : undefined
+              }
               products={products}
               loading={isLoading}
               error={error?.message}
               limit={limit}
               uniqueKey={`carousel-products-${block.id}`}
               lang={lang}
-              carouselBreakpoint={Object.keys(breakpoints).length ? breakpoints : undefined}
+              carouselBreakpoint={
+                Object.keys(breakpoints).length ? breakpoints : undefined
+              }
             />
             {!isLoading && products.length === 0 ? (
               <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-600">
@@ -326,52 +385,22 @@ const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({ block, lang }) =>
     const rawSearch = block.config?.searchQuery ?? '';
     const searchQuery = extractSearchText(rawSearch);
     const limit = toNumber(block.config?.limit, 12);
-    const legacyItems = Array.isArray(block.config?.items) ? block.config.items : [];
     const enabled = Boolean(searchQuery);
 
-    const { data: fetchedProducts, isLoading, error } = usePimProductListQuery(
+    const {
+      data: fetchedProducts,
+      isLoading,
+      error,
+    } = usePimProductListQuery(
       {
         limit,
-        q: searchQuery
+        q: searchQuery,
       },
-      { enabled }
+      { enabled, groupByParent: true }, // Group variants by parent
     );
-
-    if (!enabled && legacyItems.length > 0) {
-      const sectionTitle = block.config?.title?.trim();
-      return (
-        <Container className={block.config?.className || 'mb-6 xl:mb-8 pt-1'}>
-          {sectionTitle ? (
-            <h2 className="mb-4 text-2xl font-bold tracking-tight text-brand">
-              {sectionTitle}
-            </h2>
-          ) : null}
-          <ProductGalleryBlock
-            items={legacyItems}
-            columns={block.config?.columns || { desktop: 4, tablet: 2, mobile: 1 }}
-            gap={block.config?.gap}
-            showPrice={block.config?.showPrice}
-            showBadge={block.config?.showBadge}
-            showAddToCart={block.config?.showAddToCart}
-          />
-        </Container>
-      );
-    }
 
     const loading = isLoading;
     const products = fetchedProducts ?? [];
-
-    const items = products.map((product) => ({
-      id: String(product.id ?? product.sku ?? product.slug ?? Math.random()),
-      imageUrl: product.image?.original || product.image?.thumbnail || '',
-      title: product.name,
-      subtitle: product.description,
-      price: block.config?.showPrice ? formatCurrency(product.sale_price ?? product.price, lang) : undefined,
-      badge: block.config?.showBadge ? product?.brand?.name : undefined,
-      linkUrl: product.sku ? `/${lang}/products?sku=${encodeURIComponent(product.sku)}` : undefined,
-      openInNewTab: false
-    }));
-
     const sectionTitle = block.config?.title?.trim();
 
     return (
@@ -389,24 +418,22 @@ const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({ block, lang }) =>
           <div className="rounded-md border border-red-200 bg-red-50 px-6 py-4 text-sm text-red-600">
             {error}
           </div>
-        ) : loading && items.length === 0 ? (
-          <div className="rounded-md border border-slate-200 bg-white px-4 py-6 text-center text-sm text-slate-600">
-            Loading products…
-          </div>
-        ) : items.length === 0 ? (
-          <div className="rounded-md border border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-600">
-            No products found for “{searchQuery}”.
-          </div>
         ) : (
           <ProductGalleryBlock
-            items={items}
-            columns={block.config?.columns || { desktop: 4, tablet: 2, mobile: 1 }}
+            products={products}
+            columns={
+              block.config?.columns || { desktop: 4, tablet: 2, mobile: 1 }
+            }
             gap={block.config?.gap}
-            showPrice={block.config?.showPrice}
-            showBadge={block.config?.showBadge}
-            showAddToCart={block.config?.showAddToCart}
+            lang={lang}
+            loading={loading}
           />
         )}
+        {!loading && products.length === 0 && searchQuery?.trim() && !error ? (
+          <div className="rounded-md border border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-600">
+            No products found for "{searchQuery}".
+          </div>
+        ) : null}
       </Container>
     );
   }

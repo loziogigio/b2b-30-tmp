@@ -9,7 +9,7 @@ import Scrollbar from '@components/ui/scrollbar';
 import { useUI } from '@contexts/ui.context';
 import { Product } from '@framework/types';
 import SearchBoxB2B from './search-box-b2b';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, usePathname, useRouter } from 'next/navigation';
 import SearchOverlayB2B from '@components/search/search-overlay-b2b';
 
 type Props = {
@@ -37,6 +37,8 @@ const SearchB2B = forwardRef<HTMLDivElement, Props>(
     } = useUI();
     const [searchText, setSearchText] = useState('');
     const searchParams = useSearchParams();
+    const pathname = usePathname();
+    const router = useRouter();
     const [inputFocus, setInputFocus] = useState<boolean>(false);
     const { data, isLoading } = useSearchQuery({
       text: searchText,
@@ -67,25 +69,28 @@ const SearchB2B = forwardRef<HTMLDivElement, Props>(
       setInputFocus(false);
       closeMobileSearch();
       closeSearch();
+      // Also clear URL params (same as "Clear All" in filters)
+      if (pathname) {
+        router.push(pathname);
+      }
     }
     function enableInputFocus() {
       setInputFocus(true);
     }
     function disableInputFocus() {
-      setInputFocus(false);          // ✅ hides overlay
-      closeMobileSearch();           // ✅ closes mobile overlay if open
-      closeSearch();                 // ✅ closes desktop overlay if open
+      setInputFocus(false); // ✅ hides overlay
+      closeMobileSearch(); // ✅ closes mobile overlay if open
+      closeSearch(); // ✅ closes desktop overlay if open
     }
 
-    // Sync input with URL param `text` when present (non-empty). Also reacts to tab changes.
+    // Sync input with URL param `text` - clears when URL text is empty (e.g., Clear All clicked)
     useEffect(() => {
       const urlText = (searchParams?.get('text') || '').trim();
-      if (urlText && urlText !== searchText) {
+      if (urlText !== searchText) {
         setSearchText(urlText);
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [searchParams]);
-    
 
     return (
       <div
@@ -130,7 +135,7 @@ const SearchB2B = forwardRef<HTMLDivElement, Props>(
           {/* Full overlay content (suggestions + recommended) */}
           <SearchOverlayB2B
             lang={lang}
-            open={inputFocus === true || displaySearch}
+            open={inputFocus === true || displaySearch || displayMobileSearch}
             onClose={disableInputFocus}
             value={searchText}
             onChange={handleAutoSearch}
@@ -139,7 +144,7 @@ const SearchB2B = forwardRef<HTMLDivElement, Props>(
               pushRecent(searchText);
             }}
           />
-{/* 
+          {/* 
           {searchText && (
             <div className="w-full absolute top-[56px] ltr:left-0 rtl:right-0 bg-brand-light rounded-md flex flex-col overflow-hidden shadow-dropDown z-30">
               <Scrollbar className="os-host-flexbox">

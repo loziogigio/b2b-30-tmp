@@ -134,7 +134,10 @@ const ProductCardOak: React.FC<ProductProps> = ({
             </del>
           )}
         </div>
-        <h2 className="text-brand-dark text-13px sm:text-sm lg:text-15px leading-5 sm:leading-6 mb-1.5" onClick={handlePopupView}>
+        <h2
+          className="text-brand-dark text-13px sm:text-sm lg:text-15px leading-5 sm:leading-6 mb-1.5"
+          onClick={handlePopupView}
+        >
           {name}
         </h2>
         <div className="mt-auto text-13px sm:text-sm">{unit}</div>

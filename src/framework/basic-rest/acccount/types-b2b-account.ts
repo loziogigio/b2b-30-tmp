@@ -2,14 +2,18 @@ export type PaymentDeadline = Record<string, any>;
 export type Address = Record<string, any>;
 
 export type RawChangePasswordResponse = {
-  ReturnCode: number;   // 0 = ok, otherwise error
-  Message?: string;     // optional message from ERP
+  ReturnCode: number; // 0 = ok, otherwise error
+  Message?: string; // optional message from ERP
 };
 
 export type ChangePasswordPayload = {
-  username: string;       // email/username
-  old_password: string;
-  new_password: string;
+  username: string; // email/username
+  currentPassword: string; // current password (for validation)
+  password: string; // new password
+};
+
+export type ResetPasswordPayload = {
+  username: string; // email/username (for forgot password - sends reset link)
 };
 
 export type ChangePasswordResult = {
@@ -42,22 +46,22 @@ export type RawCustomerResponse = {
 
 // English-friendly, normalized for UI
 export type CustomerProfile = {
-  code: string;                // Codice
-  internalCode?: string;       // CodiceInterno
-  discountCode?: string;       // CodiceScontoCliente
-  statusCode?: string;         // CodiceStatoAnagrafico
-  statusLabel?: string;        // DescrizioneStatoAnangrafico
-  activityCategoryCode?: string;  // CodiceCategoriaAttivita
+  code: string; // Codice
+  internalCode?: string; // CodiceInterno
+  discountCode?: string; // CodiceScontoCliente
+  statusCode?: string; // CodiceStatoAnagrafico
+  statusLabel?: string; // DescrizioneStatoAnangrafico
+  activityCategoryCode?: string; // CodiceCategoriaAttivita
   activityCategoryLabel?: string; // DescrizioneCategoriaAttivita
-  businessName?: string;       // RagioneSociale or Descrizione
-  firstName?: string;          // Nome
-  lastName?: string;           // Cognome
-  taxCode?: string;            // CodiceFiscale
-  vatNumber?: string;          // PartitaIVA
-  vatCee?: string;             // PartitaIVACee
-  pec?: string;                // PEC
-  sdi?: string;                // SDI
-  isLegalEntity: boolean;      // derived from isPersonaFisicaOGiuridica
+  businessName?: string; // RagioneSociale or Descrizione
+  firstName?: string; // Nome
+  lastName?: string; // Cognome
+  taxCode?: string; // CodiceFiscale
+  vatNumber?: string; // PartitaIVA
+  vatCee?: string; // PartitaIVACee
+  pec?: string; // PEC
+  sdi?: string; // SDI
+  isLegalEntity: boolean; // derived from isPersonaFisicaOGiuridica
 };
 export type AddressState = {
   selected: AddressB2B | null;
@@ -70,7 +74,6 @@ export const addressInitialState: AddressState = {
 export type AddressAction =
   | { type: 'SET_SELECTED'; payload: AddressB2B | null }
   | { type: 'RESET' };
-
 
 // RAW (ERP)
 export type RawAddress = {
@@ -120,146 +123,146 @@ export type RawAddressesResponse = {
 
 // Normalized (for UI)
 export type AddressB2B = {
-  id: string;                // Codice
-  title: string;             // Descrizione or fallback
-  isLegalSeat: boolean;      // IsSedeLegale
+  id: string; // Codice
+  title: string; // Descrizione or fallback
+  isLegalSeat: boolean; // IsSedeLegale
   address: {
-    street_address: string;  // IndirizzoEsteso
-    city: string;            // Citta / Comune
-    state: string;           // Provincia
-    zip: string;             // CAP
-    country: string;         // Nazione
+    street_address: string; // IndirizzoEsteso
+    city: string; // Citta / Comune
+    state: string; // Provincia
+    zip: string; // CAP
+    country: string; // Nazione
   };
   contact?: {
-    phone?: string;          // Telefono
-    mobile?: string;         // Cellulare
-    email?: string;          // EMailAddress
+    phone?: string; // Telefono
+    mobile?: string; // Cellulare
+    email?: string; // EMailAddress
   };
   agent?: {
-    code?: string;           // CodiceAgente
-    name?: string;           // DescrizioneAgente
-    email?: string;          // EMailAgente
-    phone?: string;          // TelefonoAgente
+    code?: string; // CodiceAgente
+    name?: string; // DescrizioneAgente
+    email?: string; // EMailAgente
+    phone?: string; // TelefonoAgente
   };
   paymentTerms?: { code?: string; label?: string }; // Codice/DescrizioneModalitaPagamento
-  port?: { code?: string; label?: string };         // Codice/DescrizionePorto
-  carrier?: { code?: string; label?: string };      // Codice/DescrizioneVettore
-  currency?: { code?: string; label?: string };     // Codice/DescrizioneValuta
+  port?: { code?: string; label?: string }; // Codice/DescrizionePorto
+  carrier?: { code?: string; label?: string }; // Codice/DescrizioneVettore
+  currency?: { code?: string; label?: string }; // Codice/DescrizioneValuta
 };
-
 
 // --- Payment Deadline (raw from ERP) ---
 export type RawPaymentDeadlineItem = {
-    DataRiferimento: string | null;   // "DD/MM/YYYY" or null
-    DataScadenza: string | null;      // "DD/MM/YYYY" or null
-    Descrizione: string | null;
-    Documento: string | null;         // e.g. "V1/2025/58693"
-    GridRiferimentoIsVisible: boolean;
-    GridScadenzaIsVisible: boolean;
-    Importo: number;                  // amount for the row
-    Tipo: string | null;              // e.g. "RBA"
-    Totale: number;                   // group total (when a header row)
-    isFineRiga: boolean;
-    isRiga: boolean;
-    isTipoVisualizzazioneRiferimento: boolean;
-    isTipoVisualizzazioneScadenza: boolean;
-  };
-  
-  export type RawPaymentDeadlineResponse = {
-    CodiceValuta: string;
-    DescrizioneValuta: string;
-    ListaScadenzaConInfo: RawPaymentDeadlineItem[];
-  };
-  
-  // --- Normalized (English-friendly) ---
-  export type PaymentDeadlineRow = {
-    referenceDate?: string;   // ISO "YYYY-MM-DD"
-    dueDate?: string;         // ISO
-    description: string;      // e.g. "RI.BA. ACTIVE"
-    document?: string;        // "V1/2025/58693"
-    type?: string;            // "RBA"
-    amount: number;           // Import amount
-    total: number;            // Group total (0 if not a total row)
-    isReferenceView: boolean;
-    isDueView: boolean;
-  };
-  
-  export type PaymentDeadlineSummary = {
-    currencyCode: string;
-    currencyLabel: string;
-    items: PaymentDeadlineRow[];
-  };
-  
+  DataRiferimento: string | null; // "DD/MM/YYYY" or null
+  DataScadenza: string | null; // "DD/MM/YYYY" or null
+  Descrizione: string | null;
+  Documento: string | null; // e.g. "V1/2025/58693"
+  GridRiferimentoIsVisible: boolean;
+  GridScadenzaIsVisible: boolean;
+  Importo: number; // amount for the row
+  Tipo: string | null; // e.g. "RBA"
+  Totale: number; // group total (when a header row)
+  isFineRiga: boolean;
+  isRiga: boolean;
+  isTipoVisualizzazioneRiferimento: boolean;
+  isTipoVisualizzazioneScadenza: boolean;
+};
 
-  // RAW from ERP
+export type RawPaymentDeadlineResponse = {
+  CodiceValuta: string;
+  DescrizioneValuta: string;
+  ListaScadenzaConInfo: RawPaymentDeadlineItem[];
+};
+
+// --- Normalized (English-friendly) ---
+export type PaymentDeadlineRow = {
+  referenceDate?: string; // ISO "YYYY-MM-DD"
+  dueDate?: string; // ISO
+  description: string; // e.g. "RI.BA. ACTIVE"
+  document?: string; // "V1/2025/58693"
+  type?: string; // "RBA"
+  amount: number; // Import amount
+  total: number; // Group total (0 if not a total row)
+  isReferenceView: boolean;
+  isDueView: boolean;
+};
+
+export type PaymentDeadlineSummary = {
+  currencyCode: string;
+  currencyLabel: string;
+  items: PaymentDeadlineRow[];
+  totalGeneral: number;
+  totalExpired: number;
+  totalToExpire: number;
+};
+
+// RAW from ERP
 export type RawExposition = {
-    AccontiFatturatiTotale: number;
-    AccontiTotale: number;
-    BolleNonFatturateDaScadere: number;
-    BolleNonFatturateTotale: number;
-    CambiariaDaScadere: number;
-    CambiariaScatuto: number; // spelling from ERP
-    CambiariaTotale: number;
-    CaparreTotale: number;
-    CodiceValuta: string;
-    DescrizioneValuta: string;
-    DifferenzaTotale: number;
-    FidoAssicuratoTotale: number;
-    FidoInternoTotale: number;
-    FidoTotaleTotale: number;
-    Message: string;
-    OrdiniNonEvasiDaScadere: number;
-    OrdiniNonEvasiTotale: number;
-    PrebolleNonEvaseDaScadere: number;
-    PrebolleNonEvaseTotale: number;
-    ReturnCode: number;
-    RimesseDaScadere: number;
-    RimesseScaduto: number;
-    RimesseTotale: number;
-    Totale2Totale: number;
-  };
-  
-  // Normalized EN
-  export type Exposition = {
-    currencyCode: string;
-    currencyLabel: string;
-  
-    // Direct remittances
-    directRemittancesExpired: number;
-    directRemittancesToExpire: number;
-    directRemittancesTotal: number;
-  
-    // Ri.Ba
-    ribaExpired: number;
-    ribaToExpire: number;
-    ribaTotal: number;
-  
-    // Unbilled delivery notes (Bolle non fatturate)
-    unbilledBillsToExpire: number;
-    unbilledBillsTotal: number;
-  
-    // Orders not fulfilled
-    ordersNotFulfilledToExpire: number;
-    ordersNotFulfilledTotal: number;
-  
-    // Pre-bills (Prebolle)
-    prebillsToExpire: number;
-    prebillsTotal: number;
-  
-    // Advances
-    advancesTotal: number;
-  
-    // Credit / limits
-    trustAssuredTotal: number;   // FidoAssicuratoTotale
-    trustInternalTotal: number;  // FidoInternoTotale
-    creditLimitTotal: number;    // FidoTotaleTotale
-  
-    // Totals
-    total2Total: number;         // Totale2Totale
-    differenceTotal: number;     // DifferenzaTotale
-  
-    // meta
-    message: string;
-    returnCode: number;
-  };
-  
+  AccontiFatturatiTotale: number;
+  AccontiTotale: number;
+  BolleNonFatturateDaScadere: number;
+  BolleNonFatturateTotale: number;
+  CambiariaDaScadere: number;
+  CambiariaScatuto: number; // spelling from ERP
+  CambiariaTotale: number;
+  CaparreTotale: number;
+  CodiceValuta: string;
+  DescrizioneValuta: string;
+  DifferenzaTotale: number;
+  FidoAssicuratoTotale: number;
+  FidoInternoTotale: number;
+  FidoTotaleTotale: number;
+  Message: string;
+  OrdiniNonEvasiDaScadere: number;
+  OrdiniNonEvasiTotale: number;
+  PrebolleNonEvaseDaScadere: number;
+  PrebolleNonEvaseTotale: number;
+  ReturnCode: number;
+  RimesseDaScadere: number;
+  RimesseScaduto: number;
+  RimesseTotale: number;
+  Totale2Totale: number;
+};
+
+// Normalized EN
+export type Exposition = {
+  currencyCode: string;
+  currencyLabel: string;
+
+  // Direct remittances
+  directRemittancesExpired: number;
+  directRemittancesToExpire: number;
+  directRemittancesTotal: number;
+
+  // Ri.Ba
+  ribaExpired: number;
+  ribaToExpire: number;
+  ribaTotal: number;
+
+  // Unbilled delivery notes (Bolle non fatturate)
+  unbilledBillsToExpire: number;
+  unbilledBillsTotal: number;
+
+  // Orders not fulfilled
+  ordersNotFulfilledToExpire: number;
+  ordersNotFulfilledTotal: number;
+
+  // Pre-bills (Prebolle)
+  prebillsToExpire: number;
+  prebillsTotal: number;
+
+  // Advances
+  advancesTotal: number;
+
+  // Credit / limits
+  trustAssuredTotal: number; // FidoAssicuratoTotale
+  trustInternalTotal: number; // FidoInternoTotale
+  creditLimitTotal: number; // FidoTotaleTotale
+
+  // Totals
+  total2Total: number; // Totale2Totale
+  differenceTotal: number; // DifferenzaTotale
+
+  // meta
+  message: string;
+  returnCode: number;
+};

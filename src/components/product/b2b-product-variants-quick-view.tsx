@@ -2,14 +2,18 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { LIMITS } from '@framework/utils/limits';
 import { fetchErpPrices } from '@framework/erp/prices';
+import { fetchPimProductList } from '@framework/product/get-pim-product';
 import Button from '@components/ui/button';
 import Alert from '@components/ui/alert';
 import ProductCardB2B from '@components/product/product-cards/product-card-b2b';
 import ProductCardLoader from '@components/ui/loaders/product-card-loader';
-import { useModalAction, useModalState } from '@components/common/modal/modal.context';
+import {
+  useModalAction,
+  useModalState,
+} from '@components/common/modal/modal.context';
 import CloseButton from '@components/ui/close-button';
 import cn from 'classnames';
 import Image from '@components/ui/image';
@@ -26,7 +30,11 @@ type VariantMinimal = {
   [k: string]: any;
 };
 
-export default function B2BProductVariantsQuickView({ lang }: { lang: string }) {
+export default function B2BProductVariantsQuickView({
+  lang,
+}: {
+  lang: string;
+}) {
   const { data } = useModalState();
   const { closeModal } = useModalAction();
   const { isAuthorized } = useUI();
@@ -44,27 +52,34 @@ export default function B2BProductVariantsQuickView({ lang }: { lang: string }) 
     description,
   } = raw ?? {};
 
-  const variants: VariantMinimal[] = Array.isArray(raw?.variations) ? raw.variations : [];
+  const variants: VariantMinimal[] = Array.isArray(raw?.variations)
+    ? raw.variations
+    : [];
 
-  const allIds = useMemo(() => variants.map(v => String(v.id)), [variants]);
+  const allIds = useMemo(() => variants.map((v) => String(v.id)), [variants]);
   const totalCount = allIds.length;
 
   // Filter + sort UI
-  const [sortKey, setSortKey] =
-    useState<'sku-asc' | 'price-asc' | 'price-desc'>('sku-asc');
+  const [sortKey, setSortKey] = useState<
+    'sku-asc' | 'price-asc' | 'price-desc'
+  >('sku-asc');
   const [query, setQuery] = useState('');
   // model tag filter
   const modelOptions = useMemo(() => {
     const set = new Set<string>();
-    variants.forEach(v => {
+    variants.forEach((v) => {
       const m = String(v.model ?? '').trim();
       if (m) set.add(m);
     });
-    return Array.from(set).sort((a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }));
+    return Array.from(set).sort((a, b) =>
+      a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }),
+    );
   }, [variants]);
   const [selectedModels, setSelectedModels] = useState<string[]>([]);
   const toggleModel = (m: string) =>
-    setSelectedModels(prev => (prev.includes(m) ? prev.filter(x => x !== m) : [...prev, m]));
+    setSelectedModels((prev) =>
+      prev.includes(m) ? prev.filter((x) => x !== m) : [...prev, m],
+    );
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   const filtered = useMemo(() => {
@@ -72,21 +87,20 @@ export default function B2BProductVariantsQuickView({ lang }: { lang: string }) 
     let base = variants;
     if (selectedModels.length) {
       const s = new Set(selectedModels.map((m) => String(m).trim()));
-      base = base.filter(v => s.has(String(v.model ?? '').trim()));
+      base = base.filter((v) => s.has(String(v.model ?? '').trim()));
     }
     // Text query filter next
     const q = query.trim().toLowerCase();
     if (!q) return base;
-    return base.filter(v =>
-      (v.sku?.toLowerCase().includes(q)) ||
-      (v.name?.toLowerCase().includes(q)) ||
-      (v.model?.toLowerCase().includes(q))
+    return base.filter(
+      (v) =>
+        v.sku?.toLowerCase().includes(q) ||
+        v.name?.toLowerCase().includes(q) ||
+        v.model?.toLowerCase().includes(q),
     );
   }, [variants, selectedModels, query]);
 
   const pageSize = LIMITS.PRODUCTS_LIMITS;
-
-
 
   const {
     data: pages,
@@ -97,7 +111,12 @@ export default function B2BProductVariantsQuickView({ lang }: { lang: string }) 
     error,
     refetch,
   } = useInfiniteQuery({
-    queryKey: ['erp-variant-prices', raw?.id ?? 'no-product', allIds.join(','), pageSize],
+    queryKey: [
+      'erp-variant-prices',
+      raw?.id ?? 'no-product',
+      allIds.join(','),
+      pageSize,
+    ],
     enabled: isAuthorized && totalCount > 0,
     initialPageParam: 0,
     queryFn: async ({ pageParam }) => {
@@ -105,7 +124,10 @@ export default function B2BProductVariantsQuickView({ lang }: { lang: string }) 
       const slice = allIds.slice(start, start + pageSize);
       if (slice.length === 0) return { prices: {}, nextIndex: undefined };
       const res = await fetchErpPrices({ ...ERP_STATIC, entity_codes: slice });
-      return { prices: res as Record<string, any>, nextIndex: start + slice.length };
+      return {
+        prices: res as Record<string, any>,
+        nextIndex: start + slice.length,
+      };
     },
     getNextPageParam: (lastPage) =>
       typeof lastPage?.nextIndex === 'number' && lastPage.nextIndex < totalCount
@@ -115,7 +137,7 @@ export default function B2BProductVariantsQuickView({ lang }: { lang: string }) 
 
   const priceMap = useMemo(() => {
     const merged: Record<string, any> = {};
-    pages?.pages?.forEach(p => Object.assign(merged, p.prices));
+    pages?.pages?.forEach((p) => Object.assign(merged, p.prices));
     return merged;
   }, [pages]);
 
@@ -123,7 +145,11 @@ export default function B2BProductVariantsQuickView({ lang }: { lang: string }) 
     const row = priceMap[String(variant?.id)];
     if (!row) return Number.POSITIVE_INFINITY;
     const anyPD = row as any;
-    const v = anyPD.price_discount ?? anyPD.net_price ?? anyPD.price ?? anyPD.gross_price;
+    const v =
+      anyPD.price_discount ??
+      anyPD.net_price ??
+      anyPD.price ??
+      anyPD.gross_price;
     const n = Number(v);
     return Number.isFinite(n) ? n : Number.POSITIVE_INFINITY;
   };
@@ -132,9 +158,16 @@ export default function B2BProductVariantsQuickView({ lang }: { lang: string }) 
     const copy = filtered.slice();
     if (selectedModels.length > 0) {
       // When filtering by tags, sort alphabetically by model
-      copy.sort((a, b) => String(a.model ?? '').localeCompare(String(b.model ?? ''), undefined, { numeric: true, sensitivity: 'base' }));
+      copy.sort((a, b) =>
+        String(a.model ?? '').localeCompare(String(b.model ?? ''), undefined, {
+          numeric: true,
+          sensitivity: 'base',
+        }),
+      );
     } else if (!isAuthorized || sortKey === 'sku-asc') {
-      copy.sort((a, b) => String(a.sku ?? a.id).localeCompare(String(b.sku ?? b.id)));
+      copy.sort((a, b) =>
+        String(a.sku ?? a.id).localeCompare(String(b.sku ?? b.id)),
+      );
     } else {
       copy.sort((a, b) => {
         const pa = getSortPrice(a);
@@ -156,8 +189,10 @@ export default function B2BProductVariantsQuickView({ lang }: { lang: string }) 
     if (!rootEl || !sentinel) return;
 
     const io = new IntersectionObserver(
-      entries => { if (entries.some(e => e.isIntersecting)) fetchNextPage(); },
-      { root: rootEl, rootMargin: '400px 0px', threshold: 0 }
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) fetchNextPage();
+      },
+      { root: rootEl, rootMargin: '400px 0px', threshold: 0 },
     );
     io.observe(sentinel);
     return () => io.disconnect();
@@ -203,7 +238,7 @@ export default function B2BProductVariantsQuickView({ lang }: { lang: string }) 
                 <>
                   <span className="text-gray-300">•</span>
                   <Link
-                    href={`/${lang}/search?filters-id_brand=${brand.id}`}
+                    href={`/${lang}/search?filters-brand_id=${brand.id}`}
                     className="text-brand hover:underline uppercase truncate max-w-[55%] sm:max-w-[60%]"
                     title={brand.name}
                     onClick={() => {
@@ -218,7 +253,9 @@ export default function B2BProductVariantsQuickView({ lang }: { lang: string }) 
             </div>
 
             {/* title */}
-            <h3 className="mt-1 text-sm sm:text-base font-semibold truncate">{title}</h3>
+            <h3 className="mt-1 text-sm sm:text-base font-semibold truncate">
+              {title}
+            </h3>
 
             {/* short description */}
             {description ? (
@@ -230,13 +267,14 @@ export default function B2BProductVariantsQuickView({ lang }: { lang: string }) 
         </div>
       </div>
 
-
       {/* NON-SCROLLING controls */}
       <div className="border-b px-3 sm:px-4 py-2.5">
         {/* Top-right: priced counter */}
         {isAuthorized ? (
           <div className="flex justify-end mb-1">
-            <div className="text-[11px] text-gray-600">{loadedCount}/{totalCount} priced</div>
+            <div className="text-[11px] text-gray-600">
+              {loadedCount}/{totalCount} priced
+            </div>
           </div>
         ) : null}
 
@@ -273,7 +311,9 @@ export default function B2BProductVariantsQuickView({ lang }: { lang: string }) 
                 aria-label="Sort variants"
                 value={sortKey}
                 onChange={(e) =>
-                  setSortKey(e.target.value as 'sku-asc' | 'price-asc' | 'price-desc')
+                  setSortKey(
+                    e.target.value as 'sku-asc' | 'price-asc' | 'price-desc',
+                  )
                 }
                 className="h-10 sm:h-11 rounded-md border px-2 text-sm bg-white border-gray-300"
               >
@@ -295,7 +335,7 @@ export default function B2BProductVariantsQuickView({ lang }: { lang: string }) 
                 'px-2 py-1 rounded-md border text-xs font-medium transition-colors',
                 selectedModels.includes(m)
                   ? 'bg-brand text-white border-brand'
-                  : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
+                  : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400',
               )}
               onClick={() => toggleModel(m)}
             >
@@ -316,9 +356,13 @@ export default function B2BProductVariantsQuickView({ lang }: { lang: string }) 
 
         {error && (
           <div className="mt-2">
-            <Alert message={(error as any)?.message || 'Failed to load prices.'} />
+            <Alert
+              message={(error as any)?.message || 'Failed to load prices.'}
+            />
             <div className="mt-2">
-              <Button size="small" onClick={() => refetch()}>Retry</Button>
+              <Button size="small" onClick={() => refetch()}>
+                Retry
+              </Button>
             </div>
           </div>
         )}
@@ -332,7 +376,7 @@ export default function B2BProductVariantsQuickView({ lang }: { lang: string }) 
         <div
           className={cn(
             'grid gap-2 md:gap-3 2xl:gap-4',
-            'grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4'
+            'grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4',
           )}
         >
           {sorted.map((v) => {
@@ -348,11 +392,17 @@ export default function B2BProductVariantsQuickView({ lang }: { lang: string }) 
             );
           })}
 
-          {isAuthorized && isFetching && !pages?.pages?.length &&
-            Array.from({ length: Math.min(pageSize, sorted.length || totalCount) }).map((_, i) => (
-              <ProductCardLoader key={`skeleton-${i}`} uniqueKey={`skeleton-${i}`} />
-            ))
-          }
+          {isAuthorized &&
+            isFetching &&
+            !pages?.pages?.length &&
+            Array.from({
+              length: Math.min(pageSize, sorted.length || totalCount),
+            }).map((_, i) => (
+              <ProductCardLoader
+                key={`skeleton-${i}`}
+                uniqueKey={`skeleton-${i}`}
+              />
+            ))}
         </div>
 
         {/* sentinel inside the scrollable grid */}

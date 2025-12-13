@@ -9,8 +9,8 @@ import SectionHeader from '@components/common/section-header';
 interface MediaCarouselStyle {
   borderWidth?: number;
   borderColor?: string;
-  borderStyle?: "solid" | "dashed" | "dotted" | "none";
-  borderRadius?: "none" | "sm" | "md" | "lg" | "xl" | "2xl" | "full";
+  borderStyle?: 'solid' | 'dashed' | 'dotted' | 'none';
+  borderRadius?: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full';
   paddingX?: number;
   paddingY?: number;
   backgroundColor?: string;
@@ -24,7 +24,7 @@ const borderRadiusMap = {
   lg: '0.5rem',
   xl: '0.75rem',
   '2xl': '1rem',
-  full: '9999px'
+  full: '9999px',
 };
 
 const defaultBreakpoints = {
@@ -53,6 +53,17 @@ const defaultBreakpoints = {
   },
 };
 
+interface CardStyleOptions {
+  borderWidth?: number;
+  borderColor?: string;
+  borderStyle?: 'solid' | 'dashed' | 'dotted' | 'none';
+  borderRadius?: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full';
+  shadowSize?: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+  shadowColor?: string;
+  backgroundColor?: string;
+  hoverEffect?: 'none' | 'lift' | 'shadow' | 'scale' | 'border' | 'glow';
+}
+
 interface BannerProps {
   lang: string;
   data: any;
@@ -66,6 +77,7 @@ interface BannerProps {
   nextButtonClassName?: string;
   title?: string;
   style?: MediaCarouselStyle;
+  cardStyle?: CardStyleOptions; // Default card style for all slides
 }
 
 const BannerAllCarousel: React.FC<BannerProps> = ({
@@ -80,7 +92,8 @@ const BannerAllCarousel: React.FC<BannerProps> = ({
   prevButtonClassName,
   nextButtonClassName,
   title,
-  style
+  style,
+  cardStyle,
 }) => {
   const defaultStyle: MediaCarouselStyle = {
     borderWidth: 0,
@@ -90,54 +103,107 @@ const BannerAllCarousel: React.FC<BannerProps> = ({
     paddingX: 0,
     paddingY: 0,
     backgroundColor: 'transparent',
-    customCSS: ''
+    customCSS: '',
   };
 
   const styleOptions = { ...defaultStyle, ...(style || {}) };
 
   // Build container styles
   const containerStyle: React.CSSProperties = {
-    borderWidth: styleOptions.borderWidth ? `${styleOptions.borderWidth}px` : '0',
+    borderWidth: styleOptions.borderWidth
+      ? `${styleOptions.borderWidth}px`
+      : '0',
     borderColor: styleOptions.borderColor,
-    borderStyle: styleOptions.borderStyle === 'none' ? 'none' : styleOptions.borderStyle,
+    borderStyle:
+      styleOptions.borderStyle === 'none' ? 'none' : styleOptions.borderStyle,
     borderRadius: borderRadiusMap[styleOptions.borderRadius || 'none'],
-    paddingLeft: styleOptions.paddingX ? `${styleOptions.paddingX}px` : undefined,
-    paddingRight: styleOptions.paddingX ? `${styleOptions.paddingX}px` : undefined,
-    paddingTop: styleOptions.paddingY ? `${styleOptions.paddingY}px` : undefined,
-    paddingBottom: styleOptions.paddingY ? `${styleOptions.paddingY}px` : undefined,
+    paddingLeft: styleOptions.paddingX
+      ? `${styleOptions.paddingX}px`
+      : undefined,
+    paddingRight: styleOptions.paddingX
+      ? `${styleOptions.paddingX}px`
+      : undefined,
+    paddingTop: styleOptions.paddingY
+      ? `${styleOptions.paddingY}px`
+      : undefined,
+    paddingBottom: styleOptions.paddingY
+      ? `${styleOptions.paddingY}px`
+      : undefined,
     backgroundColor: styleOptions.backgroundColor,
   };
 
   return (
     <>
-      {styleOptions.customCSS && <style dangerouslySetInnerHTML={{ __html: styleOptions.customCSS }} />}
-      <div className={cn(className, forceFullHeight && 'heightFull')} style={containerStyle}>
+      {styleOptions.customCSS && (
+        <style dangerouslySetInnerHTML={{ __html: styleOptions.customCSS }} />
+      )}
+      {/* Hide slides that overflow before Swiper initializes */}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+        .swiper:not(.swiper-initialized) .swiper-slide:not(:first-child) {
+          display: none !important;
+        }
+        .swiper:not(.swiper-initialized) {
+          overflow: hidden;
+        }
+      `,
+        }}
+      />
+      <div
+        className={cn(
+          className,
+          forceFullHeight && 'heightFull',
+          'overflow-hidden',
+        )}
+        style={containerStyle}
+      >
         {title && (
           <div className="mb-5 md:mb-6">
-            <SectionHeader sectionHeading={title} className="mb-0" lang={lang} />
+            <SectionHeader
+              sectionHeading={title}
+              className="mb-0"
+              lang={lang}
+            />
           </div>
         )}
-      <Carousel
-        autoplay={false}
-        breakpoints={breakpoints || defaultBreakpoints}
-        buttonSize={buttonSize}
-        prevActivateId="all-banner-carousel-button-prev"
-        nextActivateId="all-banner-carousel-button-next"
-        lang={lang}
-        buttonGroupClassName={buttonGroupClassName}
-        prevButtonClassName={prevButtonClassName}
-        nextButtonClassName={nextButtonClassName}
-        className={forceFullHeight ? 'h-full' : undefined}
-      >
-        {data?.map((banner: any, index: number) => {
-          const slideIdentifier = banner?.id ?? index;
-          return (
-            <SwiperSlide key={`${itemKeyPrefix}-${slideIdentifier}`} className={forceFullHeight ? 'h-full' : undefined}>
-              <BannerCard banner={banner} effectActive={true} lang={lang} forceFullHeight={forceFullHeight} noPadding={forceFullHeight} />
-            </SwiperSlide>
-          );
-        })}
-      </Carousel>
+        <Carousel
+          autoplay={false}
+          breakpoints={breakpoints || defaultBreakpoints}
+          buttonSize={buttonSize}
+          prevActivateId="all-banner-carousel-button-prev"
+          nextActivateId="all-banner-carousel-button-next"
+          lang={lang}
+          buttonGroupClassName={buttonGroupClassName}
+          prevButtonClassName={prevButtonClassName}
+          nextButtonClassName={nextButtonClassName}
+          className={forceFullHeight ? 'h-full' : undefined}
+        >
+          {data?.map((banner: any, index: number) => {
+            const slideIdentifier = banner?.id ?? index;
+            // Merge default cardStyle with banner-specific cardStyle
+            const mergedBanner = cardStyle
+              ? {
+                  ...banner,
+                  cardStyle: { ...cardStyle, ...(banner?.cardStyle || {}) },
+                }
+              : banner;
+            return (
+              <SwiperSlide
+                key={`${itemKeyPrefix}-${slideIdentifier}`}
+                className={forceFullHeight ? 'h-full' : undefined}
+              >
+                <BannerCard
+                  banner={mergedBanner}
+                  effectActive={true}
+                  lang={lang}
+                  forceFullHeight={forceFullHeight}
+                  noPadding={forceFullHeight}
+                />
+              </SwiperSlide>
+            );
+          })}
+        </Carousel>
       </div>
     </>
   );

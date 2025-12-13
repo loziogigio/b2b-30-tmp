@@ -3,7 +3,13 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useModalAction } from '@components/common/modal/modal.context';
-import { IoCloseOutline, IoPlayCircle, IoPauseCircle, IoVolumeHigh, IoVolumeMute } from 'react-icons/io5';
+import {
+  IoCloseOutline,
+  IoPlayCircle,
+  IoPauseCircle,
+  IoVolumeHigh,
+  IoVolumeMute,
+} from 'react-icons/io5';
 import { HiOutlineMinusSm } from 'react-icons/hi';
 
 interface RadioPlayerModalProps {
@@ -13,19 +19,20 @@ interface RadioPlayerModalProps {
 const RADIO_STATIONS = [
   {
     name: 'Radio Italia',
-    streamUrl: 'https://streamcdnm10-4764f6c0c16c3e1f.msvdn.net/webradio/radioitaliawebradio.aac',
-    logo: '🇮🇹'
+    streamUrl:
+      'https://streamcdnm10-4764f6c0c16c3e1f.msvdn.net/webradio/radioitaliawebradio.aac',
+    logo: '🇮🇹',
   },
   {
     name: 'RTL 102.5',
     streamUrl: 'https://streamingv2.shoutcast.com/rtl-102-5',
-    logo: '📻'
+    logo: '📻',
   },
   {
     name: 'RDS',
     streamUrl: 'https://icstream.rds.radio/rds',
-    logo: '🎵'
-  }
+    logo: '🎵',
+  },
 ];
 
 const RadioPlayerModal: React.FC<RadioPlayerModalProps> = ({ lang }) => {
@@ -50,7 +57,7 @@ const RadioPlayerModal: React.FC<RadioPlayerModalProps> = ({ lang }) => {
     if (typeof window !== 'undefined') {
       setPosition({
         x: Math.max(0, (window.innerWidth - 400) / 2),
-        y: Math.max(0, (window.innerHeight - 400) / 2)
+        y: Math.max(0, (window.innerHeight - 400) / 2),
       });
     }
   }, []);
@@ -61,18 +68,27 @@ const RadioPlayerModal: React.FC<RadioPlayerModalProps> = ({ lang }) => {
       const rect = windowRef.current.getBoundingClientRect();
       dragOffset.current = {
         x: e.clientX - rect.left,
-        y: e.clientY - rect.top
+        y: e.clientY - rect.top,
       };
     }
   }, []);
 
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (isDragging) {
-      const newX = Math.max(0, Math.min(e.clientX - dragOffset.current.x, window.innerWidth - 400));
-      const newY = Math.max(0, Math.min(e.clientY - dragOffset.current.y, window.innerHeight - 100));
-      setPosition({ x: newX, y: newY });
-    }
-  }, [isDragging]);
+  const handleMouseMove = useCallback(
+    (e: MouseEvent) => {
+      if (isDragging) {
+        const newX = Math.max(
+          0,
+          Math.min(e.clientX - dragOffset.current.x, window.innerWidth - 400),
+        );
+        const newY = Math.max(
+          0,
+          Math.min(e.clientY - dragOffset.current.y, window.innerHeight - 100),
+        );
+        setPosition({ x: newX, y: newY });
+      }
+    },
+    [isDragging],
+  );
 
   const handleMouseUp = useCallback(() => {
     setIsDragging(false);
@@ -96,7 +112,8 @@ const RadioPlayerModal: React.FC<RadioPlayerModalProps> = ({ lang }) => {
         setIsPlaying(false);
       } else {
         setIsLoading(true);
-        audioRef.current.play()
+        audioRef.current
+          .play()
           .then(() => {
             setIsPlaying(true);
             setIsLoading(false);
@@ -134,7 +151,7 @@ const RadioPlayerModal: React.FC<RadioPlayerModalProps> = ({ lang }) => {
         left: position.x,
         top: position.y,
         width: isMinimized ? 280 : 400,
-        cursor: isDragging ? 'grabbing' : 'auto'
+        cursor: isDragging ? 'grabbing' : 'auto',
       }}
     >
       {/* Draggable Header */}
@@ -174,7 +191,9 @@ const RadioPlayerModal: React.FC<RadioPlayerModalProps> = ({ lang }) => {
         /* Minimized Controls */
         <div className="flex items-center justify-between p-3 bg-slate-50">
           <div className="flex items-center gap-2">
-            <span className="text-lg">{RADIO_STATIONS[currentStation].logo}</span>
+            <span className="text-lg">
+              {RADIO_STATIONS[currentStation].logo}
+            </span>
             <span className="text-xs text-slate-600">
               {isPlaying ? 'In riproduzione' : 'In pausa'}
             </span>
@@ -184,14 +203,22 @@ const RadioPlayerModal: React.FC<RadioPlayerModalProps> = ({ lang }) => {
               onClick={handleMuteToggle}
               className="p-1.5 rounded-full hover:bg-slate-200 transition-colors text-slate-600"
             >
-              {isMuted ? <IoVolumeMute className="w-5 h-5" /> : <IoVolumeHigh className="w-5 h-5" />}
+              {isMuted ? (
+                <IoVolumeMute className="w-5 h-5" />
+              ) : (
+                <IoVolumeHigh className="w-5 h-5" />
+              )}
             </button>
             <button
               onClick={handlePlayPause}
               disabled={isLoading}
               className="text-brand disabled:opacity-50"
             >
-              {isPlaying ? <IoPauseCircle className="w-10 h-10" /> : <IoPlayCircle className="w-10 h-10" />}
+              {isPlaying ? (
+                <IoPauseCircle className="w-10 h-10" />
+              ) : (
+                <IoPlayCircle className="w-10 h-10" />
+              )}
             </button>
           </div>
         </div>
@@ -217,7 +244,9 @@ const RadioPlayerModal: React.FC<RadioPlayerModalProps> = ({ lang }) => {
 
           {/* Now Playing */}
           <div className="text-center mb-4">
-            <div className="text-3xl mb-1">{RADIO_STATIONS[currentStation].logo}</div>
+            <div className="text-3xl mb-1">
+              {RADIO_STATIONS[currentStation].logo}
+            </div>
             <h4 className="text-lg font-semibold text-slate-800">
               {RADIO_STATIONS[currentStation].name}
             </h4>
@@ -233,7 +262,11 @@ const RadioPlayerModal: React.FC<RadioPlayerModalProps> = ({ lang }) => {
               className="p-2 rounded-full hover:bg-slate-100 transition-colors text-slate-600"
               aria-label={isMuted ? 'Attiva audio' : 'Disattiva audio'}
             >
-              {isMuted ? <IoVolumeMute className="w-6 h-6" /> : <IoVolumeHigh className="w-6 h-6" />}
+              {isMuted ? (
+                <IoVolumeMute className="w-6 h-6" />
+              ) : (
+                <IoVolumeHigh className="w-6 h-6" />
+              )}
             </button>
 
             <button
@@ -242,7 +275,11 @@ const RadioPlayerModal: React.FC<RadioPlayerModalProps> = ({ lang }) => {
               className="p-1 rounded-full hover:scale-105 transition-transform text-brand disabled:opacity-50"
               aria-label={isPlaying ? 'Pausa' : 'Play'}
             >
-              {isPlaying ? <IoPauseCircle className="w-14 h-14" /> : <IoPlayCircle className="w-14 h-14" />}
+              {isPlaying ? (
+                <IoPauseCircle className="w-14 h-14" />
+              ) : (
+                <IoPlayCircle className="w-14 h-14" />
+              )}
             </button>
 
             <div className="w-10" />

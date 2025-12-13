@@ -13,7 +13,9 @@ export interface CompareContextState {
   hasSku: (sku: string) => boolean;
 }
 
-const CompareContext = React.createContext<CompareContextState | undefined>(undefined);
+const CompareContext = React.createContext<CompareContextState | undefined>(
+  undefined,
+);
 CompareContext.displayName = 'CompareContext';
 
 export function useCompareList() {
@@ -32,7 +34,11 @@ export function CompareProvider({ children }: React.PropsWithChildren) {
     try {
       const parsed = typeof saved === 'string' ? JSON.parse(saved) : saved;
       if (Array.isArray(parsed)) {
-        setSkus(parsed.filter((value) => typeof value === 'string' && value.trim().length > 0));
+        setSkus(
+          parsed.filter(
+            (value) => typeof value === 'string' && value.trim().length > 0,
+          ),
+        );
       } else {
         setSkus([]);
       }
@@ -53,7 +59,7 @@ export function CompareProvider({ children }: React.PropsWithChildren) {
         return next;
       });
     },
-    [save]
+    [save],
   );
 
   const addSku = React.useCallback(
@@ -64,14 +70,14 @@ export function CompareProvider({ children }: React.PropsWithChildren) {
         return [...previous, sku];
       });
     },
-    [persist]
+    [persist],
   );
 
   const removeSku = React.useCallback(
     (sku: string) => {
       persist((previous) => previous.filter((value) => value !== sku));
     },
-    [persist]
+    [persist],
   );
 
   const clear = React.useCallback(() => {
@@ -86,10 +92,12 @@ export function CompareProvider({ children }: React.PropsWithChildren) {
       addSku,
       removeSku,
       clear,
-      hasSku
+      hasSku,
     }),
-    [skus, addSku, removeSku, clear, hasSku]
+    [skus, addSku, removeSku, clear, hasSku],
   );
 
-  return <CompareContext.Provider value={value}>{children}</CompareContext.Provider>;
+  return (
+    <CompareContext.Provider value={value}>{children}</CompareContext.Provider>
+  );
 }

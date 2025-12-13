@@ -96,12 +96,12 @@ export type Product = {
   tag?: Tag[];
   meta?: any[];
   brand?: Brand;
-  model?:string
+  model?: string;
   description?: string;
   html_description?: string; // HTML content for product detail tab
   attributes?: Record<string, { label: string; value: any; order?: number }>; // PIM attributes
   variations: Product[];
-  features?:any[];
+  features?: any[];
   [key: string]: unknown;
   docs?: Array<{
     id: number;

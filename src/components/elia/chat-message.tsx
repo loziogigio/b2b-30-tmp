@@ -1,27 +1,31 @@
-import { cn } from '@/lib/utils'
-import { AiOutlineUser, AiOutlineRobot } from 'react-icons/ai'
-import type { ChatMessage } from '@/lib/elia/types'
+import { cn } from '@/lib/utils';
+import { AiOutlineUser, AiOutlineRobot } from 'react-icons/ai';
+import type { ChatMessage } from '@/lib/elia/types';
 
 interface ChatMessageProps extends ChatMessage {
-  onSuggestionClick?: (suggestion: string) => void
+  onSuggestionClick?: (suggestion: string) => void;
 }
 
 export function ChatMessageComponent({
   role,
   content,
   suggestions = [],
-  onSuggestionClick
+  onSuggestionClick,
 }: ChatMessageProps) {
   return (
-    <div className={cn(
-      "flex gap-3 transition-all duration-300",
-      role === 'user' ? 'flex-row-reverse' : 'flex-row'
-    )}>
+    <div
+      className={cn(
+        'flex gap-3 transition-all duration-300',
+        role === 'user' ? 'flex-row-reverse' : 'flex-row',
+      )}
+    >
       {/* Avatar */}
-      <div className={cn(
-        "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0",
-        role === 'assistant' ? "bg-blue-600" : "bg-gray-600"
-      )}>
+      <div
+        className={cn(
+          'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0',
+          role === 'assistant' ? 'bg-blue-600' : 'bg-gray-600',
+        )}
+      >
         {role === 'assistant' ? (
           <AiOutlineRobot className="w-4 h-4 text-white" />
         ) : (
@@ -30,17 +34,21 @@ export function ChatMessageComponent({
       </div>
 
       {/* Content */}
-      <div className={cn(
-        "flex-1 space-y-2",
-        role === 'user' ? 'items-end' : 'items-start'
-      )}>
+      <div
+        className={cn(
+          'flex-1 space-y-2',
+          role === 'user' ? 'items-end' : 'items-start',
+        )}
+      >
         {/* Message bubble */}
-        <div className={cn(
-          "rounded-lg px-4 py-2 max-w-[85%]",
-          role === 'user'
-            ? 'bg-blue-600 text-white ml-auto'
-            : 'bg-white border border-gray-200 text-gray-900'
-        )}>
+        <div
+          className={cn(
+            'rounded-lg px-4 py-2 max-w-[85%]',
+            role === 'user'
+              ? 'bg-blue-600 text-white ml-auto'
+              : 'bg-white border border-gray-200 text-gray-900',
+          )}
+        >
           <p className="text-sm whitespace-pre-wrap">{content}</p>
         </div>
 
@@ -60,5 +68,5 @@ export function ChatMessageComponent({
         )}
       </div>
     </div>
-  )
+  );
 }

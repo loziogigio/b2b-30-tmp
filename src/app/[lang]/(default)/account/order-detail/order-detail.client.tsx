@@ -1,31 +1,44 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { useOrderDetailsQuery } from '@framework/order/fetch-order';
 import AddressCard from '@components/orders/address-card';
 import OrderItemsTable from '@components/orders/order-items-table';
-import OrderProgress from '@components/orders/order-progress';
+import { useTranslation } from 'src/app/i18n/client';
+import {
+  renderOrderPrintHtml,
+  OrderExportSnapshot,
+} from '@components/orders/export/order-export';
 
 // ---- tiny helpers ---------------------------------------------------------
 function money(v: any) {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 }
-function toDisplayDate(iso?: string) {
+function toDisplayDate(iso?: string, lang?: string) {
   if (!iso) return '—';
   try {
-    return new Date(iso).toLocaleDateString(undefined, {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
+    return new Date(iso).toLocaleDateString(
+      lang === 'it' ? 'it-IT' : undefined,
+      {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      },
+    );
   } catch {
     return '—';
   }
 }
-function getStatusFromOrder(o: any):
-  'pending' | 'processing' | 'at-local-facility' | 'out-for-delivery' | 'completed' {
+function getStatusFromOrder(
+  o: any,
+):
+  | 'pending'
+  | 'processing'
+  | 'at-local-facility'
+  | 'out-for-delivery'
+  | 'completed' {
   const raw = o?.order_status ?? o?.status ?? 'completed';
   switch (raw) {
     case 'order-pending':
@@ -56,18 +69,117 @@ type Props = {
 };
 
 export default function OrderDetailClient({ lang, initialParams }: Props) {
+  const { t } = useTranslation(lang, 'common');
+  const [isPrinting, setIsPrinting] = useState(false);
+
   const params = useMemo(() => {
     const { cause, doc_year, doc_number } = initialParams;
     if (!cause || !doc_year || !doc_number) return null;
     return { cause, doc_year, doc_number };
   }, [initialParams]);
 
-  const { data: order, isLoading, isError, error } = useOrderDetailsQuery(params as any);
+  const {
+    data: order,
+    isLoading,
+    isError,
+    error,
+  } = useOrderDetailsQuery(params as any);
+
+  const handlePrint = useCallback(() => {
+    if (!order || isPrinting) return;
+    setIsPrinting(true);
+
+    try {
+      const orderNumber = `${initialParams.cause}/${initialParams.doc_number}/${initialParams.doc_year}`;
+      const items = ((order as any).items ?? []).map((it: any) => ({
+        sku: it.sku ?? '',
+        name: it.name ?? '',
+        image: it.image,
+        unit: it.unit ?? '',
+        price: Number(it.price ?? 0),
+        ordered_in_quantity: Number(it.ordered_in_quantity ?? 0),
+        delivered_in_quantity: Number(it.delivered_in_quantity ?? 0),
+        delivered_in_price: Number(it.delivered_in_price ?? 0),
+      }));
+
+      const shippingAddress = (order as any).shipping_address ?? {};
+      const snapshot: OrderExportSnapshot = {
+        orderNumber,
+        orderDate: toDisplayDate((order as any).created_at, lang),
+        status:
+          getStatusFromOrder(order) === 'completed'
+            ? t('order-status-completed')
+            : getStatusFromOrder(order) === 'out-for-delivery'
+              ? t('order-status-out-for-delivery')
+              : getStatusFromOrder(order) === 'at-local-facility'
+                ? t('order-status-at-local-facility')
+                : getStatusFromOrder(order) === 'processing'
+                  ? t('order-status-processing')
+                  : t('order-status-pending'),
+        shippingAddress: {
+          line1:
+            shippingAddress.street_address ??
+            shippingAddress.address ??
+            shippingAddress.line1,
+          city: shippingAddress.city,
+          country: shippingAddress.country,
+        },
+        items,
+        total: money((order as any).total),
+        exportDateLabel: new Intl.DateTimeFormat('it-IT', {
+          dateStyle: 'medium',
+          timeStyle: 'short',
+        }).format(new Date()),
+      };
+
+      const html = renderOrderPrintHtml(snapshot, { includeImages: true });
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const popup = window.open(
+        url,
+        '_blank',
+        'width=900,height=700,scrollbars=yes,resizable=yes',
+      );
+
+      if (!popup) {
+        alert(
+          'Impossibile aprire la finestra di stampa. Controlla il blocco popup.',
+        );
+        setIsPrinting(false);
+        return;
+      }
+
+      let completed = false;
+      let pollId: ReturnType<typeof setInterval> | null = null;
+      let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
+
+      const cleanup = () => {
+        if (completed) return;
+        completed = true;
+        if (pollId != null) clearInterval(pollId);
+        if (fallbackTimer != null) clearTimeout(fallbackTimer);
+        URL.revokeObjectURL(url);
+        setIsPrinting(false);
+      };
+
+      pollId = setInterval(() => {
+        if (popup.closed) cleanup();
+      }, 500);
+
+      fallbackTimer = setTimeout(() => {
+        cleanup();
+      }, 60000);
+    } catch (err) {
+      console.error('Print failed', err);
+      alert('Errore durante la stampa.');
+      setIsPrinting(false);
+    }
+  }, [order, isPrinting, initialParams, lang, t]);
 
   if (!params) {
     return (
       <div className="rounded-2xl border border-gray-200 bg-white p-6 text-sm text-red-600">
-        Missing query parameters. Please provide <code>cause</code>, <code>doc_year</code>, and <code>doc_number</code>.
+        {t('order-detail-missing-params')}
       </div>
     );
   }
@@ -75,7 +187,7 @@ export default function OrderDetailClient({ lang, initialParams }: Props) {
   if (isLoading) {
     return (
       <div className="rounded-2xl border border-gray-200 bg-white p-6 text-sm text-gray-500">
-        Loading order details…
+        {t('order-detail-loading')}
       </div>
     );
   }
@@ -83,7 +195,7 @@ export default function OrderDetailClient({ lang, initialParams }: Props) {
   if (isError) {
     return (
       <div className="rounded-2xl border border-gray-200 bg-white p-6 text-sm text-red-600">
-        {(error as Error)?.message || 'Failed to load order details.'}
+        {(error as Error)?.message || t('order-detail-error')}
       </div>
     );
   }
@@ -91,102 +203,98 @@ export default function OrderDetailClient({ lang, initialParams }: Props) {
   if (!order) {
     return (
       <div className="rounded-2xl border border-gray-200 bg-white p-6 text-sm text-gray-500">
-        No order found.
+        {t('order-detail-not-found')}
       </div>
     );
   }
 
   const status = getStatusFromOrder(order);
-  const totalItems =
-    (order as any).items?.reduce((acc: number, it: any) => acc + Number(it.quantity ?? 0), 0) ?? 0;
+
+  const statusLabel =
+    status === 'completed'
+      ? t('order-status-completed')
+      : status === 'out-for-delivery'
+        ? t('order-status-out-for-delivery')
+        : status === 'at-local-facility'
+          ? t('order-status-at-local-facility')
+          : status === 'processing'
+            ? t('order-status-processing')
+            : t('order-status-pending');
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
       {/* Header badges */}
       <div className="flex flex-col gap-3 border-b px-6 py-4 md:flex-row md:items-center md:justify-between">
         <div className="text-sm text-gray-600">
-          <span className="font-semibold text-gray-900">Order Status:&nbsp;</span>
+          <span className="font-semibold text-gray-900">
+            {t('order-detail-status')}:&nbsp;
+          </span>
           <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200">
-            {status === 'completed' ? 'Order Completed' :
-             status === 'out-for-delivery' ? 'Out For Delivery' :
-             status === 'at-local-facility' ? 'At Local Facility' :
-             status === 'processing' ? 'Order Processing' :
-             'Order Pending'}
+            {statusLabel}
           </span>
         </div>
-
-        <div className="text-sm text-gray-600">
-          <span className="font-semibold text-gray-900">Payment Status:&nbsp;</span>
-          <span className="inline-flex items-center rounded-full bg-teal-50 px-2.5 py-1 text-xs font-semibold text-teal-700 ring-1 ring-inset ring-teal-200">
-            {/* replace when you have a real field */}
-            Cash On Delivery
-          </span>
-        </div>
+        <button
+          onClick={handlePrint}
+          disabled={isPrinting}
+          className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <svg
+            className="h-4 w-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
+            />
+          </svg>
+          {isPrinting ? t('order-printing') : t('order-print')}
+        </button>
       </div>
 
       {/* Stat cards */}
-      <div className="grid gap-4 border-b px-6 py-4 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Order Number" value={(order as any).tracking_number ?? (order as any).number ?? '—'} />
-        <StatCard label="Date" value={toDisplayDate((order as any).created_at)} />
-        <StatCard label="Total" value={`$${money((order as any).total).toFixed(2)}`} />
-        <StatCard label="Payment Method" value={(order as any).payment_method ?? 'CASH_ON_DELIVERY'} />
+      <div className="grid gap-4 border-b px-6 py-4 md:grid-cols-3">
+        <StatCard
+          label={t('order-detail-number')}
+          value={`${initialParams.cause}/${initialParams.doc_number}/${initialParams.doc_year}`}
+        />
+        <StatCard
+          label={t('order-detail-date')}
+          value={toDisplayDate((order as any).created_at, lang)}
+        />
+        <StatCard
+          label={t('orders-total')}
+          value={`€${money((order as any).total).toFixed(2)}`}
+        />
       </div>
 
-      {/* Progress */}
-      <div className="px-2 pt-2 md:px-6">
-        <OrderProgress status={status} />
-      </div>
-
-      {/* Two columns: totals + order info */}
-      <div className="grid gap-6 px-6 pb-6 md:grid-cols-2">
-        <div className="rounded-xl border border-gray-200">
-          <div className="border-b px-5 py-3">
-            <h3 className="text-sm font-semibold text-gray-900">Total Amount</h3>
-          </div>
-          <div className="px-5 py-4">
-            <InfoRow label="Sub Total" value={`$${money((order as any).sub_total).toFixed(2)}`} />
-            <InfoRow label="Shipping Charge" value={`$${money((order as any).delivery_fee).toFixed(2)}`} />
-            <InfoRow label="Tax" value={`$${money((order as any).tax).toFixed(2)}`} />
-            <InfoRow label="Discount" value={`$${money((order as any).discount).toFixed(2)}`} />
-            <div className="mt-3 border-t pt-3">
-              <InfoRow label="Total" value={`$${money((order as any).total).toFixed(2)}`} bold />
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-gray-200">
-          <div className="border-b px-5 py-3">
-            <h3 className="text-sm font-semibold text-gray-900">Order Details</h3>
-          </div>
-          <div className="grid gap-6 px-5 py-4 lg:grid-cols-2">
-            <div className="space-y-2">
-              <MiniLine label="Name" value={(order as any).customer_name ?? 'Customer'} />
-              <MiniLine label="Total Item" value={`${totalItems} items`} />
-              <MiniLine label="Delivery Time" value={(order as any).delivery_time ?? 'Express Delivery'} />
-            </div>
-            <div className="space-y-4">
-              <div>
-                <p className="mb-1 text-xs font-semibold text-gray-900">Shipping Address</p>
-                <AddressCard title="" a={(order as any).shipping_address} />
-              </div>
-              <div>
-                <p className="mb-1 text-xs font-semibold text-gray-900">Billing Address</p>
-                <AddressCard title="" a={(order as any).billing_address} />
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* Shipping Address */}
+      <div className="px-6 py-6">
+        <AddressCard
+          title={t('orders-shipping-address')}
+          a={(order as any).shipping_address}
+        />
       </div>
 
       {/* Items table with internal scroll */}
       <div className="px-6 pb-6">
-        <OrderItemsTable items={(order as any).items ?? []} height={360} />
+        <OrderItemsTable
+          items={(order as any).items ?? []}
+          height={360}
+          lang={lang}
+        />
       </div>
 
-      {/* Back link (optional) */}
+      {/* Back link */}
       <div className="border-t px-6 py-4">
-        <Link href={`/${lang}/account/orders`} className="text-sm text-teal-600 hover:underline">
-          ← Back to orders
+        <Link
+          href={`/${lang}/account/orders`}
+          className="text-sm text-teal-600 hover:underline"
+        >
+          ← {t('order-detail-back')}
         </Link>
       </div>
     </div>
@@ -200,24 +308,6 @@ function StatCard({ label, value }: { label: string; value: string }) {
     <div className="rounded-xl border border-gray-200 px-4 py-3">
       <p className="mb-1 text-xs font-semibold text-gray-500">{label}</p>
       <p className="truncate text-sm font-semibold text-gray-900">{value}</p>
-    </div>
-  );
-}
-
-function InfoRow({ label, value, bold = false }: { label: string; value: string; bold?: boolean }) {
-  return (
-    <div className="mb-2 flex items-center justify-between text-sm last:mb-0">
-      <span className="text-gray-600">{label}</span>
-      <span className={bold ? 'font-semibold text-gray-900' : 'text-gray-900'}>{value}</span>
-    </div>
-  );
-}
-
-function MiniLine({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between text-sm">
-      <span className="text-gray-600">{label}</span>
-      <span className="text-gray-900">{value}</span>
     </div>
   );
 }

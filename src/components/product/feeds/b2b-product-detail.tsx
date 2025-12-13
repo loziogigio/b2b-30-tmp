@@ -15,19 +15,27 @@ interface Props {
   showZoneLabels?: boolean;
 }
 
-export default function B2BProductDetail({ sku, lang, blocks = [], showZoneLabels = false }: Props) {
-    const search = {
-        sku:sku
-    }
-;
-
+export default function B2BProductDetail({
+  sku,
+  lang,
+  blocks = [],
+  showZoneLabels = false,
+}: Props) {
+  const search = {
+    sku: sku,
+  };
   return (
     <>
       <Divider />
       <div className="pt-6 lg:pt-7">
         <Container>
           <Breadcrumb lang={lang} />
-          <ProductB2BDetails lang={lang} search={search} blocks={blocks} showZoneLabels={showZoneLabels} />
+          <ProductB2BDetails
+            lang={lang}
+            search={search}
+            blocks={blocks}
+            showZoneLabels={showZoneLabels}
+          />
         </Container>
       </div>
 

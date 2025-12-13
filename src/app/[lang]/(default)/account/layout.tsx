@@ -1,13 +1,18 @@
 // app/[lang]/account/layout.tsx
 'use client';
 
-import { useSelectedLayoutSegments } from 'next/navigation';
+import { useSelectedLayoutSegments, useParams } from 'next/navigation';
 import SidebarMenu from '@components/account/sidebar-menu';
-import WalletPoints from '@components/account/wallet-points';
 
-export default function AccountLayout({ children }: { children: React.ReactNode }) {
+export default function AccountLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   // Segments inside /[lang]/account/*
   const segments = useSelectedLayoutSegments();
+  const params = useParams<{ lang?: string }>();
+  const lang = (params?.lang as string) || 'it';
   const hideSidebar = segments.includes('order-detail');
 
   if (hideSidebar) {
@@ -25,8 +30,7 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
       <div className="mx-auto max-w-[1920px] pt-6 md:px-6 lg:px-8 2xl:px-10">
         <div className="grid items-start gap-6 xl:grid-cols-[20rem_minmax(0,1fr)] 2xl:grid-cols-[20rem_minmax(0,1fr)]">
           <div className="space-y-6">
-            <WalletPoints />
-            <SidebarMenu />
+            <SidebarMenu lang={lang} />
           </div>
           <div>{children}</div>
         </div>

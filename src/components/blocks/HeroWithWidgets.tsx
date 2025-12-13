@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { useState, useEffect, useMemo } from "react";
-import { Swiper, SwiperSlide } from "swiper/react";
-import { Autoplay, Pagination, Navigation } from "swiper/modules";
-import "swiper/css";
-import "swiper/css/pagination";
-import "swiper/css/navigation";
+import { useState, useEffect, useMemo } from 'react';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Autoplay, Pagination, Navigation } from 'swiper/modules';
+import 'swiper/css';
+import 'swiper/css/pagination';
+import 'swiper/css/navigation';
 
 interface HeroSlide {
   id: string;
@@ -57,7 +57,10 @@ function ClockWidget({
   weatherLocation?: string;
 }) {
   const [time, setTime] = useState(new Date());
-  const [weather, setWeather] = useState({ temp: "22", condition: "Partly cloudy" });
+  const [weather, setWeather] = useState({
+    temp: '22',
+    condition: 'Partly cloudy',
+  });
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -67,12 +70,12 @@ function ClockWidget({
     return () => clearInterval(timer);
   }, []);
 
-  const hours = time.getHours().toString().padStart(2, "0");
-  const minutes = time.getMinutes().toString().padStart(2, "0");
-  const date = time.toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
+  const hours = time.getHours().toString().padStart(2, '0');
+  const minutes = time.getMinutes().toString().padStart(2, '0');
+  const date = time.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
   });
 
   return (
@@ -111,13 +114,13 @@ function CalendarWidget({ highlightToday }: { highlightToday?: boolean }) {
   const month = currentDate.getMonth();
   const today = currentDate.getDate();
 
-  const monthName = currentDate.toLocaleDateString("en-US", { month: "long" });
+  const monthName = currentDate.toLocaleDateString('en-US', { month: 'long' });
 
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
   const days = [];
-  const weekDays = ["S", "M", "T", "W", "T", "F", "S"];
+  const weekDays = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
   // Empty cells for days before the month starts
   for (let i = 0; i < firstDay; i++) {
@@ -152,10 +155,10 @@ function CalendarWidget({ highlightToday }: { highlightToday?: boolean }) {
             key={index}
             className={`flex h-8 items-center justify-center rounded text-xs font-medium ${
               day === null
-                ? "text-transparent"
+                ? 'text-transparent'
                 : highlightToday && day === today
-                  ? "bg-red-500 text-white"
-                  : "text-gray-700 hover:bg-gray-100"
+                  ? 'bg-red-500 text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
             }`}
           >
             {day}
@@ -176,18 +179,18 @@ export function HeroWithWidgets({ config }: HeroWithWidgetsProps) {
     showArrows = true,
     widgets = {},
     layout = {},
-    className = "",
+    className = '',
   } = config;
 
-  const carouselWidth = layout.carouselWidth || "80%";
-  const widgetsWidth = layout.widgetsWidth || "20%";
+  const carouselWidth = layout.carouselWidth || '80%';
+  const widgetsWidth = layout.widgetsWidth || '20%';
 
   const clockEnabled = widgets.clock?.enabled ?? true;
   const calendarEnabled = widgets.calendar?.enabled ?? true;
 
   const navigationId = useMemo(
     () => Math.random().toString(36).slice(2, 10),
-    []
+    [],
   );
   const prevButtonId = `hero-widgets-prev-${navigationId}`;
   const nextButtonId = `hero-widgets-next-${navigationId}`;
@@ -204,12 +207,19 @@ export function HeroWithWidgets({ config }: HeroWithWidgetsProps) {
     <div className={`relative ${className}`}>
       <div className="flex gap-4">
         {/* Carousel Section - 80% */}
-        <div style={{ width: carouselWidth }} className="hero-carousel-container relative">
+        <div
+          style={{ width: carouselWidth }}
+          className="hero-carousel-container relative"
+        >
           <Swiper
             modules={[Autoplay, Pagination, Navigation]}
             spaceBetween={0}
             slidesPerView={1}
-            autoplay={autoplay ? { delay: autoplaySpeed, disableOnInteraction: false } : false}
+            autoplay={
+              autoplay
+                ? { delay: autoplaySpeed, disableOnInteraction: false }
+                : false
+            }
             loop={loop}
             pagination={showDots ? { clickable: true } : false}
             navigation={
@@ -228,13 +238,17 @@ export function HeroWithWidgets({ config }: HeroWithWidgetsProps) {
                   {/* Desktop Image */}
                   <img
                     src={slide.imageDesktop.url}
-                    alt={slide.imageDesktop.alt || "Hero slide"}
+                    alt={slide.imageDesktop.alt || 'Hero slide'}
                     className="hidden h-full w-full object-cover md:block"
                   />
                   {/* Mobile Image */}
                   <img
                     src={slide.imageMobile.url || slide.imageDesktop.url}
-                    alt={slide.imageMobile.alt || slide.imageDesktop.alt || "Hero slide"}
+                    alt={
+                      slide.imageMobile.alt ||
+                      slide.imageDesktop.alt ||
+                      'Hero slide'
+                    }
                     className="block h-full w-full object-cover md:hidden"
                   />
                 </div>
@@ -245,8 +259,12 @@ export function HeroWithWidgets({ config }: HeroWithWidgetsProps) {
                   {slide.link?.url ? (
                     <a
                       href={slide.link.url}
-                      target={slide.link.openInNewTab ? "_blank" : "_self"}
-                      rel={slide.link.openInNewTab ? "noopener noreferrer" : undefined}
+                      target={slide.link.openInNewTab ? '_blank' : '_self'}
+                      rel={
+                        slide.link.openInNewTab
+                          ? 'noopener noreferrer'
+                          : undefined
+                      }
                       className="block"
                     >
                       {slideContent}
@@ -277,7 +295,10 @@ export function HeroWithWidgets({ config }: HeroWithWidgetsProps) {
         </div>
 
         {/* Widgets Section - 20% */}
-        <div style={{ width: widgetsWidth }} className="hidden space-y-4 lg:block">
+        <div
+          style={{ width: widgetsWidth }}
+          className="hidden space-y-4 lg:block"
+        >
           {/* Clock Widget */}
           {clockEnabled && (
             <div className="h-[50%]">
@@ -292,7 +313,9 @@ export function HeroWithWidgets({ config }: HeroWithWidgetsProps) {
           {/* Calendar Widget */}
           {calendarEnabled && (
             <div className="h-[50%]">
-              <CalendarWidget highlightToday={widgets.calendar?.highlightToday} />
+              <CalendarWidget
+                highlightToday={widgets.calendar?.highlightToday}
+              />
             </div>
           )}
         </div>

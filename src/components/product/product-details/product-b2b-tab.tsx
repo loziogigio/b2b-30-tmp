@@ -3,6 +3,7 @@
 
 import * as React from 'react';
 import { Tab, TabGroup, TabList, TabPanel, TabPanels } from '@headlessui/react';
+import { sanitizeHtml } from '@/lib/sanitize-html';
 import type { Product } from '@framework/types';
 import type { PageBlock } from '@/lib/types/blocks';
 import { BlockRenderer } from '@/components/blocks/BlockRenderer';
@@ -12,7 +13,9 @@ function classNames(...classes: any[]) {
 }
 
 // Normalize PIM attributes format: { "codice-prodotto": { label, value, order } } -> [{label, value}]
-function normalizeAttributes(raw: any): { label: string; value: string; order?: number }[] {
+function normalizeAttributes(
+  raw: any,
+): { label: string; value: string; order?: number }[] {
   if (!raw || typeof raw !== 'object') return [];
   const out: { label: string; value: string; order?: number }[] = [];
 
@@ -71,7 +74,13 @@ function normalizeFeatures(raw: any): { label: string; value: string }[] {
 
 /* ----------------- Documents helpers ----------------- */
 
-type DocItem = { url: string; area?: string; filename?: string; ext?: string; label?: string };
+type DocItem = {
+  url: string;
+  area?: string;
+  filename?: string;
+  ext?: string;
+  label?: string;
+};
 
 // map media_area_id -> label (Italian-friendly)
 const DOC_LABEL: Record<string, string> = {
@@ -98,8 +107,8 @@ function normalizeDocType(area?: string) {
 function extractMediaDocs(media?: any[]): DocItem[] {
   if (!Array.isArray(media)) return [];
   return media
-    .filter(m => m.type === 'document')
-    .map(m => ({
+    .filter((m) => m.type === 'document')
+    .map((m) => ({
       url: m.url,
       area: 'document',
       filename: m.label || m.url?.split('/').pop() || '',
@@ -135,8 +144,10 @@ export default function ProductB2BDetailsTab({
   zone3Blocks?: PageBlock[];
 }) {
   // Use html_description for the detailed HTML content tab
-  const htmlDesc = (product as any)?.html_description || '';
-  const hasDescription = Boolean(htmlDesc && htmlDesc.trim().length > 0);
+  // Defensive: handle string, object, or any unexpected type from server
+  const rawDesc = (product as any)?.html_description;
+  const htmlDesc = typeof rawDesc === 'string' ? rawDesc : '';
+  const hasDescription = htmlDesc.trim().length > 0;
 
   // Use PIM attributes if available, fallback to legacy features
   const pimAttributes = normalizeAttributes((product as any)?.attributes);
@@ -162,7 +173,7 @@ export default function ProductB2BDetailsTab({
       node: (
         <div
           className="prose prose-sm max-w-none leading-[1.9] text-brand-muted"
-          dangerouslySetInnerHTML={{ __html: htmlDesc }}
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(htmlDesc) }}
         />
       ),
     });
@@ -190,8 +201,6 @@ export default function ProductB2BDetailsTab({
       ),
     });
   }
-
-
 
   if (hasDocs) {
     tabs.push({
@@ -238,7 +247,7 @@ export default function ProductB2BDetailsTab({
                       )}
                     </dd>
                   </React.Fragment>
-                ))
+                )),
               )}
           </dl>
         </div>
@@ -272,7 +281,7 @@ export default function ProductB2BDetailsTab({
                 classNames(
                   'relative inline-block pb-3 text-15px leading-5 text-brand-dark transition-all hover:text-brand ltr:mr-8 rtl:ml-8 lg:pb-5 lg:text-17px',
                   selected &&
-                  'font-semibold after:absolute after:bottom-0 after:h-0.5 after:w-full after:translate-y-[1px] after:bg-brand after:ltr:left-0 after:rtl:right-0'
+                    'font-semibold after:absolute after:bottom-0 after:h-0.5 after:w-full after:translate-y-[1px] after:bg-brand after:ltr:left-0 after:rtl:right-0',
                 )
               }
             >

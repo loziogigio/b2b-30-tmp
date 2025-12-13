@@ -12,7 +12,7 @@ export default function HighlightedBarWrapper() {
   const lang = (params?.lang as string) || 'en';
   const { t } = useTranslation(lang, 'common');
   const [highlightedBar, setHighlightedBar] = useSessionStorage(
-    'borobazar-highlightedBar',
+    'vinc-b2b-highlightedBar',
     'false',
   );
 

@@ -71,11 +71,17 @@ const EP = API_ENDPOINTS_B2B.REMINDERS;
 
 // Global user identifier required by Reminders API
 // Include project code from env (prefers NEXT_PUBLIC_, falls back to NEXT_PROJECT_CODE)
-const PROJECT_CODE = (process.env.NEXT_PUBLIC_PROJECT_CODE || process.env.NEXT_PROJECT_CODE || 'APP') as string;
-const getUserId = () => `${PROJECT_CODE}-${ERP_STATIC.customer_code}-${ERP_STATIC.address_code}`;
+const PROJECT_CODE = (process.env.NEXT_PUBLIC_PROJECT_CODE ||
+  process.env.NEXT_PROJECT_CODE ||
+  'APP') as string;
+const getUserId = () =>
+  `${PROJECT_CODE}-${ERP_STATIC.customer_code}-${ERP_STATIC.address_code}`;
 
 // Core reminder operations
-export async function addReminder(sku: string, email?: string): Promise<{ success?: boolean } | void> {
+export async function addReminder(
+  sku: string,
+  email?: string,
+): Promise<{ success?: boolean } | void> {
   return post(EP.ROOT, {
     user_id: getUserId(),
     sku,
@@ -84,12 +90,17 @@ export async function addReminder(sku: string, email?: string): Promise<{ succes
   });
 }
 
-export async function removeReminder(sku: string): Promise<{ success?: boolean; message?: string } | void> {
+export async function removeReminder(
+  sku: string,
+): Promise<{ success?: boolean; message?: string } | void> {
   // Send body with DELETE via axios config
   return del(EP.ROOT, undefined, { data: { user_id: getUserId(), sku } });
 }
 
-export async function toggleReminder(sku: string, email?: string): Promise<ReminderToggleResponse> {
+export async function toggleReminder(
+  sku: string,
+  email?: string,
+): Promise<ReminderToggleResponse> {
   return post<ReminderToggleResponse>(EP.TOGGLE, {
     user_id: getUserId(),
     sku,
@@ -99,18 +110,20 @@ export async function toggleReminder(sku: string, email?: string): Promise<Remin
 }
 
 // Status endpoints
-export async function getReminderStatus(sku: string, userId: string = getUserId()): Promise<ReminderStatusResponse> {
+export async function getReminderStatus(
+  sku: string,
+  userId: string = getUserId(),
+): Promise<ReminderStatusResponse> {
   return get<ReminderStatusResponse>(EP.STATUS(userId, sku));
 }
 
 export async function getBulkReminderStatus(
   skus: string[],
-  userId: string = getUserId()
+  userId: string = getUserId(),
 ): Promise<ReminderStatusResponse[]> {
-  const response = await post<BulkReminderStatusResponse | ReminderStatusResponse[]>(
-    EP.BULK_STATUS,
-    { user_id: userId, skus }
-  );
+  const response = await post<
+    BulkReminderStatusResponse | ReminderStatusResponse[]
+  >(EP.BULK_STATUS, { user_id: userId, skus });
 
   if (Array.isArray(response)) {
     return response;
@@ -133,7 +146,7 @@ export async function getUserReminders(
   page = 1,
   pageSize = 20,
   userId: string = getUserId(),
-  statusFilter?: 'active' | 'notified' | 'expired' | 'cancelled'
+  statusFilter?: 'active' | 'notified' | 'expired' | 'cancelled',
 ): Promise<UserRemindersResponse> {
   const params: any = { page: String(page), page_size: String(pageSize) };
   if (statusFilter) {
@@ -143,20 +156,33 @@ export async function getUserReminders(
   return get<UserRemindersResponse>(`${EP.USER(userId)}?${qs}`);
 }
 
-export async function getUserRemindersSummary(userId: string = getUserId()): Promise<UserRemindersSummary> {
+export async function getUserRemindersSummary(
+  userId: string = getUserId(),
+): Promise<UserRemindersSummary> {
   return get<UserRemindersSummary>(EP.USER_SUMMARY(userId));
 }
 
 // Stats
-export async function getProductReminderStats(sku: string): Promise<ReminderStatsResponse> {
+export async function getProductReminderStats(
+  sku: string,
+): Promise<ReminderStatsResponse> {
   return get<ReminderStatsResponse>(EP.STATS(sku));
 }
 
 // Utilities
-export async function clearAllUserReminders(userId: string = getUserId()): Promise<{ success?: boolean; message?: string; deleted_count?: number } | void> {
+export async function clearAllUserReminders(
+  userId: string = getUserId(),
+): Promise<{
+  success?: boolean;
+  message?: string;
+  deleted_count?: number;
+} | void> {
   return del(EP.CLEAR_ALL(userId));
 }
 
-export async function remindersHealthCheck(): Promise<{ status: string; service: string }> {
+export async function remindersHealthCheck(): Promise<{
+  status: string;
+  service: string;
+}> {
   return get(EP.HEALTH);
 }

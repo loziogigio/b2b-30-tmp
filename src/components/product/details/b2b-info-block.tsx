@@ -46,8 +46,17 @@ export default function B2BInfoBlock({ product, priceData, lang }: Props) {
   const earliest = arrivals
     .map((a) => ({
       ...a,
-      _chosen: a.expected_date ?? a.confirmed_date ?? a.DataArrivoPrevista ?? a.DataArrivoConfermata,
-      _ts: parseDate(a.expected_date ?? a.confirmed_date ?? a.DataArrivoPrevista ?? a.DataArrivoConfermata),
+      _chosen:
+        a.expected_date ??
+        a.confirmed_date ??
+        a.DataArrivoPrevista ??
+        a.DataArrivoConfermata,
+      _ts: parseDate(
+        a.expected_date ??
+          a.confirmed_date ??
+          a.DataArrivoPrevista ??
+          a.DataArrivoConfermata,
+      ),
     }))
     .filter((a) => Number.isFinite(a._ts))
     .sort((a, b) => a._ts - b._ts)[0];
@@ -57,7 +66,8 @@ export default function B2BInfoBlock({ product, priceData, lang }: Props) {
 
   const model = product?.model ?? '—';
   const codiceProdotto = product?.sku ?? product?.id ?? '—';
-  const codiceFigura = (product as any)?.figure_code ?? (product as any)?.fig_code ?? 'F84240';
+  const codiceFigura =
+    (product as any)?.figure_code ?? (product as any)?.fig_code ?? 'F84240';
 
   const availability = Number(priceData?.availability ?? 0);
   const buyDid = Boolean(priceData?.buy_did);
@@ -65,7 +75,11 @@ export default function B2BInfoBlock({ product, priceData, lang }: Props) {
 
   const stato =
     priceData?.product_label_action?.LABEL ??
-    (availability > 0 ? 'DISPONIBILE' : earliestDateDmy ? 'IN ARRIVO' : 'NON DISPONIBILE');
+    (availability > 0
+      ? 'DISPONIBILE'
+      : earliestDateDmy
+        ? 'IN ARRIVO'
+        : 'NON DISPONIBILE');
 
   const brandImg = product?.brand?.image?.original || product?.brand?.logo_url;
   const brandName = product?.brand?.name || product?.brand?.label || 'Brand';
@@ -97,13 +111,15 @@ export default function B2BInfoBlock({ product, priceData, lang }: Props) {
               {stato}
             </dd>
 
-            { availability > 0 && priceData && (
+            {availability > 0 && priceData && (
               <>
                 <dt className="text-gray-500">Disponiblita:</dt>
-                <dd className="text-gray-700">{formatAvailability(
-                  availability,
-                  priceData.packaging_option_default?.packaging_uom
-                )}</dd>
+                <dd className="text-gray-700">
+                  {formatAvailability(
+                    availability,
+                    priceData.packaging_option_default?.packaging_uom,
+                  )}
+                </dd>
               </>
             )}
 
@@ -118,7 +134,11 @@ export default function B2BInfoBlock({ product, priceData, lang }: Props) {
                 <dt className="text-gray-500">Arrivo Previsto:</dt>
                 <dd className="font-semibold text-green-600">
                   {earliestDateDmy ?? '—'}
-                  {earliestWeek ? <span className="ml-1 text-gray-700">(Settimana {earliestWeek})</span> : null}
+                  {earliestWeek ? (
+                    <span className="ml-1 text-gray-700">
+                      (Settimana {earliestWeek})
+                    </span>
+                  ) : null}
                 </dd>
               </>
             )}
@@ -128,10 +148,14 @@ export default function B2BInfoBlock({ product, priceData, lang }: Props) {
         <div className="col-span-1 flex justify-end">
           {brandImg ? (
             <Link
-              href={`/${lang}/search?filters-id_brand=${product?.brand?.id || product?.brand?.brand_id || ''}`}
+              href={`/${lang}/search?filters-brand_id=${product?.brand?.id || product?.brand?.brand_id || ''}`}
               className="flex justify-start sm:justify-end"
             >
-              <img src={brandImg} alt={brandName} className="h-16 w-auto max-w-[120px] object-contain" />
+              <img
+                src={brandImg}
+                alt={brandName}
+                className="h-16 w-auto max-w-[120px] object-contain"
+              />
             </Link>
           ) : (
             <div className="h-10 sm:h-12 w-24 rounded bg-gray-100" />
@@ -141,4 +165,3 @@ export default function B2BInfoBlock({ product, priceData, lang }: Props) {
     </div>
   );
 }
-

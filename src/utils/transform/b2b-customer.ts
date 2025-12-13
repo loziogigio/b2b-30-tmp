@@ -1,5 +1,8 @@
 // @utils/transform/b2b-customer.ts
-import type { RawCustomerResponse, CustomerProfile } from '@framework/acccount/types-b2b-account';
+import type {
+  RawCustomerResponse,
+  CustomerProfile,
+} from '@framework/acccount/types-b2b-account';
 
 const clean = (v?: string | null) =>
   typeof v === 'string' ? v.trim() || undefined : undefined;

@@ -17,12 +17,32 @@ const CheckoutDetails: React.FC<{ lang: string }> = ({ lang }) => {
   const [bindIndex, setBindIndex] = useState(0);
 
   const data = [
-    { id: 1, title: 'text-delivery-address', component: <Address lang={lang} /> },
-    { id: 2, title: 'text-delivery-schedule', component: <DeliverySchedule lang={lang} /> },
+    {
+      id: 1,
+      title: 'text-delivery-address',
+      component: <Address lang={lang} />,
+    },
+    {
+      id: 2,
+      title: 'text-delivery-schedule',
+      component: <DeliverySchedule lang={lang} />,
+    },
     { id: 3, title: 'text-contact-number', component: <Contact lang={lang} /> },
-    { id: 4, title: 'text-payment-option', component: <StripeCheckoutInlineForm lang={lang} /> },
-    { id: 5, title: 'text-delivery-instructions', component: <DeliveryNotes lang={lang} /> },
-    { id: 6, title: 'text-delivery-tip', component: <DeliveryTips lang={lang} /> },
+    {
+      id: 4,
+      title: 'text-payment-option',
+      component: <StripeCheckoutInlineForm lang={lang} />,
+    },
+    {
+      id: 5,
+      title: 'text-delivery-instructions',
+      component: <DeliveryNotes lang={lang} />,
+    },
+    {
+      id: 6,
+      title: 'text-delivery-tip',
+      component: <DeliveryTips lang={lang} />,
+    },
   ];
 
   const changeItem = (i: number) => i !== bindIndex && setBindIndex(i);
@@ -56,10 +76,7 @@ const CheckoutDetails: React.FC<{ lang: string }> = ({ lang }) => {
               </button>
 
               {/* content */}
-              <div
-                id={`sec_${index}`}
-                className={isOpen ? 'block' : 'hidden'}
-              >
+              <div id={`sec_${index}`} className={isOpen ? 'block' : 'hidden'}>
                 <div className="px-5 pb-5 pt-4 sm:px-9 sm:pb-6 sm:pt-5 lg:px-20">
                   <div className="mb-6">{item.component}</div>
 

@@ -56,11 +56,10 @@ const Search = forwardRef<HTMLDivElement, Props>(
       setInputFocus(true);
     }
     function disableInputFocus() {
-      setInputFocus(false);          // ✅ hides overlay
-      closeMobileSearch();           // ✅ closes mobile overlay if open
-      closeSearch();                 // ✅ closes desktop overlay if open
+      setInputFocus(false); // ✅ hides overlay
+      closeMobileSearch(); // ✅ closes mobile overlay if open
+      closeSearch(); // ✅ closes desktop overlay if open
     }
-    
 
     return (
       <div

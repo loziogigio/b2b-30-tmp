@@ -1,5 +1,7 @@
-import { Exposition, RawExposition } from "@framework/acccount/types-b2b-account";
-
+import {
+  Exposition,
+  RawExposition,
+} from '@framework/acccount/types-b2b-account';
 
 export function transformExposition(raw: RawExposition): Exposition {
   return {

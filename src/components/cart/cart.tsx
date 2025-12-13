@@ -14,10 +14,15 @@ import Heading from '@components/ui/heading';
 import Text from '@components/ui/text';
 import DeleteIcon from '@components/icons/delete-icon';
 import { useTranslation } from 'src/app/i18n/client';
+import dynamic from 'next/dynamic';
+
+const Delivery = dynamic(() => import('@layouts/header/delivery'), {
+  ssr: false,
+});
 
 export default function Cart({ lang }: { lang: string }) {
   const { t } = useTranslation(lang, 'common');
-  const { closeDrawer } = useUI();
+  const { closeDrawer, hidePrices } = useUI();
   const { items, total, isEmpty, resetCart } = useCart();
   const { price: cartTotal } = usePrice({ amount: total, currencyCode: 'EUR' });
 
@@ -30,7 +35,7 @@ export default function Cart({ lang }: { lang: string }) {
             onClick={closeDrawer}
             className={cn(
               'inline-flex items-center gap-2 rounded-md bg-gray-200 px-2.5 py-1',
-              'text-[11px] font-semibold uppercase tracking-wide text-gray-800 hover:bg-gray-300'
+              'text-[11px] font-semibold uppercase tracking-wide text-gray-800 hover:bg-gray-300',
             )}
             aria-label="close"
             title={t('text-close') || 'Chiudi'}
@@ -39,26 +44,33 @@ export default function Cart({ lang }: { lang: string }) {
             <span className="text-xs leading-none">×</span>
           </button>
         </div>
+
+        {/* Delivery address widget */}
+        <div className="py-2 border-b border-border-base mb-2">
+          <Delivery lang={lang} className="text-sm" />
+        </div>
+
         <div className="flex items-center justify-between flex-col">
-          <div className="mb-3 flex justify-between w-full">
-            <Heading className="mb-0.5 text-[13px]">Subtotale:</Heading>
-            <div className="min-w-[80px] text-right text-base font-semibold text-brand-dark md:text-lg">
-              {cartTotal}
+          {!hidePrices && (
+            <div className="mb-3 flex justify-between w-full">
+              <Heading className="mb-0.5 text-[13px]">Subtotale:</Heading>
+              <div className="min-w-[80px] text-right text-base font-semibold text-brand-dark md:text-lg">
+                {cartTotal}
+              </div>
             </div>
-          </div>
+          )}
           <div className="mb-3 w-full items-center justify-center">
             <Link
               href={`/${lang}${ROUTES.CHECKOUT}`}
               onClick={closeDrawer}
               className={cn(
                 'flex w-full items-center justify-center rounded bg-gray-600 px-4 py-2.5',
-                'text-sm font-semibold text-white transition hover:bg-gray-700 md:py-3'              )}
+                'text-sm font-semibold text-white transition hover:bg-gray-700 md:py-3',
+              )}
             >
               VAI AL CARRELLO
             </Link>
-
           </div>
-
         </div>
       </div>
 

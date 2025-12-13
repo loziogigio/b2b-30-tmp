@@ -10,7 +10,7 @@ import type { AddToCartInput } from '@utils/transform/cart';
 
 type Props = {
   lang: string;
-  item: Item;                 // existing cart line
+  item: Item; // existing cart line
   className?: string;
   disabled?: boolean;
 };
@@ -36,7 +36,8 @@ const parseNum = (v: string) => {
 };
 
 export default function UpdateCart({ lang, item, className, disabled }: Props) {
-  const { getItemFromCart, setItemQuantity, addToCartServer } = useCart() as any;
+  const { getItemFromCart, setItemQuantity, addToCartServer } =
+    useCart() as any;
 
   // Always use the freshest version from context
   const live = getItemFromCart(item.id) ?? item;
@@ -44,26 +45,30 @@ export default function UpdateCart({ lang, item, className, disabled }: Props) {
 
   // --- derive step & multiple from packaging_options_all on the cart item ---
   const options = (live as any)?.packaging_options_all as
-    | Array<{ packaging_is_default?: boolean; packaging_is_smallest?: boolean; qty_x_packaging?: number | string }>
+    | Array<{
+        packaging_is_default?: boolean;
+        packaging_is_smallest?: boolean;
+        qty_x_packaging?: number | string;
+      }>
     | undefined;
 
   const def =
-    options?.find(o => o?.packaging_is_default) ??
+    options?.find((o) => o?.packaging_is_default) ??
     (live as any)?.__cartMeta?.packaging_default;
 
   const sml =
-    options?.find(o => o?.packaging_is_smallest) ??
+    options?.find((o) => o?.packaging_is_smallest) ??
     (live as any)?.__cartMeta?.packaging_smallest;
 
-  const stepQty = Number(def?.qty_x_packaging ?? 1) || 1;          // increment size
+  const stepQty = Number(def?.qty_x_packaging ?? 1) || 1; // increment size
   const multipleQty = Number(sml?.qty_x_packaging ?? stepQty) || 1; // snapping multiple
 
   const { toUnits, fromUnits } = makeScaler(stepQty, multipleQty);
 
   // promo identity for sameLine() on server
   const promo_code = (live as any)?.promo_code ?? 0;
-  const promo_row  = (live as any)?.promo_row  ?? 0;
-  const isPromo    = Boolean(promo_code && String(promo_code) !== '0');
+  const promo_row = (live as any)?.promo_row ?? 0;
+  const isPromo = Boolean(promo_code && String(promo_code) !== '0');
 
   // counter state (controlled string)
   const [draft, setDraft] = React.useState<string>(String(qty || 0));

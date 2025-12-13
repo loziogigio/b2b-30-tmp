@@ -9,7 +9,13 @@ import {
   clearAllUserReminders as apiClearAllUserReminders,
 } from '@framework/reminders';
 import { API_ENDPOINTS_B2B } from '@framework/utils/api-endpoints-b2b';
-import { remindersReducer, initialState, State as RemindersState, ReminderItem, RemindersSummary } from './reminders.reducer';
+import {
+  remindersReducer,
+  initialState,
+  State as RemindersState,
+  ReminderItem,
+  RemindersSummary,
+} from './reminders.reducer';
 
 type ToggleResult = {
   sku: string;
@@ -43,39 +49,59 @@ type BulkStatusResponse = {
 const FALLBACK_REMINDERS_ENDPOINTS = {
   ROOT: '/api/reminders',
   TOGGLE: '/api/reminders/toggle',
-  STATUS: (userId: string, sku: string) => `/api/reminders/status/${userId}/${sku}`,
+  STATUS: (userId: string, sku: string) =>
+    `/api/reminders/status/${userId}/${sku}`,
   BULK_STATUS: '/api/reminders/status/bulk',
   USER: (userId: string) => `/api/reminders/user/${userId}`,
   USER_SUMMARY: (userId: string) => `/api/reminders/user/${userId}/summary`,
   CLEAR_ALL: (userId: string) => `/api/reminders/user/${userId}/all`,
 };
 
-const EP = (API_ENDPOINTS_B2B?.REMINDERS as any) ?? FALLBACK_REMINDERS_ENDPOINTS;
+const EP =
+  (API_ENDPOINTS_B2B?.REMINDERS as any) ?? FALLBACK_REMINDERS_ENDPOINTS;
 
 export interface RemindersProviderState extends RemindersState {
   hasReminder: (sku: string) => boolean;
-  add: (sku: string, createdAt?: string | null, expiresAt?: string | null) => Promise<void>;
+  add: (
+    sku: string,
+    createdAt?: string | null,
+    expiresAt?: string | null,
+  ) => Promise<void>;
   remove: (sku: string) => Promise<void>;
   toggle: (sku: string) => Promise<void>;
-  hydrateFromServer: (items: ReminderItem[], summary?: RemindersSummary | null, mode?: 'replace' | 'merge') => void;
-  loadUserReminders: (page?: number, pageSize?: number, mode?: 'replace' | 'merge') => Promise<void>;
+  hydrateFromServer: (
+    items: ReminderItem[],
+    summary?: RemindersSummary | null,
+    mode?: 'replace' | 'merge',
+  ) => void;
+  loadUserReminders: (
+    page?: number,
+    pageSize?: number,
+    mode?: 'replace' | 'merge',
+  ) => Promise<void>;
   loadBulkStatus: (skus: string[]) => Promise<Record<string, boolean>>;
   clearAll: () => Promise<void>;
   setSummary: (summary: RemindersSummary | null) => void;
 }
 
-export const RemindersContext = React.createContext<RemindersProviderState | undefined>(undefined);
+export const RemindersContext = React.createContext<
+  RemindersProviderState | undefined
+>(undefined);
 RemindersContext.displayName = 'RemindersContext';
 
 export function useReminders() {
   const ctx = React.useContext(RemindersContext);
-  if (!ctx) throw new Error('useReminders must be used within a RemindersProvider');
+  if (!ctx)
+    throw new Error('useReminders must be used within a RemindersProvider');
   return ctx;
 }
 
 export function RemindersProvider(props: React.PropsWithChildren) {
   // LocalStorage persistence (do not seed SSR)
-  const [saved, save] = useLocalStorage('hidros-app-reminders', JSON.stringify(initialState));
+  const [saved, save] = useLocalStorage(
+    'hidros-app-reminders',
+    JSON.stringify(initialState),
+  );
   const [state, dispatch] = React.useReducer(remindersReducer, initialState);
 
   // Bootstrap after mount
@@ -86,7 +112,11 @@ export function RemindersProvider(props: React.PropsWithChildren) {
     try {
       const snapshot: RemindersState | undefined = JSON.parse(saved ?? '');
       if (snapshot?.items?.length) {
-        dispatch({ type: 'HYDRATE_REPLACE', items: snapshot.items, summary: snapshot.summary ?? null });
+        dispatch({
+          type: 'HYDRATE_REPLACE',
+          items: snapshot.items,
+          summary: snapshot.summary ?? null,
+        });
       }
     } catch {
       // ignore bad LS
@@ -103,17 +133,24 @@ export function RemindersProvider(props: React.PropsWithChildren) {
   }, [state, save]);
 
   // ----- Helpers
-  const hasReminder = React.useCallback((sku: string) => state.index[sku] != null, [state.index]);
+  const hasReminder = React.useCallback(
+    (sku: string) => state.index[sku] != null,
+    [state.index],
+  );
 
   const hydrateFromServer = React.useCallback(
-    (items: ReminderItem[], summary?: RemindersSummary | null, mode: 'replace' | 'merge' = 'replace') => {
+    (
+      items: ReminderItem[],
+      summary?: RemindersSummary | null,
+      mode: 'replace' | 'merge' = 'replace',
+    ) => {
       if (mode === 'replace') {
         dispatch({ type: 'HYDRATE_REPLACE', items, summary: summary ?? null });
       } else {
         dispatch({ type: 'HYDRATE_MERGE', items, summary: summary ?? null });
       }
     },
-    []
+    [],
   );
 
   const setSummary = React.useCallback((summary: RemindersSummary | null) => {
@@ -123,7 +160,12 @@ export function RemindersProvider(props: React.PropsWithChildren) {
   // ----- Server calls (using your httpB2B wrappers)
   const loadUserReminders = React.useCallback(
     async (page = 1, pageSize = 50, mode: 'replace' | 'merge' = 'replace') => {
-      const res = await apiGetUserReminders(page, pageSize, undefined, 'active');
+      const res = await apiGetUserReminders(
+        page,
+        pageSize,
+        undefined,
+        'active',
+      );
       const items: ReminderItem[] =
         (res?.reminders ?? []).map((r) => ({
           sku: r.sku,
@@ -138,7 +180,7 @@ export function RemindersProvider(props: React.PropsWithChildren) {
       };
       hydrateFromServer(items, summary, mode);
     },
-    [hydrateFromServer]
+    [hydrateFromServer],
   );
 
   // On first mount, refresh reminders from server to keep cache up to date
@@ -189,7 +231,8 @@ export function RemindersProvider(props: React.PropsWithChildren) {
             const updated: ReminderItem = {
               sku,
               isActive: true,
-              createdAt: status.reminder_created_at ?? current?.createdAt ?? null,
+              createdAt:
+                status.reminder_created_at ?? current?.createdAt ?? null,
               expiresAt: current?.expiresAt ?? null,
             };
             nextItemsMap.set(sku, updated);
@@ -215,7 +258,7 @@ export function RemindersProvider(props: React.PropsWithChildren) {
         return {};
       }
     },
-    [state.items, state.summary]
+    [state.items, state.summary],
   );
 
   const toggle = React.useCallback(
@@ -224,7 +267,9 @@ export function RemindersProvider(props: React.PropsWithChildren) {
       const active = result.has_active_reminder;
       const now = new Date().toISOString();
       // Expiration = 30 days from now
-      const expiresAt = active ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() : null;
+      const expiresAt = active
+        ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+        : null;
 
       dispatch({
         type: 'REMINDER_TOGGLE',
@@ -236,24 +281,39 @@ export function RemindersProvider(props: React.PropsWithChildren) {
 
       // Optionally refresh server summary count
       setSummary({
-        totalCount: active ? (state.summary?.totalCount ?? 0) + 1 : Math.max(0, (state.summary?.totalCount ?? 1) - 1),
-        activeCount: active ? (state.summary?.activeCount ?? 0) + 1 : Math.max(0, (state.summary?.activeCount ?? 1) - 1),
+        totalCount: active
+          ? (state.summary?.totalCount ?? 0) + 1
+          : Math.max(0, (state.summary?.totalCount ?? 1) - 1),
+        activeCount: active
+          ? (state.summary?.activeCount ?? 0) + 1
+          : Math.max(0, (state.summary?.activeCount ?? 1) - 1),
         updatedAt: now,
       });
     },
-    [setSummary, state.summary]
+    [setSummary, state.summary],
   );
 
   const add = React.useCallback(
-    async (sku: string, createdAt?: string | null, expiresAt?: string | null) => {
+    async (
+      sku: string,
+      createdAt?: string | null,
+      expiresAt?: string | null,
+    ) => {
       if (hasReminder(sku)) return;
       await apiToggleReminder(sku);
       const now = new Date().toISOString();
-      const expires = expiresAt ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      const expires =
+        expiresAt ??
+        new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
       dispatch({
         type: 'REMINDER_ADD',
-        item: { sku, createdAt: createdAt ?? now, expiresAt: expires, isActive: true },
+        item: {
+          sku,
+          createdAt: createdAt ?? now,
+          expiresAt: expires,
+          isActive: true,
+        },
       });
       setSummary({
         totalCount: (state.summary?.totalCount ?? 0) + 1,
@@ -261,7 +321,7 @@ export function RemindersProvider(props: React.PropsWithChildren) {
         updatedAt: now,
       });
     },
-    [hasReminder, setSummary, state.summary]
+    [hasReminder, setSummary, state.summary],
   );
 
   const remove = React.useCallback(
@@ -275,7 +335,7 @@ export function RemindersProvider(props: React.PropsWithChildren) {
         updatedAt: new Date().toISOString(),
       });
     },
-    [hasReminder, setSummary, state.summary]
+    [hasReminder, setSummary, state.summary],
   );
 
   const clearAll = React.useCallback(async () => {
@@ -296,7 +356,18 @@ export function RemindersProvider(props: React.PropsWithChildren) {
       clearAll,
       setSummary,
     }),
-    [state, hasReminder, add, remove, toggle, hydrateFromServer, loadUserReminders, loadBulkStatus, clearAll, setSummary]
+    [
+      state,
+      hasReminder,
+      add,
+      remove,
+      toggle,
+      hydrateFromServer,
+      loadUserReminders,
+      loadBulkStatus,
+      clearAll,
+      setSummary,
+    ],
   );
 
   return <RemindersContext.Provider value={value} {...props} />;

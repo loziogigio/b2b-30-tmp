@@ -1,63 +1,107 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import cn from 'classnames';
-import { usePaymentDeadlineQuery } from '@framework/acccount/fetch-account';
+import { useMemo } from 'react';
+import {
+  usePaymentDeadlineQuery,
+  useCustomerQuery,
+} from '@framework/acccount/fetch-account';
+import { useTranslation } from 'src/app/i18n/client';
+import { IoMdPrint } from 'react-icons/io';
+import { openDeadlinesPrintWindow } from './deadlines-export';
 
 // utils
 const currency = (n?: number) =>
   typeof n === 'number'
-    ? new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n)
-    : '—';
+    ? new Intl.NumberFormat('it-IT', {
+        style: 'currency',
+        currency: 'EUR',
+      }).format(n)
+    : '';
 
-const dateLabel = (iso?: string) => (iso ? new Date(iso).toLocaleDateString() : '—');
-
-// build a stable, unique key even when "document" repeats
-const makeKey = (
-  r: { document?: string; referenceDate?: string; dueDate?: string; type?: string },
-  idx: number,
-  suffix: 'row' | 'card'
-) =>
-  [
-    r.document ?? 'no-doc',
-    r.referenceDate ?? '',
-    r.dueDate ?? '',
-    r.type ?? '',
-    idx, // last-resort uniqueness
-    suffix,
-  ].join('|');
+const dateLabel = (iso?: string) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString('it-IT');
+};
 
 export default function DeadlinesClient({ lang }: { lang: string }) {
-  const [q, setQ] = useState('');
+  const { t } = useTranslation(lang, 'common');
   const { data, isLoading, isError, error } = usePaymentDeadlineQuery(true);
+  const { data: customer } = useCustomerQuery(true);
 
+  // Group items: header rows followed by their detail rows
   const rows = useMemo(() => {
-    const list = data?.items ?? [];
-    const term = q.trim().toLowerCase();
-    if (!term) return list;
-    return list.filter(
-      (r) =>
-        (r.description || '').toLowerCase().includes(term) ||
-        (r.document || '').toLowerCase().includes(term) ||
-        (r.type || '').toLowerCase().includes(term)
-    );
-  }, [data, q]);
+    return data?.items ?? [];
+  }, [data]);
+
+  const handlePrint = () => {
+    if (!data) return;
+    openDeadlinesPrintWindow({
+      data,
+      customer,
+      translations: {
+        title: t('deadlines-title'),
+        totalGeneral: t('deadlines-total-general'),
+        totalExpired: t('deadlines-total-expired'),
+        totalToExpire: t('deadlines-total-to-expire'),
+        colType: t('deadlines-col-type'),
+        colDate: t('deadlines-col-date'),
+        colTotal: t('deadlines-col-total'),
+        colDocument: t('deadlines-col-document'),
+        colAmount: t('deadlines-col-amount'),
+      },
+    });
+  };
 
   return (
     <main className="min-h-screen bg-gray-100" lang={lang} data-lang={lang}>
       <div className="mx-auto max-w-[1920px] px-4 pt-6 md:px-6 lg:px-8 2xl:px-10">
-        {/* Toolbar */}
-        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-lg font-semibold text-gray-900">Scadenze Pagamento</h1>
-          <div className="flex w-full max-w-xl items-center gap-2">
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              type="search"
-              placeholder="Cerca per descrizione / documento / tipo…"
-              className="h-10 w-full rounded-md border border-gray-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-600"
-            />
+        {/* Summary Totals */}
+        {!isLoading && data && (
+          <div className="mb-6 rounded-lg border border-gray-200 bg-white p-4">
+            <div className="flex flex-wrap gap-8">
+              <div className="flex flex-col">
+                <span className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                  {t('deadlines-total-general')}
+                </span>
+                <span className="text-lg font-bold text-gray-900">
+                  {currency(data.totalGeneral)}
+                </span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                  {t('deadlines-total-expired')}
+                </span>
+                <span className="text-lg font-bold text-red-600">
+                  {currency(data.totalExpired)}
+                </span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
+                  {t('deadlines-total-to-expire')}
+                </span>
+                <span className="text-lg font-bold text-green-600">
+                  {currency(data.totalToExpire)}
+                </span>
+              </div>
+            </div>
           </div>
+        )}
+
+        {/* Header with Print Button */}
+        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="text-lg font-semibold text-gray-900 sr-only">
+            {t('deadlines-title')}
+          </h1>
+          <div className="flex-1" />
+          <button
+            onClick={handlePrint}
+            disabled={!data}
+            className="inline-flex items-center gap-2 rounded-md bg-brand px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {t('deadlines-print')}
+            <IoMdPrint className="text-lg" />
+          </button>
         </div>
 
         {/* Alerts */}
@@ -76,57 +120,99 @@ export default function DeadlinesClient({ lang }: { lang: string }) {
           </div>
         )}
 
-        {/* ===== Desktop/Tablet: table (fixed height + sticky header) ===== */}
-        {!isLoading && (
-          <div className="hidden rounded-md border border-gray-200 bg-white sm:block">
+        {/* ===== Desktop/Tablet: table ===== */}
+        {!isLoading && data && (
+          <div className="hidden rounded-md border border-gray-200 bg-white sm:block overflow-hidden">
             <div className="max-h-[70vh] overflow-y-auto">
-              <table className="min-w-[980px] w-full border-collapse text-sm">
-                <thead className="sticky top-0 z-10 bg-gray-50 text-gray-700">
-                  <tr className="[&>th]:px-3 [&>th]:py-3 [&>th]:text-left [&>th]:font-semibold">
-                    <th className="w-44">Documento</th>
-                    <th className="w-40">Data riferimento</th>
-                    <th>Descrizione</th>
-                    <th className="w-16 text-center">Stato</th> {/* NEW */}
-                    <th className="w-40">Data scadenza</th>
-                    <th className="w-32 text-right">Importo</th>
-                    <th className="w-32 text-right">Totale</th>
-                    <th className="w-24">Tipo</th>
+              <table className="min-w-[980px] w-full text-sm">
+                <thead className="sticky top-0 z-10 bg-gray-200 text-gray-800 border-b border-gray-300">
+                  <tr>
+                    <th className="w-[22%] px-4 py-3 text-left font-semibold">
+                      {t('deadlines-col-type')}
+                    </th>
+                    <th className="w-[5%] px-2 py-3 text-center font-semibold"></th>
+                    <th className="w-[12%] px-4 py-3 text-left font-semibold border-l border-gray-300">
+                      {t('deadlines-col-date')}
+                    </th>
+                    <th className="w-[13%] px-4 py-3 text-right font-semibold border-l border-gray-300">
+                      {t('deadlines-col-total')}
+                    </th>
+                    <th className="w-[18%] px-4 py-3 text-left font-semibold border-l border-gray-300">
+                      {t('deadlines-col-document')}
+                    </th>
+                    <th className="w-[12%] px-4 py-3 text-left font-semibold border-l border-gray-300">
+                      {t('deadlines-col-date')}
+                    </th>
+                    <th className="w-[13%] px-4 py-3 text-right font-semibold border-l border-gray-300">
+                      {t('deadlines-col-amount')}
+                    </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody>
                   {rows.map((r, idx) => {
-                    const key = makeKey(r, idx, 'row');
-                    const showStatus = !!r.total; // mimic v-if="item.Totale"
-                    const isPositive = (r.total ?? 0) > 0;
+                    const isHeader = r.isDueView;
+                    const isDetail = r.isReferenceView;
 
-                    return (
-                      <tr key={key} className="hover:bg-gray-50">
-                        <td className="px-3 py-3 font-medium text-gray-900">{r.document ?? '—'}</td>
-                        <td className="px-3 py-3 text-gray-900">{dateLabel(r.referenceDate)}</td>
-                        <td className="px-3 py-3 text-gray-900">{r.description || '—'}</td>
-                        <td className="px-3 py-3 text-center">
-                          {showStatus ? (
-                            <span
-                              className={cn(
-                                'inline-block h-2.5 w-2.5 rounded-full',
-                                isPositive ? 'bg-green-500' : 'bg-red-500'
-                              )}
-                              aria-label={isPositive ? 'positivo' : 'negativo'}
-                            />
-                          ) : null}
-                        </td>
-                        <td className="px-3 py-3 text-gray-900">{dateLabel(r.dueDate)}</td>
-                        <td className="px-3 py-3 text-right">{currency(r.amount)}</td>
-                        <td className="px-3 py-3 text-right">{currency(r.total)}</td>
-                        <td className="px-3 py-3 text-gray-900">{r.type || '—'}</td>
-                      </tr>
-                    );
+                    if (isHeader) {
+                      // Header row: Tipo, status dot, Data, Totale
+                      return (
+                        <tr
+                          key={`header-${idx}`}
+                          className="hover:bg-gray-50 border-b border-gray-100 bg-gray-50/50"
+                        >
+                          <td className="px-4 py-3 text-gray-900 font-medium">
+                            {r.description}
+                          </td>
+                          <td className="px-2 py-3 text-center">
+                            <span className="inline-block h-2.5 w-2.5 rounded-full bg-green-500" />
+                          </td>
+                          <td className="px-4 py-3 text-gray-900 border-l border-gray-100">
+                            {dateLabel(r.dueDate)}
+                          </td>
+                          <td className="px-4 py-3 text-right font-semibold text-gray-900 border-l border-gray-100">
+                            {currency(r.total)}
+                          </td>
+                          <td className="px-4 py-3 border-l border-gray-100"></td>
+                          <td className="px-4 py-3 border-l border-gray-100"></td>
+                          <td className="px-4 py-3 border-l border-gray-100"></td>
+                        </tr>
+                      );
+                    }
+
+                    if (isDetail) {
+                      // Detail row: empty first cols, Documento, Data, Importo
+                      return (
+                        <tr
+                          key={`detail-${idx}`}
+                          className="hover:bg-gray-50 border-b border-gray-100"
+                        >
+                          <td className="px-4 py-3"></td>
+                          <td className="px-2 py-3"></td>
+                          <td className="px-4 py-3 border-l border-gray-100"></td>
+                          <td className="px-4 py-3 border-l border-gray-100"></td>
+                          <td className="px-4 py-3 text-gray-700 border-l border-gray-100">
+                            {r.document}
+                          </td>
+                          <td className="px-4 py-3 text-gray-700 border-l border-gray-100">
+                            {dateLabel(r.referenceDate)}
+                          </td>
+                          <td className="px-4 py-3 text-right text-gray-700 border-l border-gray-100">
+                            {currency(r.amount)}
+                          </td>
+                        </tr>
+                      );
+                    }
+
+                    return null;
                   })}
 
                   {!rows.length && (
                     <tr>
-                      <td colSpan={8} className="px-4 py-6 text-center text-sm text-gray-500">
-                        Nessun elemento trovato.
+                      <td
+                        colSpan={7}
+                        className="px-4 py-6 text-center text-sm text-gray-500"
+                      >
+                        {t('deadlines-no-items')}
                       </td>
                     </tr>
                   )}
@@ -137,48 +223,60 @@ export default function DeadlinesClient({ lang }: { lang: string }) {
         )}
 
         {/* ===== Mobile: cards ===== */}
-        {!isLoading && (
+        {!isLoading && data && (
           <div className="sm:hidden space-y-2">
-            {rows.map((r, idx) => {
-              const key = makeKey(r, idx, 'card');
-              const showStatus = !!r.total;
-              const isPositive = (r.total ?? 0) > 0;
+            {rows
+              .filter((r) => r.isDueView)
+              .map((r, idx) => {
+                // Find associated detail rows
+                const startIdx = rows.indexOf(r);
+                const details = rows.slice(startIdx + 1).filter((d, i, arr) => {
+                  // Stop at next header
+                  const beforeNextHeader = arr
+                    .slice(0, i + 1)
+                    .every((x) => !x.isDueView || x === d);
+                  return d.isReferenceView && beforeNextHeader;
+                });
 
-              return (
-                <div key={key} className="rounded-xl border bg-white p-3 shadow-sm">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-semibold text-gray-900">
-                        {r.document ?? r.type ?? '—'}
+                return (
+                  <div
+                    key={`card-${idx}`}
+                    className="rounded-xl border bg-white p-3 shadow-sm"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="inline-block h-2.5 w-2.5 rounded-full bg-green-500" />
+                        <span className="font-semibold text-gray-900">
+                          {r.description}
+                        </span>
                       </div>
-                      <div className="text-xs text-gray-500">
-                        {dateLabel(r.referenceDate)} → {dateLabel(r.dueDate)}
+                      <span className="font-semibold text-gray-900">
+                        {currency(r.total)}
+                      </span>
+                    </div>
+                    <div className="mt-1 text-xs text-gray-500">
+                      {t('deadlines-col-date')}: {dateLabel(r.dueDate)}
+                    </div>
+                    {details.length > 0 && (
+                      <div className="mt-2 border-t pt-2 space-y-1">
+                        {details.map((d, dIdx) => (
+                          <div
+                            key={`detail-${dIdx}`}
+                            className="flex justify-between text-sm text-gray-700"
+                          >
+                            <span>{d.document}</span>
+                            <span>{currency(d.amount)}</span>
+                          </div>
+                        ))}
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {showStatus ? (
-                        <span
-                          className={cn(
-                            'inline-block h-2.5 w-2.5 rounded-full',
-                            isPositive ? 'bg-green-500' : 'bg-red-500'
-                          )}
-                          aria-label={isPositive ? 'positivo' : 'negativo'}
-                        />
-                      ) : null}
-                      <div className="text-sm font-semibold text-gray-900">{currency(r.amount)}</div>
-                    </div>
+                    )}
                   </div>
-                  <div className="mt-1 text-sm text-gray-700">{r.description || '—'}</div>
-                  {r.total ? (
-                    <div className="mt-1 text-xs text-gray-500">Totale: {currency(r.total)}</div>
-                  ) : null}
-                </div>
-              );
-            })}
+                );
+              })}
 
-            {!rows.length && (
+            {!rows.filter((r) => r.isDueView).length && (
               <div className="rounded-md border bg-white px-4 py-6 text-center text-sm text-gray-500">
-                Nessun elemento trovato.
+                {t('deadlines-no-items')}
               </div>
             )}
           </div>

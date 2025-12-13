@@ -5,18 +5,33 @@ import React, { useMemo } from 'react';
 import Container from '@components/ui/container';
 import CategoryBreadcrumb from '@components/ui/category-breadcrumb';
 import { useCmsB2BMenuRawQuery } from '@framework/product/get-b2b-cms';
-import { buildB2BMenuTree, findNodeByPath, type MenuTreeNode } from '@utils/transform/b2b-menu-tree';
+import {
+  buildB2BMenuTree,
+  findNodeByPath,
+  type MenuTreeNode,
+} from '@utils/transform/b2b-menu-tree';
 import { useTranslation } from 'src/app/i18n/client';
 import ProductsCarousel from '@components/product/products-carousel';
 import { useProductListQuery } from '@framework/product/get-b2b-product';
 import Link from 'next/link';
 
-export default function CategoryPage({ lang, slug }: { lang: string; slug: string[] }) {
+export default function CategoryPage({
+  lang,
+  slug,
+}: {
+  lang: string;
+  slug: string[];
+}) {
   const { t } = useTranslation(lang, 'common');
-  const { data, isLoading, isError } = useCmsB2BMenuRawQuery({ staleTime: 5 * 60 * 1000 });
+  const { data, isLoading, isError } = useCmsB2BMenuRawQuery({
+    staleTime: 5 * 60 * 1000,
+  });
 
   const tree = useMemo(() => buildB2BMenuTree(data ?? []), [data]);
-  const current = useMemo(() => (slug.length ? findNodeByPath(tree, slug) : null), [tree, slug]);
+  const current = useMemo(
+    () => (slug.length ? findNodeByPath(tree, slug) : null),
+    [tree, slug],
+  );
 
   // Build breadcrumb path nodes
   const pathNodes: MenuTreeNode[] = useMemo(() => {
@@ -45,7 +60,13 @@ export default function CategoryPage({ lang, slug }: { lang: string; slug: strin
 
   if (isLoading) return null;
   if (isError) {
-    return <Container><div className="py-8 text-sm text-gray-500">{t('error', { defaultValue: 'Something went wrong.' })}</div></Container>;
+    return (
+      <Container>
+        <div className="py-8 text-sm text-gray-500">
+          {t('error', { defaultValue: 'Something went wrong.' })}
+        </div>
+      </Container>
+    );
   }
 
   // Optional: if leaf reached here, you could redirect to current.url instead.
@@ -58,14 +79,18 @@ export default function CategoryPage({ lang, slug }: { lang: string; slug: strin
           lang={lang}
           categories={pathNodes}
           allLabel={t('all-categories', { defaultValue: 'All Categories' })}
-          onAllCategoriesClick={() => { /* navigate to /[lang]/category */ window.location.href = `/${lang}/category`; }}
+          onAllCategoriesClick={() => {
+            /* navigate to /[lang]/category */ window.location.href = `/${lang}/category`;
+          }}
           onCategorySelect={(node) => {
             window.location.href = `/${lang}/category/${node.path.join('/')}`;
           }}
         />
 
         <h1 className="text-xl font-semibold text-gray-900">
-          {current ? current.label : t('all-categories', { defaultValue: 'All Categories' })}
+          {current
+            ? current.label
+            : t('all-categories', { defaultValue: 'All Categories' })}
         </h1>
       </Container>
 
@@ -84,7 +109,13 @@ export default function CategoryPage({ lang, slug }: { lang: string; slug: strin
   );
 }
 
-function CategoryChildCarousel({ lang, child }: { lang: string; child: MenuTreeNode }) {
+function CategoryChildCarousel({
+  lang,
+  child,
+}: {
+  lang: string;
+  child: MenuTreeNode;
+}) {
   // Use the child.slug path, or if your product API needs a code, map slug→code here.
   const codeFromUrl = (() => {
     if (!child.url) return null;
@@ -99,7 +130,9 @@ function CategoryChildCarousel({ lang, child }: { lang: string; child: MenuTreeN
     customer_code: '00000',
     address_code: '',
     // Prefer your filters-category code if it exists; otherwise you may need a slug→code lookup
-    search: codeFromUrl ? { 'filters-category': codeFromUrl } : { category: child.slug },
+    search: codeFromUrl
+      ? { 'filters-category': codeFromUrl }
+      : { category: child.slug },
   });
 
   if (isLoading || error) return null;
@@ -118,7 +151,10 @@ function CategoryChildCarousel({ lang, child }: { lang: string; child: MenuTreeN
       />
       {/* CTA to full child page */}
       <div className="mt-2">
-        <Link href={`/${lang}/category/${child.path.join('/')}`} className="text-sm text-blue-600 hover:underline">
+        <Link
+          href={`/${lang}/category/${child.path.join('/')}`}
+          className="text-sm text-blue-600 hover:underline"
+        >
           {`See all in ${child.label}`}
         </Link>
       </div>
@@ -139,7 +175,9 @@ function LeafFallback({ lang, node }: { lang: string; node: MenuTreeNode }) {
     start: 0,
     customer_code: '00000',
     address_code: '',
-    search: codeFromUrl ? { 'filters-category': codeFromUrl } : { category: node.slug },
+    search: codeFromUrl
+      ? { 'filters-category': codeFromUrl }
+      : { category: node.slug },
   });
 
   if (isLoading || error) return null;

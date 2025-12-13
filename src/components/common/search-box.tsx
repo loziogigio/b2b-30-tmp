@@ -5,7 +5,6 @@ import cn from 'classnames';
 import { useTranslation } from 'src/app/i18n/client';
 import { useRouter } from 'next/navigation';
 
-
 type SearchProps = {
   lang: string;
   className?: string;
@@ -45,7 +44,6 @@ const SearchBox = React.forwardRef<HTMLInputElement, SearchProps>(
       router.push(`/${lang}/search?text=${encodeURIComponent(value.trim())}`);
       // ✅ Tell parent to close overlay (but NOT clear input)
       onSubmitSuccess?.();
-
     };
     return (
       <form
@@ -104,7 +102,6 @@ const SearchBox = React.forwardRef<HTMLInputElement, SearchProps>(
           </button>
         </div>
       </form>
-
     );
   },
 );

@@ -32,7 +32,12 @@ export default function TrendingProductsCarousel({
     let mounted = true;
     (async () => {
       try {
-        const page = await getTrendingProductsPage(timePeriod, 1, limitSkus, false);
+        const page = await getTrendingProductsPage(
+          timePeriod,
+          1,
+          limitSkus,
+          false,
+        );
         const skus = (page?.items || []).map((r) => r.sku).filter(Boolean);
         if (!mounted) return;
         setSkuList(skus);
@@ -48,14 +53,18 @@ export default function TrendingProductsCarousel({
 
   const hasSkus = skuList.length > 0;
 
-  const { data = [], isLoading, error } = usePimProductListQuery(
+  const {
+    data = [],
+    isLoading,
+    error,
+  } = usePimProductListQuery(
     {
       limit: limitSkus,
       filters: {
         sku: skuList,
       },
     },
-    { enabled: hasSkus }
+    { enabled: hasSkus },
   );
 
   if (!hasSkus || error) return null;

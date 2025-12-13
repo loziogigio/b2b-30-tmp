@@ -11,7 +11,9 @@ import LanguageDetector from 'i18next-browser-languagedetector';
 import { getOptions } from './settings';
 
 const runsOnServerSide = typeof window === 'undefined';
-const useIsomorphicLayoutEffect = runsOnServerSide ? useEffect : useLayoutEffect;
+const useIsomorphicLayoutEffect = runsOnServerSide
+  ? useEffect
+  : useLayoutEffect;
 
 // on client side the normal singleton is ok
 i18next

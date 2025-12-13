@@ -11,7 +11,9 @@ interface HomeSettingsContextValue {
   refresh: () => Promise<void>;
 }
 
-const HomeSettingsContext = React.createContext<HomeSettingsContextValue | undefined>(undefined);
+const HomeSettingsContext = React.createContext<
+  HomeSettingsContextValue | undefined
+>(undefined);
 HomeSettingsContext.displayName = 'HomeSettingsContext';
 
 interface HomeSettingsProviderProps {
@@ -19,17 +21,26 @@ interface HomeSettingsProviderProps {
   children: React.ReactNode;
 }
 
-export function HomeSettingsProvider({ initialSettings, children }: HomeSettingsProviderProps) {
-  const [settings, setSettings] = React.useState<HomeSettings | null>(initialSettings ?? DEFAULT_HOME_SETTINGS);
+export function HomeSettingsProvider({
+  initialSettings,
+  children,
+}: HomeSettingsProviderProps) {
+  const [settings, setSettings] = React.useState<HomeSettings | null>(
+    initialSettings ?? DEFAULT_HOME_SETTINGS,
+  );
   const [isLoading, setIsLoading] = React.useState<boolean>(!initialSettings);
   const [error, setError] = React.useState<string | null>(null);
 
   const refresh = React.useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/b2b/home-settings', { cache: 'no-store' });
+      const response = await fetch('/api/b2b/home-settings', {
+        cache: 'no-store',
+      });
       if (!response.ok) {
-        throw new Error(`Failed to fetch home settings: ${response.statusText}`);
+        throw new Error(
+          `Failed to fetch home settings: ${response.statusText}`,
+        );
       }
       const data = (await response.json()) as HomeSettings;
       setSettings({
@@ -37,17 +48,19 @@ export function HomeSettingsProvider({ initialSettings, children }: HomeSettings
         ...data,
         branding: {
           ...DEFAULT_HOME_SETTINGS.branding,
-          ...(data.branding ?? {})
+          ...(data.branding ?? {}),
         },
         cardStyle: {
           ...DEFAULT_HOME_SETTINGS.cardStyle,
-          ...(data.cardStyle ?? {})
-        }
+          ...(data.cardStyle ?? {}),
+        },
       });
       setError(null);
     } catch (refreshError) {
       console.error('[HomeSettings] refresh failed:', refreshError);
-      setError(refreshError instanceof Error ? refreshError.message : 'Unknown error');
+      setError(
+        refreshError instanceof Error ? refreshError.message : 'Unknown error',
+      );
       setSettings(DEFAULT_HOME_SETTINGS);
     } finally {
       setIsLoading(false);
@@ -62,10 +75,14 @@ export function HomeSettingsProvider({ initialSettings, children }: HomeSettings
 
   const value = React.useMemo<HomeSettingsContextValue>(
     () => ({ settings, isLoading, error, refresh }),
-    [settings, isLoading, error, refresh]
+    [settings, isLoading, error, refresh],
   );
 
-  return <HomeSettingsContext.Provider value={value}>{children}</HomeSettingsContext.Provider>;
+  return (
+    <HomeSettingsContext.Provider value={value}>
+      {children}
+    </HomeSettingsContext.Provider>
+  );
 }
 
 export function useHomeSettingsContext() {

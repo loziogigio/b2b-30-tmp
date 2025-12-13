@@ -2,7 +2,12 @@
 import { Suspense } from 'react';
 import OrderPageClient from './order-client';
 
-export default function Page({ params: { lang } }: { params: { lang: string } }) {
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ lang: string }>;
+}) {
+  const { lang } = await params;
   return (
     <Suspense fallback={null}>
       <OrderPageClient lang={(lang ?? 'en').toLowerCase()} />

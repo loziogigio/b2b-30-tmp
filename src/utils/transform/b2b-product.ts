@@ -2,7 +2,7 @@ import { Product, Attachment, Brand, Tag } from '@framework/types';
 
 export interface RawProduct {
   id: string;
-  sku: string
+  sku: string;
   id_parent: string;
   parent_sku: string;
   product_status: string;
@@ -59,13 +59,14 @@ export function transformProduct(rawProducts: RawProduct[]): Product[] {
 
     const brand: Brand | undefined = item.brand
       ? {
-        id: item.brand.cprec_darti,
-        name: item.brand.tprec_darti,
-        slug: item.brand.cprec_darti.toLowerCase(),
-        brand_image: Array.isArray(item.brand_image) && item.brand_image.length > 0
-          ? item.brand_image[0]
-          : undefined,
-      }
+          id: item.brand.cprec_darti,
+          name: item.brand.tprec_darti,
+          slug: item.brand.cprec_darti.toLowerCase(),
+          brand_image:
+            Array.isArray(item.brand_image) && item.brand_image.length > 0
+              ? item.brand_image[0]
+              : undefined,
+        }
       : undefined;
 
     // 👇 Transform children_items recursively (as full Product objects)
@@ -77,7 +78,9 @@ export function transformProduct(rawProducts: RawProduct[]): Product[] {
     const docsArray = Array.isArray(item.docs) ? item.docs : [];
     const docs = docsArray.map((d, i) => {
       const filename = d?.url?.split('/').pop() ?? '';
-      const ext = filename.includes('.') ? filename.split('.').pop()?.toLowerCase() : undefined;
+      const ext = filename.includes('.')
+        ? filename.split('.').pop()?.toLowerCase()
+        : undefined;
       return {
         id: i + 1,
         url: d?.url || '',
@@ -110,21 +113,22 @@ export function transformProduct(rawProducts: RawProduct[]): Product[] {
       tag: item.tag || [],
       variations: variations, // full Product[] as variations
       features: item.features,
-      docs
+      docs,
     };
   };
 
   return rawProducts.map(transformSingle);
 }
 
-
-export function transformSearchParams(params: Record<string, any>): Record<string, any> {
+export function transformSearchParams(
+  params: Record<string, any>,
+): Record<string, any> {
   const nextParams: Record<string, any> = {
-    ...params
+    ...params,
   };
 
   const filters: Record<string, string[]> = {
-    ...(Array.isArray(params.filters) ? {} : params.filters || {})
+    ...(Array.isArray(params.filters) ? {} : params.filters || {}),
   };
 
   if (nextParams.category) {
@@ -134,8 +138,8 @@ export function transformSearchParams(params: Record<string, any>): Record<strin
     filters.category = Array.from(
       new Set([
         ...(filters.category || []),
-        ...categoryValues.map((value) => String(value).trim()).filter(Boolean)
-      ])
+        ...categoryValues.map((value) => String(value).trim()).filter(Boolean),
+      ]),
     );
   }
 
@@ -144,20 +148,22 @@ export function transformSearchParams(params: Record<string, any>): Record<strin
       ...nextParams,
       filters,
       start:
-        typeof nextParams.start === "number" && nextParams.start > 0
+        typeof nextParams.start === 'number' && nextParams.start > 0
           ? nextParams.start - 1
-          : 0
+          : 0,
     };
   }
 
   let searchEntries: Record<string, any> = {};
 
-  if (typeof nextParams.search === "string") {
+  if (typeof nextParams.search === 'string') {
     const rawSearch = nextParams.search.trim();
-    const withoutLeadingSlash = rawSearch.startsWith("/") ? rawSearch.slice(1) : rawSearch;
-    const queryString = withoutLeadingSlash.startsWith("shop?")
+    const withoutLeadingSlash = rawSearch.startsWith('/')
+      ? rawSearch.slice(1)
+      : rawSearch;
+    const queryString = withoutLeadingSlash.startsWith('shop?')
       ? withoutLeadingSlash.slice(5)
-      : withoutLeadingSlash.startsWith("?")
+      : withoutLeadingSlash.startsWith('?')
         ? withoutLeadingSlash.slice(1)
         : withoutLeadingSlash;
     const searchParams = new URLSearchParams(queryString);
@@ -165,7 +171,7 @@ export function transformSearchParams(params: Record<string, any>): Record<strin
       searchEntries[key] = value;
     });
   } else if (
-    typeof nextParams.search === "object" &&
+    typeof nextParams.search === 'object' &&
     !Array.isArray(nextParams.search)
   ) {
     searchEntries = nextParams.search;
@@ -175,16 +181,18 @@ export function transformSearchParams(params: Record<string, any>): Record<strin
     const rawValue = searchEntries[key];
     if (rawValue == null) continue;
 
-    let mappedKey = key.startsWith("filters-") ? key.replace(/^filters-/, "") : key;
-    if (mappedKey === "product_parent_codes") {
-      mappedKey = "codice_figura";
-    } else if (mappedKey === "sku") {
-      mappedKey = "carti";
+    let mappedKey = key.startsWith('filters-')
+      ? key.replace(/^filters-/, '')
+      : key;
+    if (mappedKey === 'product_parent_codes') {
+      mappedKey = 'codice_figura';
+    } else if (mappedKey === 'sku') {
+      mappedKey = 'carti';
     }
 
-    if (key === "text") {
+    if (key === 'text') {
       nextParams.text = Array.isArray(rawValue)
-        ? rawValue.join(" ")
+        ? rawValue.join(' ')
         : String(rawValue);
       continue;
     }
@@ -192,26 +200,26 @@ export function transformSearchParams(params: Record<string, any>): Record<strin
     const values = Array.isArray(rawValue)
       ? rawValue
       : String(rawValue)
-          .split(";")
+          .split(';')
           .map((value) => value.trim())
           .filter(Boolean);
 
     if (!values.length) continue;
 
     filters[mappedKey] = Array.from(
-      new Set([...(filters[mappedKey] || []), ...values])
+      new Set([...(filters[mappedKey] || []), ...values]),
     );
   }
 
   const result: Record<string, any> = {
     ...nextParams,
-    filters
+    filters,
   };
 
   delete result.search;
 
   result.start =
-    typeof result.start === "number" && result.start > 0 ? result.start - 1 : 0;
+    typeof result.start === 'number' && result.start > 0 ? result.start - 1 : 0;
 
   return result;
 }

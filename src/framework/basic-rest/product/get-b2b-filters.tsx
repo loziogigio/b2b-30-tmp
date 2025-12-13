@@ -2,16 +2,20 @@ import { useQuery } from '@tanstack/react-query';
 import { post } from '@framework/utils/httpB2B';
 import { API_ENDPOINTS_B2B } from '@framework/utils/api-endpoints-b2b';
 import { transformSearchParams } from '@utils/transform/b2b-product';
-import { RawFacetResult, TransformedFilter, transformFilterParamsForApi, transformFilters } from '@utils/transform/b2b-filter';
+import {
+  RawFacetResult,
+  TransformedFilter,
+  transformFilterParamsForApi,
+  transformFilters,
+} from '@utils/transform/b2b-filter';
 
 // ===============================
 // Fetch Filters from API
 // ===============================
 
 export const fetchAvailableFilters = async (
-  params: Record<string, any>
+  params: Record<string, any>,
 ): Promise<TransformedFilter[]> => {
-
   const allowedParams = transformFilterParamsForApi(params);
   const finalParams = transformSearchParams(allowedParams);
 

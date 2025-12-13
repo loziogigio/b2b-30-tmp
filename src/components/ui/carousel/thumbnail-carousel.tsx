@@ -40,10 +40,10 @@ interface Props {
   activationMode?: 'press' | 'hover'; // how to activate the lens
 }
 
-// product gallery breakpoints
+// product gallery breakpoints - use 'auto' to respect CSS dimensions
 const galleryCarouselBreakpoints = {
   '0': {
-    slidesPerView: 5,
+    slidesPerView: 'auto' as const,
     spaceBetween: 6,
   },
 };
@@ -73,21 +73,24 @@ const ThumbnailCarousel: React.FC<Props> = ({
   const dir = getDirection(lang);
   const isRtl = dir === 'rtl';
 
-  const normalizedGallery = Array.isArray(gallery) && gallery.length > 0
-    ? gallery
-    : [
-        {
-          id: 'placeholder',
-          original: productGalleryPlaceholder,
-          thumbnail: productGalleryPlaceholder,
-          alt: 'Product image',
-        },
-      ];
+  const normalizedGallery =
+    Array.isArray(gallery) && gallery.length > 0
+      ? gallery
+      : [
+          {
+            id: 'placeholder',
+            original: productGalleryPlaceholder,
+            thumbnail: productGalleryPlaceholder,
+            alt: 'Product image',
+          },
+        ];
 
   const hasMultiple = normalizedGallery.length > 1;
 
   // Load model-viewer if there are any 3D models
-  const has3DModel = normalizedGallery.some((item: any) => item.mediaType === '3d-model');
+  const has3DModel = normalizedGallery.some(
+    (item: any) => item.mediaType === '3d-model',
+  );
   useEffect(() => {
     if (has3DModel) {
       loadModelViewer();
@@ -113,8 +116,15 @@ const ThumbnailCarousel: React.FC<Props> = ({
   const [magnifying, setMagnifying] = useState(false);
   const [box, setBox] = useState({ w: 0, h: 0 });
   const [pos, setPos] = useState({ x: 0, y: 0 });
-  const panStart = useRef<{ x: number; y: number; moved: boolean }>({ x: 0, y: 0, moved: false });
-  const [panelPos, setPanelPos] = useState<{ left: number; top: number }>({ left: 0, top: 0 });
+  const panStart = useRef<{ x: number; y: number; moved: boolean }>({
+    x: 0,
+    y: 0,
+    moved: false,
+  });
+  const [panelPos, setPanelPos] = useState<{ left: number; top: number }>({
+    left: 0,
+    top: 0,
+  });
   const [thumbsHeight, setThumbsHeight] = useState<number>(520);
 
   // Keep thumbs column height in sync with main image container
@@ -131,7 +141,7 @@ const ThumbnailCarousel: React.FC<Props> = ({
     return () => ro.disconnect();
   }, []);
 
-  const lensW = Math.max(60, Math.round((magnifierPanelWidth / magnifierZoom)));
+  const lensW = Math.max(60, Math.round(magnifierPanelWidth / magnifierZoom));
   const lensH = lensW; // keep square
 
   function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
@@ -141,27 +151,47 @@ const ThumbnailCarousel: React.FC<Props> = ({
     const host = mainContainerRef.current?.getBoundingClientRect();
     if (host) setPanelPos({ left: host.right + 16, top: host.top });
     panStart.current = { x: e.clientX, y: e.clientY, moved: false };
-    const x = Math.min(Math.max(e.clientX - rect.left, lensW / 2), rect.width - lensW / 2);
-    const y = Math.min(Math.max(e.clientY - rect.top, lensH / 2), rect.height - lensH / 2);
+    const x = Math.min(
+      Math.max(e.clientX - rect.left, lensW / 2),
+      rect.width - lensW / 2,
+    );
+    const y = Math.min(
+      Math.max(e.clientY - rect.top, lensH / 2),
+      rect.height - lensH / 2,
+    );
     setPos({ x, y });
     setMagnifying(true);
-    try { (e.currentTarget as any).setPointerCapture?.(e.pointerId); } catch {}
+    try {
+      (e.currentTarget as any).setPointerCapture?.(e.pointerId);
+    } catch {}
   }
   function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
     if (!enableMagnifier || !magnifying) return;
     const rect = e.currentTarget.getBoundingClientRect();
-    const x = Math.min(Math.max(e.clientX - rect.left, lensW / 2), rect.width - lensW / 2);
-    const y = Math.min(Math.max(e.clientY - rect.top, lensH / 2), rect.height - lensH / 2);
+    const x = Math.min(
+      Math.max(e.clientX - rect.left, lensW / 2),
+      rect.width - lensW / 2,
+    );
+    const y = Math.min(
+      Math.max(e.clientY - rect.top, lensH / 2),
+      rect.height - lensH / 2,
+    );
     setPos({ x, y });
-    if (Math.abs(e.clientX - panStart.current.x) > 3 || Math.abs(e.clientY - panStart.current.y) > 3) {
+    if (
+      Math.abs(e.clientX - panStart.current.x) > 3 ||
+      Math.abs(e.clientY - panStart.current.y) > 3
+    ) {
       panStart.current.moved = true;
     }
-    if (box.w !== rect.width || box.h !== rect.height) setBox({ w: rect.width, h: rect.height });
+    if (box.w !== rect.width || box.h !== rect.height)
+      setBox({ w: rect.width, h: rect.height });
   }
   function onPointerUp(e: React.PointerEvent<HTMLDivElement>) {
     if (!enableMagnifier) return;
     setMagnifying(false);
-    try { (e.currentTarget as any).releasePointerCapture?.(e.pointerId); } catch {}
+    try {
+      (e.currentTarget as any).releasePointerCapture?.(e.pointerId);
+    } catch {}
   }
   function onClickCapture(e: React.MouseEvent<HTMLButtonElement>) {
     if (enableMagnifier && panStart.current.moved) {
@@ -179,18 +209,31 @@ const ThumbnailCarousel: React.FC<Props> = ({
     setBox({ w: rect.width, h: rect.height });
     const host = mainContainerRef.current?.getBoundingClientRect();
     if (host) setPanelPos({ left: host.right + 16, top: host.top });
-    const x = Math.min(Math.max(e.clientX - rect.left, lensW / 2), rect.width - lensW / 2);
-    const y = Math.min(Math.max(e.clientY - rect.top, lensH / 2), rect.height - lensH / 2);
+    const x = Math.min(
+      Math.max(e.clientX - rect.left, lensW / 2),
+      rect.width - lensW / 2,
+    );
+    const y = Math.min(
+      Math.max(e.clientY - rect.top, lensH / 2),
+      rect.height - lensH / 2,
+    );
     setPos({ x, y });
     setMagnifying(true);
   }
   function onHoverMove(e: React.MouseEvent<HTMLDivElement>) {
     if (!enableMagnifier) return;
     const rect = e.currentTarget.getBoundingClientRect();
-    const x = Math.min(Math.max(e.clientX - rect.left, lensW / 2), rect.width - lensW / 2);
-    const y = Math.min(Math.max(e.clientY - rect.top, lensH / 2), rect.height - lensH / 2);
+    const x = Math.min(
+      Math.max(e.clientX - rect.left, lensW / 2),
+      rect.width - lensW / 2,
+    );
+    const y = Math.min(
+      Math.max(e.clientY - rect.top, lensH / 2),
+      rect.height - lensH / 2,
+    );
     setPos({ x, y });
-    if (box.w !== rect.width || box.h !== rect.height) setBox({ w: rect.width, h: rect.height });
+    if (box.w !== rect.width || box.h !== rect.height)
+      setBox({ w: rect.width, h: rect.height });
   }
   function onHoverLeave() {
     if (!enableMagnifier) return;
@@ -202,7 +245,7 @@ const ThumbnailCarousel: React.FC<Props> = ({
       className={cn(
         'w-full',
         'xl:flex xl:items-start xl:gap-5',
-        isRtl ? 'xl:flex-row-reverse' : 'xl:flex-row'
+        isRtl ? 'xl:flex-row-reverse' : 'xl:flex-row',
       )}
     >
       {hasMultiple ? (
@@ -224,20 +267,25 @@ const ThumbnailCarousel: React.FC<Props> = ({
             {normalizedGallery.map((item: any, index: number) => (
               <SwiperSlide
                 key={`product-thumb-gallery-${item.id ?? index}`}
-                className="flex items-center justify-center overflow-hidden transition border rounded cursor-pointer border-border-base hover:opacity-75 bg-white"
+                className="!w-full !h-auto aspect-square flex items-center justify-center overflow-hidden transition border rounded cursor-pointer border-border-base hover:opacity-75 bg-white"
               >
-                <div className="relative w-full aspect-square">
+                <div className="relative w-full h-full">
                   {/* 3D model thumbnail - show gradient with icon and 3D text, no placeholder image */}
                   {item.mediaType === '3d-model' ? (
                     <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-gray-100 via-gray-200 to-gray-300">
                       <IoCubeOutline className="w-8 h-8 text-gray-500" />
-                      <span className="text-sm font-bold text-gray-500 mt-1">3D</span>
+                      <span className="text-sm font-bold text-gray-500 mt-1">
+                        3D
+                      </span>
                     </div>
                   ) : (
                     <>
                       <Image
-                        src={item?.thumbnail ?? productGalleryPlaceholder}
-                        alt={item?.alt ?? `Product thumb gallery ${item.id ?? index}`}
+                        src={item?.thumbnail || productGalleryPlaceholder}
+                        alt={
+                          item?.alt ??
+                          `Product thumb gallery ${item.id ?? index}`
+                        }
                         fill
                         sizes="(min-width:1280px) 120px, (min-width:768px) 15vw, 25vw"
                         className="object-contain"
@@ -265,7 +313,9 @@ const ThumbnailCarousel: React.FC<Props> = ({
           >
             <div className="relative w-full aspect-square rounded-md border border-border-base bg-white">
               <Image
-                src={normalizedGallery[0]?.thumbnail ?? productGalleryPlaceholder}
+                src={
+                  normalizedGallery[0]?.thumbnail || productGalleryPlaceholder
+                }
                 alt={normalizedGallery[0]?.alt ?? 'Product thumbnail'}
                 fill
                 sizes="120px"
@@ -279,7 +329,7 @@ const ThumbnailCarousel: React.FC<Props> = ({
       <div
         ref={mainContainerRef}
         className={cn(
-          'w-full mb-2.5 md:mb-3 border border-border-base rounded-md relative bg-white overflow-hidden',
+          'w-full mb-2.5 md:mb-3 border border-border-base rounded-md relative bg-white overflow-hidden aspect-square max-h-[70vh] xl:max-h-none',
           thumbnailClassName,
         )}
       >
@@ -288,7 +338,9 @@ const ThumbnailCarousel: React.FC<Props> = ({
           onSwiper={setMainSwiper}
           thumbs={{
             swiper:
-              hasMultiple && thumbsSwiper && !thumbsSwiper.destroyed ? thumbsSwiper : null,
+              hasMultiple && thumbsSwiper && !thumbsSwiper.destroyed
+                ? thumbsSwiper
+                : null,
           }}
           modules={[Navigation, Thumbs]}
           navigation={{
@@ -301,8 +353,14 @@ const ThumbnailCarousel: React.FC<Props> = ({
           {normalizedGallery.map((item: any, index: number) => {
             // Video content
             if (item.mediaType === 'video' && item.videoUrl) {
-              const isYouTube = item.videoUrl?.includes('youtube.com') || item.videoUrl?.includes('youtu.be');
-              const videoId = isYouTube ? item.videoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&]+)/)?.[1] : null;
+              const isYouTube =
+                item.videoUrl?.includes('youtube.com') ||
+                item.videoUrl?.includes('youtu.be');
+              const videoId = isYouTube
+                ? item.videoUrl.match(
+                    /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&]+)/,
+                  )?.[1]
+                : null;
 
               return (
                 <SwiperSlide
@@ -401,25 +459,53 @@ const ThumbnailCarousel: React.FC<Props> = ({
                 className="flex items-center justify-center"
               >
                 <div
-                  className={cn(
-                    'relative w-full aspect-square bg-white'
-                  )}
-                  onPointerDown={activationMode === 'press' && index === activeIndex ? onPointerDown : undefined}
-                  onPointerMove={activationMode === 'press' && index === activeIndex ? onPointerMove : undefined}
-                  onPointerUp={activationMode === 'press' && index === activeIndex ? onPointerUp : undefined}
-                  onPointerLeave={activationMode === 'press' && index === activeIndex ? onPointerUp : undefined}
-                  onMouseEnter={activationMode === 'hover' && index === activeIndex ? onHoverEnter : undefined}
-                  onMouseMove={activationMode === 'hover' && index === activeIndex ? onHoverMove : undefined}
-                  onMouseLeave={activationMode === 'hover' && index === activeIndex ? onHoverLeave : undefined}
+                  className={cn('relative w-full aspect-square bg-white')}
+                  onPointerDown={
+                    activationMode === 'press' && index === activeIndex
+                      ? onPointerDown
+                      : undefined
+                  }
+                  onPointerMove={
+                    activationMode === 'press' && index === activeIndex
+                      ? onPointerMove
+                      : undefined
+                  }
+                  onPointerUp={
+                    activationMode === 'press' && index === activeIndex
+                      ? onPointerUp
+                      : undefined
+                  }
+                  onPointerLeave={
+                    activationMode === 'press' && index === activeIndex
+                      ? onPointerUp
+                      : undefined
+                  }
+                  onMouseEnter={
+                    activationMode === 'hover' && index === activeIndex
+                      ? onHoverEnter
+                      : undefined
+                  }
+                  onMouseMove={
+                    activationMode === 'hover' && index === activeIndex
+                      ? onHoverMove
+                      : undefined
+                  }
+                  onMouseLeave={
+                    activationMode === 'hover' && index === activeIndex
+                      ? onHoverLeave
+                      : undefined
+                  }
                 >
                   <Image
-                    src={item?.original ?? productGalleryPlaceholder}
+                    src={item?.original || productGalleryPlaceholder}
                     alt={item?.alt ?? `Product gallery ${item.id ?? index}`}
                     fill
                     sizes="(min-width:1280px) 540px, (min-width:768px) 70vw, 100vw"
                     className={cn(
-                      "object-contain",
-                      enableMagnifier && index === activeIndex && "pointer-events-none select-none"
+                      'object-contain',
+                      enableMagnifier &&
+                        index === activeIndex &&
+                        'pointer-events-none select-none',
                     )}
                     priority={index === 0}
                   />
@@ -431,7 +517,8 @@ const ThumbnailCarousel: React.FC<Props> = ({
                         height: `${lensH}px`,
                         left: `${pos.x - lensW / 2}px`,
                         top: `${pos.y - lensH / 2}px`,
-                        background: 'linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.06))',
+                        background:
+                          'linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.06))',
                       }}
                     />
                   ) : null}
@@ -456,7 +543,10 @@ const ThumbnailCarousel: React.FC<Props> = ({
           })}
         </Swiper>
         {/* Magnified panel (desktop, fixed so layout doesn't shift) */}
-        {enableMagnifier && showMagnifierPanel && magnifying && normalizedGallery[activeIndex] ? (
+        {enableMagnifier &&
+        showMagnifierPanel &&
+        magnifying &&
+        normalizedGallery[activeIndex] ? (
           <div
             className="hidden lg:block fixed z-30 rounded-md shadow-2xl border bg-white overflow-hidden"
             style={{

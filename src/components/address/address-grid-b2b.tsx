@@ -7,9 +7,9 @@ import type { AddressB2B } from '@framework/acccount/types-b2b-account';
 type Props = {
   address?: AddressB2B[];
   lang: string;
-  onSelect?: (addr?: AddressB2B) => void;      // used only when readOnly = false
-  initialSelectedId?: string | number;          // used only when readOnly = false
-  readOnly?: boolean;                           // NEW
+  onSelect?: (addr?: AddressB2B) => void; // used only when readOnly = false
+  initialSelectedId?: string | number; // used only when readOnly = false
+  readOnly?: boolean; // NEW
 };
 
 function fmtAddress(a?: AddressB2B['address']) {
@@ -43,7 +43,9 @@ const AddressGridB2B: React.FC<Props> = ({
                 >
                   <div className="min-w-0">
                     <h3 className="truncate text-[14px] font-semibold text-gray-900">
-                      {item.title || t('text-delivery-address') || 'Delivery address'}
+                      {item.title ||
+                        t('text-delivery-address') ||
+                        'Delivery address'}
                     </h3>
                     {item.isLegalSeat && (
                       <span className="mt-1 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200">
@@ -57,7 +59,9 @@ const AddressGridB2B: React.FC<Props> = ({
                   </div>
 
                   <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-gray-700">
-                    {(item.contact?.phone || item.contact?.email || item.contact?.mobile) && (
+                    {(item.contact?.phone ||
+                      item.contact?.email ||
+                      item.contact?.mobile) && (
                       <div className="min-w-0">
                         <div className="text-[11px] uppercase tracking-wide text-gray-500">
                           {t('CONTACT') || 'Contact'}
@@ -73,7 +77,10 @@ const AddressGridB2B: React.FC<Props> = ({
                       </div>
                     )}
 
-                    {(item.agent?.name || item.agent?.phone || item.agent?.email || item.agent?.code) && (
+                    {(item.agent?.name ||
+                      item.agent?.phone ||
+                      item.agent?.email ||
+                      item.agent?.code) && (
                       <div className="min-w-0">
                         <div className="text-[11px] uppercase tracking-wide text-gray-500">
                           {t('AGENT') || 'Agent'}
@@ -97,7 +104,9 @@ const AddressGridB2B: React.FC<Props> = ({
                           title={`${item.paymentTerms?.label ?? ''} ${item.paymentTerms?.code ?? ''}`}
                         >
                           {item.paymentTerms?.label || '—'}
-                          {item.paymentTerms?.code ? ` (${item.paymentTerms.code})` : ''}
+                          {item.paymentTerms?.code
+                            ? ` (${item.paymentTerms.code})`
+                            : ''}
                         </div>
                       </div>
                     )}
@@ -133,31 +142,54 @@ const AddressGridB2B: React.FC<Props> = ({
   const deriveInitial = React.useCallback((): AddressB2B | undefined => {
     if (!address.length) return undefined;
     if (initialSelectedId != null) {
-      const byId = address.find((a) => String(a.id) === String(initialSelectedId));
+      const byId = address.find(
+        (a) => String(a.id) === String(initialSelectedId),
+      );
       if (byId) return byId;
     }
     return address.find((a) => a.isLegalSeat) ?? address[0];
   }, [address, initialSelectedId]);
 
-  const [selected, setSelected] = React.useState<AddressB2B | undefined>(deriveInitial);
-  const [committedSelected, setCommittedSelected] = React.useState<AddressB2B | undefined>(deriveInitial);
+  const [selected, setSelected] = React.useState<AddressB2B | undefined>(
+    deriveInitial,
+  );
+  const [committedSelected, setCommittedSelected] = React.useState<
+    AddressB2B | undefined
+  >(deriveInitial);
 
   React.useEffect(() => {
     const initial = deriveInitial();
-    setSelected((prev) => (prev && address.some((a) => String(a.id) === String(prev.id)) ? prev : initial));
-    setCommittedSelected((prev) => (prev && address.some((a) => String(a.id) === String(prev.id)) ? prev : initial));
+    setSelected((prev) =>
+      prev && address.some((a) => String(a.id) === String(prev.id))
+        ? prev
+        : initial,
+    );
+    setCommittedSelected((prev) =>
+      prev && address.some((a) => String(a.id) === String(prev.id))
+        ? prev
+        : initial,
+    );
   }, [address, deriveInitial]);
 
   const orderedAddresses = React.useMemo(() => {
     if (!committedSelected) return address;
-    return [committedSelected, ...address.filter((a) => String(a.id) !== String(committedSelected.id))];
+    return [
+      committedSelected,
+      ...address.filter((a) => String(a.id) !== String(committedSelected.id)),
+    ];
   }, [address, committedSelected]);
 
   return (
     <div className="flex h-full flex-col mt-2 text-[13px]">
       <div className="max-h-[52vh] overflow-y-auto pr-1">
-        <RadioGroup value={selected} onChange={setSelected} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <RadioGroup.Label className="sr-only">{t('address')}</RadioGroup.Label>
+        <RadioGroup
+          value={selected}
+          onChange={setSelected}
+          className="grid grid-cols-1 gap-3 sm:grid-cols-2"
+        >
+          <RadioGroup.Label className="sr-only">
+            {t('address')}
+          </RadioGroup.Label>
 
           {orderedAddresses.length ? (
             orderedAddresses.map((item) => (
@@ -172,7 +204,9 @@ const AddressGridB2B: React.FC<Props> = ({
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <h3 className="truncate text-[14px] font-semibold text-gray-900">
-                      {item.title || t('text-delivery-address') || 'Delivery address'}
+                      {item.title ||
+                        t('text-delivery-address') ||
+                        'Delivery address'}
                     </h3>
                     {item.isLegalSeat && (
                       <span className="mt-1 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200">
@@ -193,12 +227,16 @@ const AddressGridB2B: React.FC<Props> = ({
                 </div>
 
                 <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-gray-700">
-                  {(item.contact?.phone || item.contact?.email || item.contact?.mobile) && (
+                  {(item.contact?.phone ||
+                    item.contact?.email ||
+                    item.contact?.mobile) && (
                     <div className="min-w-0">
                       <div className="text-[11px] uppercase tracking-wide text-gray-500">
                         {t('CONTACT') || 'Contact'}
                       </div>
-                      <div className="truncate">{item.contact?.phone || item.contact?.mobile || '—'}</div>
+                      <div className="truncate">
+                        {item.contact?.phone || item.contact?.mobile || '—'}
+                      </div>
                       {item.contact?.email && (
                         <div className="truncate" title={item.contact.email}>
                           {item.contact.email}
@@ -207,11 +245,19 @@ const AddressGridB2B: React.FC<Props> = ({
                     </div>
                   )}
 
-                  {(item.agent?.name || item.agent?.phone || item.agent?.email) && (
+                  {(item.agent?.name ||
+                    item.agent?.phone ||
+                    item.agent?.email) && (
                     <div className="min-w-0">
-                      <div className="text-[11px] uppercase tracking-wide text-gray-500">{t('AGENT') || 'Agent'}</div>
-                      <div className="truncate">{item.agent?.name || item.agent?.code || '—'}</div>
-                      <div className="truncate">{item.agent?.phone || item.agent?.email || '—'}</div>
+                      <div className="text-[11px] uppercase tracking-wide text-gray-500">
+                        {t('AGENT') || 'Agent'}
+                      </div>
+                      <div className="truncate">
+                        {item.agent?.name || item.agent?.code || '—'}
+                      </div>
+                      <div className="truncate">
+                        {item.agent?.phone || item.agent?.email || '—'}
+                      </div>
                     </div>
                   )}
 
@@ -220,16 +266,23 @@ const AddressGridB2B: React.FC<Props> = ({
                       <div className="text-[11px] uppercase tracking-wide text-gray-500">
                         {t('METHOD_OF_PAYMENT') || 'Payment terms'}
                       </div>
-                      <div className="truncate" title={`${item.paymentTerms?.label ?? ''} ${item.paymentTerms?.code ?? ''}`}>
+                      <div
+                        className="truncate"
+                        title={`${item.paymentTerms?.label ?? ''} ${item.paymentTerms?.code ?? ''}`}
+                      >
                         {item.paymentTerms?.label || '—'}
-                        {item.paymentTerms?.code ? ` (${item.paymentTerms.code})` : ''}
+                        {item.paymentTerms?.code
+                          ? ` (${item.paymentTerms.code})`
+                          : ''}
                       </div>
                     </div>
                   )}
 
                   {(item.carrier?.label || item.port?.label) && (
                     <div className="min-w-0">
-                      <div className="text-[11px] uppercase tracking-wide text-gray-500">{t('LOGISTICS') || 'Logistics'}</div>
+                      <div className="text-[11px] uppercase tracking-wide text-gray-500">
+                        {t('LOGISTICS') || 'Logistics'}
+                      </div>
                       <div className="truncate" title={item.carrier?.label}>
                         {item.carrier?.label || '—'}
                       </div>

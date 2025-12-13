@@ -82,9 +82,21 @@ module.exports = {
         wiggle: 'wiggle 1s ease-in-out infinite',
       },
       fontFamily: {
-        body: ['Helvetica Neue LT Std', 'Helvetica Neue', 'Helvetica', 'Arial', 'sans-serif'],
+        body: [
+          'Helvetica Neue LT Std',
+          'Helvetica Neue',
+          'Helvetica',
+          'Arial',
+          'sans-serif',
+        ],
         manrope: ['var(--font-manrope)'],
-        sans: ['Helvetica Neue LT Std', 'Helvetica Neue', 'Helvetica', 'Arial', 'sans-serif'],
+        sans: [
+          'Helvetica Neue LT Std',
+          'Helvetica Neue',
+          'Helvetica',
+          'Arial',
+          'sans-serif',
+        ],
       },
       boxShadow: {
         card: '0px 0px 6px rgba(79, 95, 120, 0.1)',
@@ -113,8 +125,5 @@ module.exports = {
       },
     },
   },
-  plugins: [
-    require('@tailwindcss/forms'),
-    require('@tailwindcss/typography'),
-  ],
+  plugins: [require('@tailwindcss/forms'), require('@tailwindcss/typography')],
 };

@@ -5,15 +5,18 @@ import { useMemo } from 'react';
 import { useCart } from '@contexts/cart/cart.context';
 
 function formatEUR(n: number) {
-  return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n);
+  return new Intl.NumberFormat('it-IT', {
+    style: 'currency',
+    currency: 'EUR',
+  }).format(n);
 }
 
 export default function CheckoutTopBar({
   lang,
   detailsId = 'checkout-details',
-  continueHref,        // optional: override destination
+  continueHref, // optional: override destination
   totalLabel = 'Totale Documento',
-  totalOverride,       // optional: server snapshot if you have it
+  totalOverride, // optional: server snapshot if you have it
 }: {
   lang: string;
   detailsId?: string;
@@ -25,7 +28,7 @@ export default function CheckoutTopBar({
   const { total } = useCart();
   const totalDisplay = useMemo(
     () => formatEUR(totalOverride ?? total ?? 0),
-    [totalOverride, total]
+    [totalOverride, total],
   );
 
   const onNext = () => {

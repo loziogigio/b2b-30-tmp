@@ -24,7 +24,7 @@ const Modal: FC<ModalProps> = ({
     <Transition appear show={open} as={Fragment}>
       <Dialog
         as="div"
-        className="fixed inset-0 z-50 overflow-x-hidden overflow-y-auto"
+        className="fixed inset-0 z-[9999] overflow-x-hidden overflow-y-auto"
         onClose={onClose}
       >
         <div
@@ -41,7 +41,7 @@ const Modal: FC<ModalProps> = ({
             leaveFrom="opacity-100"
             leaveTo="opacity-0"
           >
-            <div className="fixed inset-0 z-40 cursor-pointer bg-brand-dark/70" />
+            <div className="fixed inset-0 z-[9998] cursor-pointer bg-brand-dark/70" />
           </TransitionChild>
 
           {/* This element is to trick the browser into centering the modal contents. */}
@@ -65,7 +65,7 @@ const Modal: FC<ModalProps> = ({
               leaveFrom="top-0"
               leaveTo="top-[100vh]"
             >
-              <div className="w-full md:w-[500px] xl:w-auto inline-block p-0 ltr:text-left rtl:text-right align-middle transition-all shadow-xl relative z-50 h-[75vh] overflow-hidden">
+              <div className="w-full md:w-[500px] xl:w-auto inline-block p-0 ltr:text-left rtl:text-right align-middle transition-all shadow-xl relative z-[9999] h-[75vh] overflow-hidden">
                 <div className="relative h-full">
                   <button
                     onClick={onClose}
@@ -86,7 +86,7 @@ const Modal: FC<ModalProps> = ({
               leaveFrom="opacity-100 scale-100"
               leaveTo="opacity-0 scale-110"
             >
-              <DialogPanel className="relative z-50 inline-block w-full p-4 overflow-hidden align-middle transition-all transform md:w-auto md:p-6 xl:p-8 ltr:text-left rtl:text-right">
+              <DialogPanel className="relative z-[9999] inline-block w-full p-4 overflow-hidden align-middle transition-all transform md:w-auto md:p-6 xl:p-8 ltr:text-left rtl:text-right">
                 <div className="relative rounded-md">
                   <button
                     onClick={onClose}

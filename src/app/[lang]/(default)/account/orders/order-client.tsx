@@ -25,7 +25,7 @@ function toErpDateFromInput(input: string) {
 }
 type Criteria = {
   date_from: string; // DDMMYYYY
-  date_to: string;   // DDMMYYYY
+  date_to: string; // DDMMYYYY
   type: 'T' | 'NE' | 'E' | 'IA';
   address_code: string;
 };
@@ -48,10 +48,7 @@ export default function OrderPageClient() {
   const lang = (params?.lang as string) || 'en';
 
   // destinations dropdown (stub)
-  const destinationOptions = useMemo(
-    () => [{ value: '', label: 'Tutti' }],
-    []
-  );
+  const destinationOptions = useMemo(() => [{ value: '', label: 'Tutti' }], []);
 
   // criteria
   const [criteria, setCriteria] = useState<Criteria>(() => lastMonthDefaults());
@@ -69,7 +66,7 @@ export default function OrderPageClient() {
       type: criteria.type,
       ...ERP_STATIC,
     },
-    true
+    true,
   );
 
   // selection
@@ -96,7 +93,7 @@ export default function OrderPageClient() {
   // selected summary
   const selected: OrderSummary | null = useMemo(
     () => orders.find((o) => o.id === selectedId) || null,
-    [orders, selectedId]
+    [orders, selectedId],
   );
 
   // detail params
@@ -143,15 +140,18 @@ export default function OrderPageClient() {
 
       {/* List + Details */}
       <section className="flex-1 min-h-0 overflow-hidden pb-6">
-        <div className="grid h-[calc(100vh-100px)] min-h-0 items-stretch gap-6
+        <div
+          className="grid h-[calc(100vh-100px)] min-h-0 items-stretch gap-6
                   xl:grid-cols-[18rem_minmax(0,1fr)]
-                  2xl:grid-cols-[22rem_minmax(0,1fr)]">
+                  2xl:grid-cols-[22rem_minmax(0,1fr)]"
+        >
           {/* LEFT: let OrdersList render its own card; wrapper is just sizing */}
           <div className="h-full min-h-0">
             <OrdersList
               orders={orders as any}
               selectedId={selectedId || null}
               onSelect={setSelectedId}
+              lang={lang}
             />
           </div>
 
@@ -160,15 +160,13 @@ export default function OrderPageClient() {
             <OrderDetails lang={lang} order={orderDetail as any} />
             {isDetailError && (
               <p className="mt-3 text-sm text-red-600">
-                {(detailError as Error)?.message || 'Failed to load order details.'}
+                {(detailError as Error)?.message ||
+                  'Failed to load order details.'}
               </p>
             )}
           </div>
         </div>
       </section>
-
-
-
     </div>
   );
 }

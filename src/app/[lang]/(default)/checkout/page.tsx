@@ -14,7 +14,7 @@ export default async function CheckoutPage({ params }: { params: any }) {
     <>
       <Divider />
       <Container className="py-10 2xl:py-12">
-        <CartHydrator/>
+        <CartHydrator />
         <CheckoutFlow lang={lang} />
       </Container>
       <Divider />

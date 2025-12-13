@@ -3,7 +3,13 @@ import type { CSSProperties } from 'react';
 export type BorderStyle = 'solid' | 'dashed' | 'dotted' | 'none';
 export type ShadowSize = 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
 export type RadiusSize = 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full';
-export type HoverEffect = 'none' | 'lift' | 'shadow' | 'scale' | 'border' | 'glow';
+export type HoverEffect =
+  | 'none'
+  | 'lift'
+  | 'shadow'
+  | 'scale'
+  | 'border'
+  | 'glow';
 export type HoverShadowSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl';
 
 export interface MediaCardStyle {
@@ -27,7 +33,7 @@ const borderRadiusMap: Record<RadiusSize, string> = {
   lg: '0.5rem',
   xl: '0.75rem',
   '2xl': '1rem',
-  full: '9999px'
+  full: '9999px',
 };
 
 const shadowMap: Record<Exclude<ShadowSize, 'none'>, string> = {
@@ -35,7 +41,7 @@ const shadowMap: Record<Exclude<ShadowSize, 'none'>, string> = {
   md: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
   lg: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
   xl: '0 20px 25px -5px rgb(0 0 0 / 0.1)',
-  '2xl': '0 25px 50px -12px rgb(0 0 0 / 0.25)'
+  '2xl': '0 25px 50px -12px rgb(0 0 0 / 0.25)',
 };
 
 const hoverShadowMap: Record<HoverShadowSize, string> = {
@@ -43,25 +49,30 @@ const hoverShadowMap: Record<HoverShadowSize, string> = {
   md: shadowMap.md,
   lg: shadowMap.lg,
   xl: shadowMap.xl,
-  '2xl': shadowMap['2xl']
+  '2xl': shadowMap['2xl'],
 };
 
 export function computeMediaCardStyle(style: MediaCardStyle): CSSProperties {
-  const borderWidth = style.borderStyle === 'none' || style.borderWidth <= 0 ? 0 : style.borderWidth;
+  const borderWidth =
+    style.borderStyle === 'none' || style.borderWidth <= 0
+      ? 0
+      : style.borderWidth;
 
   const result: CSSProperties = {
     borderWidth: `${borderWidth}px`,
     borderStyle: style.borderStyle,
-    borderColor: style.borderStyle === 'none' ? 'transparent' : style.borderColor,
+    borderColor:
+      style.borderStyle === 'none' ? 'transparent' : style.borderColor,
     borderRadius: borderRadiusMap[style.borderRadius],
     backgroundColor: style.backgroundColor,
-    transition: 'all 0.2s ease'
+    transition: 'all 0.2s ease',
   };
 
   // Only add boxShadow if there's a non-none shadow, otherwise omit it
   // so hover effects can work via CSS classes
   if (style.shadowSize !== 'none') {
-    result.boxShadow = shadowMap[style.shadowSize as Exclude<ShadowSize, 'none'>];
+    result.boxShadow =
+      shadowMap[style.shadowSize as Exclude<ShadowSize, 'none'>];
   }
 
   return result;
@@ -75,7 +86,9 @@ export function computeMediaHoverDeclarations(style: MediaCardStyle): string[] {
       declarations.push('transform: translateY(-4px);');
       break;
     case 'shadow':
-      declarations.push(`box-shadow: ${hoverShadowMap[style.hoverShadowSize || 'lg']};`);
+      declarations.push(
+        `box-shadow: ${hoverShadowMap[style.hoverShadowSize || 'lg']};`,
+      );
       break;
     case 'scale':
       declarations.push(`transform: scale(${style.hoverScale || 1.02});`);
