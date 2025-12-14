@@ -416,7 +416,7 @@ const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({
           </div>
         ) : error ? (
           <div className="rounded-md border border-red-200 bg-red-50 px-6 py-4 text-sm text-red-600">
-            {error}
+            {error?.message ?? 'Unable to load products.'}
           </div>
         ) : (
           <ProductGalleryBlock

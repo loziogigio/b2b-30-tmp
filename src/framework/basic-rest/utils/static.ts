@@ -71,6 +71,35 @@ export function applyLoginToErpStatic(payload: any, username: string) {
   }
 }
 
+// Map VINC API profile to ERP static state
+export function applyVincProfileToErpStatic(
+  profile: {
+    email: string;
+    customers?: Array<{
+      erp_customer_id: string;
+      name?: string;
+      business_name?: string;
+      addresses?: Array<{
+        erp_address_id: string;
+      }>;
+    }>;
+  } | null,
+) {
+  try {
+    if (!profile) return;
+    const firstCustomer = profile.customers?.[0];
+    const firstAddress = firstCustomer?.addresses?.[0];
+    setErpStatic({
+      customer_code: firstCustomer?.erp_customer_id || '',
+      address_code: firstAddress?.erp_address_id || '1',
+      username: profile.email,
+      company_name: firstCustomer?.business_name || firstCustomer?.name,
+    });
+  } catch {
+    // fallback silently
+  }
+}
+
 // Clear ERP state on logout
 export function clearErpStatic() {
   try {

@@ -198,3 +198,51 @@ export interface B2BAddress {
   is_default?: boolean;
   is_active: boolean;
 }
+
+// =============================================================================
+// AUTH
+// =============================================================================
+
+export interface AuthLoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface AuthLoginResponse {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  expires_in: number;
+}
+
+export interface AuthProfileAddress {
+  id: string;
+  erp_address_id: string;
+  label?: string;
+  pricelist_code?: string;
+  street?: string;
+  city?: string;
+  zip?: string;
+  province?: string;
+  country?: string;
+}
+
+export interface AuthProfileCustomer {
+  id: string;
+  erp_customer_id: string;
+  name?: string;
+  business_name?: string;
+  addresses: AuthProfileAddress[];
+}
+
+export interface AuthProfileResponse {
+  id: string;
+  email: string;
+  name?: string;
+  role: string;
+  status: string;
+  supplier_id?: string;
+  supplier_name?: string;
+  customers: AuthProfileCustomer[];
+  has_password: boolean;
+}

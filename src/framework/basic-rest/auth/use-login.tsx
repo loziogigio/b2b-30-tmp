@@ -1,9 +1,7 @@
 import { useUI } from '@contexts/ui.context';
 import Cookies from 'js-cookie';
 import { useMutation } from '@tanstack/react-query';
-import { post } from '@framework/utils/httpB2B';
-import { API_ENDPOINTS_B2B } from '@framework/utils/api-endpoints-b2b';
-import { applyLoginToErpStatic } from '@framework/utils/static';
+import { applyVincProfileToErpStatic } from '@framework/utils/static';
 
 export interface LoginInputType {
   email: string;
@@ -11,30 +9,49 @@ export interface LoginInputType {
   remember_me: boolean;
 }
 
-async function login(input: LoginInputType) {
-  // API expects { username, password }
-  const body = { username: input.email, password: input.password } as any;
-  try {
-    const res = await post<any>(API_ENDPOINTS_B2B.LOGIN, body);
-    // Check if login was successful
-    if (
-      res?.success === false ||
-      (res?.ReturnCode !== undefined && res?.ReturnCode !== 0)
-    ) {
-      throw new Error(res?.message || res?.Message || 'Credenziali non valide');
-    }
-    // token may be under message.token
-    const token = res?.message?.token || res?.token || '';
-    return { raw: res, token };
-  } catch (error: any) {
-    // Handle axios error response
-    const errorMessage =
-      error?.response?.data?.message ||
-      error?.response?.data?.Message ||
-      error?.message ||
-      'Credenziali non valide';
-    throw new Error(errorMessage);
+interface LoginResponse {
+  success: boolean;
+  token?: string;
+  refresh_token?: string;
+  expires_in?: number;
+  profile?: {
+    id: string;
+    email: string;
+    name?: string;
+    role: string;
+    status: string;
+    supplier_id?: string;
+    supplier_name?: string;
+    customers: Array<{
+      id: string;
+      erp_customer_id: string;
+      name?: string;
+      business_name?: string;
+      addresses: Array<{
+        id: string;
+        erp_address_id: string;
+        label?: string;
+        pricelist_code?: string;
+      }>;
+    }>;
+  };
+  message?: string;
+}
+
+async function login(input: LoginInputType): Promise<LoginResponse> {
+  const response = await fetch('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: input.email, password: input.password }),
+  });
+
+  const data: LoginResponse = await response.json();
+
+  if (!response.ok || !data.success) {
+    throw new Error(data.message || 'Credenziali non valide');
   }
+
+  return data;
 }
 export const useLoginMutation = (onSuccessCallback?: () => void) => {
   const { authorize } = useUI();
@@ -44,11 +61,11 @@ export const useLoginMutation = (onSuccessCallback?: () => void) => {
       if (data?.token) {
         Cookies.set('auth_token', data.token);
       }
-      // Map ERP session defaults
-      applyLoginToErpStatic(
-        data?.raw,
-        data?.raw?.user_profile_settings?.username || '',
-      );
+      if (data?.refresh_token) {
+        Cookies.set('refresh_token', data.refresh_token);
+      }
+      // Map VINC profile to ERP static state
+      applyVincProfileToErpStatic(data?.profile || null);
       authorize();
       // Call optional callback (e.g., to close modal from the component)
       onSuccessCallback?.();

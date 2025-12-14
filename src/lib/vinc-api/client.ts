@@ -27,6 +27,9 @@ import type {
   ApiError,
   B2BCustomer,
   B2BAddress,
+  AuthLoginRequest,
+  AuthLoginResponse,
+  AuthProfileResponse,
 } from './types';
 
 class VincApiError extends Error {
@@ -257,6 +260,62 @@ class VincApiClient {
       );
     },
   };
+
+  // ==========================================================================
+  // AUTH
+  // ==========================================================================
+
+  auth = {
+    /**
+     * Login with email and password
+     * Returns JWT tokens
+     */
+    login: (credentials: AuthLoginRequest): Promise<AuthLoginResponse> =>
+      this.request('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify(credentials),
+      }),
+
+    /**
+     * Get user profile using access token
+     * Note: Uses Bearer token instead of internal API key
+     */
+    getProfile: async (accessToken: string): Promise<AuthProfileResponse> => {
+      const url = `${this.config.baseUrl}/api/v1/internal/auth/me`;
+      const response = await fetch(url, {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+          'X-Tenant-ID': this.config.tenantId,
+        },
+      });
+
+      if (!response.ok) {
+        let detail = `HTTP ${response.status}`;
+        try {
+          const error = await response.json();
+          detail = error.detail || detail;
+        } catch {
+          // ignore parse error
+        }
+        throw new VincApiError(response.status, detail);
+      }
+
+      return response.json();
+    },
+
+    /**
+     * Set password for a user (internal admin operation)
+     */
+    setPassword: (
+      userId: string,
+      password: string,
+    ): Promise<{ success: boolean }> =>
+      this.request('/auth/set-password', {
+        method: 'POST',
+        body: JSON.stringify({ user_id: userId, password }),
+      }),
+  };
 }
 
 // =============================================================================
@@ -271,13 +330,13 @@ let _instance: VincApiClient | null = null;
  * Configuration is read from environment variables:
  * - VINC_API_URL: Base URL of vinc-api (e.g., http://localhost:8000)
  * - VINC_INTERNAL_API_KEY: Shared secret for internal API calls
- * - NEXT_PROJECT_CODE: Tenant ID (e.g., HIDROS)
+ * - NEXT_PUBLIC_PROJECT_CODE: Tenant ID (e.g., vinc-hidros-it)
  */
 export function getVincApi(): VincApiClient {
   if (!_instance) {
     const baseUrl = process.env.VINC_API_URL;
     const apiKey = process.env.VINC_INTERNAL_API_KEY;
-    const tenantId = process.env.NEXT_PROJECT_CODE;
+    const tenantId = process.env.NEXT_PUBLIC_PROJECT_CODE;
 
     if (!baseUrl) {
       throw new Error('VINC_API_URL environment variable is required');
@@ -286,7 +345,9 @@ export function getVincApi(): VincApiClient {
       throw new Error('VINC_INTERNAL_API_KEY environment variable is required');
     }
     if (!tenantId) {
-      throw new Error('NEXT_PROJECT_CODE environment variable is required');
+      throw new Error(
+        'NEXT_PUBLIC_PROJECT_CODE environment variable is required',
+      );
     }
 
     _instance = new VincApiClient({
@@ -305,6 +366,7 @@ export function getVincApi(): VincApiClient {
  * Usage:
  *   import { vincApi } from '@/lib/vinc-api';
  *   const order = await vincApi.orders.get('HIDROS-2025-1');
+ *   const tokens = await vincApi.auth.login({ email, password });
  */
 export const vincApi = {
   get orders() {
@@ -312,6 +374,12 @@ export const vincApi = {
   },
   get customers() {
     return getVincApi().customers;
+  },
+  get b2b() {
+    return getVincApi().b2b;
+  },
+  get auth() {
+    return getVincApi().auth;
   },
 };
 
