@@ -19,6 +19,13 @@ If you need to verify types, use `npx tsc --noEmit` on specific files only, not 
 npx tsc --noEmit src/path/to/file.ts
 ```
 
+## Commits
+
+When committing changes:
+
+- Use `--no-verify` flag if pre-existing lint errors block the commit
+- **NEVER include `Co-Authored-By:` lines** in commit messages
+
 ## Project Overview
 
 This is a Next.js 15 B2B e-commerce application with:
@@ -44,4 +51,5 @@ Key variables are in `.env`:
 
 - `VINC_API_URL` - VINC API base URL
 - `VINC_INTERNAL_API_KEY` - API key for internal calls
+- `NEXT_PUBLIC_PROJECT_CODE` - Tenant ID (e.g., vinc-hidros-it)
 - `NEXT_PUBLIC_B2B_PUBLIC_REST_API_ENDPOINT` - Public B2B API endpoint
