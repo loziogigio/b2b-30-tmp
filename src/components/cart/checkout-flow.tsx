@@ -15,6 +15,7 @@ import CheckoutSendOrder from '@components/checkout/checkout-send-order';
 import { useCart } from '@contexts/cart/cart.context';
 import CartTotals from './cart-totals';
 import CartListSidebar from './cart-list-sidebar';
+import { useTranslation } from 'src/app/i18n/client';
 
 function formatEUR(n: number) {
   return new Intl.NumberFormat('it-IT', {
@@ -36,6 +37,7 @@ export default function CheckoutFlow({
   continueHref?: string;
   totalOverride?: number;
 }) {
+  const { t } = useTranslation(lang, 'common');
   // ⬇️ also pull setItemQuantity so we can handle +/- from the table
   const { total, totalItems, items, setItemQuantity } = useCart();
 
@@ -121,13 +123,13 @@ export default function CheckoutFlow({
             href={continueHref ?? `/${lang}`}
             className="inline-flex h-10 items-center rounded-md border border-gray-300 px-4 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
-            ← Continue shopping
+            ← {t('text-continue-shopping')}
           </Link>
         </div>
 
         <div className="flex items-center gap-3">
           <div className="text-right">
-            <div className="text-xs text-gray-500">Totale Netto</div>
+            <div className="text-xs text-gray-500">{t('text-total-net')}</div>
             <div className="text-base font-semibold" suppressHydrationWarning>
               {totalDisplay}
             </div>
@@ -142,7 +144,7 @@ export default function CheckoutFlow({
               aria-expanded={false}
               aria-controls="details-accordion"
             >
-              Next Steps
+              {t('text-next-steps')}
             </button>
           ) : (
             <button
@@ -151,7 +153,7 @@ export default function CheckoutFlow({
               aria-expanded={true}
               aria-controls="cart-accordion"
             >
-              Edit cart
+              {t('text-edit-cart')}
             </button>
           )}
         </div>
@@ -212,7 +214,7 @@ export default function CheckoutFlow({
                   onClick={backToCart}
                   className="h-9 rounded-md border border-gray-300 px-3 text-sm font-semibold text-gray-700 hover:bg-gray-50"
                 >
-                  Edit cart
+                  {t('text-edit-cart')}
                 </button>
               </div>
             </div>
@@ -225,7 +227,7 @@ export default function CheckoutFlow({
               <div className="mb-3 flex flex-col gap-3 rounded-md border border-gray-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
                 <div className="flex items-center gap-3">
                   <span className="inline-flex min-h-[36px] items-center rounded-full border-2 border-indigo-600 px-3 text-sm font-semibold text-indigo-600">
-                    Complete all fields and send the order
+                    {t('text-complete-fields-send-order')}
                   </span>
                 </div>
                 <button
@@ -234,7 +236,7 @@ export default function CheckoutFlow({
                   aria-controls="details-accordion"
                   aria-expanded={true}
                 >
-                  Click here to move to next step
+                  {t('text-click-next-step')}
                 </button>
               </div>
             )}

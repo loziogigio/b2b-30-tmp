@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import cn from 'classnames';
 import { useQuery } from '@tanstack/react-query';
 import Button from '@components/ui/button';
-import Input from '@components/ui/form/input';
 import Alert from '@components/ui/alert';
 import { useTranslation } from 'src/app/i18n/client';
 import { useCart } from '@contexts/cart/cart.context';
@@ -19,10 +18,10 @@ import { fetchCartData } from '@framework/cart/b2b-cart';
 import { ERP_STATIC } from '@framework/utils/static';
 import {
   HiOutlineShoppingCart,
-  HiOutlineSave,
   HiOutlineRefresh,
   HiOutlineCheck,
-  HiOutlinePlus,
+  HiOutlinePencil,
+  HiOutlineX,
 } from 'react-icons/hi';
 
 interface CartListSidebarProps {
@@ -96,15 +95,14 @@ const CartListSidebar: React.FC<CartListSidebarProps> = ({ lang }) => {
   );
 
   const [mounted, setMounted] = useState(false);
-  const [label, setLabel] = useState('');
-  const [formError, setFormError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
   const [activatingId, setActivatingId] = useState<number | null>(null);
   const [deactivatingId, setDeactivatingId] = useState<number | null>(null);
   const [details, setDetails] = useState<CartDetailsState>({});
   const detailsRef = useRef<CartDetailsState>({});
-  const [showSaveForm, setShowSaveForm] = useState(false);
+  const [editingCartId, setEditingCartId] = useState<number | null>(null);
+  const [editingLabel, setEditingLabel] = useState('');
+  const [savingLabel, setSavingLabel] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -139,24 +137,6 @@ const CartListSidebar: React.FC<CartListSidebarProps> = ({ lang }) => {
     [savedCartsQuery.data],
   );
 
-  const activeCartRecord = useMemo(() => {
-    if (!Number.isFinite(activeCartId)) return null;
-    return carts.find((cart) => cart.cartId === Number(activeCartId));
-  }, [carts, activeCartId]);
-
-  const canSaveCurrentCart = useMemo(() => {
-    if (!Number.isFinite(activeCartId)) return false;
-    if (!savedCartsQuery.isSuccess) return true;
-    const label = activeCartRecord?.label?.trim();
-    return !label;
-  }, [activeCartId, activeCartRecord?.label, savedCartsQuery.isSuccess]);
-
-  const activeCartItemsCount = useMemo(() => {
-    if (Array.isArray(activeItems)) return activeItems.length;
-    if (!Number.isFinite(activeCartId)) return 0;
-    return details[Number(activeCartId)]?.items?.length ?? 0;
-  }, [activeItems, activeCartId, details]);
-
   useEffect(() => {
     if (!Number.isFinite(activeCartId)) return;
     setDetails((prev) => ({
@@ -168,40 +148,6 @@ const CartListSidebar: React.FC<CartListSidebarProps> = ({ lang }) => {
       },
     }));
   }, [activeCartId, activeItems]);
-
-  const handleSave = useCallback(
-    async (event: React.FormEvent<HTMLFormElement>) => {
-      event.preventDefault();
-      setFormError(null);
-      setActionError(null);
-
-      const trimmed = label.trim();
-      if (!trimmed) {
-        setFormError(t('text-saved-cart-name-required'));
-        return;
-      }
-
-      const cartId = ensureCartId(meta?.idCart);
-      if (!Number.isFinite(cartId)) {
-        setFormError(t('text-saved-cart-no-active'));
-        return;
-      }
-
-      setSaving(true);
-      try {
-        await saveCurrentCart({ cartId, label: trimmed });
-        setLabel('');
-        setShowSaveForm(false);
-        await savedCartsQuery.refetch();
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        setActionError(message);
-      } finally {
-        setSaving(false);
-      }
-    },
-    [label, meta?.idCart, savedCartsQuery, t],
-  );
 
   const handleActivate = useCallback(
     async (cartId: number) => {
@@ -241,6 +187,45 @@ const CartListSidebar: React.FC<CartListSidebarProps> = ({ lang }) => {
     [activeCartId, getCart, savedCartsQuery],
   );
 
+  const handleStartEditing = useCallback(
+    (cartId: number, currentLabel: string) => {
+      setEditingCartId(cartId);
+      setEditingLabel(currentLabel);
+      setActionError(null);
+    },
+    [],
+  );
+
+  const handleCancelEditing = useCallback(() => {
+    setEditingCartId(null);
+    setEditingLabel('');
+  }, []);
+
+  const handleSaveLabel = useCallback(
+    async (cartId: number) => {
+      const trimmed = editingLabel.trim();
+      if (!trimmed) {
+        setActionError(t('text-saved-cart-name-required'));
+        return;
+      }
+
+      setSavingLabel(true);
+      setActionError(null);
+      try {
+        await saveCurrentCart({ cartId, label: trimmed });
+        setEditingCartId(null);
+        setEditingLabel('');
+        await savedCartsQuery.refetch();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        setActionError(message);
+      } finally {
+        setSavingLabel(false);
+      }
+    },
+    [editingLabel, savedCartsQuery, t],
+  );
+
   // Show skeleton until mounted to avoid hydration mismatch
   if (!mounted) {
     return <CartListSkeleton />;
@@ -278,9 +263,9 @@ const CartListSidebar: React.FC<CartListSidebarProps> = ({ lang }) => {
       </div>
 
       {/* Error display */}
-      {(formError || actionError) && (
+      {actionError && (
         <div className="px-4 pt-3">
-          <Alert message={formError ?? actionError ?? ''} />
+          <Alert message={actionError} />
         </div>
       )}
 
@@ -323,8 +308,8 @@ const CartListSidebar: React.FC<CartListSidebarProps> = ({ lang }) => {
                       : 'hover:bg-gray-50 border-l-4 border-l-transparent',
                   )}
                 >
-                  {/* Active indicator */}
-                  {isActive && (
+                  {/* Active indicator - hide when editing to avoid overlap */}
+                  {isActive && editingCartId !== cart.cartId && (
                     <div className="absolute right-3 top-3">
                       <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700">
                         <HiOutlineCheck className="h-3 w-3" />
@@ -334,16 +319,90 @@ const CartListSidebar: React.FC<CartListSidebarProps> = ({ lang }) => {
                   )}
 
                   {/* Cart info */}
-                  <div className="mb-2 pr-16">
-                    <h3 className="text-sm font-semibold text-gray-900 truncate">
-                      {cart.label ||
-                        t('text-unnamed-cart', {
-                          defaultValue: 'Carrello senza nome',
-                        })}
-                    </h3>
-                    <p className="text-xs text-gray-500">
-                      {formatDate(cart.updatedAt)}
-                    </p>
+                  <div
+                    className={cn(
+                      'mb-2',
+                      editingCartId !== cart.cartId && 'pr-16',
+                    )}
+                  >
+                    {editingCartId === cart.cartId ? (
+                      /* Inline edit mode */
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="text"
+                          value={editingLabel}
+                          onChange={(e) => setEditingLabel(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleSaveLabel(cart.cartId);
+                            } else if (e.key === 'Escape') {
+                              handleCancelEditing();
+                            }
+                          }}
+                          className="h-7 flex-1 rounded border border-gray-300 px-2 text-sm font-semibold text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                          autoFocus
+                          disabled={savingLabel}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleSaveLabel(cart.cartId)}
+                          disabled={savingLabel}
+                          className="flex h-7 w-7 items-center justify-center rounded bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50"
+                          title={t('text-save', { defaultValue: 'Salva' })}
+                        >
+                          <HiOutlineCheck className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleCancelEditing}
+                          disabled={savingLabel}
+                          className="flex h-7 w-7 items-center justify-center rounded border border-gray-300 text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                          title={t('text-cancel', { defaultValue: 'Annulla' })}
+                        >
+                          <HiOutlineX className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      /* Display mode */
+                      <div className="flex items-center gap-1.5">
+                        <h3 className="text-sm font-semibold text-gray-900 truncate">
+                          {cart.hasCustomLabel
+                            ? cart.label
+                            : t('text-cart-id', {
+                                id: cart.cartId,
+                                defaultValue: `Carrello #${cart.cartId}`,
+                              })}
+                        </h3>
+                        {isActive && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleStartEditing(
+                                cart.cartId,
+                                cart.hasCustomLabel ? cart.label : '',
+                              )
+                            }
+                            className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded text-gray-400 hover:bg-gray-200 hover:text-gray-600"
+                            title={t('text-edit-name', {
+                              defaultValue: 'Modifica nome',
+                            })}
+                          >
+                            <HiOutlinePencil className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-xs text-gray-500">
+                        {formatDate(cart.updatedAt)}
+                      </span>
+                      {!cart.hasCustomLabel && (
+                        <span className="inline-flex items-center rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">
+                          {t('text-not-saved', { defaultValue: 'Non salvato' })}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Cart stats */}
@@ -368,13 +427,16 @@ const CartListSidebar: React.FC<CartListSidebarProps> = ({ lang }) => {
                         className="!h-8 flex-1 !py-0 text-xs"
                         disabled={isDeactivating}
                         onClick={() =>
-                          handleDeactivate(cart.cartId, cart.label)
+                          handleDeactivate(
+                            cart.cartId,
+                            cart.hasCustomLabel ? cart.label : undefined,
+                          )
                         }
                       >
                         {isDeactivating
-                          ? t('text-deactivating-cart')
-                          : t('text-deactivate-cart', {
-                              defaultValue: 'Disattiva',
+                          ? t('text-saving-cart')
+                          : t('text-save-for-later', {
+                              defaultValue: 'Salva per dopo',
                             })}
                       </Button>
                     ) : (
@@ -396,80 +458,6 @@ const CartListSidebar: React.FC<CartListSidebarProps> = ({ lang }) => {
           </div>
         )}
       </div>
-
-      {/* Save current cart section */}
-      {canSaveCurrentCart && (
-        <div className="border-t border-gray-200">
-          {showSaveForm ? (
-            <form onSubmit={handleSave} className="p-4">
-              <Input
-                lang={lang}
-                name="savedCartName"
-                value={label}
-                placeholder="text-saved-cart-name-placeholder"
-                onChange={(event) => setLabel(event.target.value)}
-                className="mb-2"
-                variant="solid"
-                inputClassName="h-10"
-              />
-              <div className="flex gap-2">
-                <Button
-                  type="submit"
-                  className="flex-1 !h-9"
-                  disabled={saving || activeCartItemsCount === 0}
-                >
-                  <HiOutlineSave className="mr-1.5 h-4 w-4" />
-                  {saving
-                    ? t('text-saving')
-                    : t('text-save', { defaultValue: 'Salva' })}
-                </Button>
-                <Button
-                  type="button"
-                  variant="border"
-                  className="!h-9"
-                  onClick={() => {
-                    setShowSaveForm(false);
-                    setLabel('');
-                    setFormError(null);
-                  }}
-                >
-                  {t('text-cancel', { defaultValue: 'Annulla' })}
-                </Button>
-              </div>
-              {activeCartItemsCount === 0 && (
-                <p className="mt-2 text-xs text-red-500">
-                  {t('text-saved-cart-missing-items')}
-                </p>
-              )}
-            </form>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setShowSaveForm(true)}
-              className="flex w-full items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-indigo-600 hover:bg-indigo-50 transition-colors"
-            >
-              <HiOutlinePlus className="h-4 w-4" />
-              {t('text-save-current-cart', {
-                defaultValue: 'Salva carrello corrente',
-              })}
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Already saved indicator */}
-      {!canSaveCurrentCart && activeCartRecord?.label?.trim() && (
-        <div className="border-t border-gray-200 px-4 py-3">
-          <div className="flex items-center gap-2 rounded-md bg-green-50 px-3 py-2 text-xs text-green-700">
-            <HiOutlineCheck className="h-4 w-4" />
-            <span>
-              {t('text-cart-already-saved', {
-                name: activeCartRecord.label.trim(),
-              })}
-            </span>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

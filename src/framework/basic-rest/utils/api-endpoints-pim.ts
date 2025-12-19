@@ -3,6 +3,10 @@ export const API_ENDPOINTS_PIM = {
   SEARCH: '/api/search/search',
   FACET: '/api/search/facet',
   MENU: '/api/public/menu',
+  // Collections
+  COLLECTIONS: '/api/public/collections',
+  COLLECTION_BY_SLUG: '/api/public/collections', // append /{slug}
+  COLLECTION_PRODUCTS: '/api/public/collections', // append /{slug}/products
   // ELIA AI Search
   ELIA_INTENT: '/api/elia/intent',
   ELIA_SEARCH: '/api/elia/search',

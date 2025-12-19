@@ -7,6 +7,7 @@ import { hydrateErpStatic, hasValidErpContext } from '@framework/utils/static';
 import { useUI } from '@contexts/ui.context';
 import { useAddressQuery } from '@framework/acccount/fetch-account';
 import { useDeliveryAddress } from '@contexts/address/address.context';
+import { API_ENDPOINTS_B2B } from '@framework/utils/api-endpoints-b2b';
 
 /**
  * ErpHydrator - Ensures ERP_STATIC is properly loaded from localStorage on client-side.
@@ -27,8 +28,9 @@ export default function ErpHydrator() {
   // Track previous auth state to detect login/logout transitions
   const prevIsAuthorizedRef = useRef<boolean | null>(null);
 
-  // Fetch addresses when authorized
-  const { data: addresses } = useAddressQuery(isAuthorized);
+  // Fetch addresses only when authorized AND after ERP_STATIC is hydrated
+  // This prevents fetching with stale/invalid customer_id from SSR
+  const { data: addresses } = useAddressQuery(isAuthorized && hydrated);
   const { selected, setSelectedAddress, resetSelectedAddress } =
     useDeliveryAddress();
 
@@ -52,7 +54,9 @@ export default function ErpHydrator() {
       // Invalidate cart and address queries to trigger re-fetch
       queryClient.invalidateQueries({ queryKey: ['b2b-cart'] });
       queryClient.invalidateQueries({ queryKey: ['saved-carts'] });
-      queryClient.invalidateQueries({ queryKey: ['addresses'] });
+      queryClient.invalidateQueries({
+        queryKey: [API_ENDPOINTS_B2B.GET_ADDRESSES],
+      });
     }
 
     setHydrated(true);
@@ -77,7 +81,9 @@ export default function ErpHydrator() {
     if (prevIsAuthorizedRef.current === false && isAuthorized) {
       // Invalidate and refetch addresses for the new user
       resetSelectedAddress(); // Clear any stale selected address first
-      queryClient.invalidateQueries({ queryKey: ['addresses'] });
+      queryClient.invalidateQueries({
+        queryKey: [API_ENDPOINTS_B2B.GET_ADDRESSES],
+      });
       queryClient.invalidateQueries({ queryKey: ['b2b-cart'] });
       queryClient.invalidateQueries({ queryKey: ['saved-carts'] });
     }

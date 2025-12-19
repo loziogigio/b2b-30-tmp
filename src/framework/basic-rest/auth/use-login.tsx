@@ -58,6 +58,10 @@ export const useLoginMutation = (onSuccessCallback?: () => void) => {
   return useMutation({
     mutationFn: (input: LoginInputType) => login(input),
     onSuccess: (data) => {
+      console.log(
+        '[useLogin] Login success, profile:',
+        JSON.stringify(data?.profile, null, 2),
+      );
       if (data?.token) {
         Cookies.set('auth_token', data.token);
       }
@@ -66,6 +70,7 @@ export const useLoginMutation = (onSuccessCallback?: () => void) => {
       }
       // Map VINC profile to ERP static state
       applyVincProfileToErpStatic(data?.profile || null);
+      console.log('[useLogin] After applyVincProfileToErpStatic');
       authorize();
       // Call optional callback (e.g., to close modal from the component)
       onSuccessCallback?.();

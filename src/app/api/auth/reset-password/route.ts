@@ -1,9 +1,40 @@
 import { NextResponse } from 'next/server';
+import { vincApi, VincApiError } from '@/lib/vinc-api';
+import * as crypto from 'crypto';
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_B2B_PUBLIC_REST_API_ENDPOINT ||
-  'http://localhost:8000/api/v1';
 const PIM_API_URL = process.env.PIM_API_PRIVATE_URL || 'http://localhost:3001';
+
+/**
+ * Generate a secure random password
+ * Similar to VINC API's generate_random_password function
+ */
+function generateSecurePassword(length: number = 12): string {
+  const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+  const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const digits = '0123456789';
+  const special = '!@#$%^&*';
+  const all = lowercase + uppercase + digits + special;
+
+  // Ensure at least one of each type
+  let password =
+    lowercase[crypto.randomInt(lowercase.length)] +
+    uppercase[crypto.randomInt(uppercase.length)] +
+    digits[crypto.randomInt(digits.length)] +
+    special[crypto.randomInt(special.length)];
+
+  // Fill the rest randomly
+  for (let i = password.length; i < length; i++) {
+    password += all[crypto.randomInt(all.length)];
+  }
+
+  // Shuffle the password
+  const shuffled = password
+    .split('')
+    .sort(() => crypto.randomInt(3) - 1)
+    .join('');
+
+  return shuffled;
+}
 
 export async function POST(request: Request) {
   try {
@@ -17,55 +48,35 @@ export async function POST(request: Request) {
       );
     }
 
-    // Build payload: if password provided, it's a change password; otherwise, it's a reset request
-    const payload: { username: string; password?: string } = { username };
-    if (password) {
-      payload.password = password;
+    // Determine the password to set
+    let passwordToSet = password;
+    let tempPassword: string | null = null;
+
+    // If no password provided, generate a temporary one (forgot password flow)
+    if (!password) {
+      tempPassword = generateSecurePassword(12);
+      passwordToSet = tempPassword;
     }
 
-    const response = await fetch(`${API_BASE}/wrapper/reset_password`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
+    // Call VINC API to set the password
+    await vincApi.auth.setPasswordByEmail(username, passwordToSet);
 
-    const data = await response.json();
-
-    // Handle ERP response
-    if (data.ReturnCode !== undefined && data.ReturnCode !== 0) {
-      return NextResponse.json(
-        { success: false, message: data.Message || 'Operation failed' },
-        { status: 400 },
-      );
-    }
-
-    // Server-to-server: Send forgot password email with temp password
-    // ERP returns: { success: true, message: { new_password: '...', username: '...' } }
-    const tempPassword = data.TempPassword || data.message?.new_password;
-
-    if (!password && tempPassword) {
+    // Send forgot password email with temp password via PIM API
+    if (tempPassword) {
       const emailPayload = {
         toEmail: username,
         email: username,
         tempPassword: tempPassword,
-        ragioneSociale:
-          data.RagioneSociale || data.message?.ragioneSociale || '',
-        contactName: data.ContactName || data.message?.contactName || '',
+        ragioneSociale: '',
+        contactName: '',
       };
 
       try {
-        const emailResponse = await fetch(
-          `${PIM_API_URL}/api/b2b/emails/forgot-password`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(emailPayload),
-          },
-        );
-        await emailResponse.json();
+        await fetch(`${PIM_API_URL}/api/b2b/emails/forgot-password`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(emailPayload),
+        });
       } catch (emailError) {
         console.error('[reset-password] Email send failed:', emailError);
       }
@@ -73,14 +84,29 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message:
-        data.Message ||
-        (password ? 'Password changed successfully' : 'Reset email sent'),
+      message: password
+        ? 'Password cambiata con successo'
+        : 'Email di recupero inviata',
     });
   } catch (error) {
     console.error('[reset-password] Error:', error);
+
+    if (error instanceof VincApiError) {
+      // User not found or other API error
+      if (error.status === 404) {
+        return NextResponse.json(
+          { success: false, message: 'Utente non trovato' },
+          { status: 404 },
+        );
+      }
+      return NextResponse.json(
+        { success: false, message: error.detail || 'Operazione fallita' },
+        { status: 400 },
+      );
+    }
+
     return NextResponse.json(
-      { success: false, message: 'An error occurred' },
+      { success: false, message: 'Si è verificato un errore' },
       { status: 500 },
     );
   }

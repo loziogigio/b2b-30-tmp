@@ -7,6 +7,7 @@ export type SavedCartStatus = 'A' | 'S' | string;
 export interface SavedCartSummary {
   cartId: number;
   label: string;
+  hasCustomLabel: boolean; // true if user explicitly saved with a name
   status: SavedCartStatus;
   netTotal: number;
   grossTotal: number;
@@ -14,6 +15,7 @@ export interface SavedCartSummary {
   documentTotal: number;
   deliveryDate?: string | null;
   updatedAt?: string | null;
+  itemsCount?: number;
 }
 
 interface SavedCartListResponse {
@@ -29,6 +31,7 @@ interface SavedCartListResponse {
     delivery_date?: string | null;
     updated_at?: string | null;
     cart_name?: string | null;
+    items_count?: number;
   }>;
   count: number;
   page: number;
@@ -37,17 +40,22 @@ interface SavedCartListResponse {
 
 const toSavedCart = (
   entry: SavedCartListResponse['data'][number],
-): SavedCartSummary => ({
-  cartId: entry.cart_id,
-  label: entry.cart_name?.trim() || `Cart #${entry.cart_id}`,
-  status: entry.status,
-  netTotal: Number(entry.net_total ?? 0),
-  grossTotal: Number(entry.gross_total ?? 0),
-  vatTotal: Number(entry.vat_total ?? 0),
-  documentTotal: Number(entry.document_total ?? 0),
-  deliveryDate: entry.delivery_date ?? null,
-  updatedAt: entry.updated_at ?? null,
-});
+): SavedCartSummary => {
+  const customLabel = entry.cart_name?.trim();
+  return {
+    cartId: entry.cart_id,
+    label: customLabel || `Cart #${entry.cart_id}`,
+    hasCustomLabel: Boolean(customLabel),
+    status: entry.status,
+    netTotal: Number(entry.net_total ?? 0),
+    grossTotal: Number(entry.gross_total ?? 0),
+    vatTotal: Number(entry.vat_total ?? 0),
+    documentTotal: Number(entry.document_total ?? 0),
+    deliveryDate: entry.delivery_date ?? null,
+    updatedAt: entry.updated_at ?? null,
+    itemsCount: entry.items_count,
+  };
+};
 
 const ensureCustomerContext = () => {
   const { customer_code, address_code } = ERP_STATIC;
@@ -134,11 +142,12 @@ export async function deactivateCart(options: {
 }) {
   ensureCustomerContext();
 
+  // API requires label field - use existing label or empty string for unsaved carts
   const payload = {
-    label: options.label ?? `Cart #${options.cartId}`,
     cart_id: Number(options.cartId),
     customer_code: ERP_STATIC.customer_code,
     address_code: ERP_STATIC.address_code,
+    label: options.label || '', // Empty string for carts without custom label
   };
 
   const raw = await post(API_ENDPOINTS_B2B.CART_SAVE, payload);

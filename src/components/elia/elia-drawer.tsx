@@ -384,7 +384,10 @@ export function EliaDrawer() {
                   <AiOutlineSearch className="w-5 h-5" />
                   <BsStars className="w-2.5 h-2.5 absolute -top-1 -right-1 text-yellow-300" />
                 </div>
-                ELIA Search
+                ELIA Classic
+                <span className="rounded-full bg-orange-500 px-2 py-0.5 text-[10px] font-bold uppercase">
+                  Beta 0.1
+                </span>
               </h2>
               <p className="text-xs text-blue-100 mt-0.5">
                 Ricerca intelligente con AI
@@ -456,32 +459,32 @@ export function EliaDrawer() {
                       onClick={() => {
                         handleReset();
                         handleSendMessage(
-                          'cerco un rubinetto per cucina alto cromato',
+                          'lavabo bianco per un bagno piccolo',
                         );
                       }}
                       className="text-sm text-blue-600 hover:text-blue-800 hover:underline block mx-auto py-1"
                     >
-                      "rubinetto per cucina alto cromato"
+                      "lavabo bianco per un bagno piccolo"
                     </button>
                     <button
                       onClick={() => {
                         handleReset();
                         handleSendMessage(
-                          'lavandino bagno moderno bianco sotto i 300 euro',
+                          'caldaia per 100 m2 di appartamento a basso prezzo',
                         );
                       }}
                       className="text-sm text-blue-600 hover:text-blue-800 hover:underline block mx-auto py-1"
                     >
-                      "lavandino bagno moderno sotto 300€"
+                      "caldaia per 100 m² a basso prezzo"
                     </button>
                     <button
                       onClick={() => {
                         handleReset();
-                        handleSendMessage('wc sospeso salvaspazio');
+                        handleSendMessage('condizionatore a basso consumo per 100m2');
                       }}
                       className="text-sm text-blue-600 hover:text-blue-800 hover:underline block mx-auto py-1"
                     >
-                      "wc sospeso salvaspazio"
+                      "condizionatore a basso consumo per 100m2"
                     </button>
                   </div>
                 </div>
@@ -801,6 +804,10 @@ export function EliaDrawer() {
               />
               <p className="text-xs text-gray-400 mt-2 text-center">
                 Premi Invio per cercare • Shift+Invio per nuova riga
+              </p>
+              <p className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-700 text-center border border-amber-200">
+                ⚠️ Le risposte AI potrebbero contenere errori. Verifica sempre le
+                informazioni.
               </p>
             </div>
           )}

@@ -126,6 +126,7 @@ export type AddressB2B = {
   id: string; // Codice
   title: string; // Descrizione or fallback
   isLegalSeat: boolean; // IsSedeLegale
+  isDefault?: boolean; // Default delivery address (from VINC API is_default)
   address: {
     street_address: string; // IndirizzoEsteso
     city: string; // Citta / Comune

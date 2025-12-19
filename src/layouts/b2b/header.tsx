@@ -48,6 +48,11 @@ const promoButtons = [
     color: 'bg-brand text-white',
     href: '/search?filters-attribute_is_new_b=true',
   },
+  {
+    label: 'Outlet',
+    color: 'bg-emerald-600 text-white',
+    href: '/search?filters-collection_slugs=outlet',
+  },
 ];
 
 const quickLinks = [
@@ -167,7 +172,7 @@ function Header({ lang }: HeaderProps) {
                 <button
                   type="button"
                   onClick={handleAccount}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 hover:border-brand hover:text-brand text-slate-600"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border-2 border-brand bg-brand text-white shadow-md hover:bg-white hover:text-brand"
                   aria-label={t('text-account', { defaultValue: 'Account' })}
                 >
                   <HiOutlineUserCircle className="h-4 w-4" />
@@ -218,65 +223,74 @@ function Header({ lang }: HeaderProps) {
           </div>
 
           {/* Right - Buttons (hidden on mobile, shown on desktop) */}
-          <div className="hidden lg:flex lg:w-[20%] items-center justify-end gap-3 text-slate-600">
+          <div className="hidden lg:flex lg:w-[20%] items-center justify-end gap-4 text-slate-600">
             {isAuthorized ? (
               <>
-                <button
-                  type="button"
-                  onClick={toggleHidePrices}
-                  className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 hover:border-brand hover:text-brand shrink-0"
-                  aria-label={
-                    hidePrices
-                      ? t('text-show-prices', { defaultValue: 'Show prices' })
-                      : t('text-hide-prices', { defaultValue: 'Hide prices' })
-                  }
-                  title={
-                    hidePrices
-                      ? t('text-show-prices', { defaultValue: 'Show prices' })
-                      : t('text-hide-prices', { defaultValue: 'Hide prices' })
-                  }
-                >
-                  {hidePrices ? (
-                    <HiOutlineEyeOff className="h-5 w-5" />
-                  ) : (
-                    <HiOutlineEye className="h-5 w-5" />
-                  )}
-                </button>
+                <div className="flex flex-col items-center group">
+                  <button
+                    type="button"
+                    onClick={toggleHidePrices}
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 hover:border-brand hover:text-brand shrink-0"
+                    title={
+                      hidePrices
+                        ? t('text-show-prices-tooltip', { defaultValue: 'Clicca per mostrare i prezzi dei prodotti' })
+                        : t('text-hide-prices-tooltip', { defaultValue: 'Clicca per nascondere i prezzi dei prodotti' })
+                    }
+                  >
+                    {hidePrices ? (
+                      <HiOutlineEyeOff className="h-5 w-5" />
+                    ) : (
+                      <HiOutlineEye className="h-5 w-5" />
+                    )}
+                  </button>
+                  <span className="mt-1 text-[10px] text-slate-500">
+                    {hidePrices ? 'Mostra' : 'No prezzi'}
+                  </span>
+                </div>
 
-                <Link
-                  href={`/${lang}/search?source=likes&page_size=12`}
-                  aria-label={t('text-wishlist', { defaultValue: 'Wishlist' })}
-                  className="relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 hover:border-brand hover:text-brand shrink-0"
-                >
-                  <HiOutlineHeart className="h-5 w-5" />
-                  {summary?.totalCount ? (
-                    <span className="absolute -top-1 -right-1 rounded-full bg-[#E1E7EE] px-1.5 text-[10px] font-semibold text-black">
-                      {summary.totalCount}
-                    </span>
-                  ) : null}
-                </Link>
+                <div className="flex flex-col items-center group">
+                  <Link
+                    href={`/${lang}/search?source=likes&page_size=12`}
+                    className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 hover:border-brand hover:text-brand shrink-0"
+                    title={t('text-wishlist-tooltip', { defaultValue: 'I tuoi prodotti preferiti salvati' })}
+                  >
+                    <HiOutlineHeart className="h-5 w-5" />
+                    {summary?.totalCount ? (
+                      <span className="absolute -top-1 -right-1 rounded-full bg-[#E1E7EE] px-1.5 text-[10px] font-semibold text-black">
+                        {summary.totalCount}
+                      </span>
+                    ) : null}
+                  </Link>
+                  <span className="mt-1 text-[10px] text-slate-500">Preferiti</span>
+                </div>
 
-                <Link
-                  href={`/${lang}${ROUTES.PRODUCT_COMPARE}`}
-                  aria-label="Product compare"
-                  className="relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 hover:border-brand hover:text-brand shrink-0"
-                >
-                  <HiOutlineSwitchHorizontal className="h-5 w-5" />
-                  {compareSkus.length ? (
-                    <span className="absolute -top-1 -right-1 rounded-full bg-[#E1E7EE] px-1.5 text-[10px] font-semibold text-black">
-                      {compareSkus.length}
-                    </span>
-                  ) : null}
-                </Link>
+                <div className="flex flex-col items-center group">
+                  <Link
+                    href={`/${lang}${ROUTES.PRODUCT_COMPARE}`}
+                    className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 hover:border-brand hover:text-brand shrink-0"
+                    title={t('text-compare-tooltip', { defaultValue: 'Confronta prodotti fianco a fianco' })}
+                  >
+                    <HiOutlineSwitchHorizontal className="h-5 w-5" />
+                    {compareSkus.length ? (
+                      <span className="absolute -top-1 -right-1 rounded-full bg-[#E1E7EE] px-1.5 text-[10px] font-semibold text-black">
+                        {compareSkus.length}
+                      </span>
+                    ) : null}
+                  </Link>
+                  <span className="mt-1 text-[10px] text-slate-500">Confronta</span>
+                </div>
 
-                <button
-                  type="button"
-                  onClick={handleAccount}
-                  className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
-                  aria-label={t('text-account')}
-                >
-                  <HiOutlineUserCircle className="h-6 w-6" />
-                </button>
+                <div className="flex flex-col items-center group">
+                  <button
+                    type="button"
+                    onClick={handleAccount}
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full border-2 border-brand bg-brand text-white shadow-md hover:bg-white hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+                    title={t('text-account-tooltip', { defaultValue: 'Gestisci il tuo profilo e le impostazioni' })}
+                  >
+                    <HiOutlineUserCircle className="h-5 w-5" />
+                  </button>
+                  <span className="mt-1 text-[10px] text-slate-500">Profilo</span>
+                </div>
               </>
             ) : (
               <button

@@ -346,7 +346,7 @@ const ProductCardB2B: React.FC<ProductProps> = ({
 
         {/* Product Name - 2 lines */}
         <h3
-          className="text-brand-dark text-[11px] sm:text-sm lg:text-[13px] leading-4 sm:leading-5 font-normal line-clamp-2 min-h-[2rem] sm:min-h-[2.5rem]"
+          className="text-brand-dark text-[11px] sm:text-sm lg:text-[13px] leading-[0.8rem] sm:leading-4 font-normal line-clamp-2 min-h-[1.6rem] sm:min-h-[2rem]"
           onClick={handlePopupView}
         >
           {name || 'Product name missing'}

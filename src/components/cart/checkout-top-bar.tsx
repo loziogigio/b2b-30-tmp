@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useMemo } from 'react';
 import { useCart } from '@contexts/cart/cart.context';
+import { useTranslation } from 'src/app/i18n/client';
 
 function formatEUR(n: number) {
   return new Intl.NumberFormat('it-IT', {
@@ -15,7 +16,7 @@ export default function CheckoutTopBar({
   lang,
   detailsId = 'checkout-details',
   continueHref, // optional: override destination
-  totalLabel = 'Totale Documento',
+  totalLabel,
   totalOverride, // optional: server snapshot if you have it
 }: {
   lang: string;
@@ -24,6 +25,7 @@ export default function CheckoutTopBar({
   totalLabel?: string;
   totalOverride?: number;
 }) {
+  const { t } = useTranslation(lang, 'common');
   // read local cart total on the client
   const { total } = useCart();
   const totalDisplay = useMemo(
@@ -44,21 +46,23 @@ export default function CheckoutTopBar({
           href={continueHref ?? `/${lang}`}
           className="inline-flex h-10 items-center rounded-md border border-gray-300 px-4 text-sm font-medium text-gray-700 hover:bg-gray-50"
         >
-          ← Continue shopping
+          ← {t('text-continue-shopping')}
         </Link>
       </div>
 
       {/* Right: Total + Next steps */}
       <div className="flex items-center gap-3">
         <div className="text-right">
-          <div className="text-xs text-gray-500">{totalLabel}</div>
+          <div className="text-xs text-gray-500">
+            {totalLabel || t('text-total-net')}
+          </div>
           <div className="text-base font-semibold">{totalDisplay}</div>
         </div>
         <button
           onClick={onNext}
           className="h-10 rounded-md bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700 active:translate-y-px"
         >
-          Next Steps
+          {t('text-next-steps')}
         </button>
       </div>
     </div>

@@ -466,7 +466,7 @@ const ProductB2BDetails: React.FC<{
                 ) : (
                   <HiOutlineSwitchHorizontal className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 transition-all group-hover:text-emerald-600" />
                 )}
-                {isInCompare ? 'In compare' : 'Confronta'}
+                {isInCompare ? t('text-in-compare') : t('text-compare')}
               </Button>
 
               {/* Share Button */}

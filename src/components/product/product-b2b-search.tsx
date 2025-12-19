@@ -15,9 +15,9 @@ import {
 import ProductCardB2B from './product-cards/product-card-b2b';
 import ProductRowB2B from './product-rows/product-row-b2b';
 import { fetchErpPrices } from '@framework/erp/prices';
-import { useMemo, useEffect, useRef, useState } from 'react';
+import { useMemo, useEffect, useRef, useState, useCallback } from 'react';
 import { ERP_STATIC } from '@framework/utils/static';
-import { IoGridOutline, IoListOutline } from 'react-icons/io5';
+import { IoGridOutline, IoListOutline, IoInformationCircleOutline } from 'react-icons/io5';
 import type { ErpPriceData } from '@utils/transform/erp-prices';
 import { useUI } from '@contexts/ui.context';
 import {
@@ -29,11 +29,13 @@ import React from 'react';
 interface ProductSearchProps {
   lang: string;
   className?: string;
+  collectionSlug?: string; // Filter products by collection
 }
 
 export const ProductB2BSearch: FC<ProductSearchProps> = ({
   className = '',
   lang,
+  collectionSlug,
 }) => {
   const { t } = useTranslation(lang, 'common');
 
@@ -95,13 +97,18 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
       }
     }
 
+    // Add collection filter if provided via prop
+    if (collectionSlug) {
+      filters.collection_slugs = collectionSlug;
+    }
+
     return {
       lang,
       text: urlParams.text || urlParams.q || '',
       per_page: LIMITS.PRODUCTS_LIMITS,
       filters: Object.keys(filters).length > 0 ? filters : undefined,
     };
-  }, [urlParams, lang]);
+  }, [urlParams, lang, collectionSlug]);
 
   const source = (searchParams.get('source') || '').toLowerCase();
   const period = (searchParams.get('period') || '7d').toLowerCase();
@@ -112,8 +119,23 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
 
   const likesOrTrending = source === 'likes' || source === 'trending';
 
+  // Extract URL filters for likes/trending queries
+  const urlFiltersForSpecialQuery = useMemo(() => {
+    const filters: Record<string, any> = {};
+    for (const [key, value] of Object.entries(urlParams)) {
+      if (key.startsWith('filters-')) {
+        const filterKey = key.replace('filters-', '');
+        filters[filterKey] =
+          typeof value === 'string' && value.includes(';')
+            ? value.split(';')
+            : value;
+      }
+    }
+    return filters;
+  }, [urlParams]);
+
   const likesTrendingQuery = useInfiniteQuery({
-    queryKey: ['search-special', source, period, pageSizeParam, lang],
+    queryKey: ['search-special', source, period, pageSizeParam, lang, urlFiltersForSpecialQuery],
     queryFn: async ({ pageParam = 1 }) => {
       if (source === 'likes') {
         const res = await apiGetUserLikes(pageParam, pageSizeParam);
@@ -121,10 +143,10 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
         if (!skus.length) {
           return { items: [], nextPage: null };
         }
-        // Use PIM search with SKU filter
+        // Use PIM search with SKU filter + URL filters
         const result = await fetchPimProductList({
           lang,
-          filters: { sku: skus },
+          filters: { sku: skus, ...urlFiltersForSpecialQuery },
           rows: skus.length,
         });
         const nextPage = res?.has_next ? pageParam + 1 : null;
@@ -141,10 +163,10 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
         .map((x: any) => x.sku)
         .filter(Boolean);
       if (!skus.length) return { items: [], nextPage: null };
-      // Use PIM search with SKU filter
+      // Use PIM search with SKU filter + URL filters
       const result = await fetchPimProductList({
         lang,
-        filters: { sku: skus },
+        filters: { sku: skus, ...urlFiltersForSpecialQuery },
         rows: skus.length,
       });
       const nextPage = trendingPage?.has_next ? pageParam + 1 : null;
@@ -242,6 +264,38 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
   }, [newCodes]);
 
   const getPrice = (id: string | number) => erpPricesMap[String(id)];
+
+  // Infinite scroll: auto-load more when user scrolls near bottom
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  const isLoadingMoreRef = useRef(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        // Auto-load when sentinel is visible, has next page, and not already loading
+        if (
+          entry.isIntersecting &&
+          hasNextPage &&
+          !loadingMore &&
+          !isLoadingMoreRef.current
+        ) {
+          isLoadingMoreRef.current = true;
+          fetchNextPage().finally(() => {
+            isLoadingMoreRef.current = false;
+          });
+        }
+      },
+      { rootMargin: '200px' }, // Start loading 200px before reaching the sentinel
+    );
+
+    const sentinel = loadMoreRef.current;
+    if (sentinel) observer.observe(sentinel);
+
+    return () => {
+      if (sentinel) observer.unobserve(sentinel);
+    };
+  }, [hasNextPage, loadingMore, fetchNextPage]);
 
   return (
     <>
@@ -347,6 +401,9 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
         )}
       </div>
 
+      {/* Sentinel for infinite scroll */}
+      <div ref={loadMoreRef} className="h-1" />
+
       {hasNextPage && (
         <div className="pt-8 text-center xl:pt-10">
           <Button
@@ -356,6 +413,55 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
           >
             {t('button-load-more')}
           </Button>
+        </div>
+      )}
+
+      {/* End of results message - only show if we loaded multiple pages */}
+      {!hasNextPage && data?.pages && data.pages.length > 1 && (
+        <div className="flex items-start gap-3 p-4 my-6 bg-blue-50 border border-blue-200 rounded-lg max-w-2xl mx-auto">
+          <IoInformationCircleOutline className="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-blue-900">
+              {t('text-all-products-loaded', {
+                defaultValue: 'Tutti i prodotti sono stati caricati',
+              })}
+            </p>
+            <p className="text-xs text-blue-700 mt-1">
+              {t('text-all-available-results-shown', {
+                defaultValue: 'Hai visualizzato tutti i risultati disponibili per questa ricerca',
+              })}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* No results message */}
+      {!isLoading && data?.pages && data.pages.length === 0 && (
+        <div className="flex items-start gap-3 p-5 my-6 bg-amber-50 border border-amber-200 rounded-lg max-w-2xl mx-auto">
+          <IoInformationCircleOutline className="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-base font-semibold text-amber-900 mb-2">
+              {t('text-no-products-found', {
+                defaultValue: 'Nessun prodotto trovato',
+              })}
+            </p>
+            <p className="text-sm text-amber-800 mb-2">
+              {t('text-try-different-filters', {
+                defaultValue: 'Prova a modificare i filtri di ricerca',
+              })}
+            </p>
+            <ul className="text-xs text-amber-700 space-y-1 ml-1">
+              <li>• {t('text-search-suggestion-1', {
+                defaultValue: 'Prova con parole chiave diverse o più generiche'
+              })}</li>
+              <li>• {t('text-search-suggestion-2', {
+                defaultValue: 'Rimuovi alcuni filtri per ampliare i risultati'
+              })}</li>
+              <li>• {t('text-search-suggestion-3', {
+                defaultValue: 'Verifica l\'ortografia dei termini di ricerca'
+              })}</li>
+            </ul>
+          </div>
         </div>
       )}
     </>

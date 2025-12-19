@@ -1,7 +1,6 @@
 import Container from '@components/ui/container';
 import Map from '@components/ui/map';
 import PageContactHeroSection from '@components/ui/page-contact-hero-section';
-import DownloadApps from '@components/common/download-apps';
 import ContactForm from '@components/common/form/contact-form';
 import ContactSupport from '@components/contact/contact-support';
 import ContactInformation from '@components/contact/contact-information';
@@ -38,7 +37,6 @@ export default async function Page({ params }: { params: any }) {
           showInfoWindow={true}
         />
       </div>
-      <DownloadApps lang={lang} />
     </>
   );
 }

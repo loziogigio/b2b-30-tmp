@@ -30,6 +30,9 @@ import type {
   AuthLoginRequest,
   AuthLoginResponse,
   AuthProfileResponse,
+  ChangePasswordRequest,
+  ChangePasswordResponse,
+  SetPasswordByEmailRequest,
 } from './types';
 
 class VincApiError extends Error {
@@ -278,7 +281,7 @@ class VincApiClient {
 
     /**
      * Get user profile using access token
-     * Note: Uses Bearer token instead of internal API key
+     * Note: Uses Bearer token for user identity + internal API key for service auth
      */
     getProfile: async (accessToken: string): Promise<AuthProfileResponse> => {
       const url = `${this.config.baseUrl}/api/v1/internal/auth/me`;
@@ -286,6 +289,7 @@ class VincApiClient {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${accessToken}`,
+          'X-Internal-API-Key': this.config.apiKey,
           'X-Tenant-ID': this.config.tenantId,
         },
       });
@@ -315,6 +319,91 @@ class VincApiClient {
         method: 'POST',
         body: JSON.stringify({ user_id: userId, password }),
       }),
+
+    /**
+     * Set password for a user by email (for password reset)
+     */
+    setPasswordByEmail: (
+      email: string,
+      password: string,
+    ): Promise<{ success: boolean }> =>
+      this.request('/auth/set-password-by-email', {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+      }),
+
+    /**
+     * Change password for authenticated user
+     * Note: Uses Bearer token for authentication
+     */
+    changePassword: async (
+      accessToken: string,
+      currentPassword: string,
+      newPassword: string,
+    ): Promise<ChangePasswordResponse> => {
+      const url = `${this.config.baseUrl}/api/v1/internal/auth/change-password`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+          'X-Internal-API-Key': this.config.apiKey,
+          'X-Tenant-ID': this.config.tenantId,
+        },
+        body: JSON.stringify({
+          current_password: currentPassword,
+          new_password: newPassword,
+        }),
+      });
+
+      if (!response.ok) {
+        let detail = `HTTP ${response.status}`;
+        try {
+          const error = await response.json();
+          // Handle FastAPI validation errors (detail is an array)
+          if (Array.isArray(error.detail)) {
+            detail = error.detail[0]?.msg || 'Validation error';
+          } else {
+            detail = error.detail || detail;
+          }
+        } catch {
+          // ignore parse error
+        }
+        throw new VincApiError(response.status, detail);
+      }
+
+      return response.json();
+    },
+
+    /**
+     * Refresh access token using refresh token
+     * Returns new access_token and refresh_token
+     */
+    refreshToken: async (refreshToken: string): Promise<AuthLoginResponse> => {
+      const url = `${this.config.baseUrl}/api/v1/internal/auth/refresh`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Internal-API-Key': this.config.apiKey,
+          'X-Tenant-ID': this.config.tenantId,
+          'X-Refresh-Token': refreshToken,
+        },
+      });
+
+      if (!response.ok) {
+        let detail = `HTTP ${response.status}`;
+        try {
+          const error = await response.json();
+          detail = error.detail || detail;
+        } catch {
+          // ignore parse error
+        }
+        throw new VincApiError(response.status, detail);
+      }
+
+      return response.json();
+    },
   };
 }
 

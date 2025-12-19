@@ -38,8 +38,20 @@ export const FiltersB2BItem = ({
 
   const queryKey = `filters-${filterKey}`;
   const queryParamValue = searchParams?.get(queryKey);
+  const isInitialMount = React.useRef(true);
 
+  // Sync URL params to formState on mount and when URL changes
   useEffect(() => {
+    setFormState(queryParamValue?.split(',').filter(Boolean) ?? []);
+  }, [queryParamValue]);
+
+  // Update URL when formState changes (skip initial mount)
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
     const newValue = formState.join(',');
     const url = new URL(location.href);
 
@@ -49,12 +61,8 @@ export const FiltersB2BItem = ({
       url.searchParams.delete(queryKey);
     }
 
-    router.push(`${pathname}${url.search}`);
-  }, [formState]);
-
-  useEffect(() => {
-    setFormState(queryParamValue?.split(',') ?? []);
-  }, [queryParamValue]);
+    router.push(`${pathname}${url.search}`, { scroll: false });
+  }, [formState, queryKey, pathname, router]);
 
   function handleItemClick(e: React.FormEvent<HTMLInputElement>): void {
     const { value } = e.currentTarget;

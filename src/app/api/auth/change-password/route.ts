@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import { vincApi, VincApiError } from '@/lib/vinc-api';
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_B2B_PUBLIC_REST_API_ENDPOINT ||
-  'http://localhost:8000/api/v1';
 const PIM_API_URL = process.env.PIM_API_PRIVATE_URL || 'http://localhost:3001';
 
 export async function POST(request: Request) {
@@ -20,84 +19,69 @@ export async function POST(request: Request) {
       );
     }
 
-    // Step 1: Validate current password by attempting login
-    const loginResponse = await fetch(`${API_BASE}/wrapper/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      body: JSON.stringify({ username, password: currentPassword }),
-    });
+    // Get auth token from cookies
+    const cookieStore = await cookies();
+    const authToken = cookieStore.get('auth_token')?.value;
 
-    const loginData = await loginResponse.json();
-
-    // Check if login failed:
-    // - HTTP status not ok (e.g., 422)
-    // - ReturnCode exists and is not 0
-    // - success field is explicitly false
-    const loginFailed =
-      !loginResponse.ok ||
-      (loginData.ReturnCode !== undefined && loginData.ReturnCode !== 0) ||
-      loginData.success === false;
-
-    if (loginFailed) {
+    if (!authToken) {
       return NextResponse.json(
-        { success: false, message: 'La password attuale non è corretta' },
+        { success: false, message: 'Non autenticato' },
         { status: 401 },
       );
     }
 
-    // Step 2: Change password
-    const changeResponse = await fetch(`${API_BASE}/wrapper/reset_password`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      body: JSON.stringify({ username, password }),
-    });
+    // Call VINC API to change password (validates current password and changes it)
+    await vincApi.auth.changePassword(authToken, currentPassword, password);
 
-    const changeData = await changeResponse.json();
-
-    if (changeData.ReturnCode !== undefined && changeData.ReturnCode !== 0) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: changeData.Message || 'Cambio password fallito',
-        },
-        { status: 400 },
-      );
-    }
-
-    // Step 3: Send confirmation email
+    // Send confirmation email via PIM API
     const emailPayload = {
       toEmail: username,
       email: username,
-      ragioneSociale: loginData.message?.company_name || '',
-      contactName: loginData.message?.client?.Nome || '',
+      ragioneSociale: '',
+      contactName: '',
     };
 
     try {
-      const emailResponse = await fetch(
-        `${PIM_API_URL}/api/b2b/emails/reset-password`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(emailPayload),
-        },
-      );
-      await emailResponse.json();
+      await fetch(`${PIM_API_URL}/api/b2b/emails/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(emailPayload),
+      });
     } catch (emailError) {
       console.error('[change-password] Email send failed:', emailError);
     }
 
     return NextResponse.json({
       success: true,
-      message: changeData.Message || 'Password cambiata con successo',
+      message: 'Password cambiata con successo',
     });
   } catch (error) {
     console.error('[change-password] Error:', error);
+
+    if (error instanceof VincApiError) {
+      const status = error.status === 401 ? 401 : 400;
+
+      // Map error messages to translated versions
+      let message = 'Cambio password fallito';
+      if (error.status === 401) {
+        message = 'La password attuale non è corretta';
+      } else if (error.status === 422) {
+        // Validation error - check for password length
+        if (
+          error.detail?.includes('at least') ||
+          error.detail?.includes('min_length')
+        ) {
+          message = 'La nuova password deve essere di almeno 4 caratteri';
+        } else {
+          message = 'Dati non validi. Controlla i campi inseriti';
+        }
+      } else if (error.detail) {
+        message = error.detail;
+      }
+
+      return NextResponse.json({ success: false, message }, { status });
+    }
+
     return NextResponse.json(
       { success: false, message: 'Si è verificato un errore' },
       { status: 500 },

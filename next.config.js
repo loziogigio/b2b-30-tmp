@@ -24,12 +24,12 @@ module.exports = {
           {
             key: 'Permissions-Policy',
             value:
-              'clipboard-read=(self "http://localhost:3001" "http://149.81.163.109:3001"), clipboard-write=(self "http://localhost:3001" "http://149.81.163.109:3001")',
+              'clipboard-read=(self "http://localhost:3001" "https://cs.vendereincloud.it"), clipboard-write=(self "http://localhost:3001" "https://cs.vendereincloud.it")',
           },
           {
             key: 'Content-Security-Policy',
             value:
-              "frame-ancestors 'self' http://localhost:3001 http://149.81.163.109:3001",
+              "frame-ancestors 'self' http://localhost:3001 https://cs.vendereincloud.it",
           },
         ],
       },

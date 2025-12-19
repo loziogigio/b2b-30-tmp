@@ -246,3 +246,18 @@ export interface AuthProfileResponse {
   customers: AuthProfileCustomer[];
   has_password: boolean;
 }
+
+export interface ChangePasswordRequest {
+  current_password: string;
+  new_password: string;
+}
+
+export interface ChangePasswordResponse {
+  success: boolean;
+  message?: string;
+}
+
+export interface SetPasswordByEmailRequest {
+  email: string;
+  password: string;
+}

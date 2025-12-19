@@ -3,7 +3,7 @@ import { useTranslation } from 'src/app/i18n/client';
 import { FilteredItem } from './filtered-item';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import isEmpty from 'lodash/isEmpty';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import useQueryParam from '@utils/use-query-params';
 
 type Props = {
@@ -17,9 +17,6 @@ export default function SelectedFilters({
   allowedKeys,
   labelMap,
 }: Props) {
-  // Temporarily hidden - filter chips disabled
-  return null;
-
   const { t } = useTranslation(lang, 'common');
 
   const { push } = useRouter();
@@ -45,49 +42,40 @@ export default function SelectedFilters({
       updateQueryparams(key, o.filter((i) => i !== item).join(','));
     }
   }
+  // Check if there are any filter params (excluding non-filter params like 'view', 'source', 'period', 'page_size', 'text', 'q')
+  const hasFilters = useMemo(() => {
+    let hasFilterParam = false;
+    searchParams?.forEach((_, key) => {
+      if (key.startsWith('filters-')) {
+        hasFilterParam = true;
+      }
+    });
+    return hasFilterParam;
+  }, [searchParams]);
+
   return (
     <>
-      {!isEmpty(searchParams?.toString()) && (
-        <div className="block -mb-3">
-          <div className="flex items-center justify-between mb-4 -mt-1">
-            <Heading>{t('text-filters')}</Heading>
+      {hasFilters && (
+        <div className="block mb-4">
+          <div className="flex items-center justify-end">
             {/* @ts-ignore */}
             <button
-              className="flex-shrink transition duration-150 ease-in text-13px focus:outline-none hover:text-brand-dark"
+              className="flex-shrink transition duration-150 ease-in text-sm font-medium text-red-600 hover:text-red-700 focus:outline-none hover:underline"
               aria-label={t('text-clear-all')}
               onClick={() => {
-                push(pathname);
+                // Clear all filter params while preserving source, period, page_size, view, etc.
+                const params = new URLSearchParams();
+                searchParams?.forEach((value, key) => {
+                  if (!key.startsWith('filters-')) {
+                    params.set(key, value);
+                  }
+                });
+                const search = params.toString();
+                push(search ? `${pathname}?${search}` : pathname);
               }}
             >
               {t('text-clear-all')}
             </button>
-          </div>
-          <div className="flex flex-wrap -m-1">
-            {Object.entries(state).map(([key, value]) => {
-              if (Array.isArray(value)) {
-                return value.map((item) => (
-                  <FilteredItem
-                    itemKey={key ? key : ' '}
-                    key={`${key}-${item}`}
-                    itemValue={labelMap?.[key]?.[String(item)] ?? (item as any)}
-                    onClick={() => handleArrayUpdate(key, item)}
-                  />
-                ));
-              } else {
-                return (
-                  <FilteredItem
-                    itemKey={key ? key : ' '}
-                    key={`${key}-${value}`}
-                    itemValue={
-                      labelMap?.[key]?.[String(value)] ?? (value as any)
-                    }
-                    onClick={() => {
-                      clearQueryParam([key]);
-                    }}
-                  />
-                );
-              }
-            })}
           </div>
         </div>
       )}

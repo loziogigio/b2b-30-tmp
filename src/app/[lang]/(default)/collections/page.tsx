@@ -1,13 +1,13 @@
 import { Suspense } from 'react';
 import Divider from '@components/ui/divider';
-import SearchB2BPageContent from './search-b2b-page-content';
+import CollectionPageContent from './collection-page-content';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Search',
+  title: 'Collection',
 };
 
-function SearchBarFallback() {
+function CollectionFallback() {
   return <>Loading...</>;
 }
 
@@ -17,8 +17,8 @@ export default async function Page({ params }: { params: any }) {
   return (
     <>
       <Divider />
-      <Suspense fallback={<SearchBarFallback />}>
-        <SearchB2BPageContent lang={lang} />
+      <Suspense fallback={<CollectionFallback />}>
+        <CollectionPageContent lang={lang} />
       </Suspense>
     </>
   );

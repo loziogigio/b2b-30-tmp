@@ -91,22 +91,30 @@ export const usePaymentDeadlineQuery = (enabled = true) =>
   });
 
 export async function fetchAddresses(): Promise<AddressB2B[]> {
-  const raw = await post<
-    { message?: RawAddressesResponse } | RawAddressesResponse
-  >(API_ENDPOINTS_B2B.GET_ADDRESSES, buildPayload());
+  const vincCustomerId = ERP_STATIC.vinc_customer_id;
 
-  // Handle both wrapped (message.ListaIndirizzi) and direct (ListaIndirizzi) response formats
-  const res: RawAddressesResponse | undefined = (raw as any)?.message
-    ?.ListaIndirizzi
-    ? (raw as any).message
-    : (raw as RawAddressesResponse)?.ListaIndirizzi
-      ? (raw as RawAddressesResponse)
-      : undefined;
+  console.log('[fetchAddresses] vinc_customer_id:', vincCustomerId);
 
-  if (!res || typeof res !== 'object' || !Array.isArray(res.ListaIndirizzi)) {
-    throw new Error('Unexpected ERP response for addresses.');
+  if (!vincCustomerId) {
+    console.warn('[fetchAddresses] No vinc_customer_id available');
+    return [];
   }
-  return transformAddresses(res);
+
+  console.log('[fetchAddresses] Calling VINC API...');
+  const response = await fetch('/api/b2b/addresses', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ customer_id: vincCustomerId }),
+  });
+
+  const data = await response.json();
+  console.log('[fetchAddresses] VINC API response:', data);
+
+  if (data.success && Array.isArray(data.addresses)) {
+    return data.addresses;
+  }
+
+  throw new Error(data.message || 'Failed to fetch addresses from VINC API');
 }
 
 export const useAddressQuery = (enabled = true) =>

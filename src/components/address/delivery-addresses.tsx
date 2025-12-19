@@ -44,12 +44,12 @@ const DeliveryAddresses: React.FC<{ lang: string }> = ({ lang }) => {
     [setSelectedAddress, closeModal, isHomePage],
   );
 
-  // Choose a sensible default if nothing is selected yet
+  // Choose the first address if nothing is selected yet
+  // (API already sorts default address first)
   React.useEffect(() => {
     if (!addresses.length) return;
     if (!selected) {
-      const fallback = addresses.find((a) => a.isLegalSeat) ?? addresses[0];
-      handleAddressChange(fallback, false);
+      handleAddressChange(addresses[0], false);
     }
   }, [addresses, selected, handleAddressChange]);
 

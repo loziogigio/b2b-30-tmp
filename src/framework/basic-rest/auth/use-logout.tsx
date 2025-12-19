@@ -2,6 +2,7 @@ import { useUI } from '@contexts/ui.context';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useDeliveryAddress } from '@contexts/address/address.context';
 import { clearAllCookies } from '@utils/cookies';
+import { clearAllB2BSessionData } from '@framework/utils/static';
 
 export interface LoginInputType {
   email: string;
@@ -34,8 +35,8 @@ export const useLogoutMutation = (lang: string) => {
       // 2. Clear React Query cache
       queryClient.clear();
 
-      // 3. Clear ALL localStorage
-      localStorage.clear();
+      // 3. Clear B2B session data from localStorage (address, cart, ERP static)
+      clearAllB2BSessionData();
 
       // 4. Clear cookies client-side
       clearAllCookies();

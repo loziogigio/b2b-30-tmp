@@ -4,9 +4,17 @@ import SelectedFilters from './selected-filters';
 import { useTranslation } from 'src/app/i18n/client';
 import { useSearchParams } from 'next/navigation';
 import React from 'react';
-import { usePimFilterQuery } from '@framework/product/get-pim-filters';
+import {
+  fetchPimFilters,
+  type PimTransformedFilter,
+} from '@framework/product/get-pim-filters';
 import { FiltersB2BItem } from './filters-b2b-item';
 import { PIM_FACET_FIELDS } from '@framework/utils/filters';
+import { useQuery } from '@tanstack/react-query';
+import {
+  getUserLikes as apiGetUserLikes,
+  getTrendingProductsPage as apiGetTrendingPage,
+} from '@framework/likes';
 
 export const SearchFiltersB2B: React.FC<{ lang: string; text?: string }> = ({
   lang,
@@ -20,17 +28,86 @@ export const SearchFiltersB2B: React.FC<{ lang: string; text?: string }> = ({
     urlParams[key] = value;
   });
 
-  const mergedParams = {
-    ...urlParams,
-    lang,
-    ...(text ? { text } : {}),
-  };
+  // Check if we're on trending or likes page
+  const source = (searchParams.get('source') || '').toLowerCase();
+  const period = (searchParams.get('period') || '7d').toLowerCase();
+  const pageSizeParam = Math.min(
+    100,
+    Math.max(1, Number(searchParams.get('page_size') || 24)),
+  );
+  const isLikesOrTrending = source === 'likes' || source === 'trending';
+
+  // Fetch SKUs for likes/trending pages
+  const {
+    data: specialSkus,
+    isLoading: isLoadingSkus,
+    error: skusError,
+  } = useQuery({
+    queryKey: ['facet-skus', source, period],
+    queryFn: async () => {
+      const MAX_PAGE_SIZE = 100; // API limit
+      const MAX_PAGES = 5; // Fetch up to 500 SKUs total for faceting
+      const allSkus: string[] = [];
+
+      if (source === 'likes') {
+        // Fetch multiple pages of likes
+        for (let page = 1; page <= MAX_PAGES; page++) {
+          const res = await apiGetUserLikes(page, MAX_PAGE_SIZE);
+          const skus = (res?.likes || [])
+            .map((l: any) => l.sku)
+            .filter(Boolean);
+          allSkus.push(...skus);
+          if (!res?.has_next) break;
+        }
+        return allSkus;
+      }
+
+      if (source === 'trending') {
+        // Fetch multiple pages of trending
+        for (let page = 1; page <= MAX_PAGES; page++) {
+          const res = await apiGetTrendingPage(period, page, MAX_PAGE_SIZE, false);
+          const skus = (res?.items || [])
+            .map((x: any) => x.sku)
+            .filter(Boolean);
+          allSkus.push(...skus);
+          if (!res?.has_next) break;
+        }
+        return allSkus;
+      }
+
+      return [];
+    },
+    enabled: isLikesOrTrending,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  // Build merged params - same logic as product search
+  const mergedParams = React.useMemo(() => {
+    const params: Record<string, any> = {
+      ...urlParams,
+      lang,
+      ...(text ? { text } : {}),
+    };
+
+    // Add SKU filter for trending/likes pages (same as product search)
+    if (isLikesOrTrending && specialSkus?.length) {
+      params['filters-sku'] = specialSkus.join(';');
+    }
+
+    return params;
+  }, [urlParams, lang, text, isLikesOrTrending, specialSkus]);
 
   const {
     data: filters,
     isLoading: isLoadingFilters,
     error: filtersError,
-  } = usePimFilterQuery(mergedParams);
+  } = useQuery<PimTransformedFilter[], Error>({
+    queryKey: ['pim-filters', mergedParams],
+    queryFn: () => fetchPimFilters(mergedParams),
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    // Don't run facet query until SKUs are loaded (when on trending/likes pages)
+    enabled: !isLikesOrTrending || (isLikesOrTrending && !isLoadingSkus),
+  });
 
   // Build label map for selected chips: { 'filters-<key>': { value: label } }
   const labelMap: Record<string, Record<string, string>> = React.useMemo(() => {

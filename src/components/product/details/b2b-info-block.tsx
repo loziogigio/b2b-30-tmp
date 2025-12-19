@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import type { ErpPriceData } from '@utils/transform/erp-prices';
 import { formatAvailability } from '@utils/format-availability';
+import { useTranslation } from 'src/app/i18n/client';
 
 type Props = {
   product: any;
@@ -12,6 +13,8 @@ type Props = {
 };
 
 export default function B2BInfoBlock({ product, priceData, lang }: Props) {
+  const { t } = useTranslation(lang, 'common');
+
   type SupplierArrival = {
     expected_date?: string;
     confirmed_date?: string;
@@ -66,8 +69,7 @@ export default function B2BInfoBlock({ product, priceData, lang }: Props) {
 
   const model = product?.model ?? '—';
   const codiceProdotto = product?.sku ?? product?.id ?? '—';
-  const codiceFigura =
-    (product as any)?.figure_code ?? (product as any)?.fig_code ?? 'F84240';
+  const codiceFigura = (product as any)?.parent_sku ?? '—';
 
   const availability = Number(priceData?.availability ?? 0);
   const buyDid = Boolean(priceData?.buy_did);
@@ -76,10 +78,10 @@ export default function B2BInfoBlock({ product, priceData, lang }: Props) {
   const stato =
     priceData?.product_label_action?.LABEL ??
     (availability > 0
-      ? 'DISPONIBILE'
+      ? t('text-available')
       : earliestDateDmy
-        ? 'IN ARRIVO'
-        : 'NON DISPONIBILE');
+        ? t('text-arriving')
+        : t('text-not-available'));
 
   const brandImg = product?.brand?.image?.original || product?.brand?.logo_url;
   const brandName = product?.brand?.name || product?.brand?.label || 'Brand';
@@ -89,16 +91,16 @@ export default function B2BInfoBlock({ product, priceData, lang }: Props) {
       <div className="grid grid-cols-5 items-start gap-4 p-4">
         <div className="col-span-4">
           <dl className="grid grid-cols-[140px,1fr] gap-y-2 text-[13px] sm:text-sm">
-            <dt className="text-gray-500">MODELLO:</dt>
+            <dt className="text-gray-500">{t('text-model')}</dt>
             <dd className="font-semibold text-gray-700 break-words">{model}</dd>
 
-            <dt className="text-gray-500">Codice Prodotto:</dt>
+            <dt className="text-gray-500">{t('text-product-code')}</dt>
             <dd className="text-gray-700">{codiceProdotto}</dd>
 
-            <dt className="text-gray-500">Codice Figura:</dt>
+            <dt className="text-gray-500">{t('text-figure-code')}</dt>
             <dd className="text-gray-700">{codiceFigura}</dd>
 
-            <dt className="text-gray-500">Stato:</dt>
+            <dt className="text-gray-500">{t('text-state')}</dt>
             <dd
               className={
                 availability > 0
@@ -113,7 +115,7 @@ export default function B2BInfoBlock({ product, priceData, lang }: Props) {
 
             {availability > 0 && priceData && (
               <>
-                <dt className="text-gray-500">Disponiblita:</dt>
+                <dt className="text-gray-500">{t('text-availability-label')}</dt>
                 <dd className="text-gray-700">
                   {formatAvailability(
                     availability,
@@ -125,18 +127,18 @@ export default function B2BInfoBlock({ product, priceData, lang }: Props) {
 
             {buyDid && buyDidLast && (
               <>
-                <dt className="text-gray-500">Ultimo ordinato:</dt>
+                <dt className="text-gray-500">{t('text-last-ordered')}</dt>
                 <dd className="text-gray-700">{buyDidLast}</dd>
               </>
             )}
             {earliestDateDmy && availability <= 0 && (
               <>
-                <dt className="text-gray-500">Arrivo Previsto:</dt>
+                <dt className="text-gray-500">{t('text-expected-arrival')}</dt>
                 <dd className="font-semibold text-green-600">
                   {earliestDateDmy ?? '—'}
                   {earliestWeek ? (
                     <span className="ml-1 text-gray-700">
-                      (Settimana {earliestWeek})
+                      ({t('text-week')} {earliestWeek})
                     </span>
                   ) : null}
                 </dd>

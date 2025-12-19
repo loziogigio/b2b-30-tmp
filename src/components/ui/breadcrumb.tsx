@@ -83,19 +83,25 @@ const Breadcrumb: React.FC<{ separator?: string; lang: string }> = ({
         </a>
       </ActiveLink>
 
-      {breadcrumbs?.map((breadcrumb: any) => (
-        <ActiveLink
-          href={breadcrumb.href}
-          activeClassName="font-semibold text-heading"
-          key={breadcrumb.href}
-          legacyBehavior
-          lang={lang}
-        >
-          <a className="capitalize">
-            {convertBreadcrumbTitle(breadcrumb.breadcrumb)}
-          </a>
-        </ActiveLink>
-      ))}
+      {breadcrumbs?.map((breadcrumb: any) => {
+        const breadcrumbText = convertBreadcrumbTitle(breadcrumb.breadcrumb);
+        const translationKey = `breadcrumb-${breadcrumbText.replace(/\s+/g, '-')}`;
+        const translatedText = t(translationKey, { defaultValue: breadcrumbText });
+
+        return (
+          <ActiveLink
+            href={breadcrumb.href}
+            activeClassName="font-semibold text-heading"
+            key={breadcrumb.href}
+            legacyBehavior
+            lang={lang}
+          >
+            <a className="capitalize">
+              {translatedText}
+            </a>
+          </ActiveLink>
+        );
+      })}
     </BreadcrumbItems>
   );
 };

@@ -289,27 +289,7 @@ export default function SearchTabs({ lang }: { lang: string }) {
   return (
     <div className="mt-3 mb-2 border-b border-gray-200 overflow-x-auto">
       <div className="flex items-end gap-1 min-w-max">
-        {/* Fixed tabs: Wishlist and Trending at the beginning */}
-        {mounted && isAuthorized ? (
-          <button
-            className={cn(
-              'mr-1 px-3 py-2 rounded-t-md text-sm border',
-              (searchParams.get('source') || '') === 'likes'
-                ? 'bg-white border border-b-white text-pink-700'
-                : 'bg-pink-50 text-pink-700 border-pink-200 hover:bg-pink-100',
-            )}
-            onClick={() => {
-              const qs = new URLSearchParams(searchParams as any);
-              qs.set('source', 'likes');
-              if (!qs.get('page_size')) qs.set('page_size', '24');
-              router.replace(`${pathname}?${qs.toString()}`, { scroll: false });
-            }}
-            title="Wishlist"
-          >
-            Wishlist
-          </button>
-        ) : null}
-
+        {/* Fixed tab: Trending only */}
         <button
           className={cn(
             'mr-2 px-3 py-2 rounded-t-md text-sm border',
@@ -327,40 +307,6 @@ export default function SearchTabs({ lang }: { lang: string }) {
           title="Trending"
         >
           Trending
-        </button>
-
-        <button
-          className={cn(
-            'mr-2 px-3 py-2 rounded-t-md text-sm border',
-            searchParams.get('filters-new') === 'true'
-              ? 'bg-white border border-b-white text-indigo-700'
-              : 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100',
-          )}
-          onClick={() => {
-            const qs = new URLSearchParams();
-            qs.set('filters-new', 'true');
-            router.replace(`${pathname}?${qs.toString()}`, { scroll: false });
-          }}
-          title="New arrivals"
-        >
-          New arrivals
-        </button>
-
-        <button
-          className={cn(
-            'mr-2 px-3 py-2 rounded-t-md text-sm border',
-            searchParams.get('filters-promo_type') === 'all'
-              ? 'bg-white border border-b-white text-indigo-700'
-              : 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100',
-          )}
-          onClick={() => {
-            const qs = new URLSearchParams();
-            qs.set('filters-promo_type', 'all');
-            router.replace(`${pathname}?${qs.toString()}`, { scroll: false });
-          }}
-          title="Promo"
-        >
-          Promo (all)
         </button>
 
         {tabs.map((t, i) => (

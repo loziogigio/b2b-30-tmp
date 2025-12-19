@@ -11,6 +11,8 @@ import CloseIcon from '@components/icons/close-icon';
 import SearchBoxB2B from '@components/common/search-box-b2b';
 import { SearchFiltersB2B } from '@components/search/filters-b2b';
 import { IoFilterOutline, IoChevronDown, IoChevronUp } from 'react-icons/io5';
+import Logo from '@components/ui/logo';
+import { useTranslation } from 'src/app/i18n/client';
 
 // Debounce delay in ms
 const SEARCH_DEBOUNCE_MS = 400;
@@ -64,6 +66,7 @@ export default function SearchOverlayB2B({
   onClear,
   onSubmitSuccess,
 }: Props) {
+  const { t } = useTranslation(lang, 'common');
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -252,7 +255,7 @@ export default function SearchOverlayB2B({
       )}
       aria-hidden={!open}
     >
-      <div className="relative bg-white shadow-xl border-t border-amber-300">
+      <div className="relative bg-white shadow-xl border-t border-brand">
         {/* Close button floats, not adding top margin */}
         <button
           type="button"
@@ -266,8 +269,15 @@ export default function SearchOverlayB2B({
         <Container>
           {/* Inline search bar inside the overlay */}
           <div className="pt-2">
-            <div className="max-w-[1100px] mx-auto">
-              <SearchBoxB2B
+            <div className="max-w-[1100px] mx-auto flex items-center gap-4">
+              {/* Logo before search bar */}
+              <div className="hidden sm:block flex-shrink-0">
+                <Logo className="h-10 w-auto" />
+              </div>
+
+              {/* Search box takes remaining space */}
+              <div className="flex-1">
+                <SearchBoxB2B
                 searchId="overlay-search"
                 lang={lang}
                 name="overlay-search"
@@ -285,15 +295,16 @@ export default function SearchOverlayB2B({
                   onClose();
                 }}
               />
+              </div>
             </div>
-            <div className="border-b border-amber-300 mt-2" />
+            <div className="border-b border-brand mt-2" />
           </div>
 
           {/* Recent searches row */}
           <div className="py-3">
             <div className="flex items-center flex-wrap gap-2 text-[13px]">
               <span className="font-semibold text-gray-700">
-                Ultime ricerche:
+                {t('text-recent-searches')}
               </span>
               {recent.length ? (
                 recent.map((term) => (
@@ -321,15 +332,15 @@ export default function SearchOverlayB2B({
                   </div>
                 ))
               ) : (
-                <span className="text-gray-400">Nessuna ricerca recente</span>
+                <span className="text-gray-400">{t('text-no-recent-searches')}</span>
               )}
               {recent.length ? (
                 <button
                   type="button"
-                  className="ml-2 text-amber-500 hover:underline"
+                  className="ml-2 text-red-600 hover:text-red-700 hover:underline font-medium"
                   onClick={clear}
                 >
-                  Cancella tutto
+                  {t('text-clear-all')}
                 </button>
               ) : null}
             </div>
@@ -346,7 +357,7 @@ export default function SearchOverlayB2B({
                 >
                   <span className="flex items-center gap-2">
                     <IoFilterOutline className="w-5 h-5" />
-                    Filtri
+                    {t('text-filters')}
                   </span>
                   {filtersOpen ? (
                     <IoChevronUp className="w-5 h-5" />
@@ -373,7 +384,7 @@ export default function SearchOverlayB2B({
               ) : (
                 <div>
                   <div className="text-base font-semibold text-gray-800 mb-2">
-                    Ricerche popolari
+                    {t('text-popular-searches')}
                   </div>
                   <div className="flex flex-col gap-1">
                     {popular.map((term) => (
@@ -397,7 +408,7 @@ export default function SearchOverlayB2B({
               {showAutocomplete && (
                 <div className="mb-6">
                   <ProductsCarousel
-                    sectionHeading={`See all results for "${trimmed}"`}
+                    sectionHeading={t('text-see-all-results-for', { query: trimmed })}
                     categorySlug={`search?${(() => {
                       const p = new URLSearchParams();
                       if (trimmed) p.set('text', trimmed);
@@ -419,7 +430,7 @@ export default function SearchOverlayB2B({
                 <TrendingProductsCarousel
                   lang={lang}
                   limitSkus={18}
-                  sectionTitle="Prodotti consigliati"
+                  sectionTitle={t('text-recommended-products')}
                   carouselBreakpoint={overlayBreakpoints}
                 />
               )}

@@ -1,23 +1,35 @@
+'use client';
+
 import HomeIcon from '@components/icons/home-icon';
 import NotFoundIcon from '@components/icons/not-found';
 import { ROUTES } from '@utils/routes';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { useTranslation } from 'src/app/i18n/client';
 
 const ErrorInformation: React.FC = () => {
+  const pathname = usePathname();
+  const lang = pathname?.split('/')[1] || 'it';
+  const { t } = useTranslation(lang, 'common');
+
   return (
-    <div className="flex items-center justify-center min-h-screen px-12 py-16 text-center sm:py-20 lg:py-24 xl:py-32">
+    <div className="flex min-h-screen items-center justify-center px-12 py-16 text-center sm:py-20 lg:py-24 xl:py-32">
       <div className="max-w-md xl:max-w-lg">
-        <NotFoundIcon className="w-full h-[410px]" />
-        <p className="text-15px md:text-base 2xl:text-[18px] leading-7 md:leading-8 pt-4 font-medium pb-7">
-          We&apos;re sorry! This page is currently unavailable. We request you
-          to please try again later.
+        <NotFoundIcon className="h-[410px] w-full" />
+        <p className="text-15px pb-7 pt-4 font-medium leading-7 md:text-base md:leading-8 2xl:text-[18px]">
+          {t('text-404-message', {
+            defaultValue:
+              "We're sorry! This page is currently unavailable. Please try again later.",
+          })}
         </p>
         <Link
           href={ROUTES.HOME}
-          className='class="text-[13px] md:text-sm lg:text-[15px] leading-4 inline-flex items-center font-medium cursor-pointer transition ease-in-out duration-300 bg-brand-dark text-white px-4 md:px-6 py-2.5 lg:py-3 hover:text-white bg-opacity-90 hover:bg-opacity-100 rounded-md'
+          className="inline-flex cursor-pointer items-center rounded-md bg-brand-dark bg-opacity-90 px-4 py-2.5 text-[13px] font-medium leading-4 text-white transition duration-300 ease-in-out hover:bg-opacity-100 hover:text-white md:px-6 md:text-sm lg:py-3 lg:text-[15px]"
         >
           <HomeIcon width="14" />
-          <span className="ps-2 mt-0.5"> Back to Home</span>
+          <span className="mt-0.5 ps-2">
+            {t('text-back-to-home', { defaultValue: 'Back to Home' })}
+          </span>
         </Link>
       </div>
     </div>

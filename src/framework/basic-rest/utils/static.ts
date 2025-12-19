@@ -8,6 +8,9 @@ export type ErpStaticState = {
   username: string;
   company_name?: string;
   ext_call: boolean;
+  // VINC API fields (UUIDs)
+  vinc_customer_id?: string;
+  vinc_address_id?: string;
 };
 
 // Persistent key
@@ -76,27 +79,42 @@ export function applyVincProfileToErpStatic(
   profile: {
     email: string;
     customers?: Array<{
+      id: string;
       erp_customer_id: string;
       name?: string;
       business_name?: string;
       addresses?: Array<{
+        id: string;
         erp_address_id: string;
       }>;
     }>;
   } | null,
 ) {
   try {
-    if (!profile) return;
+    console.log('[applyVincProfileToErpStatic] profile:', profile);
+    if (!profile) {
+      console.log('[applyVincProfileToErpStatic] No profile, returning');
+      return;
+    }
     const firstCustomer = profile.customers?.[0];
     const firstAddress = firstCustomer?.addresses?.[0];
+    console.log('[applyVincProfileToErpStatic] firstCustomer:', firstCustomer);
+    console.log('[applyVincProfileToErpStatic] firstAddress:', firstAddress);
     setErpStatic({
       customer_code: firstCustomer?.erp_customer_id || '',
       address_code: firstAddress?.erp_address_id || '1',
       username: profile.email,
       company_name: firstCustomer?.business_name || firstCustomer?.name,
+      // Store VINC API UUIDs for direct API calls
+      vinc_customer_id: firstCustomer?.id || '',
+      vinc_address_id: firstAddress?.id || '',
     });
-  } catch {
-    // fallback silently
+    console.log(
+      '[applyVincProfileToErpStatic] ERP_STATIC after set:',
+      ERP_STATIC,
+    );
+  } catch (err) {
+    console.error('[applyVincProfileToErpStatic] Error:', err);
   }
 }
 
@@ -113,6 +131,8 @@ export function clearErpStatic() {
       username: 'guest@example.com',
       company_name: undefined,
       ext_call: true,
+      vinc_customer_id: undefined,
+      vinc_address_id: undefined,
     };
   } catch {}
 }
@@ -135,6 +155,8 @@ export function clearAllB2BSessionData() {
       username: 'guest@example.com',
       company_name: undefined,
       ext_call: true,
+      vinc_customer_id: undefined,
+      vinc_address_id: undefined,
     };
   } catch {}
 }
@@ -145,7 +167,11 @@ export function hydrateErpStatic(): boolean {
   try {
     if (typeof window === 'undefined') return false;
     const stored = loadState();
-    if (stored && stored.customer_code && stored.customer_code !== '0') {
+    // Valid if we have either legacy ERP customer_code or VINC API customer_id
+    const hasValidContext =
+      (stored?.customer_code && stored.customer_code !== '0') ||
+      stored?.vinc_customer_id;
+    if (stored && hasValidContext) {
       ERP_STATIC = stored;
       return true;
     }
@@ -157,9 +183,11 @@ export function hydrateErpStatic(): boolean {
 
 // Check if ERP_STATIC has valid customer context
 export function hasValidErpContext(): boolean {
+  // Valid if we have either legacy ERP context or VINC API customer_id
   return Boolean(
-    ERP_STATIC.customer_code &&
+    (ERP_STATIC.customer_code &&
       ERP_STATIC.address_code &&
-      ERP_STATIC.customer_code !== '0',
+      ERP_STATIC.customer_code !== '0') ||
+      ERP_STATIC.vinc_customer_id,
   );
 }

@@ -16,7 +16,9 @@ function fmtAddress(a?: AddressB2B['address']) {
   if (!a) return '—';
   const row1 = a.street_address;
   const row2 = [a.zip, a.city].filter(Boolean).join(' ');
-  const row3 = [a.state, a.country].filter(Boolean).join(', ');
+  // Filter out "0" country values (invalid data)
+  const country = a.country && a.country !== '0' ? a.country : '';
+  const row3 = [a.state, country].filter(Boolean).join(', ');
   return [row1, row2, row3].filter(Boolean).join('\n');
 }
 
@@ -47,6 +49,11 @@ const AddressGridB2B: React.FC<Props> = ({
                         t('text-delivery-address') ||
                         'Delivery address'}
                     </h3>
+                    {item.isDefault && (
+                      <span className="mt-1 inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700 ring-1 ring-inset ring-blue-200">
+                        {t('text-default-address') || 'Default'}
+                      </span>
+                    )}
                     {item.isLegalSeat && (
                       <span className="mt-1 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200">
                         {t('text-registered-office') || 'Registered office'}
@@ -93,37 +100,6 @@ const AddressGridB2B: React.FC<Props> = ({
                         </div>
                       </div>
                     )}
-
-                    {(item.paymentTerms?.label || item.paymentTerms?.code) && (
-                      <div className="min-w-0">
-                        <div className="text-[11px] uppercase tracking-wide text-gray-500">
-                          {t('METHOD_OF_PAYMENT') || 'Payment terms'}
-                        </div>
-                        <div
-                          className="truncate"
-                          title={`${item.paymentTerms?.label ?? ''} ${item.paymentTerms?.code ?? ''}`}
-                        >
-                          {item.paymentTerms?.label || '—'}
-                          {item.paymentTerms?.code
-                            ? ` (${item.paymentTerms.code})`
-                            : ''}
-                        </div>
-                      </div>
-                    )}
-
-                    {(item.carrier?.label || item.port?.label) && (
-                      <div className="min-w-0">
-                        <div className="text-[11px] uppercase tracking-wide text-gray-500">
-                          {t('LOGISTICS') || 'Logistics'}
-                        </div>
-                        <div className="truncate" title={item.carrier?.label}>
-                          {item.carrier?.label || '—'}
-                        </div>
-                        <div className="truncate" title={item.port?.label}>
-                          {item.port?.label || '—'}
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </div>
               ))}
@@ -139,6 +115,7 @@ const AddressGridB2B: React.FC<Props> = ({
   }
 
   // ---------- SELECTABLE MODE (existing logic) ----------
+  // Use initialSelectedId if provided, otherwise first address (API sorts default first)
   const deriveInitial = React.useCallback((): AddressB2B | undefined => {
     if (!address.length) return undefined;
     if (initialSelectedId != null) {
@@ -147,7 +124,7 @@ const AddressGridB2B: React.FC<Props> = ({
       );
       if (byId) return byId;
     }
-    return address.find((a) => a.isLegalSeat) ?? address[0];
+    return address[0];
   }, [address, initialSelectedId]);
 
   const [selected, setSelected] = React.useState<AddressB2B | undefined>(
@@ -208,6 +185,11 @@ const AddressGridB2B: React.FC<Props> = ({
                         t('text-delivery-address') ||
                         'Delivery address'}
                     </h3>
+                    {item.isDefault && (
+                      <span className="mt-1 inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700 ring-1 ring-inset ring-blue-200">
+                        {t('text-default-address') || 'Default'}
+                      </span>
+                    )}
                     {item.isLegalSeat && (
                       <span className="mt-1 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200">
                         {t('text-registered-office') || 'Registered office'}
@@ -257,37 +239,6 @@ const AddressGridB2B: React.FC<Props> = ({
                       </div>
                       <div className="truncate">
                         {item.agent?.phone || item.agent?.email || '—'}
-                      </div>
-                    </div>
-                  )}
-
-                  {(item.paymentTerms?.label || item.paymentTerms?.code) && (
-                    <div className="min-w-0">
-                      <div className="text-[11px] uppercase tracking-wide text-gray-500">
-                        {t('METHOD_OF_PAYMENT') || 'Payment terms'}
-                      </div>
-                      <div
-                        className="truncate"
-                        title={`${item.paymentTerms?.label ?? ''} ${item.paymentTerms?.code ?? ''}`}
-                      >
-                        {item.paymentTerms?.label || '—'}
-                        {item.paymentTerms?.code
-                          ? ` (${item.paymentTerms.code})`
-                          : ''}
-                      </div>
-                    </div>
-                  )}
-
-                  {(item.carrier?.label || item.port?.label) && (
-                    <div className="min-w-0">
-                      <div className="text-[11px] uppercase tracking-wide text-gray-500">
-                        {t('LOGISTICS') || 'Logistics'}
-                      </div>
-                      <div className="truncate" title={item.carrier?.label}>
-                        {item.carrier?.label || '—'}
-                      </div>
-                      <div className="truncate" title={item.port?.label}>
-                        {item.port?.label || '—'}
                       </div>
                     </div>
                   )}
