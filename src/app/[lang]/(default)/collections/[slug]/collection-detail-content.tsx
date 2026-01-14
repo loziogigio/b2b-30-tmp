@@ -4,7 +4,11 @@ import { ProductB2BSearch } from '@components/product/product-b2b-search';
 import Container from '@components/ui/container';
 import Link from 'next/link';
 import { Element } from 'react-scroll';
-import { HiOutlineHome, HiOutlineChevronRight, HiOutlineExclamationCircle } from 'react-icons/hi';
+import {
+  HiOutlineHome,
+  HiOutlineChevronRight,
+  HiOutlineExclamationCircle,
+} from 'react-icons/hi';
 import { useTranslation } from 'src/app/i18n/client';
 import { useCollection } from '@framework/collections/use-collections';
 import { useQueryClient } from '@tanstack/react-query';

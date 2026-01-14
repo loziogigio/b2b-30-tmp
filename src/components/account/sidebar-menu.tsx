@@ -2,10 +2,9 @@
 
 import cn from 'classnames';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import Cookies from 'js-cookie';
-import { useUI } from '@contexts/ui.context';
+import { usePathname } from 'next/navigation';
 import { useTranslation } from 'src/app/i18n/client';
+import { useLogoutMutation } from '@framework/auth/use-logout';
 
 type MenuItem = {
   labelKey: string;
@@ -53,26 +52,10 @@ interface SidebarMenuProps {
 export default function SidebarMenu({ lang }: SidebarMenuProps) {
   const { t } = useTranslation(lang, 'common');
   const pathname = usePathname();
-  const router = useRouter();
-  const { unauthorize } = useUI();
+  const { mutate: logout, isPending: isLoggingOut } = useLogoutMutation(lang);
 
   function handleLogout() {
-    try {
-      // Remove auth token
-      Cookies.remove('auth_token');
-      // Clear persisted app state that should reset on logout
-      if (typeof window !== 'undefined') {
-        try {
-          window.localStorage.removeItem('erp-static');
-        } catch {}
-        try {
-          window.localStorage.removeItem('likes-state');
-        } catch {}
-      }
-    } catch {}
-    // Update UI auth state and redirect to home
-    unauthorize?.();
-    router.replace(`/${lang}`);
+    logout();
   }
 
   return (
@@ -103,9 +86,10 @@ export default function SidebarMenu({ lang }: SidebarMenuProps) {
       <div className="mt-4 border-t pt-2">
         <button
           onClick={handleLogout}
-          className="block w-full rounded-xl px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+          disabled={isLoggingOut}
+          className="block w-full rounded-xl px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
         >
-          {t('text-logout')}
+          {isLoggingOut ? '...' : t('text-logout')}
         </button>
       </div>
     </nav>

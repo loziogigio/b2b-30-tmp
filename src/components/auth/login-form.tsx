@@ -25,7 +25,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
   isPopup = true,
   className,
 }) => {
-  const { t } = useTranslation(lang);
+  const { t } = useTranslation(lang, ['common', 'forms']);
   const { closeModal, openModal } = useModalAction();
   const [loginError, setLoginError] = useState<string | null>(null);
   const { mutate: login, isPending } = useLoginMutation(closeModal);

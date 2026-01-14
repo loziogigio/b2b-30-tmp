@@ -87,71 +87,94 @@ export default function B2BInfoBlock({ product, priceData, lang }: Props) {
   const brandName = product?.brand?.name || product?.brand?.label || 'Brand';
 
   return (
-    <div className="mt-2 rounded-md border border-gray-200 bg-white/60">
-      <div className="grid grid-cols-5 items-start gap-4 p-4">
-        <div className="col-span-4">
-          <dl className="grid grid-cols-[140px,1fr] gap-y-2 text-[13px] sm:text-sm">
-            <dt className="text-gray-500">{t('text-model')}</dt>
-            <dd className="font-semibold text-gray-700 break-words">{model}</dd>
+    <div className="mt-2 rounded border border-border-base bg-white">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr,auto] items-start">
+        {/* Info Grid */}
+        <dl className="grid grid-cols-1 sm:grid-cols-[180px,1fr]">
+          <dt className="border-b border-border-base bg-gray-50 px-4 py-3 text-[12px] font-semibold uppercase text-gray-600 sm:text-sm">
+            {t('text-model')}
+          </dt>
+          <dd className="border-b border-border-base px-4 py-3 text-sm font-semibold text-brand-dark break-words">
+            {model}
+          </dd>
 
-            <dt className="text-gray-500">{t('text-product-code')}</dt>
-            <dd className="text-gray-700">{codiceProdotto}</dd>
+          <dt className="border-b border-border-base bg-gray-50 px-4 py-3 text-[12px] font-semibold uppercase text-gray-600 sm:text-sm">
+            {t('text-product-code')}
+          </dt>
+          <dd className="border-b border-border-base px-4 py-3 text-sm text-brand-dark">
+            {codiceProdotto}
+          </dd>
 
-            <dt className="text-gray-500">{t('text-figure-code')}</dt>
-            <dd className="text-gray-700">{codiceFigura}</dd>
+          <dt className="border-b border-border-base bg-gray-50 px-4 py-3 text-[12px] font-semibold uppercase text-gray-600 sm:text-sm">
+            {t('text-figure-code')}
+          </dt>
+          <dd className="border-b border-border-base px-4 py-3 text-sm text-brand-dark">
+            {codiceFigura}
+          </dd>
 
-            <dt className="text-gray-500">{t('text-state')}</dt>
-            <dd
-              className={
-                availability > 0
-                  ? 'font-semibold text-emerald-600'
-                  : earliestDateDmy
-                    ? 'font-semibold text-blue-700'
-                    : 'font-semibold text-red-600'
-              }
-            >
-              {stato}
-            </dd>
+          <dt className="border-b border-border-base bg-gray-50 px-4 py-3 text-[12px] font-semibold uppercase text-gray-600 sm:text-sm">
+            {t('text-state')}
+          </dt>
+          <dd
+            className={`border-b border-border-base px-4 py-3 text-sm font-semibold ${
+              availability > 0
+                ? 'text-emerald-600'
+                : earliestDateDmy
+                  ? 'text-blue-700'
+                  : 'text-red-600'
+            }`}
+          >
+            {stato}
+          </dd>
 
-            {availability > 0 && priceData && (
-              <>
-                <dt className="text-gray-500">{t('text-availability-label')}</dt>
-                <dd className="text-gray-700">
-                  {formatAvailability(
-                    availability,
-                    priceData.packaging_option_default?.packaging_uom,
-                  )}
-                </dd>
-              </>
-            )}
+          {availability > 0 && priceData && (
+            <>
+              <dt className="border-b border-border-base bg-gray-50 px-4 py-3 text-[12px] font-semibold uppercase text-gray-600 sm:text-sm">
+                {t('text-availability-label')}
+              </dt>
+              <dd className="border-b border-border-base px-4 py-3 text-sm text-brand-dark">
+                {formatAvailability(
+                  availability,
+                  priceData.packaging_option_default?.packaging_uom,
+                )}
+              </dd>
+            </>
+          )}
 
-            {buyDid && buyDidLast && (
-              <>
-                <dt className="text-gray-500">{t('text-last-ordered')}</dt>
-                <dd className="text-gray-700">{buyDidLast}</dd>
-              </>
-            )}
-            {earliestDateDmy && availability <= 0 && (
-              <>
-                <dt className="text-gray-500">{t('text-expected-arrival')}</dt>
-                <dd className="font-semibold text-green-600">
-                  {earliestDateDmy ?? '—'}
-                  {earliestWeek ? (
-                    <span className="ml-1 text-gray-700">
-                      ({t('text-week')} {earliestWeek})
-                    </span>
-                  ) : null}
-                </dd>
-              </>
-            )}
-          </dl>
-        </div>
+          {buyDid && buyDidLast && (
+            <>
+              <dt className="border-b border-border-base bg-gray-50 px-4 py-3 text-[12px] font-semibold uppercase text-gray-600 sm:text-sm">
+                {t('text-last-ordered')}
+              </dt>
+              <dd className="border-b border-border-base px-4 py-3 text-sm text-brand-dark">
+                {buyDidLast}
+              </dd>
+            </>
+          )}
 
-        <div className="col-span-1 flex justify-end">
+          {earliestDateDmy && availability <= 0 && (
+            <>
+              <dt className="border-b border-border-base bg-gray-50 px-4 py-3 text-[12px] font-semibold uppercase text-gray-600 sm:text-sm">
+                {t('text-expected-arrival')}
+              </dt>
+              <dd className="border-b border-border-base px-4 py-3 text-sm font-semibold text-green-600">
+                {earliestDateDmy ?? '—'}
+                {earliestWeek ? (
+                  <span className="ml-1 font-normal text-gray-700">
+                    ({t('text-week')} {earliestWeek})
+                  </span>
+                ) : null}
+              </dd>
+            </>
+          )}
+        </dl>
+
+        {/* Brand Logo */}
+        <div className="flex items-center justify-center p-4 border-l border-border-base">
           {brandImg ? (
             <Link
               href={`/${lang}/search?filters-brand_id=${product?.brand?.id || product?.brand?.brand_id || ''}`}
-              className="flex justify-start sm:justify-end"
+              className="flex justify-center"
             >
               <img
                 src={brandImg}
@@ -160,7 +183,7 @@ export default function B2BInfoBlock({ product, priceData, lang }: Props) {
               />
             </Link>
           ) : (
-            <div className="h-10 sm:h-12 w-24 rounded bg-gray-100" />
+            <div className="h-12 w-24 rounded bg-gray-100" />
           )}
         </div>
       </div>

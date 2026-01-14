@@ -16,6 +16,7 @@ interface Props {
   className?: string;
   searchPlaceholder?: string;
   showSearchAndSort?: boolean;
+  clearAllLabel?: string;
 }
 
 export default function VariantsFilterBar({
@@ -31,6 +32,7 @@ export default function VariantsFilterBar({
   className,
   searchPlaceholder = 'Search SKU, name, model…',
   showSearchAndSort = true,
+  clearAllLabel = 'Clear all',
 }: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   return (
@@ -106,7 +108,7 @@ export default function VariantsFilterBar({
             className="ml-1 px-2 py-1 rounded-md border text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200"
             onClick={onClearModels}
           >
-            Clear all
+            {clearAllLabel}
           </button>
         )}
       </div>

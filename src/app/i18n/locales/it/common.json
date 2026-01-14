@@ -212,7 +212,7 @@
   "text-notifications": "Notifiche",
   "text-out-stock": "Esaurito",
   "text-read-more": "Leggi di più",
-  "text-wishlist": "Preferitii",
+  "text-wishlist": "Preferiti",
   "text-new-order": "nuovo ordine",
   "text-via-flat-rate": "tramite tariffa fissa",
   "text-share": "Condividi",
@@ -520,5 +520,15 @@
   "breadcrumb-search": "Ricerca",
   "breadcrumb-categories": "Categorie",
   "breadcrumb-category": "Categoria",
-  "breadcrumb-collections": "Collezioni"
+  "breadcrumb-collections": "Collezioni",
+  "hide-variants": "Nascondi varianti",
+  "show-variants": "Mostra varianti",
+  "search-variants": "Cerca SKU, nome, modello…",
+  "model": "modello:",
+  "ordered": "ORDINATO",
+
+  "text-notes": "Note",
+  "text-notes-placeholder": "Aggiungi eventuali note per questo ordine…",
+  "button-send-order": "Invia Ordine",
+  "text-sending": "Invio in corso..."
 }

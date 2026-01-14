@@ -1,6 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
+import { useSearchParams } from 'next/navigation';
 import Footer from '@layouts/footer/footer';
 import B2BMobileNavigation from '@layouts/mobile-navigation/b2b-mobile-navigation';
 import CartHydrator from '@framework/cart/b2b-cart';
@@ -23,6 +24,18 @@ export default function DefaultLayout({
   children: React.ReactNode;
   lang: string;
 }) {
+  const searchParams = useSearchParams();
+  const isPreview = searchParams.get('preview') === 'true';
+
+  // In preview mode, show minimal layout without header/footer
+  if (isPreview) {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <main className="relative flex-grow">{children}</main>
+      </div>
+    );
+  }
+
   return (
     <AuthGuard lang={lang}>
       <div className="flex min-h-screen flex-col">

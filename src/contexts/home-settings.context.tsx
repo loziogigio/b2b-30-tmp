@@ -36,6 +36,11 @@ export function HomeSettingsProvider({
     try {
       const response = await fetch('/api/b2b/home-settings', {
         cache: 'no-store',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': process.env.NEXT_PUBLIC_API_KEY_ID!,
+          'X-API-Secret': process.env.NEXT_PUBLIC_API_SECRET!,
+        },
       });
       if (!response.ok) {
         throw new Error(

@@ -25,6 +25,13 @@ When committing changes:
 
 - Use `--no-verify` flag if pre-existing lint errors block the commit
 - **NEVER include `Co-Authored-By:` lines** in commit messages
+- **NEVER include `🤖 Generated with [Claude Code]` lines** in commit messages
+
+## Documentation
+
+- **NEVER use specific company/tenant names** (e.g., hidros, dfl-eventi) in documentation files
+- Use generic placeholders instead: `your-tenant-id`, `tenant-a`, `your-domain.com`, etc.
+- This keeps documentation reusable across different deployments
 
 ## Project Overview
 
@@ -51,5 +58,5 @@ Key variables are in `.env`:
 
 - `VINC_API_URL` - VINC API base URL
 - `VINC_INTERNAL_API_KEY` - API key for internal calls
-- `NEXT_PUBLIC_PROJECT_CODE` - Tenant ID (e.g., vinc-hidros-it)
+- `NEXT_PUBLIC_PROJECT_CODE` - Tenant ID (e.g., vinc-your-tenant-id)
 - `NEXT_PUBLIC_B2B_PUBLIC_REST_API_ENDPOINT` - Public B2B API endpoint

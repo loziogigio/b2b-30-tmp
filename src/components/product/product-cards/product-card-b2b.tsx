@@ -255,11 +255,17 @@ const ProductCardB2B: React.FC<ProductProps> = ({
         {/* SKU + Brand + Favorite (single line) */}
         <div className="flex items-center justify-between text-[10px] sm:text-xs text-gray-500 gap-1 sm:gap-2 min-w-0">
           <div className="flex items-center whitespace-nowrap gap-1.5 min-w-0 flex-1 overflow-hidden">
-            <span className="uppercase">{sku}</span>
+            {/* Only show SKU if different from parent_sku (badge already shows parent_sku) */}
+            {sku && sku !== parent_sku && (
+              <span className="uppercase">{sku}</span>
+            )}
 
             {brand?.name && (brand as any)?.brand_id && (
               <>
-                <span className="text-gray-300">•</span>
+                {/* Only show bullet if SKU is also shown */}
+                {sku && sku !== parent_sku && (
+                  <span className="text-gray-300">•</span>
+                )}
                 <Link
                   href={`/${lang}/search?filters-brand_id=${(brand as any).brand_id}`}
                   className="text-brand hover:underline uppercase truncate max-w-[55%] sm:max-w-[60%]"

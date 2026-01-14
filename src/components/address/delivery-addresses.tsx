@@ -44,12 +44,22 @@ const DeliveryAddresses: React.FC<{ lang: string }> = ({ lang }) => {
     [setSelectedAddress, closeModal, isHomePage],
   );
 
-  // Choose the first address if nothing is selected yet
+  // Auto-select address if none selected OR if current selection is stale (not in API list)
   // (API already sorts default address first)
   React.useEffect(() => {
     if (!addresses.length) return;
-    if (!selected) {
-      handleAddressChange(addresses[0], false);
+
+    // Check if current selected address exists in the fetched addresses list
+    // Use String() conversion to handle different ID types (string/number)
+    const selectedIsValid =
+      selected &&
+      addresses.some((addr) => String(addr.id) === String(selected.id));
+
+    // Select first/default address if no selection or stale selection
+    if (!selectedIsValid) {
+      const defaultAddress =
+        addresses.find((addr) => addr.is_default) || addresses[0];
+      handleAddressChange(defaultAddress, false);
     }
   }, [addresses, selected, handleAddressChange]);
 

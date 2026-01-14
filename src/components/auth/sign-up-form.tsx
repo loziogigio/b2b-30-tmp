@@ -26,7 +26,7 @@ export default function SignUpForm({
   isPopup = true,
   className,
 }: RegistrationRequestFormProps) {
-  const { t } = useTranslation(lang);
+  const { t } = useTranslation(lang, ['common', 'forms']);
   const { mutate: submitRequest, isPending } = useRegistrationRequestMutation();
   const { closeModal, openModal } = useModalAction();
   const [isSubmitted, setIsSubmitted] = useState(false);

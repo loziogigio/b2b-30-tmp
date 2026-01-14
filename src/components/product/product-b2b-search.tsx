@@ -15,9 +15,13 @@ import {
 import ProductCardB2B from './product-cards/product-card-b2b';
 import ProductRowB2B from './product-rows/product-row-b2b';
 import { fetchErpPrices } from '@framework/erp/prices';
-import { useMemo, useEffect, useRef, useState, useCallback } from 'react';
+import { useMemo, useEffect, useRef, useState } from 'react';
 import { ERP_STATIC } from '@framework/utils/static';
-import { IoGridOutline, IoListOutline, IoInformationCircleOutline } from 'react-icons/io5';
+import {
+  IoGridOutline,
+  IoListOutline,
+  IoInformationCircleOutline,
+} from 'react-icons/io5';
 import type { ErpPriceData } from '@utils/transform/erp-prices';
 import { useUI } from '@contexts/ui.context';
 import {
@@ -135,7 +139,14 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
   }, [urlParams]);
 
   const likesTrendingQuery = useInfiniteQuery({
-    queryKey: ['search-special', source, period, pageSizeParam, lang, urlFiltersForSpecialQuery],
+    queryKey: [
+      'search-special',
+      source,
+      period,
+      pageSizeParam,
+      lang,
+      urlFiltersForSpecialQuery,
+    ],
     queryFn: async ({ pageParam = 1 }) => {
       if (source === 'likes') {
         const res = await apiGetUserLikes(pageParam, pageSizeParam);
@@ -428,7 +439,8 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
             </p>
             <p className="text-xs text-blue-700 mt-1">
               {t('text-all-available-results-shown', {
-                defaultValue: 'Hai visualizzato tutti i risultati disponibili per questa ricerca',
+                defaultValue:
+                  'Hai visualizzato tutti i risultati disponibili per questa ricerca',
               })}
             </p>
           </div>
@@ -436,34 +448,49 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
       )}
 
       {/* No results message */}
-      {!isLoading && data?.pages && data.pages.length === 0 && (
-        <div className="flex items-start gap-3 p-5 my-6 bg-amber-50 border border-amber-200 rounded-lg max-w-2xl mx-auto">
-          <IoInformationCircleOutline className="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <p className="text-base font-semibold text-amber-900 mb-2">
-              {t('text-no-products-found', {
-                defaultValue: 'Nessun prodotto trovato',
-              })}
-            </p>
-            <p className="text-sm text-amber-800 mb-2">
-              {t('text-try-different-filters', {
-                defaultValue: 'Prova a modificare i filtri di ricerca',
-              })}
-            </p>
-            <ul className="text-xs text-amber-700 space-y-1 ml-1">
-              <li>• {t('text-search-suggestion-1', {
-                defaultValue: 'Prova con parole chiave diverse o più generiche'
-              })}</li>
-              <li>• {t('text-search-suggestion-2', {
-                defaultValue: 'Rimuovi alcuni filtri per ampliare i risultati'
-              })}</li>
-              <li>• {t('text-search-suggestion-3', {
-                defaultValue: 'Verifica l\'ortografia dei termini di ricerca'
-              })}</li>
-            </ul>
+      {!isLoading &&
+        data?.pages &&
+        data.pages.length > 0 &&
+        data.pages.every((page: any) => !page?.items?.length) && (
+          <div className="flex items-start gap-3 p-5 my-6 bg-amber-50 border border-amber-200 rounded-lg max-w-2xl mx-auto">
+            <IoInformationCircleOutline className="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-base font-semibold text-amber-900 mb-2">
+                {t('text-no-products-found', {
+                  defaultValue: 'Nessun prodotto trovato',
+                })}
+              </p>
+              <p className="text-sm text-amber-800 mb-2">
+                {t('text-try-different-filters', {
+                  defaultValue: 'Prova a modificare i filtri di ricerca',
+                })}
+              </p>
+              <ul className="text-xs text-amber-700 space-y-1 ml-1">
+                <li>
+                  •{' '}
+                  {t('text-search-suggestion-1', {
+                    defaultValue:
+                      'Prova con parole chiave diverse o più generiche',
+                  })}
+                </li>
+                <li>
+                  •{' '}
+                  {t('text-search-suggestion-2', {
+                    defaultValue:
+                      'Rimuovi alcuni filtri per ampliare i risultati',
+                  })}
+                </li>
+                <li>
+                  •{' '}
+                  {t('text-search-suggestion-3', {
+                    defaultValue:
+                      "Verifica l'ortografia dei termini di ricerca",
+                  })}
+                </li>
+              </ul>
+            </div>
           </div>
-        </div>
-      )}
+        )}
     </>
   );
 };

@@ -8,6 +8,10 @@ import { useTranslation } from 'src/app/i18n/client';
 import { formatAddress } from '@utils/format-address';
 import { useDeliveryAddress } from '@contexts/address/address.context';
 import type { AddressB2B } from '@framework/acccount/types-b2b-account';
+import { useCart } from '@contexts/cart/cart.context';
+import { post } from '@framework/utils/httpB2B';
+import { API_ENDPOINTS_B2B } from '@framework/utils/api-endpoints-b2b';
+import { ERP_STATIC } from '@framework/utils/static';
 
 // helpers
 const isWeekend = (d: Date) => d.getDay() === 0 || d.getDay() === 6;
@@ -57,6 +61,9 @@ export default function CheckoutSendOrder({ lang, onSubmit }: Props) {
   // selectedB2B can be AddressB2B | null
   const { selected: selectedB2B } = useDeliveryAddress();
 
+  // Get cart meta for idCart
+  const { meta, resetCart } = useCart();
+
   // map to local Address type (undefined instead of null to avoid TS error)
   const selected: Address | undefined = useMemo(() => {
     if (!selectedB2B) return undefined;
@@ -73,24 +80,58 @@ export default function CheckoutSendOrder({ lang, onSubmit }: Props) {
   // auto-pick first available date (next business day)
   const [date] = useState<string>(() => toLocalISODate(nextBusinessDay()));
   const [notes, setNotes] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const canSubmit = Boolean(selected && date);
+  const canSubmit = Boolean(selected && date && !isSubmitting);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!canSubmit || !selected) return;
-    onSubmit?.({
-      address: selected,
-      paymentTerms,
-      date, // already set to first available date
-      notes,
-    });
+
+    setIsSubmitting(true);
+
+    try {
+      // Build payload matching the expected API format
+      const payload = {
+        client_id: ERP_STATIC.customer_code,
+        address_code: selectedB2B?.id || ERP_STATIC.address_code,
+        ext_call: ERP_STATIC.ext_call,
+        username: ERP_STATIC.username,
+        id_cart: meta?.idCart || ERP_STATIC.id_cart,
+        note: notes,
+        shipping_date: date,
+        transport_cost: 0,
+      };
+
+      await post(API_ENDPOINTS_B2B.SEND_ORDER, payload);
+
+      // Call onSubmit callback if provided
+      onSubmit?.({
+        address: selected,
+        paymentTerms,
+        date,
+        notes,
+      });
+
+      // Reset cart after successful order
+      await resetCart();
+
+      // Redirect to order confirmation or show success message
+      if (typeof window !== 'undefined') {
+        window.location.href = `/${lang}/complete-order`;
+      }
+    } catch (error) {
+      console.error('Failed to send order:', error);
+      // Optionally show error to user
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div className="space-y-4">
       <div className="px-2">
         <Heading variant="title" className="mb-3">
-          {t('button-send-order') ?? 'Send Order'}
+          {t('text-delivery-address') ?? 'Delivery Address'}
         </Heading>
       </div>
 
@@ -152,13 +193,14 @@ export default function CheckoutSendOrder({ lang, onSubmit }: Props) {
       <div className="flex items-center justify-end gap-3 px-2 pb-2 pt-2">
         <Button
           disabled={!canSubmit}
+          loading={isSubmitting}
           onClick={handleSubmit}
           className={cn(
             'rounded bg-brand px-4 py-3 text-sm font-semibold text-white',
             !canSubmit && 'cursor-not-allowed opacity-50',
           )}
         >
-          {t('button-send-order') ?? 'Send Order'}
+          {t('button-send-order', { defaultValue: 'Send Order' })}
         </Button>
       </div>
     </div>

@@ -109,6 +109,8 @@ export const fetchPimMenu = async (
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
+      'X-API-Key': process.env.NEXT_PUBLIC_API_KEY_ID!,
+      'X-API-Secret': process.env.NEXT_PUBLIC_API_SECRET!,
     },
   });
 

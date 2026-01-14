@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import cn from 'classnames';
 import { useRouter } from 'next/navigation';
 import { ROUTES } from '@utils/routes';
-import Button from '@components/ui/button';
 import ThumbnailCarousel from '@components/ui/carousel/thumbnail-carousel';
 import Image from '@components/ui/image';
 import {
@@ -53,7 +52,11 @@ export default function ProductPopup({ lang }: { lang: string }) {
   const reminders = useReminders();
   const { isAuthorized } = useUI();
   const sku = String(product?.sku ?? '');
-  const { addSku: addSkuToCompare, hasSku } = useCompareList();
+  const {
+    addSku: addSkuToCompare,
+    removeSku: removeSkuFromCompare,
+    hasSku,
+  } = useCompareList();
   const favorite = isAuthorized && sku ? likes.isLiked(sku) : false;
   const hasReminder = isAuthorized && sku ? reminders.hasReminder(sku) : false;
   // --- Wishlist / share UI only ---
@@ -79,9 +82,13 @@ export default function ProductPopup({ lang }: { lang: string }) {
   const productUrl = `${process.env.NEXT_PUBLIC_WEBSITE_URL}/${lang}${ROUTES.PRODUCT}?sku=${encodeURIComponent(product?.sku ?? '')}`;
   const isInCompare = hasSku(sku);
 
-  const handleAddToCompare = () => {
+  const handleToggleCompare = () => {
     if (!sku) return;
-    addSkuToCompare(sku);
+    if (hasSku(sku)) {
+      removeSkuFromCompare(sku);
+    } else {
+      addSkuToCompare(sku);
+    }
   };
 
   function navigateToProductPage() {
@@ -223,95 +230,114 @@ export default function ProductPopup({ lang }: { lang: string }) {
 
             {/* Wishlist / Reminder / Compare / Share */}
             <div className="pt-3 md:pt-4">
-              <div
-                className={cn(
-                  'grid gap-2.5',
-                  isAuthorized && isOutOfStock
-                    ? 'grid-cols-4'
-                    : isAuthorized
-                      ? 'grid-cols-3'
-                      : 'grid-cols-2',
-                )}
-              >
+              <div className="flex items-start justify-start gap-4">
+                {/* Reminder Button - only show when out of stock */}
                 {isAuthorized && isOutOfStock && (
-                  <Button
-                    variant="border"
-                    onClick={handleToggleReminder}
-                    loading={addToReminderLoader}
-                    className={`group hover:text-yellow-500 ${hasReminder ? 'text-yellow-500' : ''}`}
-                    title={
-                      hasReminder
+                  <div className="flex flex-col items-center">
+                    <button
+                      type="button"
+                      onClick={handleToggleReminder}
+                      disabled={addToReminderLoader}
+                      className={cn(
+                        'inline-flex h-10 w-10 items-center justify-center rounded-full border transition-colors',
+                        hasReminder
+                          ? 'border-yellow-300 bg-yellow-50 text-yellow-500'
+                          : 'border-slate-200 text-slate-600 hover:border-yellow-300 hover:text-yellow-500',
+                      )}
+                    >
+                      {hasReminder ? (
+                        <IoNotifications className="h-5 w-5 animate-pulse" />
+                      ) : (
+                        <IoNotificationsOutline className="h-5 w-5" />
+                      )}
+                    </button>
+                    <span className="hidden sm:block mt-1 text-[10px] text-slate-500 text-center whitespace-nowrap">
+                      {hasReminder
                         ? t('text-reminder-active')
-                        : t('text-reminder-notify')
-                    }
-                  >
-                    {hasReminder ? (
-                      <IoNotifications className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 transition-all animate-pulse text-yellow-500" />
-                    ) : (
-                      <IoNotificationsOutline className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 transition-all group-hover:text-yellow-500" />
-                    )}
-                    {t('text-reminder')}
-                  </Button>
+                        : t('text-reminder')}
+                    </span>
+                  </div>
                 )}
 
+                {/* Wishlist Button */}
                 {isAuthorized && (
-                  <Button
-                    variant="border"
-                    onClick={async () => {
-                      try {
-                        setAddToWishlistLoader(true);
-                        if (!sku) return;
-                        await likes.toggle(sku);
-                      } finally {
-                        setAddToWishlistLoader(false);
-                      }
-                    }}
-                    loading={addToWishlistLoader}
-                    className={`group hover:text-brand ${favorite ? 'text-brand' : ''}`}
-                    title={t('text-wishlist')}
-                  >
-                    {favorite ? (
-                      <IoIosHeart className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 transition-all text-[#6D727F]" />
-                    ) : (
-                      <IoIosHeartEmpty className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 transition-all group-hover:text-brand" />
-                    )}
-                    {t('text-wishlist')}
-                  </Button>
+                  <div className="flex flex-col items-center">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          setAddToWishlistLoader(true);
+                          if (!sku) return;
+                          await likes.toggle(sku);
+                        } finally {
+                          setAddToWishlistLoader(false);
+                        }
+                      }}
+                      disabled={addToWishlistLoader}
+                      className={cn(
+                        'inline-flex h-10 w-10 items-center justify-center rounded-full border transition-colors',
+                        favorite
+                          ? 'border-brand/30 bg-brand/5 text-brand'
+                          : 'border-slate-200 text-slate-600 hover:border-brand hover:text-brand',
+                      )}
+                    >
+                      {favorite ? (
+                        <IoIosHeart className="h-5 w-5" />
+                      ) : (
+                        <IoIosHeartEmpty className="h-5 w-5" />
+                      )}
+                    </button>
+                    <span className="hidden sm:block mt-1 text-[10px] text-slate-500 text-center whitespace-nowrap">
+                      {favorite ? t('text-favorited') : t('text-wishlist')}
+                    </span>
+                  </div>
                 )}
 
-                <Button
-                  variant="border"
-                  className={cn(
-                    'hover:text-emerald-600',
-                    isInCompare
-                      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                      : '',
-                  )}
-                  onClick={handleAddToCompare}
-                  title="Confronta"
-                  disabled={!sku}
-                >
-                  {isInCompare ? (
-                    <HiOutlineCheckCircle className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 text-emerald-500" />
-                  ) : (
-                    <HiOutlineSwitchHorizontal className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 transition-all" />
-                  )}
-                  {isInCompare ? 'In compare' : 'Confronta'}
-                </Button>
-
-                <div className="relative group">
-                  <Button
-                    variant="border"
-                    className={`w-full hover:text-brand ${shareButtonStatus ? 'text-brand' : ''}`}
-                    onClick={toggleShare}
+                {/* Compare Button */}
+                <div className="flex flex-col items-center">
+                  <button
+                    type="button"
+                    onClick={handleToggleCompare}
+                    disabled={!sku}
+                    className={cn(
+                      'inline-flex h-10 w-10 items-center justify-center rounded-full border transition-colors',
+                      isInCompare
+                        ? 'border-emerald-300 bg-emerald-50 text-emerald-600'
+                        : 'border-slate-200 text-slate-600 hover:border-emerald-300 hover:text-emerald-600',
+                    )}
                   >
-                    <IoArrowRedoOutline className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 transition-all group-hover:text-brand" />
+                    {isInCompare ? (
+                      <HiOutlineCheckCircle className="h-5 w-5" />
+                    ) : (
+                      <HiOutlineSwitchHorizontal className="h-5 w-5" />
+                    )}
+                  </button>
+                  <span className="hidden sm:block mt-1 text-[10px] text-slate-500 text-center whitespace-nowrap">
+                    {isInCompare ? t('text-in-compare') : t('text-compare')}
+                  </span>
+                </div>
+
+                {/* Share Button */}
+                <div className="flex flex-col items-center relative">
+                  <button
+                    type="button"
+                    onClick={toggleShare}
+                    className={cn(
+                      'inline-flex h-10 w-10 items-center justify-center rounded-full border transition-colors',
+                      shareButtonStatus
+                        ? 'border-brand/30 bg-brand/5 text-brand'
+                        : 'border-slate-200 text-slate-600 hover:border-brand hover:text-brand',
+                    )}
+                  >
+                    <IoArrowRedoOutline className="h-5 w-5" />
+                  </button>
+                  <span className="hidden sm:block mt-1 text-[10px] text-slate-500 text-center whitespace-nowrap">
                     {t('text-share')}
-                  </Button>
+                  </span>
                   <SocialShareBox
                     className={`absolute z-10 ltr:right-0 rtl:left-0 w-[300px] md:min-w-[400px] transition-all duration-300 ${
                       shareButtonStatus
-                        ? 'visible opacity-100 top-full'
+                        ? 'visible opacity-100 top-full mt-2'
                         : 'opacity-0 invisible top-[130%]'
                     }`}
                     shareUrl={productUrl}

@@ -1,12 +1,12 @@
 import mongoose from 'mongoose';
 
-const MIN_POOL = Number(process.env.HIDROS_MONGO_MIN_POOL_SIZE ?? '0');
-const MAX_POOL = Number(process.env.HIDROS_MONGO_MAX_POOL_SIZE ?? '50');
+const MIN_POOL = Number(process.env.MONGO_MIN_POOL_SIZE ?? '0');
+const MAX_POOL = Number(process.env.MONGO_MAX_POOL_SIZE ?? '50');
 
 const mongoUri =
-  process.env.HIDROS_MONGO_URL ??
-  'mongodb://admin:admin@localhost:27017/?authSource=admin';
-const mongoDbName = process.env.HIDROS_MONGO_DB ?? 'hidros_app';
+  process.env.MONGO_URL ??
+  'mongodb://root:root@localhost:27017/?authSource=admin';
+const mongoDbName = process.env.MONGO_DB ?? 'vinc-hidros-it';
 
 interface MongooseGlobal {
   conn: typeof mongoose | null;

@@ -143,7 +143,11 @@ const ProductB2BDetails: React.FC<{
   const reminders = useReminders();
   const { isAuthorized } = useUI();
   const sku = String(data?.sku ?? '');
-  const { addSku: addSkuToCompare, hasSku } = useCompareList();
+  const {
+    addSku: addSkuToCompare,
+    removeSku: removeSkuFromCompare,
+    hasSku,
+  } = useCompareList();
   const favorite = isAuthorized && sku ? likes.isLiked(sku) : false;
   const hasReminder = isAuthorized && sku ? reminders.hasReminder(sku) : false;
   const [addToWishlistLoader, setAddToWishlistLoader] = useState(false);
@@ -253,13 +257,17 @@ const ProductB2BDetails: React.FC<{
     [galleryItems.length],
   );
 
-  const productUrl = `${process.env.NEXT_PUBLIC_WEBSITE_URL}${ROUTES.PRODUCT}/${pathname.slug}`;
+  const productUrl = `${process.env.NEXT_PUBLIC_WEBSITE_URL}/${lang}${ROUTES.PRODUCT}?sku=${encodeURIComponent(sku)}`;
   const isInCompare = hasSku(sku);
 
-  const handleAddToCompare = React.useCallback(() => {
+  const handleToggleCompare = React.useCallback(() => {
     if (!sku) return;
-    addSkuToCompare(sku);
-  }, [sku, addSkuToCompare]);
+    if (hasSku(sku)) {
+      removeSkuFromCompare(sku);
+    } else {
+      addSkuToCompare(sku);
+    }
+  }, [sku, hasSku, addSkuToCompare, removeSkuFromCompare]);
 
   const handlePrint = React.useCallback(() => {
     if (!data) return;
@@ -407,82 +415,109 @@ const ProductB2BDetails: React.FC<{
           {/* Wishlist / Reminder / Compare / Share / Print */}
           <div className="pt-3 md:pt-4">
             <div
-              className={`grid gap-2.5 ${
-                isAuthorized
-                  ? isOutOfStock
-                    ? 'grid-cols-5'
-                    : 'grid-cols-4'
-                  : 'grid-cols-3'
+              className={`flex items-start justify-start gap-4 ${
+                isAuthorized ? '' : ''
               }`}
             >
               {/* Reminder Button - only show when out of stock */}
               {isOutOfStock && isAuthorized && (
-                <Button
-                  variant="border"
-                  onClick={toggleReminder}
-                  loading={addToReminderLoader}
-                  className={`group hover:text-yellow-500 ${hasReminder ? 'text-yellow-500' : ''}`}
-                >
-                  {hasReminder ? (
-                    <IoNotifications className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 transition-all animate-pulse text-yellow-500" />
-                  ) : (
-                    <IoNotificationsOutline className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 transition-all group-hover:text-yellow-500" />
-                  )}
-                  {t('text-reminder')}
-                </Button>
+                <div className="flex flex-col items-center">
+                  <button
+                    type="button"
+                    onClick={toggleReminder}
+                    disabled={addToReminderLoader}
+                    className={cn(
+                      'inline-flex h-10 w-10 items-center justify-center rounded-full border transition-colors',
+                      hasReminder
+                        ? 'border-yellow-300 bg-yellow-50 text-yellow-500'
+                        : 'border-slate-200 text-slate-600 hover:border-yellow-300 hover:text-yellow-500',
+                    )}
+                  >
+                    {hasReminder ? (
+                      <IoNotifications className="h-5 w-5 animate-pulse" />
+                    ) : (
+                      <IoNotificationsOutline className="h-5 w-5" />
+                    )}
+                  </button>
+                  <span className="hidden sm:block mt-1 text-[10px] text-slate-500 text-center whitespace-nowrap">
+                    {hasReminder
+                      ? t('text-reminder-active')
+                      : t('text-reminder')}
+                  </span>
+                </div>
               )}
 
               {/* Wishlist Button */}
               {isAuthorized && (
-                <Button
-                  variant="border"
-                  onClick={addToWishlist}
-                  loading={addToWishlistLoader}
-                  className={`group hover:text-brand ${favorite ? 'text-brand' : ''}`}
-                >
-                  {favorite ? (
-                    <IoIosHeart className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 transition-all text-[#6D727F]" />
-                  ) : (
-                    <IoIosHeartEmpty className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 transition-all group-hover:text-brand" />
-                  )}
-                  {t('text-wishlist')}
-                </Button>
+                <div className="flex flex-col items-center">
+                  <button
+                    type="button"
+                    onClick={addToWishlist}
+                    disabled={addToWishlistLoader}
+                    className={cn(
+                      'inline-flex h-10 w-10 items-center justify-center rounded-full border transition-colors',
+                      favorite
+                        ? 'border-brand/30 bg-brand/5 text-brand'
+                        : 'border-slate-200 text-slate-600 hover:border-brand hover:text-brand',
+                    )}
+                  >
+                    {favorite ? (
+                      <IoIosHeart className="h-5 w-5" />
+                    ) : (
+                      <IoIosHeartEmpty className="h-5 w-5" />
+                    )}
+                  </button>
+                  <span className="hidden sm:block mt-1 text-[10px] text-slate-500 text-center whitespace-nowrap">
+                    {favorite ? t('text-favorited') : t('text-wishlist')}
+                  </span>
+                </div>
               )}
 
               {/* Compare Button */}
-              <Button
-                variant="border"
-                onClick={handleAddToCompare}
-                disabled={!sku}
-                className={cn(
-                  'group hover:text-emerald-600',
-                  isInCompare
-                    ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                    : '',
-                )}
-              >
-                {isInCompare ? (
-                  <HiOutlineCheckCircle className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 text-emerald-500" />
-                ) : (
-                  <HiOutlineSwitchHorizontal className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 transition-all group-hover:text-emerald-600" />
-                )}
-                {isInCompare ? t('text-in-compare') : t('text-compare')}
-              </Button>
+              <div className="flex flex-col items-center">
+                <button
+                  type="button"
+                  onClick={handleToggleCompare}
+                  disabled={!sku}
+                  className={cn(
+                    'inline-flex h-10 w-10 items-center justify-center rounded-full border transition-colors',
+                    isInCompare
+                      ? 'border-emerald-300 bg-emerald-50 text-emerald-600'
+                      : 'border-slate-200 text-slate-600 hover:border-emerald-300 hover:text-emerald-600',
+                  )}
+                >
+                  {isInCompare ? (
+                    <HiOutlineCheckCircle className="h-5 w-5" />
+                  ) : (
+                    <HiOutlineSwitchHorizontal className="h-5 w-5" />
+                  )}
+                </button>
+                <span className="hidden sm:block mt-1 text-[10px] text-slate-500 text-center whitespace-nowrap">
+                  {isInCompare ? t('text-in-compare') : t('text-compare')}
+                </span>
+              </div>
 
               {/* Share Button */}
-              <div className="relative group">
-                <Button
-                  variant="border"
-                  className={`w-full hover:text-brand ${shareButtonStatus ? 'text-brand' : ''}`}
+              <div className="flex flex-col items-center relative">
+                <button
+                  type="button"
                   onClick={toggleShare}
+                  className={cn(
+                    'inline-flex h-10 w-10 items-center justify-center rounded-full border transition-colors',
+                    shareButtonStatus
+                      ? 'border-brand/30 bg-brand/5 text-brand'
+                      : 'border-slate-200 text-slate-600 hover:border-brand hover:text-brand',
+                  )}
                 >
-                  <IoArrowRedoOutline className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 transition-all group-hover:text-brand" />
+                  <IoArrowRedoOutline className="h-5 w-5" />
+                </button>
+                <span className="hidden sm:block mt-1 text-[10px] text-slate-500 text-center whitespace-nowrap">
                   {t('text-share')}
-                </Button>
+                </span>
                 <SocialShareBox
                   className={`absolute z-10 ltr:right-0 rtl:left-0 w-[300px] md:min-w-[400px] transition-all duration-300 ${
                     shareButtonStatus
-                      ? 'visible opacity-100 top-full'
+                      ? 'visible opacity-100 top-full mt-2'
                       : 'opacity-0 invisible top-[130%]'
                   }`}
                   shareUrl={productUrl}
@@ -491,14 +526,18 @@ const ProductB2BDetails: React.FC<{
               </div>
 
               {/* Print Button */}
-              <Button
-                variant="border"
-                onClick={handlePrint}
-                className="group hover:text-blue-600"
-              >
-                <HiOutlinePrinter className="text-2xl md:text-[26px] ltr:mr-2 rtl:ml-2 transition-all group-hover:text-blue-600" />
-                {t('text-print', { defaultValue: 'Print' })}
-              </Button>
+              <div className="flex flex-col items-center">
+                <button
+                  type="button"
+                  onClick={handlePrint}
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-600 transition-colors hover:border-blue-300 hover:text-blue-600"
+                >
+                  <HiOutlinePrinter className="h-5 w-5" />
+                </button>
+                <span className="hidden sm:block mt-1 text-[10px] text-slate-500 text-center whitespace-nowrap">
+                  {t('text-print')}
+                </span>
+              </div>
             </div>
           </div>
 

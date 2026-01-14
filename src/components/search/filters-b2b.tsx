@@ -65,7 +65,12 @@ export const SearchFiltersB2B: React.FC<{ lang: string; text?: string }> = ({
       if (source === 'trending') {
         // Fetch multiple pages of trending
         for (let page = 1; page <= MAX_PAGES; page++) {
-          const res = await apiGetTrendingPage(period, page, MAX_PAGE_SIZE, false);
+          const res = await apiGetTrendingPage(
+            period,
+            page,
+            MAX_PAGE_SIZE,
+            false,
+          );
           const skus = (res?.items || [])
             .map((x: any) => x.sku)
             .filter(Boolean);

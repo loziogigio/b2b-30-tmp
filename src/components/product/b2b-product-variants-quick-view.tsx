@@ -21,6 +21,7 @@ import { productPlaceholder } from '@assets/placeholders';
 import Link from 'next/link';
 import { ERP_STATIC } from '@framework/utils/static';
 import { useUI } from '@contexts/ui.context';
+import { useTranslation } from 'src/app/i18n/client';
 
 type VariantMinimal = {
   id: string | number;
@@ -38,6 +39,7 @@ export default function B2BProductVariantsQuickView({
   const { data } = useModalState();
   const { closeModal } = useModalAction();
   const { isAuthorized } = useUI();
+  const { t } = useTranslation(lang, 'common');
 
   // normalize payload (allow { product } or raw)
   const raw = (data as any)?.product ?? data;
@@ -220,7 +222,7 @@ export default function B2BProductVariantsQuickView({
         <div className="flex items-start gap-3 sm:gap-4 pr-12 sm:pr-0">
           <div className="relative shrink-0 w-[56px] h-[56px] sm:w-[80px] sm:h-[80px] rounded overflow-hidden">
             <Image
-              src={productImage?.thumbnail ?? productPlaceholder}
+              src={productImage?.thumbnail || productPlaceholder}
               alt={title || 'Product Image'}
               fill
               quality={90}
@@ -349,7 +351,7 @@ export default function B2BProductVariantsQuickView({
               className="ml-1 px-2 py-1 rounded-md border text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200"
               onClick={() => setSelectedModels([])}
             >
-              Clear all
+              {t('text-clear-all', { defaultValue: 'Clear all' })}
             </button>
           )}
         </div>

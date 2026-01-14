@@ -26,6 +26,10 @@ function resolveBaseUrl(raw: string): string {
 
 const PIM_API_BASE = resolveBaseUrl(rawPimApiUrl);
 
+// Get API keys from environment (use server-side vars if available)
+const apiKeyId = process.env.API_KEY_ID || process.env.NEXT_PUBLIC_API_KEY_ID;
+const apiSecret = process.env.API_SECRET || process.env.NEXT_PUBLIC_API_SECRET;
+
 async function fetchHomeSettingsOnce(): Promise<HomeSettings> {
   try {
     const url = new URL(
@@ -36,6 +40,8 @@ async function fetchHomeSettingsOnce(): Promise<HomeSettings> {
     const response = await fetch(url, {
       headers: {
         'Content-Type': 'application/json',
+        ...(apiKeyId && { 'X-API-Key': apiKeyId }),
+        ...(apiSecret && { 'X-API-Secret': apiSecret }),
       },
       next: {
         revalidate: 300,

@@ -86,7 +86,9 @@ const Breadcrumb: React.FC<{ separator?: string; lang: string }> = ({
       {breadcrumbs?.map((breadcrumb: any) => {
         const breadcrumbText = convertBreadcrumbTitle(breadcrumb.breadcrumb);
         const translationKey = `breadcrumb-${breadcrumbText.replace(/\s+/g, '-')}`;
-        const translatedText = t(translationKey, { defaultValue: breadcrumbText });
+        const translatedText = t(translationKey, {
+          defaultValue: breadcrumbText,
+        });
 
         return (
           <ActiveLink
@@ -96,9 +98,7 @@ const Breadcrumb: React.FC<{ separator?: string; lang: string }> = ({
             legacyBehavior
             lang={lang}
           >
-            <a className="capitalize">
-              {translatedText}
-            </a>
+            <a className="capitalize">{translatedText}</a>
           </ActiveLink>
         );
       })}

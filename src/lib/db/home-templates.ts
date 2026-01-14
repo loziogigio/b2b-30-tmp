@@ -46,31 +46,13 @@ export async function getPublishedHomeTemplate(options?: {
     isActive: true,
   }).lean<HomeTemplateDocument[]>();
 
-  console.log('[getPublishedHomeTemplate] Versions found:', versions.length);
-
   if (!versions || versions.length === 0) {
-    console.log('[getPublishedHomeTemplate] No versions available');
     return null;
   }
-
-  // Debug: log each version's tags
-  versions.forEach((v) => {
-    console.log(`[getPublishedHomeTemplate] Version ${v.version}:`, {
-      status: v.status,
-      tags: v.tags,
-      addressStates: v.tags?.attributes?.addressStates,
-    });
-  });
 
   // Find the current published version as fallback
   const currentPublished = versions.find((v) => v.isCurrentPublished);
   const fallbackVersionNumber = currentPublished?.version;
-
-  console.log(
-    '[getPublishedHomeTemplate] currentPublishedVersion:',
-    fallbackVersionNumber,
-  );
-  console.log('[getPublishedHomeTemplate] Looking for tags:', normalizedTags);
 
   const resolution = resolveVersion({
     versions: versions as any,
@@ -81,20 +63,8 @@ export async function getPublishedHomeTemplate(options?: {
   });
 
   if (!resolution) {
-    console.log(
-      '[getPublishedHomeTemplate] Unable to resolve published version',
-    );
     return null;
   }
-
-  console.log(
-    '[getPublishedHomeTemplate] Selected version:',
-    resolution.version.version,
-    'matchedBy:',
-    resolution.matchedBy ?? 'n/a',
-    'tags:',
-    resolution.version.tags ?? resolution.version.tag ?? 'none',
-  );
 
   return buildReturnPayload(resolution.version, resolution.matchedBy);
 }
@@ -117,24 +87,13 @@ export async function getLatestHomeTemplateVersion(options?: {
     isActive: true,
   }).lean<HomeTemplateDocument[]>();
 
-  console.log(
-    '[getLatestHomeTemplateVersion] Versions found:',
-    versions.length,
-  );
-
   if (!versions || versions.length === 0) {
-    console.log('[getLatestHomeTemplateVersion] No versions available');
     return null;
   }
 
   // Find the current version as fallback
   const currentVersion = versions.find((v) => v.isCurrent);
   const fallbackVersionNumber = currentVersion?.version;
-
-  console.log(
-    '[getLatestHomeTemplateVersion] currentVersion:',
-    fallbackVersionNumber,
-  );
 
   const allowedStatuses =
     options?.allowDraft === false ? ['published'] : ['draft', 'published'];
@@ -148,18 +107,8 @@ export async function getLatestHomeTemplateVersion(options?: {
   });
 
   if (!resolution) {
-    console.log('[getLatestHomeTemplateVersion] Unable to resolve version');
     return null;
   }
-
-  console.log(
-    '[getLatestHomeTemplateVersion] Returning version:',
-    resolution.version.version,
-    'status:',
-    resolution.version.status,
-    'matchedBy:',
-    resolution.matchedBy ?? 'n/a',
-  );
 
   return buildReturnPayload(resolution.version, resolution.matchedBy);
 }

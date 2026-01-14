@@ -312,19 +312,21 @@ export default function ProductRowB2B({
 
           {/* 3) Brand image (right) - PIM format */}
           <Cell className="hidden sm:flex justify-end items-center">
-            {(brand as any)?.logo_url && (brand as any)?.brand_id && (
-              <Link
-                href={`/${lang}/search?filters-brand_id=${(brand as any).brand_id}`}
-                className="block w-[120px] h-[64px]"
-                title={brand?.name || 'Brand'}
-              >
-                <img
-                  src={(brand as any).logo_url}
-                  alt={brand?.name || 'Brand'}
-                  className="w-full h-full object-contain"
-                />
-              </Link>
-            )}
+            {(brand as any)?.logo_url &&
+              (brand as any).logo_url.trim() !== '' &&
+              (brand as any)?.brand_id && (
+                <Link
+                  href={`/${lang}/search?filters-brand_id=${(brand as any).brand_id}`}
+                  className="block w-[120px] h-[64px]"
+                  title={brand?.name || 'Brand'}
+                >
+                  <img
+                    src={(brand as any).logo_url}
+                    alt={brand?.name || 'Brand'}
+                    className="w-full h-full object-contain"
+                  />
+                </Link>
+              )}
           </Cell>
         </div>
       </div>
@@ -365,6 +367,9 @@ export default function ProductRowB2B({
               searchPlaceholder={t('search-variants', {
                 defaultValue: 'Search SKU, name, model…',
               })}
+              clearAllLabel={t('text-clear-all', {
+                defaultValue: 'Clear all',
+              })}
               showSearchAndSort={
                 (variations?.length ?? 0) >= (searchSortThreshold ?? 0)
               }
@@ -375,11 +380,20 @@ export default function ProductRowB2B({
             const vPrice: ErpPriceData | undefined = isPseudo
               ? priceData
               : getVariantPrice(v.id);
-            const vImg = v.image?.thumbnail ?? productPlaceholder;
+            const vImg = v.image?.thumbnail || productPlaceholder;
             const targetSku = String(v.sku ?? sku ?? '').trim();
             const isOutOfStock = vPrice
               ? Number(vPrice.availability) <= 0
               : false;
+            // Check if we have a valid price - same logic as ProductCardB2B
+            const anyPD = vPrice as any;
+            const priceValue =
+              anyPD?.price_discount ??
+              anyPD?.net_price ??
+              anyPD?.gross_price ??
+              anyPD?.price_gross;
+            const hasValidPrice =
+              vPrice && priceValue != null && Number(priceValue) > 0;
             const reminderActive = targetSku
               ? reminders.hasReminder(targetSku)
               : false;
@@ -518,26 +532,26 @@ export default function ProductRowB2B({
                           ''
                         )}
                       </div>
-                      {v.model ? (
-                        <div className="text-[13px] text-gray-700 mt-0.5 line-clamp-1">
-                          <span className="mr-1">
-                            {t('model', { defaultValue: 'model:' })}
-                          </span>
-                          <span
-                            className={cn(
-                              'inline-flex items-center rounded-md border px-2 py-0.5 align-middle',
-                              'text-[11px] font-semibold tracking-wide',
-                              'bg-brand/10 text-brand-dark border-brand/30',
-                            )}
-                          >
-                            {v.model}
-                          </span>
-                        </div>
-                      ) : (
-                        <div className="text-[13px] text-gray-400 mt-0.5">
-                          ''
-                        </div>
-                      )}
+                      {v.model &&
+                        String(v.model).trim() &&
+                        !/^\.+$/.test(String(v.model).trim()) && (
+                          <div className="flex items-center text-[13px] text-gray-700 mt-0.5 min-w-0">
+                            <span className="mr-1 shrink-0">
+                              {t('model', { defaultValue: 'model:' })}
+                            </span>
+                            <span
+                              className={cn(
+                                'inline-block rounded-md border px-2 py-0.5',
+                                'text-[11px] font-medium',
+                                'bg-brand/10 text-brand-dark border-brand/30',
+                                'truncate',
+                              )}
+                              title={v.model}
+                            >
+                              {v.model}
+                            </span>
+                          </div>
+                        )}
 
                       {vPrice?.packaging_option_default && (
                         <div className="text-[13px] text-gray-700 mt-0.5 line-clamp-1">
@@ -592,13 +606,14 @@ export default function ProductRowB2B({
                   {/* 6)  Add */}
                   <Cell>
                     <div className="flex flex-col justify-center items-end gap-2">
-                      {isAuthorized && (
+                      {isAuthorized && hasValidPrice && (
                         <AddToCart
                           product={isPseudo ? (product as any) : v}
                           priceData={vPrice}
                           variant="venus"
                           lang={lang}
                           className="justify-end"
+                          showPlaceholder={false}
                         />
                       )}
                     </div>

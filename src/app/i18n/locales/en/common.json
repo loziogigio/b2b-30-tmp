@@ -394,5 +394,15 @@
   "breadcrumb-search": "Search",
   "breadcrumb-categories": "Categories",
   "breadcrumb-category": "Category",
-  "breadcrumb-collections": "Collections"
+  "breadcrumb-collections": "Collections",
+  "hide-variants": "Hide variants",
+  "show-variants": "Show variants",
+  "search-variants": "Search SKU, name, model…",
+  "model": "model:",
+  "ordered": "ORDERED",
+
+  "text-notes": "Notes",
+  "text-notes-placeholder": "Add any notes for this order…",
+  "button-send-order": "Send Order",
+  "text-sending": "Sending..."
 }

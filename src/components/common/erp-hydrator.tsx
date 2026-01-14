@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { usePathname } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { hydrateErpStatic, hasValidErpContext } from '@framework/utils/static';
 import { useUI } from '@contexts/ui.context';
@@ -22,7 +21,6 @@ import { API_ENDPOINTS_B2B } from '@framework/utils/api-endpoints-b2b';
 export default function ErpHydrator() {
   const { isAuthorized } = useUI();
   const queryClient = useQueryClient();
-  const pathname = usePathname();
   const [hydrated, setHydrated] = useState(false);
 
   // Track previous auth state to detect login/logout transitions
@@ -33,13 +31,6 @@ export default function ErpHydrator() {
   const { data: addresses } = useAddressQuery(isAuthorized && hydrated);
   const { selected, setSelectedAddress, resetSelectedAddress } =
     useDeliveryAddress();
-
-  // Check if we're on the home page (needs reload when address changes)
-  const isHomePage =
-    pathname === '/it' ||
-    pathname === '/it/' ||
-    pathname === '/en' ||
-    pathname === '/en/';
 
   useEffect(() => {
     // Only run on client-side
@@ -62,6 +53,9 @@ export default function ErpHydrator() {
     setHydrated(true);
   }, [isAuthorized, queryClient]);
 
+  // Track if we just logged in to force address selection from API
+  const justLoggedInRef = useRef(false);
+
   // Handle auth state transitions (login/logout)
   useEffect(() => {
     // Skip on initial mount (when prevIsAuthorizedRef.current is null)
@@ -73,6 +67,7 @@ export default function ErpHydrator() {
     // Detect logout: was authorized, now not authorized
     if (prevIsAuthorizedRef.current === true && !isAuthorized) {
       resetSelectedAddress();
+      justLoggedInRef.current = false;
       // Clear all queries on logout to prevent stale data
       queryClient.clear();
     }
@@ -81,6 +76,7 @@ export default function ErpHydrator() {
     if (prevIsAuthorizedRef.current === false && isAuthorized) {
       // Invalidate and refetch addresses for the new user
       resetSelectedAddress(); // Clear any stale selected address first
+      justLoggedInRef.current = true; // Mark that we just logged in
       queryClient.invalidateQueries({
         queryKey: [API_ENDPOINTS_B2B.GET_ADDRESSES],
       });
@@ -95,23 +91,26 @@ export default function ErpHydrator() {
   // This runs when: user logs in, addresses are fetched, and we need to select one
   useEffect(() => {
     if (isAuthorized && addresses && addresses.length > 0) {
-      // Always select first address if none is selected OR if current selected is not in the list
+      // Check if current selected is valid (exists in the fetched addresses list)
+      // Use String() conversion to handle different ID types (string/number)
       const selectedIsValid =
-        selected && addresses.some((addr) => addr.id === selected.id);
-      if (!selectedIsValid) {
-        const newAddress = addresses[0];
-        setSelectedAddress(newAddress);
+        selected &&
+        addresses.some((addr) => String(addr.id) === String(selected.id));
 
-        // Reload page if on home page to show personalized template
-        // Wait for cookie to be set by AddressProvider
-        if (isHomePage && newAddress?.address?.state) {
-          setTimeout(() => {
-            window.location.reload();
-          }, 200);
-        }
+      // Force select first address if:
+      // 1. No selection or invalid selection
+      // 2. Just logged in (to ensure fresh selection from API, not stale localStorage)
+      const shouldSelect = !selectedIsValid || justLoggedInRef.current;
+
+      if (shouldSelect) {
+        // Find the default address from API (if marked) or use first one
+        const defaultAddress =
+          addresses.find((addr) => addr.isDefault) || addresses[0];
+        setSelectedAddress(defaultAddress);
+        justLoggedInRef.current = false; // Reset the flag after selecting
       }
     }
-  }, [isAuthorized, addresses, selected, setSelectedAddress, isHomePage]);
+  }, [isAuthorized, addresses, selected, setSelectedAddress]);
 
   // This component doesn't render anything
   return null;

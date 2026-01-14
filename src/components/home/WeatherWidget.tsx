@@ -172,10 +172,13 @@ export function WeatherWidget({ lang, className }: WeatherWidgetProps) {
 
   // Geocode the city to get coordinates
   useEffect(() => {
+    const abortController = new AbortController();
+
     const geocodeCity = async (city: string) => {
       try {
         const response = await fetch(
           `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=${lang}&format=json`,
+          { signal: abortController.signal },
         );
         const data = await response.json();
 
@@ -189,7 +192,8 @@ export function WeatherWidget({ lang, className }: WeatherWidgetProps) {
           };
         }
         return null;
-      } catch {
+      } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') return null;
         return null;
       }
     };
@@ -197,9 +201,9 @@ export function WeatherWidget({ lang, className }: WeatherWidgetProps) {
     const updateLocation = async () => {
       if (userCity) {
         const geoResult = await geocodeCity(userCity);
-        if (geoResult) {
+        if (geoResult && !abortController.signal.aborted) {
           setLocation(geoResult);
-        } else {
+        } else if (!abortController.signal.aborted) {
           // Fallback to default if geocoding fails
           setLocation(DEFAULT_LOCATION);
         }
@@ -209,10 +213,14 @@ export function WeatherWidget({ lang, className }: WeatherWidgetProps) {
     };
 
     updateLocation();
+
+    return () => abortController.abort();
   }, [userCity, lang]);
 
   // Fetch weather data
   useEffect(() => {
+    const abortController = new AbortController();
+
     const fetchWeather = async () => {
       setLoading(true);
       setError(null);
@@ -220,6 +228,7 @@ export function WeatherWidget({ lang, className }: WeatherWidgetProps) {
       try {
         const response = await fetch(
           `https://api.open-meteo.com/v1/forecast?latitude=${location.lat}&longitude=${location.lon}&current=temperature_2m,weather_code,is_day,relative_humidity_2m,wind_speed_10m&timezone=auto`,
+          { signal: abortController.signal },
         );
 
         if (!response.ok) {
@@ -228,7 +237,7 @@ export function WeatherWidget({ lang, className }: WeatherWidgetProps) {
 
         const data = await response.json();
 
-        if (data.current) {
+        if (data.current && !abortController.signal.aborted) {
           setWeather({
             temperature: Math.round(data.current.temperature_2m),
             weatherCode: data.current.weather_code,
@@ -238,10 +247,14 @@ export function WeatherWidget({ lang, className }: WeatherWidgetProps) {
           });
         }
       } catch (err) {
+        // Ignore abort errors (component unmounted)
+        if (err instanceof Error && err.name === 'AbortError') return;
         setError('Unable to load weather');
         console.error('Weather fetch error:', err);
       } finally {
-        setLoading(false);
+        if (!abortController.signal.aborted) {
+          setLoading(false);
+        }
       }
     };
 
@@ -249,7 +262,10 @@ export function WeatherWidget({ lang, className }: WeatherWidgetProps) {
 
     // Refresh weather every 30 minutes
     const interval = setInterval(fetchWeather, 30 * 60 * 1000);
-    return () => clearInterval(interval);
+    return () => {
+      abortController.abort();
+      clearInterval(interval);
+    };
   }, [location]);
 
   // Format time

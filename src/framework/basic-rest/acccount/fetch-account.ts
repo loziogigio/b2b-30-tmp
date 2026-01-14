@@ -93,22 +93,21 @@ export const usePaymentDeadlineQuery = (enabled = true) =>
 export async function fetchAddresses(): Promise<AddressB2B[]> {
   const vincCustomerId = ERP_STATIC.vinc_customer_id;
 
-  console.log('[fetchAddresses] vinc_customer_id:', vincCustomerId);
-
   if (!vincCustomerId) {
-    console.warn('[fetchAddresses] No vinc_customer_id available');
     return [];
   }
 
-  console.log('[fetchAddresses] Calling VINC API...');
   const response = await fetch('/api/b2b/addresses', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'X-API-Key': process.env.NEXT_PUBLIC_API_KEY_ID!,
+      'X-API-Secret': process.env.NEXT_PUBLIC_API_SECRET!,
+    },
     body: JSON.stringify({ customer_id: vincCustomerId }),
   });
 
   const data = await response.json();
-  console.log('[fetchAddresses] VINC API response:', data);
 
   if (data.success && Array.isArray(data.addresses)) {
     return data.addresses;

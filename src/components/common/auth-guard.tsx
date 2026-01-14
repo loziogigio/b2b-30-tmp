@@ -70,7 +70,9 @@ export default function AuthGuard({ children, lang }: AuthGuardProps) {
           {t('text-login', { defaultValue: 'Login' })}
         </button>
         <p className="text-sm text-brand-muted">
-          {t("text-don't-have-account", { defaultValue: "Don't have an account?" })}{' '}
+          {t("text-don't-have-account", {
+            defaultValue: "Don't have an account?",
+          })}{' '}
           <button
             onClick={() => openModal('SIGN_UP_VIEW')}
             className="font-semibold text-brand underline hover:text-brand-dark"

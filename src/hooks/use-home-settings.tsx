@@ -41,7 +41,13 @@ export function useHomeSettings() {
     const fetchSettings = async () => {
       setFallbackLoading(true);
       try {
-        const response = await fetch(`/api/b2b/home-settings`);
+        const response = await fetch(`/api/b2b/home-settings`, {
+          headers: {
+            'Content-Type': 'application/json',
+            'X-API-Key': process.env.NEXT_PUBLIC_API_KEY_ID!,
+            'X-API-Secret': process.env.NEXT_PUBLIC_API_SECRET!,
+          },
+        });
 
         if (!response.ok) {
           if (response.status === 404 || response.status === 429) {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useEliaSearch } from '@framework/elia/use-elia-search';
 import { useEliaAnalyze } from '@framework/elia/use-elia-analyze';
 import type {
@@ -181,6 +182,9 @@ function EliaAnalyzedProductCard({
 }
 
 export function EliaDrawer() {
+  const searchParams = useSearchParams();
+  const isPreview = searchParams.get('preview') === 'true';
+
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [expandedReasoning, setExpandedReasoning] = useState<string | null>(
@@ -331,6 +335,11 @@ export function EliaDrawer() {
     pendingAnalyzeRef.current = false;
   };
 
+  // Hide in preview mode
+  if (isPreview) {
+    return null;
+  }
+
   return (
     <>
       {/* Floating Button - Attached to right side */}
@@ -458,9 +467,7 @@ export function EliaDrawer() {
                     <button
                       onClick={() => {
                         handleReset();
-                        handleSendMessage(
-                          'lavabo bianco per un bagno piccolo',
-                        );
+                        handleSendMessage('lavabo bianco per un bagno piccolo');
                       }}
                       className="text-sm text-blue-600 hover:text-blue-800 hover:underline block mx-auto py-1"
                     >
@@ -480,7 +487,9 @@ export function EliaDrawer() {
                     <button
                       onClick={() => {
                         handleReset();
-                        handleSendMessage('condizionatore a basso consumo per 100m2');
+                        handleSendMessage(
+                          'condizionatore a basso consumo per 100m2',
+                        );
                       }}
                       className="text-sm text-blue-600 hover:text-blue-800 hover:underline block mx-auto py-1"
                     >
@@ -806,8 +815,8 @@ export function EliaDrawer() {
                 Premi Invio per cercare • Shift+Invio per nuova riga
               </p>
               <p className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-700 text-center border border-amber-200">
-                ⚠️ Le risposte AI potrebbero contenere errori. Verifica sempre le
-                informazioni.
+                ⚠️ Le risposte AI potrebbero contenere errori. Verifica sempre
+                le informazioni.
               </p>
             </div>
           )}

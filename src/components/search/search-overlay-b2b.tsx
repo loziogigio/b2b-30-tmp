@@ -278,23 +278,23 @@ export default function SearchOverlayB2B({
               {/* Search box takes remaining space */}
               <div className="flex-1">
                 <SearchBoxB2B
-                searchId="overlay-search"
-                lang={lang}
-                name="overlay-search"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                }}
-                value={value}
-                onChange={(e) => onChange?.(e)}
-                onClear={(e) => onClear?.(e)}
-                onFocus={() => {
-                  /* keep open */
-                }}
-                onSubmitSuccess={() => {
-                  onSubmitSuccess?.();
-                  onClose();
-                }}
-              />
+                  searchId="overlay-search"
+                  lang={lang}
+                  name="overlay-search"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                  }}
+                  value={value}
+                  onChange={(e) => onChange?.(e)}
+                  onClear={(e) => onClear?.(e)}
+                  onFocus={() => {
+                    /* keep open */
+                  }}
+                  onSubmitSuccess={() => {
+                    onSubmitSuccess?.();
+                    onClose();
+                  }}
+                />
               </div>
             </div>
             <div className="border-b border-brand mt-2" />
@@ -332,7 +332,9 @@ export default function SearchOverlayB2B({
                   </div>
                 ))
               ) : (
-                <span className="text-gray-400">{t('text-no-recent-searches')}</span>
+                <span className="text-gray-400">
+                  {t('text-no-recent-searches')}
+                </span>
               )}
               {recent.length ? (
                 <button
@@ -408,7 +410,9 @@ export default function SearchOverlayB2B({
               {showAutocomplete && (
                 <div className="mb-6">
                   <ProductsCarousel
-                    sectionHeading={t('text-see-all-results-for', { query: trimmed })}
+                    sectionHeading={t('text-see-all-results-for', {
+                      query: trimmed,
+                    })}
                     categorySlug={`search?${(() => {
                       const p = new URLSearchParams();
                       if (trimmed) p.set('text', trimmed);

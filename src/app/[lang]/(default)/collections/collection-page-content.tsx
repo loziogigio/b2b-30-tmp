@@ -15,11 +15,14 @@ export default function CollectionPageContent({ lang }: { lang: string }) {
         {/* Page Header */}
         <div className="mb-8 text-center">
           <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">
-            {t('text-our-collections', { defaultValue: 'Le Nostre Collezioni' })}
+            {t('text-our-collections', {
+              defaultValue: 'Le Nostre Collezioni',
+            })}
           </h1>
           <p className="mt-2 text-slate-600">
             {t('text-explore-catalog-by-collections', {
-              defaultValue: 'Esplora il nostro catalogo organizzato per Collezioni',
+              defaultValue:
+                'Esplora il nostro catalogo organizzato per Collezioni',
             })}
           </p>
         </div>
@@ -99,7 +102,8 @@ export default function CollectionPageContent({ lang }: { lang: string }) {
                     <div className="mt-2 flex items-center gap-2">
                       <span className="text-xs bg-white/20 rounded-full px-3 py-1">
                         {t('text-products-count', {
-                          count: collection.product_count.toLocaleString('it-IT'),
+                          count:
+                            collection.product_count.toLocaleString('it-IT'),
                           defaultValue: '{{count}} prodotti',
                         })}
                       </span>

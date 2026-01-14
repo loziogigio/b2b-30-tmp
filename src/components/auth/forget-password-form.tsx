@@ -16,7 +16,7 @@ const defaultValues = {
 };
 
 const ForgetPasswordForm = ({ lang }: { lang: string }) => {
-  const { t } = useTranslation(lang);
+  const { t } = useTranslation(lang, ['common', 'forms']);
   const { closeModal, openModal } = useModalAction();
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
