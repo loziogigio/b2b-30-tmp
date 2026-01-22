@@ -11,6 +11,10 @@ export const API_ENDPOINTS_PIM = {
   ELIA_INTENT: '/api/elia/intent',
   ELIA_SEARCH: '/api/elia/search',
   ELIA_ANALYZE: '/api/elia/analyze',
+  // Correlations (related products)
+  CORRELATIONS: '/api/b2b/correlations',
+  // Available specs (dynamic discovery)
+  AVAILABLE_SPECS: '/api/b2b/search/available-specs',
 };
 
 // Base URL for PIM API

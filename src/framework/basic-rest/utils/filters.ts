@@ -1,5 +1,6 @@
 // PIM facet fields (from SEARCH_AND_FACETING.md)
 export const PIM_FACET_FIELDS: string[] = [
+  'product_type_code', // Product Type - first position for filtering (backend enriches labels)
   'category_ancestors',
   'brand_id',
   'stock_status',
@@ -9,6 +10,7 @@ export const PIM_FACET_FIELDS: string[] = [
 
 // PIM facet field labels (Italian)
 export const PIM_FACET_LABELS: Record<string, string> = {
+  product_type_code: 'Tipologia Prodotto',
   category_ancestors: 'Categoria',
   brand_id: 'Marca',
   stock_status: 'Disponibilità',

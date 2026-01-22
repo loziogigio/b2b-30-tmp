@@ -48,11 +48,12 @@ const promoButtons = [
     color: 'bg-brand text-white',
     href: '/search?filters-attribute_is_new_b=true',
   },
-  {
-    label: 'Outlet',
-    color: 'bg-emerald-600 text-white',
-    href: '/search?filters-collection_slugs=outlet',
-  },
+  // Outlet hidden for now
+  // {
+  //   label: 'Outlet',
+  //   color: 'bg-emerald-600 text-white',
+  //   href: '/search?filters-collection_slugs=outlet',
+  // },
 ];
 
 const quickLinks = [

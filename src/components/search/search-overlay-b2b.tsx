@@ -142,6 +142,12 @@ export default function SearchOverlayB2B({
     return out;
   }, [searchParams]);
 
+  // Check if any URL filters are present
+  const hasUrlFilters = Object.keys(urlFilters).length > 0;
+
+  // Show filters section when searching OR when URL filters are present
+  const showFiltersSection = showAutocomplete || hasUrlFilters;
+
   // Live preview query: typed text + selected filters (uses debounced query)
   // Fetch 12 items for the quick preview slider
   const liveQueryParams = React.useMemo(
@@ -269,33 +275,38 @@ export default function SearchOverlayB2B({
         <Container>
           {/* Inline search bar inside the overlay */}
           <div className="pt-2">
-            <div className="max-w-[1100px] mx-auto flex items-center gap-4">
-              {/* Logo before search bar */}
-              <div className="hidden sm:block flex-shrink-0">
+            <div className="flex items-center">
+              {/* Logo on the left */}
+              <div className="hidden sm:block flex-shrink-0 w-[120px]">
                 <Logo className="h-10 w-auto" />
               </div>
 
-              {/* Search box takes remaining space */}
-              <div className="flex-1">
-                <SearchBoxB2B
-                  searchId="overlay-search"
-                  lang={lang}
-                  name="overlay-search"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                  }}
-                  value={value}
-                  onChange={(e) => onChange?.(e)}
-                  onClear={(e) => onClear?.(e)}
-                  onFocus={() => {
-                    /* keep open */
-                  }}
-                  onSubmitSuccess={() => {
-                    onSubmitSuccess?.();
-                    onClose();
-                  }}
-                />
+              {/* Search box - centered */}
+              <div className="flex-1 flex justify-center">
+                <div className="w-full max-w-[700px]">
+                  <SearchBoxB2B
+                    searchId="overlay-search"
+                    lang={lang}
+                    name="overlay-search"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                    }}
+                    value={value}
+                    onChange={(e) => onChange?.(e)}
+                    onClear={(e) => onClear?.(e)}
+                    onFocus={() => {
+                      /* keep open */
+                    }}
+                    onSubmitSuccess={() => {
+                      onSubmitSuccess?.();
+                      onClose();
+                    }}
+                  />
+                </div>
               </div>
+
+              {/* Spacer to balance the logo on the right */}
+              <div className="hidden sm:block w-[120px]" />
             </div>
             <div className="border-b border-brand mt-2" />
           </div>
@@ -349,8 +360,8 @@ export default function SearchOverlayB2B({
           </div>
 
           <div className="flex flex-col xl:grid xl:grid-cols-12 gap-4 xl:gap-6 pb-6">
-            {/* Mobile filter toggle button - only show when searching */}
-            {showAutocomplete && (
+            {/* Mobile filter toggle button - show when searching or when filters are active */}
+            {showFiltersSection && (
               <div className="xl:hidden">
                 <button
                   type="button"
@@ -360,6 +371,11 @@ export default function SearchOverlayB2B({
                   <span className="flex items-center gap-2">
                     <IoFilterOutline className="w-5 h-5" />
                     {t('text-filters')}
+                    {hasUrlFilters && (
+                      <span className="ml-1 px-1.5 py-0.5 text-xs bg-brand text-white rounded-full">
+                        {Object.keys(urlFilters).length}
+                      </span>
+                    )}
                   </span>
                   {filtersOpen ? (
                     <IoChevronUp className="w-5 h-5" />
@@ -370,18 +386,18 @@ export default function SearchOverlayB2B({
               </div>
             )}
 
-            {/* Left column: Facets when searching, otherwise suggestions (hidden on mobile) */}
+            {/* Left column: Facets when searching/filtering, otherwise suggestions (hidden on mobile) */}
             <div
               className={cn(
                 'xl:col-span-3',
-                showAutocomplete
+                showFiltersSection
                   ? filtersOpen
                     ? 'block'
                     : 'hidden xl:block'
                   : 'hidden xl:block', // Hide "Ricerche popolari" completely on mobile
               )}
             >
-              {showAutocomplete ? (
+              {showFiltersSection ? (
                 <SearchFiltersB2B lang={lang} text={trimmed} />
               ) : (
                 <div>

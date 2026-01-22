@@ -66,15 +66,8 @@ export async function POST(request: Request) {
       );
     }
 
-    console.log('[b2b/addresses] Fetching for customer_id:', customer_id);
-
     // Call VINC API to get addresses
     const addresses = await vincApi.b2b.getAddresses(customer_id);
-
-    console.log(
-      '[b2b/addresses] VINC API raw response:',
-      JSON.stringify(addresses, null, 2),
-    );
 
     // Transform to AddressB2B format and sort default address first
     const transformedAddresses = addresses
@@ -86,11 +79,6 @@ export async function POST(request: Request) {
         if (!a.isDefault && b.isDefault) return 1;
         return 0;
       });
-
-    console.log(
-      '[b2b/addresses] Transformed addresses:',
-      transformedAddresses.length,
-    );
 
     return NextResponse.json({
       success: true,

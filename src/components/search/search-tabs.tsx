@@ -4,6 +4,7 @@ import * as React from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import cn from 'classnames';
 import { useUI } from '@contexts/ui.context';
+import { useTranslation } from 'src/app/i18n/client';
 
 type Tab = {
   id: string; // stable id for DnD
@@ -112,6 +113,7 @@ function saveTabs(tabs: Tab[]) {
 }
 
 export default function SearchTabs({ lang }: { lang: string }) {
+  const { t } = useTranslation(lang, 'common');
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -119,7 +121,6 @@ export default function SearchTabs({ lang }: { lang: string }) {
   const [tabs, setTabs] = React.useState<Tab[]>([]);
   const [active, setActive] = React.useState<number>(0);
   const [editing, setEditing] = React.useState<string | null>(null);
-  const { isAuthorized } = useUI();
 
   // Track if component has mounted to avoid hydration mismatch
   const [mounted, setMounted] = React.useState(false);
@@ -304,9 +305,9 @@ export default function SearchTabs({ lang }: { lang: string }) {
             qs.set('page_size', '24');
             router.replace(`${pathname}?${qs.toString()}`, { scroll: false });
           }}
-          title="Trending"
+          title={t('text-trending')}
         >
-          Trending
+          {t('text-trending')}
         </button>
 
         {tabs.map((t, i) => (
@@ -357,7 +358,7 @@ export default function SearchTabs({ lang }: { lang: string }) {
           className="ml-2 px-2 py-1 text-sm rounded bg-gray-100 hover:bg-gray-200 border"
           onClick={newTab}
         >
-          + New tab
+          + {t('text-new-tab')}
         </button>
       </div>
     </div>

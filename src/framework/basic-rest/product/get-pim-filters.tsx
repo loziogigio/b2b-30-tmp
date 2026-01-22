@@ -72,7 +72,7 @@ function mapFilterKey(key: string): string {
 // Resolve labels for special fields
 // ===============================
 function resolveLabel(field: string, value: string, apiLabel?: string): string {
-  // Use API label if provided and not empty
+  // Use API label if provided and not empty (backend enriches product_type_code labels)
   if (apiLabel && apiLabel.trim() !== '') {
     return apiLabel;
   }

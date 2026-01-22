@@ -258,6 +258,10 @@
   "text-add-to-cart-btn": "Add",
   "text-products-of-the-week": "Products of the week",
   "text-trending-products": "Trending Products",
+  "text-related-products": "Related Products",
+  "text-trending": "Trending",
+  "text-new-tab": "New tab",
+  "text-search-tab": "Search",
   "text-view-all": "View All",
   "text-saved-carts": "Saved Carts",
   "text-saved-carts-description": "Manage your saved carts to quickly switch between active orders.",
@@ -404,5 +408,9 @@
   "text-notes": "Notes",
   "text-notes-placeholder": "Add any notes for this order…",
   "button-send-order": "Send Order",
-  "text-sending": "Sending..."
+  "text-sending": "Sending...",
+  "text-product-type": "Product Type",
+  "text-clear": "Clear",
+  "text-no-product-type": "Without type",
+  "text-technical-specs": "Technical Specifications"
 }
