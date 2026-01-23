@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useUI } from '@contexts/ui.context';
 import { useModalAction } from '@components/common/modal/modal.context';
 import { useTranslation } from 'src/app/i18n/client';
+import { useTenantOptional } from '@contexts/tenant.context';
 import Logo from '@components/ui/logo';
 
 interface AuthGuardProps {
@@ -11,17 +12,37 @@ interface AuthGuardProps {
   lang: string;
 }
 
-const REQUIRE_LOGIN = process.env.NEXT_PUBLIC_REQUIRE_LOGIN === 'true';
+// Fallback to env variable if tenant context not available
+const ENV_REQUIRE_LOGIN = process.env.NEXT_PUBLIC_REQUIRE_LOGIN === 'true';
 
 /**
- * AuthGuard - Blocks access to the app if NEXT_PUBLIC_REQUIRE_LOGIN=true
- * and user is not authenticated. Shows login modal automatically.
+ * AuthGuard - Optionally blocks access to the app if user is not authenticated.
+ *
+ * Priority for requireLogin setting:
+ * 1. Tenant config (from TenantContext) - takes precedence
+ * 2. Environment variable NEXT_PUBLIC_REQUIRE_LOGIN - fallback
  */
 export default function AuthGuard({ children, lang }: AuthGuardProps) {
   const { isAuthorized } = useUI();
   const { openModal } = useModalAction();
   const { t } = useTranslation(lang, 'common');
+  const tenantContext = useTenantOptional();
   const [mounted, setMounted] = useState(false);
+
+  // Get requireLogin from tenant config, fallback to env variable
+  const requireLogin = tenantContext?.tenant?.requireLogin ?? ENV_REQUIRE_LOGIN;
+
+  // Debug logging for requireLogin reactivity
+  useEffect(() => {
+    console.log('[AuthGuard] Debug values:', {
+      tenantId: tenantContext?.tenant?.id,
+      tenantRequireLogin: tenantContext?.tenant?.requireLogin,
+      envRequireLogin: ENV_REQUIRE_LOGIN,
+      finalRequireLogin: requireLogin,
+      isAuthorized,
+      mounted,
+    });
+  }, [tenantContext, requireLogin, isAuthorized, mounted]);
 
   useEffect(() => {
     setMounted(true);
@@ -29,10 +50,10 @@ export default function AuthGuard({ children, lang }: AuthGuardProps) {
 
   useEffect(() => {
     // Auto-open login modal when not authorized and login is required
-    if (mounted && REQUIRE_LOGIN && !isAuthorized) {
+    if (mounted && requireLogin && !isAuthorized) {
       openModal('LOGIN_VIEW');
     }
-  }, [mounted, isAuthorized, openModal]);
+  }, [mounted, isAuthorized, openModal, requireLogin]);
 
   // During SSR or initial hydration, show nothing to prevent flash
   if (!mounted) {
@@ -40,7 +61,7 @@ export default function AuthGuard({ children, lang }: AuthGuardProps) {
   }
 
   // If login not required, show content
-  if (!REQUIRE_LOGIN) {
+  if (!requireLogin) {
     return <>{children}</>;
   }
 

@@ -167,6 +167,13 @@ export default async function Page({
     ? decodeURIComponent(addressStateCookie)
     : undefined;
 
+  console.log('[Home Page] Address cookie debug:', {
+    cookieName: ADDRESS_STATE_COOKIE,
+    rawCookieValue: addressStateCookie,
+    decodedAddressState: addressState,
+    allCookies: cookieStore.getAll().map((c) => c.name),
+  });
+
   const queryContext = buildContextFromParams({
     campaign: coerceParam(search?.campaign),
     tag: coerceParam(search?.tag),
@@ -208,6 +215,17 @@ export default async function Page({
     console.error('[Home Page] Error loading home template:', err);
     homeTemplate = null;
   }
+
+  console.log(
+    '[Home Page] Template loaded:',
+    homeTemplate ? `${homeTemplate.blocks?.length || 0} blocks` : 'null',
+    'preview:',
+    isPreview,
+    'context:',
+    versionTags || 'default',
+    'matchedBy:',
+    homeTemplate?.matchedBy ?? 'n/a',
+  );
 
   if (!homeTemplate && versionTags) {
     console.warn(

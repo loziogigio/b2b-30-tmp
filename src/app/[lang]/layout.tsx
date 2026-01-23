@@ -9,6 +9,11 @@ import ToasterProvider from 'src/app/provider/toaster-provider';
 import Providers from 'src/app/provider/provider';
 import { getServerHomeSettings } from '@/lib/home-settings/fetch-server';
 import { EliaDrawer } from '@components/elia/elia-drawer';
+import { headers } from 'next/headers';
+import { resolveTenant, isMultiTenant, hasCriticalErrors, logTenantConfigIssues } from '@/lib/tenant';
+import { toPublicInfo, buildTenantFromEnv } from '@/lib/tenant/types';
+import TenantDisabled from '@components/tenant/tenant-disabled';
+import TenantConfigError from '@components/tenant/tenant-config-error';
 
 // external
 import 'react-toastify/dist/ReactToastify.css';
@@ -34,17 +39,87 @@ const manrope = Manrope({
   variable: '--font-manrope',
 });
 
-// Dynamic metadata based on branding from home settings
+// Dynamic metadata based on branding and meta_tags from home settings
 export async function generateMetadata(): Promise<Metadata> {
   const homeSettings = await getServerHomeSettings();
-  const brandingTitle = homeSettings?.branding?.title || 'VINC - B2B';
+  const branding = homeSettings?.branding;
+  const metaTags = homeSettings?.meta_tags;
+  const brandingTitle = branding?.title || 'VINC - B2B';
 
-  return {
+  // Build comprehensive metadata from meta_tags if available
+  const metadata: Metadata = {
     title: {
-      template: `${brandingTitle} | %s`,
-      default: brandingTitle,
+      template: `${metaTags?.title || brandingTitle} | %s`,
+      default: metaTags?.title || brandingTitle,
     },
   };
+
+  // Description
+  if (metaTags?.description) {
+    metadata.description = metaTags.description;
+  }
+
+  // Keywords
+  if (metaTags?.keywords) {
+    metadata.keywords = metaTags.keywords;
+  }
+
+  // Author
+  if (metaTags?.author) {
+    metadata.authors = [{ name: metaTags.author }];
+  }
+
+  // Robots
+  if (metaTags?.robots) {
+    metadata.robots = metaTags.robots;
+  }
+
+  // Canonical URL
+  if (metaTags?.canonicalUrl) {
+    metadata.alternates = {
+      canonical: metaTags.canonicalUrl,
+    };
+  }
+
+  // Open Graph
+  metadata.openGraph = {
+    title: metaTags?.ogTitle || metaTags?.title || brandingTitle,
+    description: metaTags?.ogDescription || metaTags?.description,
+    siteName: metaTags?.ogSiteName || brandingTitle,
+    type: (metaTags?.ogType as 'website' | 'article') || 'website',
+    ...(metaTags?.ogImage && {
+      images: [{ url: metaTags.ogImage }],
+    }),
+  };
+
+  // Twitter Card
+  metadata.twitter = {
+    card: metaTags?.twitterCard || 'summary_large_image',
+    ...(metaTags?.twitterSite && { site: metaTags.twitterSite }),
+    ...(metaTags?.twitterCreator && { creator: metaTags.twitterCreator }),
+    ...(metaTags?.twitterImage && {
+      images: [metaTags.twitterImage],
+    }),
+  };
+
+  // Theme color
+  if (metaTags?.themeColor) {
+    metadata.themeColor = metaTags.themeColor;
+  }
+
+  // Verification
+  if (metaTags?.googleSiteVerification || metaTags?.bingSiteVerification) {
+    metadata.verification = {
+      ...(metaTags.googleSiteVerification && {
+        google: metaTags.googleSiteVerification,
+      }),
+      ...(metaTags.bingSiteVerification && {
+        other: { 'msvalidate.01': metaTags.bingSiteVerification },
+      }),
+    };
+  }
+
+  return metadata;
 }
 
 // Force dynamic rendering for all pages to avoid timeout during Docker build
@@ -63,19 +138,74 @@ export default async function RootLayout({
   params: any;
 }) {
   const { lang } = await params;
+
+  // Resolve tenant configuration
+  let tenant = null;
+  if (isMultiTenant) {
+    const headersList = await headers();
+    const hostname =
+      headersList.get('x-tenant-hostname') ||
+      headersList.get('host') ||
+      'localhost';
+    tenant = await resolveTenant(hostname);
+
+    // If tenant not found or not active, show disabled page
+    if (!tenant || !tenant.isActive) {
+      return (
+        <html lang={lang} dir={dir(lang)} suppressHydrationWarning={true}>
+          <head />
+          <body suppressHydrationWarning={true}>
+            <TenantDisabled />
+          </body>
+        </html>
+      );
+    }
+
+    // Check for critical configuration errors
+    if (hasCriticalErrors(tenant)) {
+      logTenantConfigIssues(tenant, `Tenant: ${tenant.id}`);
+      return (
+        <html lang={lang} dir={dir(lang)} suppressHydrationWarning={true}>
+          <head />
+          <body suppressHydrationWarning={true}>
+            <TenantConfigError
+              errorType="invalid_config"
+              details={`Tenant: ${tenant.id}`}
+            />
+          </body>
+        </html>
+      );
+    }
+  } else {
+    // Single-tenant mode: build tenant from env variables
+    tenant = buildTenantFromEnv();
+  }
+
+  // Convert to public info for client-side (no secrets)
+  const tenantPublicInfo = toPublicInfo(tenant);
+
+  // Debug logging for tenant resolution
+  console.log('[RootLayout] isMultiTenant:', isMultiTenant);
+  console.log('[RootLayout] Resolved tenant:', {
+    id: tenant.id,
+    name: tenant.name,
+    requireLogin: tenant.requireLogin,
+  });
+  console.log('[RootLayout] tenantPublicInfo:', tenantPublicInfo);
+
   const homeSettings = await getServerHomeSettings();
   const branding = homeSettings?.branding ?? {
-    title: 'VINC - B2B',
+    title: 'B2B Store',
     primaryColor: '#009f7f',
     secondaryColor: '#02b290',
-    logo: undefined,
-    favicon: undefined,
+    logo: '/assets/images/logo-placeholder.svg',
+    favicon: '/assets/vinc/favicon.svg',
   };
 
   return (
     <html lang={lang} dir={dir(lang)} suppressHydrationWarning={true}>
       <head>
-        {branding.favicon ? <link rel="icon" href={branding.favicon} /> : null}
+        <link rel="icon" href={branding.favicon || '/assets/vinc/favicon.svg'} />
       </head>
       <body
         className={`${inter.variable} ${manrope.variable}`}
@@ -86,7 +216,11 @@ export default async function RootLayout({
         }}
         suppressHydrationWarning={true}
       >
-        <Providers initialHomeSettings={homeSettings}>
+        <Providers
+          initialHomeSettings={homeSettings}
+          tenant={tenantPublicInfo}
+          isMultiTenant={isMultiTenant}
+        >
           <ManagedUIContext>
             {children}
             <ManagedModal lang={lang} />
