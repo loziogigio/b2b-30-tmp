@@ -113,7 +113,7 @@ const SearchB2B = forwardRef<HTMLDivElement, Props>(
         />
         {/* End of overlay */}
 
-        <div className="relative z-30 flex flex-col justify-center w-full shrink-0">
+        <div className="relative flex flex-col justify-center w-full shrink-0">
           <div className="flex flex-col w-full mx-auto">
             <SearchBoxB2B
               searchId={searchId}

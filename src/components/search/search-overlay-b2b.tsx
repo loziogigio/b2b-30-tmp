@@ -73,23 +73,6 @@ export default function SearchOverlayB2B({
   const { items: recent, remove, clear } = useRecentSearches();
   const rootRef = React.useRef<HTMLDivElement>(null);
 
-  // Popular search seeds (simple defaults, can be wired to API later)
-  const popular = React.useMemo(
-    () => [
-      'canna fumaria doppia parete',
-      'mobile bagno sospeso 90 cm',
-      'mobili bagno bianco',
-      'paffoni',
-      'lavatoio',
-      'rubinetto miscelatore',
-      'radiatore',
-      'vaso espansine aperto',
-      'radiatore interase 180',
-      'mensola',
-    ],
-    [],
-  );
-
   function gotoSearch(term: string) {
     const q = encodeURIComponent(term);
     onClose();
@@ -256,18 +239,25 @@ export default function SearchOverlayB2B({
       ref={rootRef}
       onClickCapture={handleClickCapture}
       className={cn(
-        'fixed inset-x-0 top-0 z-40 transition-all duration-200',
+        'fixed inset-0 z-[100] transition-all duration-200',
         open ? 'opacity-100 visible' : 'opacity-0 invisible',
       )}
       aria-hidden={!open}
     >
+      {/* Backdrop - covers full screen */}
+      <div
+        className="absolute inset-0 bg-black/30"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      {/* Content panel */}
       <div className="relative bg-white shadow-xl border-t border-brand">
-        {/* Close button floats, not adding top margin */}
+        {/* Close button */}
         <button
           type="button"
           onClick={onClose}
           aria-label="Close"
-          className="absolute top-2 right-3 w-9 h-9 flex items-center justify-center rounded hover:bg-gray-100 text-gray-500"
+          className="absolute top-2 right-3 w-9 h-9 flex items-center justify-center rounded hover:bg-gray-100 text-gray-500 z-10"
         >
           <CloseIcon className="w-5 h-5" />
         </button>
@@ -312,7 +302,7 @@ export default function SearchOverlayB2B({
           </div>
 
           {/* Recent searches row */}
-          <div className="py-3">
+          <div className="py-2">
             <div className="flex items-center flex-wrap gap-2 text-[13px]">
               <span className="font-semibold text-gray-700">
                 {t('text-recent-searches')}
@@ -359,7 +349,7 @@ export default function SearchOverlayB2B({
             </div>
           </div>
 
-          <div className="flex flex-col xl:grid xl:grid-cols-12 gap-4 xl:gap-6 pb-6">
+          <div className="flex flex-col xl:grid xl:grid-cols-12 gap-3 xl:gap-4 pb-4">
             {/* Mobile filter toggle button - show when searching or when filters are active */}
             {showFiltersSection && (
               <div className="xl:hidden">
@@ -386,45 +376,22 @@ export default function SearchOverlayB2B({
               </div>
             )}
 
-            {/* Left column: Facets when searching/filtering, otherwise suggestions (hidden on mobile) */}
-            <div
-              className={cn(
-                'xl:col-span-3',
-                showFiltersSection
-                  ? filtersOpen
-                    ? 'block'
-                    : 'hidden xl:block'
-                  : 'hidden xl:block', // Hide "Ricerche popolari" completely on mobile
-              )}
-            >
-              {showFiltersSection ? (
+            {/* Left column: Facets when searching/filtering */}
+            {showFiltersSection && (
+              <div
+                className={cn(
+                  'xl:col-span-3',
+                  filtersOpen ? 'block' : 'hidden xl:block',
+                )}
+              >
                 <SearchFiltersB2B lang={lang} text={trimmed} />
-              ) : (
-                <div>
-                  <div className="text-base font-semibold text-gray-800 mb-2">
-                    {t('text-popular-searches')}
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    {popular.map((term) => (
-                      <button
-                        key={term}
-                        type="button"
-                        className="text-left px-2 py-1 rounded hover:bg-gray-50"
-                        onClick={() => gotoSearch(term)}
-                        title={term}
-                      >
-                        {term}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+              </div>
+            )}
 
             {/* Right: Trending carousel used as recommended products */}
-            <div className="xl:col-span-9">
+            <div className={showFiltersSection ? 'xl:col-span-9' : 'xl:col-span-12'}>
               {showAutocomplete && (
-                <div className="mb-6">
+                <div className="mb-4">
                   <ProductsCarousel
                     sectionHeading={t('text-see-all-results-for', {
                       query: trimmed,

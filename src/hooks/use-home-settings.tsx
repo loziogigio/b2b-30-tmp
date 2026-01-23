@@ -41,11 +41,10 @@ export function useHomeSettings() {
     const fetchSettings = async () => {
       setFallbackLoading(true);
       try {
+        // Internal API route - credentials are handled server-side
         const response = await fetch(`/api/b2b/home-settings`, {
           headers: {
             'Content-Type': 'application/json',
-            'X-API-Key': process.env.NEXT_PUBLIC_API_KEY_ID!,
-            'X-API-Secret': process.env.NEXT_PUBLIC_API_SECRET!,
           },
         });
 
@@ -70,6 +69,11 @@ export function useHomeSettings() {
             ...DEFAULT_HOME_SETTINGS.cardStyle,
             ...(data.cardStyle ?? {}),
           },
+          // Explicitly use API headerConfig if it has rows, otherwise use default
+          headerConfig:
+            data.headerConfig && data.headerConfig.rows?.length > 0
+              ? data.headerConfig
+              : DEFAULT_HOME_SETTINGS.headerConfig,
         });
         setFallbackError(null);
       } catch (err) {
@@ -103,6 +107,15 @@ export type {
   HomeSettings,
   CompanyBranding,
   ProductCardStyle,
+  HeaderConfig,
+  HeaderRow,
+  HeaderBlock,
+  HeaderWidget,
+  HeaderWidgetType,
+  WidgetConfig,
+  RadioStation,
+  RowLayout,
+  MetaTags,
 } from '@/lib/home-settings/types';
 
 /**
@@ -173,12 +186,45 @@ export function applyBrandingCSS(branding: CompanyBranding) {
 
   const root = document.documentElement;
 
+  // Primary brand colors
   if (branding.primaryColor) {
     root.style.setProperty('--color-brand', branding.primaryColor);
   }
 
   if (branding.secondaryColor) {
     root.style.setProperty('--color-brand-secondary', branding.secondaryColor);
+  }
+
+  // Extended theme colors
+  if (branding.accentColor) {
+    root.style.setProperty('--color-accent', branding.accentColor);
+  } else if (branding.primaryColor) {
+    // Fallback accent to primary
+    root.style.setProperty('--color-accent', branding.primaryColor);
+  }
+
+  if (branding.textColor) {
+    root.style.setProperty('--color-text', branding.textColor);
+  }
+
+  if (branding.mutedColor) {
+    root.style.setProperty('--color-muted', branding.mutedColor);
+  }
+
+  if (branding.backgroundColor) {
+    root.style.setProperty('--color-background', branding.backgroundColor);
+  }
+
+  if (branding.headerBackgroundColor) {
+    root.style.setProperty('--color-header-bg', branding.headerBackgroundColor);
+  }
+
+  if (branding.footerBackgroundColor) {
+    root.style.setProperty('--color-footer-bg', branding.footerBackgroundColor);
+  }
+
+  if (branding.footerTextColor) {
+    root.style.setProperty('--color-footer-text', branding.footerTextColor);
   }
 
   // Update favicon if provided

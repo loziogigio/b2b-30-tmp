@@ -1,9 +1,13 @@
 import { cache } from 'react';
-import { DEFAULT_HOME_SETTINGS } from '@/lib/home-settings/defaults';
+import { headers } from 'next/headers';
 import type { HomeSettings } from '@/lib/home-settings/types';
+import { resolveTenant, isSingleTenant } from '@/lib/tenant';
+import { DEFAULT_HOME_SETTINGS } from '@/lib/home-settings/defaults';
 
-// Use private URL for server-side calls (internal Docker network)
-// Falls back to public URL for local development
+// =============================================================================
+// SINGLE-TENANT CONFIG (from .env)
+// =============================================================================
+
 const rawPimApiUrl =
   process.env.PIM_API_PRIVATE_URL ||
   process.env.NEXT_PUBLIC_PIM_API_URL ||
@@ -24,18 +28,27 @@ function resolveBaseUrl(raw: string): string {
   }
 }
 
-const PIM_API_BASE = resolveBaseUrl(rawPimApiUrl);
+const DEFAULT_PIM_API_BASE = resolveBaseUrl(rawPimApiUrl);
+const DEFAULT_API_KEY_ID = process.env.API_KEY_ID || process.env.NEXT_PUBLIC_API_KEY_ID;
+const DEFAULT_API_SECRET = process.env.API_SECRET || process.env.NEXT_PUBLIC_API_SECRET;
 
-// Get API keys from environment (use server-side vars if available)
-const apiKeyId = process.env.API_KEY_ID || process.env.NEXT_PUBLIC_API_KEY_ID;
-const apiSecret = process.env.API_SECRET || process.env.NEXT_PUBLIC_API_SECRET;
+// =============================================================================
+// HOME SETTINGS FETCH
+// =============================================================================
 
-async function fetchHomeSettingsOnce(): Promise<HomeSettings> {
+interface FetchConfig {
+  pimApiUrl: string;
+  apiKeyId?: string;
+  apiSecret?: string;
+  tenantId?: string;
+}
+
+async function fetchHomeSettingsWithConfig(config: FetchConfig): Promise<HomeSettings | null> {
+  const { pimApiUrl, apiKeyId, apiSecret, tenantId } = config;
+
   try {
-    const url = new URL(
-      '/api/b2b/home-settings',
-      `${PIM_API_BASE}/`,
-    ).toString();
+    const baseUrl = resolveBaseUrl(pimApiUrl);
+    const url = new URL('/api/b2b/home-settings', `${baseUrl}/`).toString();
 
     const response = await fetch(url, {
       headers: {
@@ -45,63 +58,93 @@ async function fetchHomeSettingsOnce(): Promise<HomeSettings> {
       },
       next: {
         revalidate: 300,
+        tags: tenantId ? [`home-settings-${tenantId}`] : ['home-settings'],
       },
-    }).catch((fetchError) => {
-      console.warn(
-        '[HomeSettings] Network error, using defaults:',
-        fetchError.message,
-      );
+    }).catch(() => null);
+
+    if (!response || !response.ok) {
       return null;
-    });
-
-    if (!response) {
-      return DEFAULT_HOME_SETTINGS;
-    }
-
-    if (!response.ok) {
-      console.warn(
-        `[HomeSettings] Response ${response.status}, using defaults`,
-      );
-      return DEFAULT_HOME_SETTINGS;
     }
 
     const contentType = response.headers.get('content-type') || '';
     if (!contentType.toLowerCase().includes('application/json')) {
-      console.warn(
-        `[HomeSettings] Unexpected content-type "${contentType}" from ${PIM_API_BASE}, using defaults.`,
-      );
-      return DEFAULT_HOME_SETTINGS;
+      return null;
     }
 
     const data = (await response.json()) as HomeSettings;
-    return {
-      ...DEFAULT_HOME_SETTINGS,
-      ...data,
-      branding: {
-        ...DEFAULT_HOME_SETTINGS.branding,
-        ...(data.branding ?? {}),
-      },
-      cardStyle: {
-        ...DEFAULT_HOME_SETTINGS.cardStyle,
-        ...(data.cardStyle ?? {}),
-      },
-    };
-  } catch (error) {
-    console.error('[HomeSettings] server fetch failed, using defaults:', error);
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+// Single-tenant cached fetch
+const cachedSingleTenantFetch = cache(() =>
+  fetchHomeSettingsWithConfig({
+    pimApiUrl: DEFAULT_PIM_API_BASE,
+    apiKeyId: DEFAULT_API_KEY_ID,
+    apiSecret: DEFAULT_API_SECRET,
+  }),
+);
+
+// Multi-tenant fetch (caches per hostname within same request)
+const cachedMultiTenantFetch = cache(async (hostname: string) => {
+  const tenant = await resolveTenant(hostname);
+
+  if (!tenant) {
+    return null;
+  }
+
+  return fetchHomeSettingsWithConfig({
+    pimApiUrl: tenant.api.pimApiUrl,
+    apiKeyId: tenant.api.apiKeyId,
+    apiSecret: tenant.api.apiSecret,
+    tenantId: tenant.id,
+  });
+});
+
+/**
+ * Get home settings for the current request
+ *
+ * - Single-tenant mode: Uses .env configuration
+ * - Multi-tenant mode: Resolves tenant from request hostname and uses tenant-specific config
+ * - Returns DEFAULT_HOME_SETTINGS if no settings are configured
+ */
+export async function getServerHomeSettings(): Promise<HomeSettings> {
+  try {
+    // Single-tenant mode: use .env config
+    if (isSingleTenant) {
+      const result = await cachedSingleTenantFetch();
+      return result || DEFAULT_HOME_SETTINGS;
+    }
+
+    // Multi-tenant mode: resolve tenant from hostname
+    const headersList = await headers();
+    const hostname =
+      headersList.get('x-tenant-hostname') ||
+      headersList.get('host') ||
+      'localhost';
+
+    const result = await cachedMultiTenantFetch(hostname);
+    return result || DEFAULT_HOME_SETTINGS;
+  } catch {
     return DEFAULT_HOME_SETTINGS;
   }
 }
 
-const cachedFetch = cache(fetchHomeSettingsOnce);
-
-export async function getServerHomeSettings(): Promise<HomeSettings> {
-  try {
-    return await cachedFetch();
-  } catch (error) {
-    console.error(
-      '[HomeSettings] Unexpected error from cached fetch, using defaults:',
-      error,
-    );
-    return DEFAULT_HOME_SETTINGS;
-  }
+/**
+ * Get home settings for a specific tenant (useful for API routes)
+ */
+export async function getHomeSettingsForTenant(
+  pimApiUrl: string,
+  apiKeyId?: string,
+  apiSecret?: string,
+  tenantId?: string,
+): Promise<HomeSettings | null> {
+  return fetchHomeSettingsWithConfig({
+    pimApiUrl,
+    apiKeyId,
+    apiSecret,
+    tenantId,
+  });
 }

@@ -37,7 +37,9 @@ export function RadioWidget({ config }: RadioWidgetProps) {
     <button
       type="button"
       onClick={handleOpenRadio}
-      className="hidden lg:flex shrink-0 items-center justify-center h-9 w-9 rounded-full border border-slate-200 hover:border-brand hover:text-brand text-slate-600 transition-colors cursor-pointer overflow-hidden"
+      className={`hidden lg:flex shrink-0 items-center justify-center rounded-lg border border-slate-200 hover:border-brand hover:text-brand text-slate-600 transition-colors cursor-pointer h-12 ${
+        headerIcon ? 'px-3' : 'w-12'
+      }`}
       aria-label="Ascolta la radio"
       title="Ascolta la radio"
     >
@@ -45,13 +47,13 @@ export function RadioWidget({ config }: RadioWidgetProps) {
         <Image
           src={headerIcon}
           alt="Radio"
-          width={36}
-          height={36}
-          className="h-full w-full object-cover"
+          width={100}
+          height={40}
+          className="h-8 w-auto object-contain"
           unoptimized
         />
       ) : (
-        <HiOutlineRadio className="h-5 w-5" />
+        <HiOutlineRadio className="h-6 w-6" />
       )}
     </button>
   );

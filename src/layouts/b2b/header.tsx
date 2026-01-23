@@ -26,6 +26,8 @@ import {
   HiOutlineEye,
   HiOutlineEyeOff,
 } from 'react-icons/hi';
+import { RadioWidget } from '@layouts/header/widgets/radio-widget';
+import type { WidgetConfig } from '@/lib/home-settings/types';
 
 const Delivery = dynamic(() => import('@layouts/header/delivery'), {
   ssr: false,
@@ -75,9 +77,24 @@ function Header({ lang }: HeaderProps) {
   const { settings } = useHomeSettings();
   const brandingTitle = useMemo(
     () =>
-      settings?.branding?.title || siteSettings?.site_header?.title || 'Hidros',
+      settings?.branding?.title || siteSettings?.site_header?.title || 'VINC B2B',
     [settings?.branding?.title],
   );
+
+  // Get radio widget config from header settings
+  const radioConfig = useMemo<WidgetConfig>(() => {
+    const rows = settings?.headerConfig?.rows || [];
+    for (const row of rows) {
+      for (const block of row.blocks || []) {
+        for (const widget of block.widgets || []) {
+          if (widget.type === 'radio-widget') {
+            return widget.config || {};
+          }
+        }
+      }
+    }
+    return { enabled: true }; // Default: show radio
+  }, [settings?.headerConfig]);
 
   const [isElevated, setIsElevated] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -108,7 +125,7 @@ function Header({ lang }: HeaderProps) {
     <>
       <div
         className={cn(
-          'md:sticky md:top-0 z-40 border-b border-slate-200 bg-white transition-shadow',
+          'md:sticky md:top-0 z-30 border-b border-slate-200 bg-white transition-shadow',
           isElevated && 'shadow-sm',
         )}
       >
@@ -196,31 +213,14 @@ function Header({ lang }: HeaderProps) {
             <div className="w-full">
               <Suspense fallback={null}>
                 <SearchB2B
-                  searchId="hidros-main-search"
+                  searchId="vinc-main-search"
                   className="w-full h-12"
                   lang={lang}
                 />
               </Suspense>
             </div>
 
-            <button
-              type="button"
-              onClick={() => {
-                window.open(
-                  '/radio-player.html',
-                  'RadioPlayer',
-                  'width=450,height=500,resizable=yes,scrollbars=no,status=no,menubar=no,toolbar=no,location=no',
-                );
-              }}
-              className="shrink-0 hover:opacity-80 transition-opacity cursor-pointer"
-              aria-label="Ascolta la radio"
-            >
-              <img
-                src="/assets/placeholders/radio_icon.png"
-                alt="RTL 102.5"
-                className="h-10 w-auto"
-              />
-            </button>
+            <RadioWidget config={radioConfig} lang={lang} />
           </div>
 
           {/* Right - Buttons (hidden on mobile, shown on desktop) */}
@@ -326,7 +326,7 @@ function Header({ lang }: HeaderProps) {
       </div>
 
       {/* Second header bar - navigation always visible, account features only when logged in */}
-      <header className="md:sticky md:top-16 z-30 border-b border-slate-200 bg-white text-slate-900">
+      <header className="md:sticky md:top-16 z-20 border-b border-slate-200 bg-white text-slate-900">
         <div className="bg-white">
           <Container className="flex flex-wrap items-center justify-between gap-4 py-3 text-sm font-medium">
             {/* Left side - always visible */}

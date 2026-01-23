@@ -2,7 +2,6 @@
 
 import React from 'react';
 import type { HomeSettings } from '@/lib/home-settings/types';
-import { DEFAULT_HOME_SETTINGS } from '@/lib/home-settings/defaults';
 
 interface HomeSettingsContextValue {
   settings: HomeSettings | null;
@@ -26,7 +25,7 @@ export function HomeSettingsProvider({
   children,
 }: HomeSettingsProviderProps) {
   const [settings, setSettings] = React.useState<HomeSettings | null>(
-    initialSettings ?? DEFAULT_HOME_SETTINGS,
+    initialSettings,
   );
   const [isLoading, setIsLoading] = React.useState<boolean>(!initialSettings);
   const [error, setError] = React.useState<string | null>(null);
@@ -34,39 +33,22 @@ export function HomeSettingsProvider({
   const refresh = React.useCallback(async () => {
     setIsLoading(true);
     try {
+      // Internal API route - credentials are handled server-side
       const response = await fetch('/api/b2b/home-settings', {
         cache: 'no-store',
         headers: {
           'Content-Type': 'application/json',
-          'X-API-Key': process.env.NEXT_PUBLIC_API_KEY_ID!,
-          'X-API-Secret': process.env.NEXT_PUBLIC_API_SECRET!,
         },
       });
       if (!response.ok) {
-        throw new Error(
-          `Failed to fetch home settings: ${response.statusText}`,
-        );
+        setSettings(null);
+        return;
       }
       const data = (await response.json()) as HomeSettings;
-      setSettings({
-        ...DEFAULT_HOME_SETTINGS,
-        ...data,
-        branding: {
-          ...DEFAULT_HOME_SETTINGS.branding,
-          ...(data.branding ?? {}),
-        },
-        cardStyle: {
-          ...DEFAULT_HOME_SETTINGS.cardStyle,
-          ...(data.cardStyle ?? {}),
-        },
-      });
+      setSettings(data);
       setError(null);
-    } catch (refreshError) {
-      console.error('[HomeSettings] refresh failed:', refreshError);
-      setError(
-        refreshError instanceof Error ? refreshError.message : 'Unknown error',
-      );
-      setSettings(DEFAULT_HOME_SETTINGS);
+    } catch {
+      setSettings(null);
     } finally {
       setIsLoading(false);
     }
