@@ -1,10 +1,27 @@
 import axios from 'axios';
 import { getToken } from './get-token';
 
+/**
+ * Get base URL for API proxy
+ * - Client-side: use relative URL
+ * - Server-side: use full URL with localhost
+ */
+const getBaseUrl = () => {
+  if (typeof window !== 'undefined') {
+    // Client-side: relative URL works
+    return '/api/proxy/b2b';
+  }
+  // Server-side: need full URL
+  const port = process.env.PORT || '3000';
+  return `http://localhost:${port}/api/proxy/b2b`;
+};
+
+/**
+ * HTTP client for B2B API calls.
+ * Routes through /api/proxy/b2b to keep external API URLs server-side.
+ */
 const http = axios.create({
-  baseURL:
-    process.env.NEXT_PUBLIC_B2B_PUBLIC_REST_API_ENDPOINT ||
-    'http://localhost:8000/api/v1',
+  baseURL: getBaseUrl(),
   timeout: 30000,
   headers: {
     Accept: 'application/json',

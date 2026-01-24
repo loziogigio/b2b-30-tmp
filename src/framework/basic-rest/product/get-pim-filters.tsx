@@ -1,8 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import {
-  API_ENDPOINTS_PIM,
-  PIM_API_BASE_URL,
-} from '@framework/utils/api-endpoints-pim';
+import { API_ENDPOINTS_PIM } from '@framework/utils/api-endpoints-pim';
+import { post } from '@framework/utils/httpPIM';
 import {
   PIM_FACET_FIELDS,
   PIM_FACET_LABELS,
@@ -134,14 +132,11 @@ function transformPimFacets(
 }
 
 // ===============================
-// Fetch PIM facets (using search endpoint with include_faceting)
+// Fetch PIM facets via proxy (credentials injected server-side)
 // ===============================
 export const fetchPimFilters = async (
   params: Record<string, any>,
 ): Promise<PimTransformedFilter[]> => {
-  // Use search endpoint with include_faceting instead of separate facet endpoint
-  const url = `${PIM_API_BASE_URL}${API_ENDPOINTS_PIM.SEARCH}`;
-
   // Build filters from URL params (filters-xxx -> filters.xxx)
   const filters: Record<string, any> = {};
   for (const [key, value] of Object.entries(params)) {
@@ -175,21 +170,8 @@ export const fetchPimFilters = async (
     body.filters = filters;
   }
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-API-Key': process.env.NEXT_PUBLIC_API_KEY_ID!,
-      'X-API-Secret': process.env.NEXT_PUBLIC_API_SECRET!,
-    },
-    body: JSON.stringify(body),
-  });
-
-  if (!response.ok) {
-    throw new Error(`PIM facet fetch failed: ${response.statusText}`);
-  }
-
-  const data: PimFacetResponse = await response.json();
+  // Use proxy - credentials are injected server-side
+  const data = await post<PimFacetResponse>(API_ENDPOINTS_PIM.SEARCH, body);
 
   // Handle response formats: { success, data: { facet_results } } or { facet_results }
   const facetResults = data.data?.facet_results || data.facet_results || {};

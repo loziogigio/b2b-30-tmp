@@ -8,7 +8,7 @@
  *   import { vincApi } from '@/lib/vinc-api';
  *
  *   // Get order
- *   const order = await vincApi.orders.get('HIDROS-2025-1');
+ *   const order = await vincApi.orders.get('ORDER-2025-1');
  *
  *   // Create cart
  *   const cart = await vincApi.orders.createCart({ session_id: 'abc123' });
@@ -404,6 +404,35 @@ class VincApiClient {
 
       return response.json();
     },
+
+    /**
+     * Logout - invalidate token on backend
+     * Note: Uses Bearer token for authentication
+     */
+    logout: async (accessToken: string): Promise<{ success: boolean }> => {
+      const url = `${this.config.baseUrl}/api/v1/internal/auth/logout`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+          'X-Internal-API-Key': this.config.apiKey,
+          'X-Tenant-ID': this.config.tenantId,
+        },
+      });
+
+      // Even if backend returns error, we still want to clear local state
+      // So we don't throw, just return the result
+      if (!response.ok) {
+        console.warn(
+          '[vincApi.auth.logout] Backend returned error:',
+          response.status,
+        );
+        return { success: false };
+      }
+
+      return response.json();
+    },
   };
 }
 
@@ -413,15 +442,25 @@ class VincApiClient {
 
 let _instance: VincApiClient | null = null;
 
+// Multi-tenant mode flag
+const TENANT_MODE = process.env.TENANT_MODE || 'single';
+const isMultiTenant = TENANT_MODE === 'multi';
+
 /**
- * Get the VINC API client instance
+ * Get the VINC API client instance (single-tenant mode)
  *
  * Configuration is read from environment variables:
  * - VINC_API_URL: Base URL of vinc-api (e.g., http://localhost:8000)
  * - VINC_INTERNAL_API_KEY: Shared secret for internal API calls
- * - NEXT_PUBLIC_PROJECT_CODE: Tenant ID (e.g., vinc-hidros-it)
+ * - NEXT_PUBLIC_PROJECT_CODE: Tenant ID (e.g., vinc-tenant-id)
  */
 export function getVincApi(): VincApiClient {
+  if (isMultiTenant) {
+    console.warn(
+      '[VincApi] getVincApi() called in multi-tenant mode without tenant config. Use getVincApiForTenant() instead.',
+    );
+  }
+
   if (!_instance) {
     const baseUrl = process.env.VINC_API_URL;
     const apiKey = process.env.VINC_INTERNAL_API_KEY;
@@ -450,11 +489,53 @@ export function getVincApi(): VincApiClient {
 }
 
 /**
+ * Configuration for multi-tenant VINC API client
+ */
+export interface TenantVincConfig {
+  projectCode: string;
+  vincApiUrl?: string;
+  vincApiKey?: string;
+}
+
+/**
+ * Get VINC API client for a specific tenant (multi-tenant mode)
+ *
+ * @param tenantConfig - Tenant-specific configuration
+ * @returns VincApiClient instance configured for the tenant
+ */
+export function getVincApiForTenant(tenantConfig: TenantVincConfig): VincApiClient {
+  const baseUrl = tenantConfig.vincApiUrl || process.env.VINC_API_URL;
+  const apiKey = tenantConfig.vincApiKey || process.env.VINC_INTERNAL_API_KEY;
+  const tenantId = tenantConfig.projectCode;
+
+  if (!baseUrl) {
+    console.error('[VincApi] Missing VINC_API_URL for tenant:', tenantId);
+    throw new Error('VINC_API_URL is required');
+  }
+  if (!apiKey) {
+    console.error('[VincApi] Missing VINC_INTERNAL_API_KEY for tenant:', tenantId);
+    throw new Error('VINC_INTERNAL_API_KEY is required');
+  }
+  if (!tenantId) {
+    console.error('[VincApi] Missing projectCode in tenant config');
+    throw new Error('projectCode is required in tenant config');
+  }
+
+  // Create a new client instance for this tenant (not cached)
+  return new VincApiClient({
+    baseUrl,
+    apiKey,
+    tenantId,
+    serviceName: 'vinc-b2b',
+  });
+}
+
+/**
  * Convenience export for direct usage
  *
  * Usage:
  *   import { vincApi } from '@/lib/vinc-api';
- *   const order = await vincApi.orders.get('HIDROS-2025-1');
+ *   const order = await vincApi.orders.get('ORDER-2025-1');
  *   const tokens = await vincApi.auth.login({ email, password });
  */
 export const vincApi = {

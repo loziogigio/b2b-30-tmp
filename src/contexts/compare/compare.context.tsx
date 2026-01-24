@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useLocalStorage } from '@utils/use-local-storage';
 
-const STORAGE_KEY = 'hidros-compare-skus';
+const STORAGE_KEY = 'vinc-compare-skus';
 
 export interface CompareContextState {
   skus: string[];

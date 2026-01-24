@@ -49,8 +49,14 @@ export async function generateMetadata(): Promise<Metadata> {
   // Build comprehensive metadata from meta_tags if available
   const metadata: Metadata = {
     title: {
-      template: `${metaTags?.title || brandingTitle} | %s`,
+      template: `%s | ${metaTags?.title || brandingTitle}`,
       default: metaTags?.title || brandingTitle,
+    },
+    // Favicon/icons
+    icons: {
+      icon: branding?.favicon || '/assets/vinc/favicon.svg',
+      shortcut: branding?.favicon || '/assets/vinc/favicon.svg',
+      apple: branding?.favicon || '/assets/vinc/favicon.svg',
     },
   };
 
@@ -184,15 +190,6 @@ export default async function RootLayout({
   // Convert to public info for client-side (no secrets)
   const tenantPublicInfo = toPublicInfo(tenant);
 
-  // Debug logging for tenant resolution
-  console.log('[RootLayout] isMultiTenant:', isMultiTenant);
-  console.log('[RootLayout] Resolved tenant:', {
-    id: tenant.id,
-    name: tenant.name,
-    requireLogin: tenant.requireLogin,
-  });
-  console.log('[RootLayout] tenantPublicInfo:', tenantPublicInfo);
-
   const homeSettings = await getServerHomeSettings();
   const branding = homeSettings?.branding ?? {
     title: 'B2B Store',
@@ -204,9 +201,7 @@ export default async function RootLayout({
 
   return (
     <html lang={lang} dir={dir(lang)} suppressHydrationWarning={true}>
-      <head>
-        <link rel="icon" href={branding.favicon || '/assets/vinc/favicon.svg'} />
-      </head>
+      <head />
       <body
         className={`${inter.variable} ${manrope.variable}`}
         style={{

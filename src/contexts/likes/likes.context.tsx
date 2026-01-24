@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { useLocalStorage } from '@utils/use-local-storage';
+import { useUI } from '@contexts/ui.context';
 import {
   addLike,
   removeLike,
@@ -85,6 +86,8 @@ export function useLikes() {
 }
 
 export function LikesProvider(props: React.PropsWithChildren) {
+  const { isAuthorized } = useUI();
+
   // LocalStorage persistence (do not seed SSR)
   const [saved, save] = useLocalStorage(
     'likes-state',
@@ -164,14 +167,16 @@ export function LikesProvider(props: React.PropsWithChildren) {
     [hydrateFromServer],
   );
 
-  // On first mount, refresh likes from server to keep cache up to date
+  // Refresh likes from server when user is authorized
   const didRefreshFromServer = React.useRef(false);
   React.useEffect(() => {
+    // Only fetch when user is logged in
+    if (!isAuthorized) return;
     if (didRefreshFromServer.current) return;
     didRefreshFromServer.current = true;
     // fetch within backend limit (<= 100)
     loadUserLikes(1, 100, 'replace').catch(() => {});
-  }, [loadUserLikes]);
+  }, [isAuthorized, loadUserLikes]);
 
   const loadBulkStatus = React.useCallback(
     async (skus: string[]) => {

@@ -63,7 +63,7 @@ const ForgetPasswordForm = ({ lang }: { lang: string }) => {
   // Success state
   if (isSuccess) {
     return (
-      <div className="w-full px-5 py-6 mx-auto rounded-lg sm:p-8 bg-brand-light sm:w-96 md:w-450px">
+      <div className="w-full px-5 py-6 mx-auto rounded-lg sm:p-8 bg-white shadow-2xl ring-1 ring-black/5 sm:w-96 md:w-450px">
         <CloseButton onClick={closeModal} />
         <div className="text-center pt-2.5">
           <div onClick={closeModal}>
@@ -103,7 +103,7 @@ const ForgetPasswordForm = ({ lang }: { lang: string }) => {
   }
 
   return (
-    <div className="w-full px-5 py-6 mx-auto rounded-lg sm:p-8 bg-brand-light sm:w-96 md:w-450px">
+    <div className="w-full px-5 py-6 mx-auto rounded-lg sm:p-8 bg-white shadow-2xl ring-1 ring-black/5 sm:w-96 md:w-450px">
       <CloseButton onClick={closeModal} />
       <div className="text-center mb-9 pt-2.5">
         <div onClick={closeModal}>
@@ -151,7 +151,7 @@ const ForgetPasswordForm = ({ lang }: { lang: string }) => {
       </form>
       <div className="relative flex flex-col items-center justify-center mt-8 mb-6 text-sm text-heading sm:mt-10 sm:mb-7">
         <hr className="w-full border-gray-300" />
-        <span className="absolute -top-2.5 px-2 bg-brand-light">
+        <span className="absolute -top-2.5 px-2 bg-white">
           {t('common:text-or')}
         </span>
       </div>

@@ -87,10 +87,10 @@ export default function B2BInfoBlock({ product, priceData, lang }: Props) {
   const brandName = product?.brand?.name || product?.brand?.label || 'Brand';
 
   return (
-    <div className="mt-2 rounded border border-border-base bg-white">
+    <div className="mt-2 bg-white">
       <div className="grid grid-cols-1 lg:grid-cols-[1fr,auto] items-start">
-        {/* Info Grid */}
-        <dl className="grid grid-cols-1 sm:grid-cols-[180px,1fr]">
+        {/* Info Grid - borders only on the text content */}
+        <dl className="grid grid-cols-1 sm:grid-cols-[180px,1fr] border border-border-base rounded-l lg:rounded-r-none rounded-r">
           <dt className="border-b border-border-base bg-gray-50 px-4 py-3 text-[12px] font-semibold uppercase text-gray-600 sm:text-sm">
             {t('text-model')}
           </dt>
@@ -169,8 +169,8 @@ export default function B2BInfoBlock({ product, priceData, lang }: Props) {
           )}
         </dl>
 
-        {/* Brand Logo */}
-        <div className="flex items-center justify-center p-4 border-l border-border-base">
+        {/* Brand Logo - no border */}
+        <div className="flex items-center justify-center p-4">
           {brandImg ? (
             <Link
               href={`/${lang}/search?filters-brand_id=${product?.brand?.id || product?.brand?.brand_id || ''}`}

@@ -22,10 +22,10 @@ interface ProductPreviewListenerProps {
   currentProductId?: string;
 }
 
-const PREVIEW_STORAGE_KEY = 'hidros_preview_blocks';
-const PREVIEW_TIMESTAMP_KEY = 'hidros_preview_timestamp';
-const PREVIEW_DIRTY_KEY = 'hidros_preview_dirty';
-const PREVIEW_PRODUCT_KEY = 'hidros_preview_product';
+const PREVIEW_STORAGE_KEY = 'vinc_preview_blocks';
+const PREVIEW_TIMESTAMP_KEY = 'vinc_preview_timestamp';
+const PREVIEW_DIRTY_KEY = 'vinc_preview_dirty';
+const PREVIEW_PRODUCT_KEY = 'vinc_preview_product';
 const PREVIEW_EXPIRY_MS = 30 * 60 * 1000; // 30 minutes
 
 const isWildcardProduct = (value: string | null | undefined) =>

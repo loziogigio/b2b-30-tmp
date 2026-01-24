@@ -1,58 +1,55 @@
-import mongoose from 'mongoose';
+import { Connection } from 'mongoose';
+import { headers } from 'next/headers';
+import { resolveTenant, isSingleTenant } from '@/lib/tenant';
+import {
+  getPooledConnection,
+  closeAllConnections,
+  getPoolStats,
+} from './connection-pool';
 
-const MIN_POOL = Number(process.env.MONGO_MIN_POOL_SIZE ?? '0');
-const MAX_POOL = Number(process.env.MONGO_MAX_POOL_SIZE ?? '50');
+// Re-export pool utilities
+export { getPooledConnection, closeAllConnections, getPoolStats };
 
-const mongoUri =
-  process.env.MONGO_URL ??
-  'mongodb://root:root@localhost:27017/?authSource=admin';
-const mongoDbName = process.env.MONGO_DB ?? 'vinc-hidros-it';
+// Re-export model registry utilities
+export { getModel, getHomeTemplateModelForDb, getProductTemplateModelForDb } from './model-registry';
 
-interface MongooseGlobal {
-  conn: typeof mongoose | null;
-  promise: Promise<typeof mongoose> | null;
-}
+// Default database name from .env
+const defaultMongoDb = process.env.MONGO_DB ?? 'vinc-default';
 
-const globalForMongoose = globalThis as typeof globalThis & {
-  _mongoose?: MongooseGlobal;
-};
-
-if (!globalForMongoose._mongoose) {
-  globalForMongoose._mongoose = { conn: null, promise: null };
-}
-
-export const connectToDatabase = async () => {
-  const cache = globalForMongoose._mongoose!;
-
-  if (cache.conn) {
-    return cache.conn;
+/**
+ * Connect to the appropriate database
+ * - Single-tenant mode: uses MONGO_DB from .env
+ * - Multi-tenant mode: resolves tenant from hostname and uses tenant's database
+ */
+export const connectToDatabase = async (): Promise<Connection> => {
+  // Single-tenant mode: use .env values directly
+  if (isSingleTenant) {
+    return getPooledConnection(defaultMongoDb);
   }
 
-  if (!cache.promise) {
-    cache.promise = mongoose
-      .connect(mongoUri, {
-        dbName: mongoDbName,
-        minPoolSize: MIN_POOL,
-        maxPoolSize: MAX_POOL,
-        bufferCommands: false,
-      })
-      .then((m) => {
-        cache.conn = m;
-        return m;
-      })
-      .catch((error) => {
-        cache.promise = null;
-        cache.conn = null;
-        throw error;
-      });
-  }
-
+  // Multi-tenant mode: resolve tenant from hostname
+  let hostname = 'localhost';
   try {
-    cache.conn = await cache.promise;
-  } catch (error) {
-    cache.conn = null;
-    throw error;
+    const headersList = await headers();
+    hostname =
+      headersList.get('x-tenant-hostname') ||
+      headersList.get('host') ||
+      'localhost';
+  } catch {
+    // headers() not available (e.g., in build or outside request context)
+    console.warn('[DB] Could not get headers, using default database');
+    return getPooledConnection(defaultMongoDb);
   }
 
-  return cache.conn;
+  const tenant = await resolveTenant(hostname);
+
+  if (!tenant) {
+    console.warn(`[DB] No tenant found for ${hostname}, using default database`);
+    return getPooledConnection(defaultMongoDb);
+  }
+
+  const mongoDb = tenant.database.mongoDb || defaultMongoDb;
+
+  console.log(`[DB] Tenant ${tenant.id} resolved, using database: ${mongoDb}`);
+  return getPooledConnection(mongoDb);
 };

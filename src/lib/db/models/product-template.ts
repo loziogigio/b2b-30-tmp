@@ -1,4 +1,4 @@
-import { Schema, models, model, type InferSchemaType } from 'mongoose';
+import { Schema, models, model, type InferSchemaType, Connection } from 'mongoose';
 
 const BlockSchema = new Schema(
   {
@@ -91,3 +91,17 @@ export type ProductTemplateDocument = InferSchemaType<
 
 export const ProductTemplateModel =
   models.ProductTemplate ?? model('ProductTemplate', ProductTemplateSchema);
+
+// Export schema for model registry
+export { ProductTemplateSchema };
+
+/**
+ * Get the ProductTemplate model for a specific connection
+ * This ensures the model uses the correct tenant database
+ */
+export function getProductTemplateModel(connection: Connection) {
+  if (connection.models.ProductTemplate) {
+    return connection.models.ProductTemplate;
+  }
+  return connection.model<ProductTemplateDocument>('ProductTemplate', ProductTemplateSchema);
+}

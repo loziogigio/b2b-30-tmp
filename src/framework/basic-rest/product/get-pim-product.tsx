@@ -1,10 +1,8 @@
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { Product } from '@framework/types';
-import {
-  API_ENDPOINTS_PIM,
-  PIM_API_BASE_URL,
-} from '@framework/utils/api-endpoints-pim';
+import { API_ENDPOINTS_PIM } from '@framework/utils/api-endpoints-pim';
+import { post } from '@framework/utils/httpPIM';
 
 // ===============================
 // Types for PIM API response
@@ -42,6 +40,14 @@ interface PimMediaItem {
   position?: number;
 }
 
+interface PimTechnicalSpec {
+  key: string;
+  value: string;
+  label?: string;
+  uom?: string;
+  order?: number;
+}
+
 interface PimProduct {
   id: string;
   sku: string;
@@ -65,6 +71,11 @@ interface PimProduct {
   variants?: PimProduct[]; // Variants array when group_variants=true
   has_active_promo?: boolean;
   promotions?: any[];
+  // Marketing and technical specs
+  marketing_features?: { [lang: string]: string[] } | string[];
+  technical_specifications?:
+    | { [lang: string]: PimTechnicalSpec[] }
+    | PimTechnicalSpec[];
 }
 
 interface PimGroupedResult {
@@ -181,6 +192,9 @@ function transformPimProduct(raw: PimProduct): Product {
       false,
     promotions:
       raw.promotions || raw.variants?.flatMap((v) => v.promotions || []) || [],
+    // Pass through marketing and technical specs
+    marketing_features: raw.marketing_features || {},
+    technical_specifications: raw.technical_specifications || {},
   } as Product;
 }
 
@@ -238,16 +252,23 @@ export interface ProductWithVariantCount extends Product {
 }
 
 // ===============================
-// Fetch function for PIM search (POST)
+// Fetch function for PIM search (POST) via proxy (credentials injected server-side)
 // ===============================
 export const fetchPimProductList = async (
   params: Record<string, any>,
 ): Promise<GroupedSearchResult> => {
-  const url = `${PIM_API_BASE_URL}${API_ENDPOINTS_PIM.SEARCH}`;
-
   // Build filters object - map legacy field names to PIM field names
   const rawFilters = params.filters || {};
   const filters: Record<string, any> = mapFilterKeys(rawFilters);
+
+  // Also extract filters from URL-style params (e.g., filters-brand_id=MOB)
+  for (const [key, value] of Object.entries(params)) {
+    if (key.startsWith('filters-') && value) {
+      const filterKey = key.replace('filters-', '');
+      const pimKey = LEGACY_TO_PIM_FIELD[filterKey] || filterKey;
+      filters[pimKey] = value;
+    }
+  }
 
   // Build POST body matching PIM API structure
   const body: Record<string, any> = {
@@ -272,21 +293,8 @@ export const fetchPimProductList = async (
     body.group_variants = true;
   }
 
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-API-Key': process.env.NEXT_PUBLIC_API_KEY_ID!,
-      'X-API-Secret': process.env.NEXT_PUBLIC_API_SECRET!,
-    },
-    body: JSON.stringify(body),
-  });
-
-  if (!response.ok) {
-    throw new Error(`PIM search failed: ${response.statusText}`);
-  }
-
-  const data: PimSearchResponse = await response.json();
+  // Use proxy - credentials are injected server-side
+  const data = await post<PimSearchResponse>(API_ENDPOINTS_PIM.SEARCH, body);
 
   if (!data.success) {
     throw new Error('PIM search returned unsuccessful response');

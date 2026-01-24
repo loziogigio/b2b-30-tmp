@@ -254,7 +254,7 @@ export function renderCartPdfHtml(
 <html lang="it">
 <head>
   <meta charset="utf-8" />
-  <title>Hidros - Cart export</title>
+  <title>VINC B2B - Cart export</title>
   <style>
     :root { color-scheme: only light; }
     * { box-sizing: border-box; }
@@ -392,7 +392,7 @@ export function renderCartPdfHtml(
 <body>
   <header>
     <h1>Cart export</h1>
-    <div class="subtitle">HidrosPoint B2B</div>
+    <div class="subtitle">VINC B2B</div>
   </header>
   <div class="actions">
     <button type="button" onclick="document.body.classList.remove('hide-images'); window.print();">Print with images</button>
@@ -428,7 +428,7 @@ export function renderCartPdfHtml(
     ${totalsHtml}
   </section>
   <footer>
-    Generated automatically by Hidros customer portal • ${escapeHtml(snapshot.exportDateLabel)}
+    Generated automatically by VINC B2B • ${escapeHtml(snapshot.exportDateLabel)}
   </footer>
 </body>
 </html>`;

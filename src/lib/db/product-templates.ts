@@ -1,8 +1,5 @@
-import { connectToDatabase } from './connection';
-import {
-  ProductTemplateModel,
-  type ProductTemplateDocument,
-} from './models/product-template';
+import { connectToDatabase, getProductTemplateModelForDb } from './connection';
+import type { ProductTemplateDocument } from './models/product-template';
 import type { PageBlock } from '@/lib/types/blocks';
 
 interface ProductContext {
@@ -35,7 +32,8 @@ const serializeBlock = (block: {
 export const findMatchingTemplate = async (
   context: ProductContext,
 ): Promise<ProductTemplateDocument | null> => {
-  await connectToDatabase();
+  const connection = await connectToDatabase();
+  const ProductTemplateModel = await getProductTemplateModelForDb(connection.name);
 
   const { productId, categoryIds = [], tags = [] } = context;
 
@@ -135,7 +133,8 @@ export const getProductDetailBlocks = async (
  * Create or get default template
  */
 export const ensureDefaultTemplate = async () => {
-  await connectToDatabase();
+  const connection = await connectToDatabase();
+  const ProductTemplateModel = await getProductTemplateModelForDb(connection.name);
 
   let template = await ProductTemplateModel.findOne({
     templateId: 'default-product-detail',
@@ -169,7 +168,8 @@ export const createCategoryTemplate = async (
   categoryId: string,
   name: string,
 ): Promise<ProductTemplateDocument> => {
-  await connectToDatabase();
+  const connection = await connectToDatabase();
+  const ProductTemplateModel = await getProductTemplateModelForDb(connection.name);
 
   const now = new Date();
   const template = await ProductTemplateModel.create({
@@ -197,7 +197,8 @@ export const createProductTemplate = async (
   productId: string,
   name: string,
 ): Promise<ProductTemplateDocument> => {
-  await connectToDatabase();
+  const connection = await connectToDatabase();
+  const ProductTemplateModel = await getProductTemplateModelForDb(connection.name);
 
   const now = new Date();
   const template = await ProductTemplateModel.create({

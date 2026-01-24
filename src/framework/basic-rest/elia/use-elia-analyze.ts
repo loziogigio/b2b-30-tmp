@@ -1,8 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import {
-  API_ENDPOINTS_PIM,
-  PIM_API_BASE_URL,
-} from '../utils/api-endpoints-pim';
+import { API_ENDPOINTS_PIM } from '../utils/api-endpoints-pim';
 import { fetchErpPrices } from '../erp/prices';
 import { ERP_STATIC } from '../utils/static';
 import type {
@@ -136,14 +133,13 @@ export function useEliaAnalyze(): UseEliaAnalyzeReturn {
           total_found: totalFound,
         };
 
+        // Use proxy - credentials are injected server-side
         const response = await fetch(
-          `${PIM_API_BASE_URL}${API_ENDPOINTS_PIM.ELIA_ANALYZE}`,
+          `/api/proxy/pim/${API_ENDPOINTS_PIM.ELIA_ANALYZE}`,
           {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'X-API-Key': process.env.NEXT_PUBLIC_API_KEY_ID!,
-              'X-API-Secret': process.env.NEXT_PUBLIC_API_SECRET!,
             },
             body: JSON.stringify(analyzeRequest),
             signal: abortRef.current.signal,

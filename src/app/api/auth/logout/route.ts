@@ -1,5 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// Helper to clear all auth cookies
+function clearAuthCookies(response: NextResponse) {
+  const cookieOptions = {
+    path: '/',
+    expires: new Date(0),
+    maxAge: 0,
+  };
+
+  response.cookies.set('auth_token', '', cookieOptions);
+  response.cookies.set('access_token', '', cookieOptions);
+  response.cookies.set('refresh_token', '', cookieOptions);
+}
+
+// POST - First step: clear cookies
 export async function POST(request: NextRequest) {
   let lang = 'it';
   try {
@@ -14,29 +28,22 @@ export async function POST(request: NextRequest) {
     redirectUrl: `/${lang}`,
   });
 
-  // Clear auth cookie
-  response.cookies.set('auth_token', '', {
-    path: '/',
-    expires: new Date(0),
-    maxAge: 0,
-  });
+  // Clear all auth cookies
+  clearAuthCookies(response);
 
   return response;
 }
 
-// GET endpoint that clears cookies and redirects
+// GET - Second step: clear cookies again and redirect to root
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const lang = searchParams.get('lang') || 'it';
 
+  // Redirect to root page
   const response = NextResponse.redirect(new URL(`/${lang}`, request.url));
 
-  // Clear auth cookie
-  response.cookies.set('auth_token', '', {
-    path: '/',
-    expires: new Date(0),
-    maxAge: 0,
-  });
+  // Clear all auth cookies again
+  clearAuthCookies(response);
 
   return response;
 }

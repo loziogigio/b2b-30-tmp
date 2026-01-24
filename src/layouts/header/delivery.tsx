@@ -41,15 +41,16 @@ const Delivery: React.FC<DeliveryProps> = ({ lang, className }) => {
   return (
     <div className={cn('delivery-address', className)}>
       <button
-        className="inline-flex items-center text-15px text-brand-dark tracking-[0.1px]"
+        className="inline-flex items-center text-sm text-brand-dark tracking-[0.1px] max-w-[200px] xl:max-w-[320px]"
         onClick={handleDeliveryView}
+        title={label}
       >
-        <LocationIcon />
-        <span className="ltr:pl-1.5 lg:rtl:pr-1.5">{t('text-delivery')}:</span>
-        <span className="font-semibold text-brand relative top-[1px] ltr:pl-1 rtl:pr-1">
+        <LocationIcon className="shrink-0" />
+        <span className="shrink-0 ltr:pl-1.5 lg:rtl:pr-1.5">{t('text-delivery')}:</span>
+        <span className="font-semibold text-brand relative top-[1px] ltr:pl-1 rtl:pr-1 truncate">
           {label}
         </span>
-        <span className="ltr:pl-1.5 lg:rtl:pr-1.5">
+        <span className="shrink-0 ltr:pl-1.5 lg:rtl:pr-1.5">
           <FaChevronDown className="text-xs text-brand-dark text-opacity-40" />
         </span>
       </button>

@@ -4,16 +4,27 @@
 import React, { useMemo } from 'react';
 import Container from '@components/ui/container';
 import CategoryBreadcrumb from '@components/ui/category-breadcrumb';
-import { useCmsB2BMenuRawQuery } from '@framework/product/get-b2b-cms';
 import {
-  buildB2BMenuTree,
-  findNodeByPath,
+  usePimMenuQuery,
   type MenuTreeNode,
-} from '@utils/transform/b2b-menu-tree';
+} from '@framework/product/get-pim-menu';
 import { useTranslation } from 'src/app/i18n/client';
 import ProductsCarousel from '@components/product/products-carousel';
 import { useProductListQuery } from '@framework/product/get-b2b-product';
 import Link from 'next/link';
+
+// Helper to find a node by path in the menu tree
+function findNodeByPath(tree: MenuTreeNode[], pathSegments: string[]): MenuTreeNode | null {
+  if (!pathSegments.length) return null;
+  let current: MenuTreeNode | undefined;
+  let children = tree;
+  for (const seg of pathSegments) {
+    current = children.find((n) => n.slug === seg);
+    if (!current) return null;
+    children = current.children;
+  }
+  return current || null;
+}
 
 export default function CategoryPage({
   lang,
@@ -23,11 +34,12 @@ export default function CategoryPage({
   slug: string[];
 }) {
   const { t } = useTranslation(lang, 'common');
-  const { data, isLoading, isError } = useCmsB2BMenuRawQuery({
+  const { data, isLoading, isError } = usePimMenuQuery({
+    location: 'header',
     staleTime: 5 * 60 * 1000,
   });
 
-  const tree = useMemo(() => buildB2BMenuTree(data ?? []), [data]);
+  const tree = useMemo(() => data?.menuItems ?? [], [data]);
   const current = useMemo(
     () => (slug.length ? findNodeByPath(tree, slug) : null),
     [tree, slug],

@@ -1,4 +1,4 @@
-import { ShopFilters } from '@components/search/filters-hidros';
+import { ShopFilters } from '@components/search/filters';
 import Scrollbar from '@components/ui/scrollbar';
 import { useUI } from '@contexts/ui.context';
 import { IoArrowBack, IoArrowForward } from 'react-icons/io5';

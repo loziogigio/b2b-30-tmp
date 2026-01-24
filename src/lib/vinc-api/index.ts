@@ -12,9 +12,9 @@
  *    import { vincApi } from '@/lib/vinc-api';
  *
  *    // Orders
- *    const order = await vincApi.orders.get('HIDROS-2025-1');
+ *    const order = await vincApi.orders.get('ORDER-2025-1');
  *    const cart = await vincApi.orders.createCart({ session_id: 'abc' });
- *    const updated = await vincApi.orders.addItem('HIDROS-2025-1', {
+ *    const updated = await vincApi.orders.addItem('ORDER-2025-1', {
  *      product_id: 'SKU123',
  *      quantity: 2,
  *    });
@@ -24,6 +24,6 @@
  *    const addresses = await vincApi.customers.getAddresses('customer-id', 'shop-id');
  */
 
-export { vincApi, getVincApi, VincApiClient, VincApiError } from './client';
-export type { VincApiConfig } from './client';
+export { vincApi, getVincApi, getVincApiForTenant, VincApiClient, VincApiError } from './client';
+export type { VincApiConfig, TenantVincConfig } from './client';
 export type * from './types';

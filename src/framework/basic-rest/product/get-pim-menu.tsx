@@ -1,8 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import {
-  API_ENDPOINTS_PIM,
-  PIM_API_BASE_URL,
-} from '@framework/utils/api-endpoints-pim';
+import { API_ENDPOINTS_PIM } from '@framework/utils/api-endpoints-pim';
+import { get } from '@framework/utils/httpPIM';
 import { slugify } from '@utils/slugify';
 
 // ===============================
@@ -92,7 +90,7 @@ function transformPimMenuTree(items: PimMenuTreeItem[]): MenuTreeNode[] {
 }
 
 // ===============================
-// Fetch function for PIM Menu
+// Fetch function for PIM Menu via proxy (credentials injected server-side)
 // ===============================
 export const fetchPimMenu = async (
   location?: 'header' | 'footer' | 'mobile',
@@ -100,25 +98,8 @@ export const fetchPimMenu = async (
   menuItems: MenuTreeNode[];
   flat: PimMenuTreeItem[];
 }> => {
-  const url = new URL(`${PIM_API_BASE_URL}${API_ENDPOINTS_PIM.MENU}`);
-  if (location) {
-    url.searchParams.set('location', location);
-  }
-
-  const response = await fetch(url.toString(), {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-API-Key': process.env.NEXT_PUBLIC_API_KEY_ID!,
-      'X-API-Secret': process.env.NEXT_PUBLIC_API_SECRET!,
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`PIM menu fetch failed: ${response.statusText}`);
-  }
-
-  const data: PimMenuResponse = await response.json();
+  const params = location ? { location } : undefined;
+  const data = await get<PimMenuResponse>(API_ENDPOINTS_PIM.MENU, params);
 
   if (!data.success) {
     throw new Error('PIM menu returned unsuccessful response');

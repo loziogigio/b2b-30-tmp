@@ -56,12 +56,12 @@ export default function SignUpForm({
     return (
       <div
         className={cn(
-          'flex bg-brand-light mx-auto rounded-lg md:w-[720px] lg:w-[920px] xl:w-[1000px] 2xl:w-[1200px]',
+          'flex mx-auto rounded-lg md:w-[720px] lg:w-[920px] xl:w-[1000px] 2xl:w-[1200px]',
           className,
         )}
       >
         {isPopup && <CloseButton onClick={closeModal} />}
-        <div className="flex w-full mx-auto overflow-hidden rounded-lg bg-brand-light">
+        <div className="flex w-full mx-auto overflow-hidden rounded-lg bg-white shadow-2xl ring-1 ring-black/5">
           <div className="md:w-1/2 lg:w-[55%] xl:w-[60%] registration hidden md:block relative">
             <Image
               src="/assets/images/login-desk.svg"
@@ -111,12 +111,12 @@ export default function SignUpForm({
   return (
     <div
       className={cn(
-        'flex bg-brand-light mx-auto rounded-lg md:w-[720px] lg:w-[920px] xl:w-[1000px] 2xl:w-[1200px]',
+        'flex mx-auto rounded-lg md:w-[720px] lg:w-[920px] xl:w-[1000px] 2xl:w-[1200px]',
         className,
       )}
     >
       {isPopup && <CloseButton onClick={closeModal} />}
-      <div className="flex w-full mx-auto overflow-hidden rounded-lg bg-brand-light">
+      <div className="flex w-full mx-auto overflow-hidden rounded-lg bg-white shadow-2xl ring-1 ring-black/5">
         <div className="md:w-1/2 lg:w-[55%] xl:w-[60%] registration hidden md:block relative">
           <Image
             src="/assets/images/login-desk.svg"

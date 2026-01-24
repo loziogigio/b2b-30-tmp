@@ -77,7 +77,11 @@
   "text-sign-in": "Accedi",
   "text-register": "Registrati",
   "text-welcome-back": "Bentornato!",
-  "text-don’t-have-account": "Non hai un account?",
+  "text-login-subtitle": "Accedi per gestire i tuoi ordini",
+  "text-login-feature-catalog": "Catalogo",
+  "text-login-feature-orders": "Ordini",
+  "text-login-feature-prices": "Prezzi riservati",
+  "text-don't-have-account": "Non hai un account?",
   "text-create-account": "Richiedi accesso",
   "text-forgot-password": "Password dimenticata?",
   "text-or": "oppure continua con",
@@ -538,5 +542,13 @@
   "text-product-type": "Tipologia Prodotto",
   "text-clear": "Rimuovi",
   "text-no-product-type": "Senza tipologia",
-  "text-technical-specs": "Specifiche Tecniche"
+  "text-technical-specs": "Specifiche Tecniche",
+
+  "tenant-disabled-title": "Servizio Non Attivo",
+  "tenant-disabled-message": "L'accesso a questo portale è stato temporaneamente sospeso. Per informazioni sulla riattivazione, contatta il tuo referente commerciale.",
+  "tenant-disabled-contact": "Se ritieni che questo sia un errore, contatta l'assistenza.",
+
+  "tenant-config-error-title": "Errore di Configurazione",
+  "tenant-config-error-message": "La configurazione del sistema è incompleta. Contatta l'amministratore per verificare le impostazioni del portale.",
+  "tenant-config-error-contact": "Se il problema persiste, contatta l'assistenza tecnica."
 }

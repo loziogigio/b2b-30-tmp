@@ -72,6 +72,60 @@ function normalizeFeatures(raw: any): { label: string; value: string }[] {
   return out;
 }
 
+// Normalize marketing_features for current language
+// Handles both formats:
+// - Direct array: ["Feature 1", "Feature 2"]
+// - Language nested: { "it": ["Feature 1", "Feature 2"] }
+function normalizeMarketingFeatures(raw: any, lang: string): string[] {
+  if (!raw) return [];
+
+  // Handle direct array format
+  if (Array.isArray(raw)) {
+    return raw.filter((f: any) => typeof f === 'string' && f.trim());
+  }
+
+  // Handle language-nested format
+  if (typeof raw === 'object') {
+    const features = raw[lang] || raw['it'] || Object.values(raw)[0];
+    if (!Array.isArray(features)) return [];
+    return features.filter((f: any) => typeof f === 'string' && f.trim());
+  }
+
+  return [];
+}
+
+// Normalize technical_specifications for current language
+// Handles both formats:
+// - Direct array: [{ key, label, value, uom }, ...]
+// - Language nested: { "it": [{ key, label, value, uom }, ...] }
+function normalizeTechSpecs(
+  raw: any,
+  lang: string,
+): { label: string; value: string; order?: number }[] {
+  if (!raw) return [];
+
+  // Handle direct array format
+  let specs: any[];
+  if (Array.isArray(raw)) {
+    specs = raw;
+  } else if (typeof raw === 'object') {
+    // Handle language-nested format
+    specs = raw[lang] || raw['it'] || Object.values(raw)[0];
+    if (!Array.isArray(specs)) return [];
+  } else {
+    return [];
+  }
+
+  return specs
+    .map((s: any) => ({
+      label: s.label || s.key || '',
+      value: s.uom ? `${s.value} ${s.uom}` : String(s.value ?? ''),
+      order: s.order ?? 999,
+    }))
+    .filter((s) => s.label && s.value)
+    .sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+}
+
 /* ----------------- Documents helpers ----------------- */
 
 type DocItem = {
@@ -155,6 +209,20 @@ export default function ProductB2BDetailsTab({
   const features = pimAttributes.length > 0 ? pimAttributes : legacyFeatures;
   const hasFeatures = features.length > 0;
 
+  // Marketing features (bullet points)
+  const marketingFeatures = normalizeMarketingFeatures(
+    (product as any)?.marketing_features,
+    lang,
+  );
+  const hasMarketingFeatures = marketingFeatures.length > 0;
+
+  // Technical specifications (structured data with labels/values/uom)
+  const techSpecs = normalizeTechSpecs(
+    (product as any)?.technical_specifications,
+    lang,
+  );
+  const hasTechSpecs = techSpecs.length > 0;
+
   // Combine legacy docs with PIM media documents
   const legacyDocs = (product.docs as DocItem[] | undefined) || [];
   const mediaDocs = extractMediaDocs((product as any).media);
@@ -162,7 +230,14 @@ export default function ProductB2BDetailsTab({
   const docsByType = groupDocs(allDocs);
   const hasDocs = Object.keys(docsByType).length > 0;
 
-  if (!hasDescription && !hasFeatures && !hasDocs) return null;
+  if (
+    !hasDescription &&
+    !hasMarketingFeatures &&
+    !hasFeatures &&
+    !hasTechSpecs &&
+    !hasDocs
+  )
+    return null;
 
   const tabs: { id: string; label: string; node: React.ReactNode }[] = [];
 
@@ -175,6 +250,43 @@ export default function ProductB2BDetailsTab({
           className="prose prose-sm max-w-none leading-[1.9] text-brand-muted"
           dangerouslySetInnerHTML={{ __html: sanitizeHtml(htmlDesc) }}
         />
+      ),
+    });
+  }
+
+  if (hasMarketingFeatures) {
+    tabs.push({
+      id: 'marketing',
+      label: 'Caratteristiche',
+      node: (
+        <ul className="list-disc list-inside space-y-2 text-sm text-brand-dark">
+          {marketingFeatures.map((feature, i) => (
+            <li key={i}>{feature}</li>
+          ))}
+        </ul>
+      ),
+    });
+  }
+
+  if (hasTechSpecs) {
+    tabs.push({
+      id: 'tech-specs',
+      label: 'Specifiche tecniche',
+      node: (
+        <div className="rounded border border-border-base">
+          <dl className="grid grid-cols-1 sm:grid-cols-[220px,1fr]">
+            {techSpecs.map(({ label, value }, i) => (
+              <React.Fragment key={`${label}-${i}`}>
+                <dt className="border-b border-border-base bg-gray-50 px-4 py-3 text-[12px] font-semibold text-gray-600 sm:text-sm">
+                  {label.toUpperCase()}
+                </dt>
+                <dd className="border-b border-border-base px-4 py-3 text-sm text-brand-dark">
+                  {value}
+                </dd>
+              </React.Fragment>
+            ))}
+          </dl>
+        </div>
       ),
     });
   }

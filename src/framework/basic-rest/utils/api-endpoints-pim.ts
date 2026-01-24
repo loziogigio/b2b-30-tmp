@@ -1,20 +1,20 @@
-// PIM API endpoints
+// PIM API endpoints - paths without leading slash for axios baseURL compatibility
 export const API_ENDPOINTS_PIM = {
-  SEARCH: '/api/search/search',
-  FACET: '/api/search/facet',
-  MENU: '/api/public/menu',
+  SEARCH: 'api/search/search',
+  FACET: 'api/search/facet',
+  MENU: 'api/public/menu',
   // Collections
-  COLLECTIONS: '/api/public/collections',
-  COLLECTION_BY_SLUG: '/api/public/collections', // append /{slug}
-  COLLECTION_PRODUCTS: '/api/public/collections', // append /{slug}/products
+  COLLECTIONS: 'api/public/collections',
+  COLLECTION_BY_SLUG: 'api/public/collections', // append /{slug}
+  COLLECTION_PRODUCTS: 'api/public/collections', // append /{slug}/products
   // ELIA AI Search
-  ELIA_INTENT: '/api/elia/intent',
-  ELIA_SEARCH: '/api/elia/search',
-  ELIA_ANALYZE: '/api/elia/analyze',
+  ELIA_INTENT: 'api/elia/intent',
+  ELIA_SEARCH: 'api/elia/search',
+  ELIA_ANALYZE: 'api/elia/analyze',
   // Correlations (related products)
-  CORRELATIONS: '/api/b2b/correlations',
+  CORRELATIONS: 'api/b2b/correlations',
   // Available specs (dynamic discovery)
-  AVAILABLE_SPECS: '/api/b2b/search/available-specs',
+  AVAILABLE_SPECS: 'api/b2b/search/available-specs',
 };
 
 // Base URL for PIM API

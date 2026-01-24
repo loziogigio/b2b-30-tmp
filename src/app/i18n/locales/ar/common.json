@@ -270,5 +270,8 @@
   "text-cart-already-saved-generic": "This cart is already saved.",
   "text-deactivate-cart": "Deactivate",
   "text-deactivating-cart": "Deactivating...",
-  "text-saved-cart-missing-items": "Add items to your cart before saving it."
+  "text-saved-cart-missing-items": "Add items to your cart before saving it.",
+
+  "text-404-message": "نأسف! هذه الصفحة غير متوفرة حاليًا. يرجى المحاولة مرة أخرى لاحقًا.",
+  "text-back-to-home": "العودة إلى الصفحة الرئيسية"
 }

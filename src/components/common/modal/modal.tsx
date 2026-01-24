@@ -41,7 +41,7 @@ const Modal: FC<ModalProps> = ({
             leaveFrom="opacity-100"
             leaveTo="opacity-0"
           >
-            <div className="fixed inset-0 z-[9998] cursor-pointer bg-brand-dark/70" />
+            <div className="fixed inset-0 z-[9998] cursor-pointer bg-black/60 backdrop-blur-sm" />
           </TransitionChild>
 
           {/* This element is to trick the browser into centering the modal contents. */}

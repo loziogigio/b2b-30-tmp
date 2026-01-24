@@ -4,7 +4,18 @@
 
 /* Write your own custom base styles here */
 @layer base {
-  /* default theme */
+  /* CSS variables for dynamic theming - defaults match DEFAULT_HOME_SETTINGS */
+  :root {
+    --color-brand: #009f7f;
+    --color-brand-secondary: #02b290;
+    --color-accent: var(--color-brand);
+    --color-text: #000000;
+    --color-muted: #595959;
+    --color-background: #ffffff;
+    --color-header-bg: transparent;
+    --color-footer-bg: #f5f5f5;
+    --color-footer-text: #666666;
+  }
 
   html {
     -webkit-tap-highlight-color: transparent;
@@ -391,7 +402,7 @@ input:checked + .slider:before {
 /* Address box */
 
 .address__box input[type='radio']:checked ~ label {
-  border-color: #02b290;
+  border-color: var(--color-brand-secondary);
 }
 
 @media (min-width: 1024px) {
@@ -420,7 +431,7 @@ input:checked + .slider:before {
   position: absolute;
   left: 2px;
   width: 3px;
-  background: #02b290;
+  background: var(--color-brand-secondary);
   @apply h-6 top-3 2xl:top-2.5;
 }
 .registration > div {

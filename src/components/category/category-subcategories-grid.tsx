@@ -21,7 +21,7 @@ function ViewAllCard({ lang, parentHref }: ViewAllCardProps) {
   return (
     <Link
       href={href}
-      className="flex flex-col items-center justify-center bg-[#405BA8] rounded-xl p-6 text-white hover:bg-[#344d8c] transition-colors min-h-[280px]"
+      className="flex flex-col items-center justify-center bg-brand rounded-xl p-6 text-white hover:bg-brand/80 transition-colors min-h-[280px]"
     >
       <h3 className="text-2xl md:text-3xl font-bold text-center mb-2">
         {t('text-not-enough', { defaultValue: 'Non ti basta?' })}

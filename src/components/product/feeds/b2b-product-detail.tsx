@@ -3,8 +3,6 @@
 import Breadcrumb from '@components/ui/breadcrumb';
 import Container from '@components/ui/container';
 import Divider from '@components/ui/divider';
-import { useProductListQuery } from '@framework/product/get-b2b-product';
-import ProductSingleDetailsHidros from '../product-hidros';
 import ProductB2BDetails from '../product-b2b-details';
 import type { PageBlock } from '@/lib/types/blocks';
 
@@ -38,16 +36,6 @@ export default function B2BProductDetail({
           />
         </Container>
       </div>
-
-      {/* <HidrosDemoProducts
-          lang={lang}
-          carouselBreakpoint={breakpoints}
-        />
-      <HidrosDemoProducts
-          lang={lang}
-          carouselBreakpoint={breakpoints}
-        />
-      <DownloadApps lang={lang} /> */}
     </>
   );
 }

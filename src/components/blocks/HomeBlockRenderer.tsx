@@ -23,7 +23,6 @@ import { usePimProductListQuery } from '@framework/product/get-pim-product';
 interface HomeBlockRendererProps {
   block: any;
   lang: string;
-  cmsData?: any;
 }
 
 /**
@@ -341,41 +340,42 @@ const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({
 
     const products = fetchedProducts ?? [];
 
+    // Hide section when no products found (after loading completes)
+    if (!isLoading && products.length === 0 && !error) {
+      return null;
+    }
+
     return (
       <Container className={className}>
         {!enabled ? (
-          <div className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-6 py-8 text-center text-sm text-slate-500">
-            Configure a search keyword in the builder to populate this carousel.
-          </div>
+          // Only show placeholder in builder/preview mode
+          showZoneLabels ? (
+            <div className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-6 py-8 text-center text-sm text-slate-500">
+              Configure a search keyword in the builder to populate this carousel.
+            </div>
+          ) : null
         ) : error ? (
           <div className="rounded-md border border-red-200 bg-red-50 px-6 py-4 text-sm text-red-600">
             {error?.message ?? 'Unable to load products for this search.'}
           </div>
         ) : (
-          <div className="relative">
-            <ProductsCarousel
-              sectionHeading={sectionTitle || 'Featured Products'}
-              categorySlug={
-                searchQuery
-                  ? `shop?text=${encodeURIComponent(searchQuery)}`
-                  : undefined
-              }
-              products={products}
-              loading={isLoading}
-              error={error?.message}
-              limit={limit}
-              uniqueKey={`carousel-products-${block.id}`}
-              lang={lang}
-              carouselBreakpoint={
-                Object.keys(breakpoints).length ? breakpoints : undefined
-              }
-            />
-            {!isLoading && products.length === 0 ? (
-              <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-600">
-                No products found for “{searchQuery}”.
-              </div>
-            ) : null}
-          </div>
+          <ProductsCarousel
+            sectionHeading={sectionTitle || 'Featured Products'}
+            categorySlug={
+              searchQuery
+                ? `shop?text=${encodeURIComponent(searchQuery)}`
+                : undefined
+            }
+            products={products}
+            loading={isLoading}
+            error={error?.message}
+            limit={limit}
+            uniqueKey={`carousel-products-${block.id}`}
+            lang={lang}
+            carouselBreakpoint={
+              Object.keys(breakpoints).length ? breakpoints : undefined
+            }
+          />
         )}
       </Container>
     );
@@ -403,6 +403,11 @@ const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({
     const products = fetchedProducts ?? [];
     const sectionTitle = block.config?.title?.trim();
 
+    // Hide section when no products found (after loading completes)
+    if (!loading && products.length === 0 && !error) {
+      return null;
+    }
+
     return (
       <Container className={block.config?.className || 'mb-6 xl:mb-8 pt-1'}>
         {sectionTitle ? (
@@ -411,9 +416,12 @@ const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({
           </h2>
         ) : null}
         {!searchQuery?.trim() ? (
-          <div className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-6 py-8 text-center text-sm text-slate-500">
-            Set a search keyword to populate this gallery.
-          </div>
+          // Only show placeholder in builder/preview mode
+          showZoneLabels ? (
+            <div className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-6 py-8 text-center text-sm text-slate-500">
+              Set a search keyword to populate this gallery.
+            </div>
+          ) : null
         ) : error ? (
           <div className="rounded-md border border-red-200 bg-red-50 px-6 py-4 text-sm text-red-600">
             {error?.message ?? 'Unable to load products.'}
@@ -429,11 +437,6 @@ const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({
             loading={loading}
           />
         )}
-        {!loading && products.length === 0 && searchQuery?.trim() && !error ? (
-          <div className="rounded-md border border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-600">
-            No products found for "{searchQuery}".
-          </div>
-        ) : null}
       </Container>
     );
   }

@@ -37,31 +37,42 @@ export interface RawProduct {
 }
 
 export function transformProduct(rawProducts: RawProduct[]): Product[] {
-  const transformImage = (img: RawProduct['images'][0]): Attachment => ({
-    id: 1,
-    original: img?.original || '',
-    thumbnail: img?.main || '',
-  });
-
   const transformSingle = (item: RawProduct): Product => {
+    // Handle multiple image formats from different APIs:
+    // 1. item.image object with thumbnail/original
+    // 2. item.cover_image_url string
+    // 3. item.images array with url or original/main properties
+    const rawImage = item.image as any;
     const imagesArray = Array.isArray(item.images) ? item.images : [];
-    const mainImage = imagesArray[0];
+    const firstImage = imagesArray[0] as any;
 
-    const image: Attachment = mainImage
-      ? transformImage(mainImage)
-      : { id: 1, thumbnail: '', original: '' };
+    // Get main image URL from various possible sources
+    const mainImageUrl =
+      rawImage?.thumbnail ||
+      rawImage?.original ||
+      (item as any).cover_image_url ||
+      firstImage?.url ||
+      firstImage?.main ||
+      firstImage?.original ||
+      '';
 
-    const gallery: Attachment[] = imagesArray.map((img, index) => ({
+    const image: Attachment = {
+      id: 1,
+      thumbnail: mainImageUrl,
+      original: rawImage?.original || (item as any).cover_image_url || firstImage?.url || firstImage?.original || mainImageUrl,
+    };
+
+    const gallery: Attachment[] = imagesArray.map((img: any, index: number) => ({
       id: index + 1,
-      thumbnail: img?.main || '',
-      original: img?.original || '',
+      thumbnail: img?.url || img?.main || img?.thumbnail || '',
+      original: img?.url || img?.original || '',
     }));
 
     const brand: Brand | undefined = item.brand
       ? {
-          id: item.brand.cprec_darti,
-          name: item.brand.tprec_darti,
-          slug: item.brand.cprec_darti.toLowerCase(),
+          id: item.brand.cprec_darti || '',
+          name: item.brand.tprec_darti || '',
+          slug: item.brand.cprec_darti?.toLowerCase() || '',
           brand_image:
             Array.isArray(item.brand_image) && item.brand_image.length > 0
               ? item.brand_image[0]
@@ -161,11 +172,15 @@ export function transformSearchParams(
     const withoutLeadingSlash = rawSearch.startsWith('/')
       ? rawSearch.slice(1)
       : rawSearch;
-    const queryString = withoutLeadingSlash.startsWith('shop?')
-      ? withoutLeadingSlash.slice(5)
-      : withoutLeadingSlash.startsWith('?')
-        ? withoutLeadingSlash.slice(1)
-        : withoutLeadingSlash;
+    // Handle various prefixes: shop?, search?, or just ?
+    let queryString = withoutLeadingSlash;
+    if (queryString.startsWith('shop?')) {
+      queryString = queryString.slice(5);
+    } else if (queryString.startsWith('search?')) {
+      queryString = queryString.slice(7);
+    } else if (queryString.startsWith('?')) {
+      queryString = queryString.slice(1);
+    }
     const searchParams = new URLSearchParams(queryString);
     searchParams.forEach((value, key) => {
       searchEntries[key] = value;

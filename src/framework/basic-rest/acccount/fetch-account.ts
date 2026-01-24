@@ -97,12 +97,11 @@ export async function fetchAddresses(): Promise<AddressB2B[]> {
     return [];
   }
 
+  // Call internal API route - credentials are handled server-side
   const response = await fetch('/api/b2b/addresses', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'X-API-Key': process.env.NEXT_PUBLIC_API_KEY_ID!,
-      'X-API-Secret': process.env.NEXT_PUBLIC_API_SECRET!,
     },
     body: JSON.stringify({ customer_id: vincCustomerId }),
   });

@@ -7,10 +7,7 @@ import {
   type PimTransformedFilter,
 } from '@framework/product/get-pim-filters';
 import { FiltersB2BItem } from './filters-b2b-item';
-import {
-  API_ENDPOINTS_PIM,
-  PIM_API_BASE_URL,
-} from '@framework/utils/api-endpoints-pim';
+import { API_ENDPOINTS_PIM } from '@framework/utils/api-endpoints-pim';
 import { useTranslation } from 'src/app/i18n/client';
 
 interface Props {
@@ -40,7 +37,7 @@ interface AvailableSpecsResponse {
   product_type_id: string | null;
 }
 
-// Fetch available spec fields dynamically from the API
+// Fetch available spec fields dynamically via proxy (credentials injected server-side)
 async function fetchAvailableSpecs(
   productTypeCode: string,
 ): Promise<AvailableSpec[]> {
@@ -48,17 +45,12 @@ async function fetchAvailableSpecs(
     return [];
   }
 
-  const url = new URL(
-    `${PIM_API_BASE_URL}${API_ENDPOINTS_PIM.AVAILABLE_SPECS}`,
-  );
-  url.searchParams.set('product_type_code', productTypeCode);
+  const url = `/api/proxy/pim/${API_ENDPOINTS_PIM.AVAILABLE_SPECS}?product_type_code=${encodeURIComponent(productTypeCode)}`;
 
-  const response = await fetch(url.toString(), {
+  const response = await fetch(url, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
-      'X-API-Key': process.env.NEXT_PUBLIC_API_KEY_ID || '',
-      'X-API-Secret': process.env.NEXT_PUBLIC_API_SECRET || '',
     },
   });
 

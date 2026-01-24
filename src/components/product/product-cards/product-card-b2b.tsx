@@ -234,7 +234,7 @@ const ProductCardB2B: React.FC<ProductProps> = ({
         {/* Left badge: Parent SKU */}
         {parent_sku && (
           <div className="absolute top-0 left-0 z-10">
-            <span className="text-[9px] sm:text-[10px] md:text-xs font-bold text-[#405BA8] uppercase bg-[#DADADA] px-1.5 py-1 sm:px-2 sm:py-1.5">
+            <span className="text-[9px] sm:text-[10px] md:text-xs font-bold text-brand uppercase bg-[#DADADA] px-1.5 py-1 sm:px-2 sm:py-1.5">
               {parent_sku}
             </span>
           </div>

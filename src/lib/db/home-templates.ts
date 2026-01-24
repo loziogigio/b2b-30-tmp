@@ -1,8 +1,7 @@
-import { connectToDatabase } from './connection';
-import {
-  HomeTemplateModel,
-  type HomeTemplateDocument,
-  type HomeTemplateVersion,
+import { connectToDatabase, getHomeTemplateModelForDb } from './connection';
+import type {
+  HomeTemplateDocument,
+  HomeTemplateVersion,
 } from './models/home-template';
 import type { PageVersionTags } from '@/lib/types/blocks';
 import {
@@ -37,7 +36,20 @@ const buildReturnPayload = (
 export async function getPublishedHomeTemplate(options?: {
   tags?: PageVersionTags | null;
 }): Promise<any | null> {
-  await connectToDatabase();
+  console.log('[getPublishedHomeTemplate] Starting...');
+
+  let connection;
+  try {
+    connection = await connectToDatabase();
+    console.log('[getPublishedHomeTemplate] DB connected to:', connection.name);
+  } catch (err) {
+    console.error('[getPublishedHomeTemplate] DB connection failed:', err);
+    return null;
+  }
+
+  // Get model for this specific connection using model registry
+  const HomeTemplateModel = await getHomeTemplateModelForDb(connection.name);
+
   const normalizedTags = normalizeTagsInput(options?.tags);
 
   // Find all versions for this template
@@ -46,13 +58,21 @@ export async function getPublishedHomeTemplate(options?: {
     isActive: true,
   }).lean<HomeTemplateDocument[]>();
 
+  console.log('[getPublishedHomeTemplate] Found', versions?.length || 0, 'versions');
+  if (versions?.length > 0) {
+    console.log('[getPublishedHomeTemplate] First version _id:', versions[0]._id?.toString());
+    console.log('[getPublishedHomeTemplate] First version name:', versions[0].name);
+  }
+
   if (!versions || versions.length === 0) {
+    console.log('[getPublishedHomeTemplate] No versions found');
     return null;
   }
 
   // Find the current published version as fallback
   const currentPublished = versions.find((v) => v.isCurrentPublished);
   const fallbackVersionNumber = currentPublished?.version;
+  console.log('[getPublishedHomeTemplate] Fallback version:', fallbackVersionNumber);
 
   const resolution = resolveVersion({
     versions: versions as any,
@@ -62,11 +82,15 @@ export async function getPublishedHomeTemplate(options?: {
     respectActiveWindow: true,
   });
 
+  console.log('[getPublishedHomeTemplate] Resolution:', resolution ? `v${resolution.version.version} (${resolution.matchedBy})` : 'null');
+
   if (!resolution) {
     return null;
   }
 
-  return buildReturnPayload(resolution.version, resolution.matchedBy);
+  const result = buildReturnPayload(resolution.version, resolution.matchedBy);
+  console.log('[getPublishedHomeTemplate] Returning', result.blocks?.length || 0, 'blocks');
+  return result;
 }
 
 /**
@@ -78,7 +102,11 @@ export async function getLatestHomeTemplateVersion(options?: {
   tags?: PageVersionTags | null;
   allowDraft?: boolean;
 }): Promise<any | null> {
-  await connectToDatabase();
+  const connection = await connectToDatabase();
+
+  // Get model for this specific connection using model registry
+  const HomeTemplateModel = await getHomeTemplateModelForDb(connection.name);
+
   const normalizedTags = normalizeTagsInput(options?.tags);
 
   // Find all versions for this template

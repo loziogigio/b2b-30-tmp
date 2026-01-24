@@ -51,22 +51,20 @@ module.exports = {
   },
   images: {
     remotePatterns: [
+      // Allow any HTTPS domain for multi-tenant support
       {
         protocol: 'https',
-        hostname: 'hidros.s3.eu-de.cloud-object-storage.appdomain.cloud',
-        pathname: '/**',
+        hostname: '**',
+      },
+      // HTTP only for localhost (local development)
+      {
+        protocol: 'http',
+        hostname: 'localhost',
       },
       {
-        protocol: 'https',
-        hostname: 'b2b.hidros.com',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'drupal-hidros.omnicommerce.cloud',
-        pathname: '/**',
+        protocol: 'http',
+        hostname: '127.0.0.1',
       },
     ],
-    unoptimized: true, // 🔥 disables image optimization
   },
 };

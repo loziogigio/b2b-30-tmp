@@ -113,7 +113,7 @@ export function CategoryCard({
 
       {/* Title */}
       <div className="px-3 pt-3 pb-2 text-center flex-grow">
-        <h3 className="font-sans text-sm sm:text-base font-bold text-[#405BA8] leading-tight tracking-normal text-center">
+        <h3 className="font-sans text-sm sm:text-base font-bold text-brand leading-tight tracking-normal text-center">
           {node.label || node.name}
         </h3>
       </div>
@@ -145,7 +145,7 @@ function ViewAllCard({ lang, parentHref }: ViewAllCardProps) {
   return (
     <Link
       href={parentHref}
-      className="flex flex-col items-center justify-center bg-[#405BA8] rounded-xl p-4 text-white hover:bg-[#344d8c] transition-colors h-full min-h-[200px]"
+      className="flex flex-col items-center justify-center bg-brand rounded-xl p-4 text-white hover:bg-brand/80 transition-colors h-full min-h-[200px]"
     >
       <h3 className="text-lg sm:text-xl md:text-2xl font-bold text-center mb-1">
         {t('text-not-enough', { defaultValue: 'Non ti basta?' })}
@@ -218,7 +218,7 @@ export default function CategoryChildrenCarousel({
       <div className="relative category-carousel group">
         {/* Custom Prev Arrow */}
         <button
-          className="category-carousel-prev absolute left-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-[#405BA8] text-white flex items-center justify-center shadow-lg hover:bg-[#344d8c] transition-colors disabled:opacity-30 -ml-3 opacity-0 group-hover:opacity-100"
+          className="category-carousel-prev absolute left-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-brand text-white flex items-center justify-center shadow-lg hover:bg-brand/80 transition-colors disabled:opacity-30 -ml-3 opacity-0 group-hover:opacity-100"
           aria-label="Previous"
         >
           <IoChevronBack className="w-5 h-5" />
@@ -251,7 +251,7 @@ export default function CategoryChildrenCarousel({
 
         {/* Custom Next Arrow */}
         <button
-          className="category-carousel-next absolute right-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-[#405BA8] text-white flex items-center justify-center shadow-lg hover:bg-[#344d8c] transition-colors disabled:opacity-30 -mr-3 opacity-0 group-hover:opacity-100"
+          className="category-carousel-next absolute right-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-brand text-white flex items-center justify-center shadow-lg hover:bg-brand/80 transition-colors disabled:opacity-30 -mr-3 opacity-0 group-hover:opacity-100"
           aria-label="Next"
         >
           <IoChevronForward className="w-5 h-5" />

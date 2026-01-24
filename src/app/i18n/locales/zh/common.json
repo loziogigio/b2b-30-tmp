@@ -270,5 +270,8 @@
   "text-cart-already-saved-generic": "This cart is already saved.",
   "text-deactivate-cart": "Deactivate",
   "text-deactivating-cart": "Deactivating...",
-  "text-saved-cart-missing-items": "Add items to your cart before saving it."
+  "text-saved-cart-missing-items": "Add items to your cart before saving it.",
+
+  "text-404-message": "抱歉！此页面目前不可用。请稍后重试。",
+  "text-back-to-home": "返回首页"
 }

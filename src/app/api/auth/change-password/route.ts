@@ -1,10 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { vincApi, VincApiError } from '@/lib/vinc-api';
+import { vincApi, VincApiError, getVincApiForTenant } from '@/lib/vinc-api';
+import { resolveTenant, isMultiTenant } from '@/lib/tenant';
 
-const PIM_API_URL = process.env.PIM_API_PRIVATE_URL || 'http://localhost:3001';
-
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { username, currentPassword, password } = body;
@@ -30,8 +29,31 @@ export async function POST(request: Request) {
       );
     }
 
+    // Get VINC API client and PIM URL (multi-tenant aware)
+    let api = vincApi;
+    let pimApiUrl = process.env.PIM_API_URL || 'http://localhost:3001';
+
+    if (isMultiTenant) {
+      const hostname =
+        request.headers.get('x-tenant-hostname') ||
+        request.headers.get('host') ||
+        'localhost';
+      const tenant = await resolveTenant(hostname);
+
+      if (!tenant) {
+        console.error('[change-password] Tenant not found for hostname:', hostname);
+        return NextResponse.json(
+          { success: false, message: 'Tenant not found' },
+          { status: 404 },
+        );
+      }
+
+      api = getVincApiForTenant({ projectCode: tenant.projectCode });
+      pimApiUrl = tenant.api.pimApiUrl;
+    }
+
     // Call VINC API to change password (validates current password and changes it)
-    await vincApi.auth.changePassword(authToken, currentPassword, password);
+    await api.auth.changePassword(authToken, currentPassword, password);
 
     // Send confirmation email via PIM API
     const emailPayload = {
@@ -42,7 +64,7 @@ export async function POST(request: Request) {
     };
 
     try {
-      await fetch(`${PIM_API_URL}/api/b2b/emails/reset-password`, {
+      await fetch(`${pimApiUrl}/api/b2b/emails/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(emailPayload),

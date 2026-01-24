@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { useLocalStorage } from '@utils/use-local-storage';
+import { useUI } from '@contexts/ui.context';
 import {
   toggleReminder as apiToggleReminder,
   getBulkReminderStatus as apiGetBulkReminderStatus,
@@ -97,9 +98,11 @@ export function useReminders() {
 }
 
 export function RemindersProvider(props: React.PropsWithChildren) {
+  const { isAuthorized } = useUI();
+
   // LocalStorage persistence (do not seed SSR)
   const [saved, save] = useLocalStorage(
-    'hidros-app-reminders',
+    'vinc-app-reminders',
     JSON.stringify(initialState),
   );
   const [state, dispatch] = React.useReducer(remindersReducer, initialState);
@@ -183,14 +186,16 @@ export function RemindersProvider(props: React.PropsWithChildren) {
     [hydrateFromServer],
   );
 
-  // On first mount, refresh reminders from server to keep cache up to date
+  // Refresh reminders from server when user is authorized
   const didRefreshFromServer = React.useRef(false);
   React.useEffect(() => {
+    // Only fetch when user is logged in
+    if (!isAuthorized) return;
     if (didRefreshFromServer.current) return;
     didRefreshFromServer.current = true;
     // fetch within backend limit (<= 100)
     loadUserReminders(1, 100, 'replace').catch(() => {});
-  }, [loadUserReminders]);
+  }, [isAuthorized, loadUserReminders]);
 
   const loadBulkStatus = React.useCallback(
     async (skus: string[]) => {

@@ -87,11 +87,12 @@ export default function BottomNavigation({ lang }: { lang: string }) {
         )}
       </div>
 
-      {/* Categories Menu - controlled via UI context */}
+      {/* Categories Menu - controlled via UI context (no trigger, opened via bottom nav icon) */}
       <B2BHeaderMenu
         lang={lang}
         open={displayCategories}
         onOpenChange={(open) => (open ? openCategories() : closeCategories())}
+        renderTrigger={() => null}
       />
     </>
   );

@@ -47,6 +47,8 @@ import B2BInfoBlock from './details/b2b-info-block';
 import ProductImageLightbox from './details/product-image-lightbox';
 import { useCompareList } from '@/contexts/compare/compare.context';
 import { printProductDetail } from '@utils/print-product';
+import CorrelatedProductsCarousel from './feeds/correlated-products-carousel';
+import ProductJsonLd from '@components/seo/product-json-ld';
 
 // add inside ProductB2BDetails.tsx (same file, above the component's return)
 
@@ -314,6 +316,9 @@ const ProductB2BDetails: React.FC<{
 
   return (
     <div className="pt-6 pb-2 md:pt-7">
+      {/* JSON-LD Structured Data for SEO */}
+      <ProductJsonLd product={data} priceData={erpPrice} lang={lang} />
+
       {lightboxIndex != null ? (
         <ProductImageLightbox
           images={galleryItems}
@@ -593,6 +598,17 @@ const ProductB2BDetails: React.FC<{
               productData={{ sku: String(data?.sku ?? ''), lang }}
             />
           ))}
+        </div>
+      )}
+
+      {/* Related Products (Correlations) */}
+      {data?.id && (
+        <div className="pt-8">
+          <CorrelatedProductsCarousel
+            lang={lang}
+            entityCode={String(data.id)}
+            limit={12}
+          />
         </div>
       )}
     </div>

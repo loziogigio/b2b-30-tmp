@@ -13,6 +13,15 @@ import {
 
 acceptLanguage.languages(languages);
 
+// =============================================================================
+// MULTI-TENANT CONFIGURATION
+// =============================================================================
+// In multi-tenant mode, the middleware sets x-tenant-hostname header
+// which is used by API routes to resolve tenant configuration from MongoDB
+const TENANT_MODE = process.env.TENANT_MODE || 'single';
+const isMultiTenant = TENANT_MODE === 'multi';
+const TENANT_HOSTNAME_HEADER = 'x-tenant-hostname';
+
 export const config = {
   // Match all routes except API, static files, and Next.js internals
   matcher: [
@@ -22,6 +31,18 @@ export const config = {
 
 const LANGUAGE_COOKIE = 'i18next';
 const CAMPAIGN_RESET_VALUES = new Set(['reset', 'default', 'none']);
+
+/**
+ * Set tenant hostname header on response (multi-tenant mode only)
+ * This header is read by API routes to resolve tenant configuration
+ */
+const setTenantHeader = (req: NextRequest, res: NextResponse): NextResponse => {
+  if (isMultiTenant) {
+    const hostname = req.headers.get('host') || 'localhost';
+    res.headers.set(TENANT_HOSTNAME_HEADER, hostname);
+  }
+  return res;
+};
 
 const collectCampaignParams = (
   url: URL,
@@ -42,6 +63,9 @@ const collectCampaignParams = (
 };
 
 const applyCampaignPersistence = (req: NextRequest, res: NextResponse) => {
+  // Set tenant header for multi-tenant mode
+  setTenantHeader(req, res);
+
   const detected = extractAttributesFromUserAgent(
     req.headers.get('user-agent'),
   );

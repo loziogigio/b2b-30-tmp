@@ -30,6 +30,7 @@ interface ProductsCarouselProps {
   lang: string;
   headerImageSrc?: string;
   headerImageAlt?: string;
+  showSeeAll?: boolean;
 }
 
 const breakpoints = {
@@ -72,6 +73,7 @@ const ProductsCarousel: React.FC<ProductsCarouselProps> = ({
   lang,
   headerImageSrc,
   headerImageAlt,
+  showSeeAll = true,
 }) => {
   const { width } = useWindowSize();
   const dir = getDirection(lang);
@@ -218,12 +220,14 @@ const ProductsCarousel: React.FC<ProductsCarouselProps> = ({
                   })}
 
                 {/* See all */}
-                <SwiperSlide
-                  key="see-all"
-                  className="p-2.5 flex items-center justify-center"
-                >
-                  <SeeAll href={categorySlug} lang={lang} />
-                </SwiperSlide>
+                {showSeeAll && (
+                  <SwiperSlide
+                    key="see-all"
+                    className="p-2.5 flex items-center justify-center"
+                  >
+                    <SeeAll href={categorySlug} lang={lang} />
+                  </SwiperSlide>
+                )}
 
                 {/* Optional spacer for certain desktop widths */}
                 {typeof width === 'number' && width > 1024 && width < 1921 ? (

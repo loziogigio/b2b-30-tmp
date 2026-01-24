@@ -73,7 +73,11 @@
   "text-sign-in": "Sign In",
   "text-register": "Register",
   "text-welcome-back": "Welcome Back!",
-  "text-don’t-have-account": "Don’t have an account?",
+  "text-login-subtitle": "Sign in to manage your orders",
+  "text-login-feature-catalog": "Catalog",
+  "text-login-feature-orders": "Orders",
+  "text-login-feature-prices": "Reserved prices",
+  "text-don't-have-account": "Don't have an account?",
   "text-create-account": "Create Account",
   "text-forgot-password": "Forgot password?",
   "text-or": "or continue with",
@@ -412,5 +416,13 @@
   "text-product-type": "Product Type",
   "text-clear": "Clear",
   "text-no-product-type": "Without type",
-  "text-technical-specs": "Technical Specifications"
+  "text-technical-specs": "Technical Specifications",
+
+  "tenant-disabled-title": "Service Not Active",
+  "tenant-disabled-message": "Access to this portal has been temporarily suspended. For information on reactivation, please contact your sales representative.",
+  "tenant-disabled-contact": "If you believe this is an error, please contact support.",
+
+  "tenant-config-error-title": "Configuration Error",
+  "tenant-config-error-message": "The system configuration is incomplete. Please contact the administrator to verify the portal settings.",
+  "tenant-config-error-contact": "If the problem persists, please contact technical support."
 }

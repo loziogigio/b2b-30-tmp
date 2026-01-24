@@ -110,6 +110,26 @@ export type Product = {
     filename?: string;
     ext?: string;
   }>;
+  // Marketing features (bullet points per language or direct array)
+  marketing_features?: { [lang: string]: string[] } | string[];
+  // Technical specifications (structured data - language nested or direct array)
+  technical_specifications?:
+    | {
+        [lang: string]: Array<{
+          key: string;
+          value: string;
+          label?: string;
+          uom?: string;
+          order?: number;
+        }>;
+      }
+    | Array<{
+        key: string;
+        value: string;
+        label?: string;
+        uom?: string;
+        order?: number;
+      }>;
 };
 export type OrderItem = {
   id: number | string;

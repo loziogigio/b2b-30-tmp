@@ -1,6 +1,11 @@
 'use client';
 
-import { IoClose } from 'react-icons/io5';
+import { IoIosArrowUp, IoIosArrowDown } from 'react-icons/io';
+import {
+  Disclosure,
+  DisclosureButton,
+  DisclosurePanel,
+} from '@headlessui/react';
 import { useTranslation } from 'src/app/i18n/client';
 
 interface Props {
@@ -21,21 +26,45 @@ export const ProductTypeBreadcrumb = ({
   if (!productType) return null;
 
   return (
-    <div className="mb-4 p-3 bg-brand/5 rounded-lg border border-brand/20">
-      <div className="text-xs text-brand-muted mb-1">
-        {t('text-product-type')}
-      </div>
-      <div className="flex items-center justify-between gap-2">
-        <span className="font-medium text-brand-dark truncate">{label}</span>
-        <button
-          type="button"
-          onClick={onClear}
-          className="shrink-0 p-1 rounded hover:bg-brand/10 transition"
-          aria-label={t('text-clear')}
-        >
-          <IoClose className="w-4 h-4 text-brand-muted" />
-        </button>
-      </div>
+    <div className="block">
+      <Disclosure defaultOpen>
+        {({ open }) => (
+          <div>
+            <DisclosureButton className="w-full flex items-center justify-between px-4 py-2">
+              <span className="text-brand-dark font-semibold text-sm uppercase">
+                {t('text-product-type')}
+              </span>
+              {open ? (
+                <IoIosArrowUp className="text-brand-dark text-opacity-80 text-sm" />
+              ) : (
+                <IoIosArrowDown className="text-brand-dark text-opacity-80 text-sm" />
+              )}
+            </DisclosureButton>
+            <DisclosurePanel>
+              <div className="flex flex-col px-4 pb-2">
+                <label className="group flex items-center justify-between text-sm py-0.5 cursor-pointer transition-all hover:text-opacity-80 text-brand-dark">
+                  <span className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      className="appearance-none w-4 h-4 border border-gray-300 rounded bg-white checked:bg-brand checked:border-brand cursor-pointer shrink-0"
+                      checked={true}
+                      onChange={onClear}
+                      style={{
+                        backgroundImage:
+                          "url(\"data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3e%3c/svg%3e\")",
+                        backgroundSize: '100% 100%',
+                        backgroundPosition: 'center',
+                        backgroundRepeat: 'no-repeat',
+                      }}
+                    />
+                    <span className="text-sm">{label}</span>
+                  </span>
+                </label>
+              </div>
+            </DisclosurePanel>
+          </div>
+        )}
+      </Disclosure>
     </div>
   );
 };

@@ -1,9 +1,4 @@
-import Container from '@components/ui/container';
-import { Metadata } from 'next';
 import { cookies } from 'next/headers';
-import BannerAllCarousel from '@components/common/banner-all-carousel';
-import B2BHomeProducts from '@components/product/feeds/b2b-home-products';
-import { fetchCmsB2BHomeData } from '@framework/product/get-b2b-cms';
 import {
   getLatestHomeTemplateVersion,
   getPublishedHomeTemplate,
@@ -26,104 +21,8 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const fetchCache = 'force-no-store';
 
-export const metadata: Metadata = {
-  title: 'Home',
-};
-const sliderTopBreakpoints = {
-  '1536': {
-    slidesPerView: 2,
-    spaceBetween: 20,
-  },
-  '1280': {
-    slidesPerView: 2,
-    spaceBetween: 16,
-  },
-  '1024': {
-    slidesPerView: 2,
-    spaceBetween: 16,
-  },
-  '768': {
-    slidesPerView: 2,
-    spaceBetween: 16,
-  },
-  '520': {
-    slidesPerView: 2,
-    spaceBetween: 12,
-  },
-  '0': {
-    slidesPerView: 1,
-    spaceBetween: 5,
-  },
-};
-
-const promoBannerBreakpoints = {
-  '1536': {
-    slidesPerView: 5.5,
-    spaceBetween: 20,
-  },
-  '768': {
-    slidesPerView: 4.5,
-    spaceBetween: 16,
-  },
-  '520': {
-    slidesPerView: 3.5,
-    spaceBetween: 12,
-  },
-  '0': {
-    slidesPerView: 2.5,
-    spaceBetween: 5,
-  },
-};
-const homeBrandBreakpoints = {
-  '1536': {
-    slidesPerView: 10.5,
-    spaceBetween: 20,
-  },
-  '1280': {
-    slidesPerView: 8.5,
-    spaceBetween: 16,
-  },
-  '1024': {
-    slidesPerView: 6.5,
-    spaceBetween: 16,
-  },
-  '768': {
-    slidesPerView: 4.5,
-    spaceBetween: 16,
-  },
-  '520': {
-    slidesPerView: 4.5,
-    spaceBetween: 12,
-  },
-  '0': {
-    slidesPerView: 3.5,
-  },
-};
-const flyerBreakpoints = {
-  '1536': {
-    slidesPerView: 5,
-    spaceBetween: 20,
-  },
-  '1280': {
-    slidesPerView: 5,
-    spaceBetween: 16,
-  },
-  '1024': {
-    slidesPerView: 5,
-    spaceBetween: 16,
-  },
-  '768': {
-    slidesPerView: 4,
-    spaceBetween: 16,
-  },
-  '520': {
-    slidesPerView: 4,
-    spaceBetween: 12,
-  },
-  '0': {
-    slidesPerView: 2,
-  },
-};
+// Home page uses layout's default metadata (branding title)
+// No page-specific metadata needed - inherits from layout
 
 type HomePageSearchParams = {
   preview?: string | string[];
@@ -167,13 +66,6 @@ export default async function Page({
     ? decodeURIComponent(addressStateCookie)
     : undefined;
 
-  console.log('[Home Page] Address cookie debug:', {
-    cookieName: ADDRESS_STATE_COOKIE,
-    rawCookieValue: addressStateCookie,
-    decodedAddressState: addressState,
-    allCookies: cookieStore.getAll().map((c) => c.name),
-  });
-
   const queryContext = buildContextFromParams({
     campaign: coerceParam(search?.campaign),
     tag: coerceParam(search?.tag),
@@ -216,97 +108,14 @@ export default async function Page({
     homeTemplate = null;
   }
 
-  console.log(
-    '[Home Page] Template loaded:',
-    homeTemplate ? `${homeTemplate.blocks?.length || 0} blocks` : 'null',
-    'preview:',
-    isPreview,
-    'context:',
-    versionTags || 'default',
-    'matchedBy:',
-    homeTemplate?.matchedBy ?? 'n/a',
-  );
-
-  if (!homeTemplate && versionTags) {
-    console.warn(
-      `[Home Page] No template found for context "${JSON.stringify(versionTags)}", rendering default layout`,
-    );
-  }
-
-  // Load CMS data as fallback or for carousel data
-  const sliderTopData = await fetchCmsB2BHomeData().catch(() => ({
-    slider_top_transformed: [],
-    home_brand_transformed: [],
-    promo_banner_transformed: [],
-    flyer_transformed: [],
-    home_category_filtered: [],
-  }));
-
-  // If we have a published home template OR if in preview mode, use the preview wrapper
-  if ((homeTemplate?.blocks && homeTemplate.blocks.length > 0) || isPreview) {
-    return (
-      <HomePageWithPreview
-        lang={lang}
-        serverBlocks={homeTemplate?.blocks || []}
-        cmsData={sliderTopData}
-        isPreview={isPreview}
-        templateTags={homeTemplate?.tags ?? versionTags}
-        matchInfo={homeTemplate?.matchedBy}
-      />
-    );
-  }
-
-  // Otherwise, render the default hardcoded layout
+  // Render home page with template blocks (or empty for preview mode)
   return (
-    <>
-      <Container>
-        <BannerAllCarousel
-          data={sliderTopData.slider_top_transformed}
-          className="mb-12 xl:mb-8 pt-1"
-          lang={lang}
-          breakpoints={sliderTopBreakpoints}
-          key="slider_top_transformed"
-          itemKeyPrefix="slider_top_transformed"
-        />
-      </Container>
-
-      <Container>
-        <BannerAllCarousel
-          data={sliderTopData.promo_banner_transformed}
-          className="mb-12 xl:mb-8 pt-1"
-          lang={lang}
-          breakpoints={promoBannerBreakpoints}
-          key="promo_banner_transformed"
-          itemKeyPrefix="promo_banner_transformed"
-        />
-      </Container>
-
-      <B2BHomeProducts
-        lang={lang}
-        homeCategoryFiltered={sliderTopData.home_category_filtered}
-      />
-
-      <Container>
-        <BannerAllCarousel
-          data={sliderTopData.home_brand_transformed}
-          className="mb-12 xl:mb-8 pt-1"
-          lang={lang}
-          breakpoints={homeBrandBreakpoints}
-          key="home_brand_transformed"
-          itemKeyPrefix="home_brand_transformed"
-        />
-      </Container>
-
-      <Container>
-        <BannerAllCarousel
-          data={sliderTopData.flyer_transformed}
-          className="mb-12 xl:mb-8 pt-1"
-          lang={lang}
-          breakpoints={flyerBreakpoints}
-          key="flyer_transformed"
-          itemKeyPrefix="flyer_transformed"
-        />
-      </Container>
-    </>
+    <HomePageWithPreview
+      lang={lang}
+      serverBlocks={homeTemplate?.blocks || []}
+      isPreview={isPreview}
+      templateTags={homeTemplate?.tags ?? versionTags}
+      matchInfo={homeTemplate?.matchedBy}
+    />
   );
 }

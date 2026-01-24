@@ -1,5 +1,5 @@
-import { post } from '@framework/utils/httpB2B';
-import { API_ENDPOINTS_B2B } from '@framework/utils/api-endpoints-b2b';
+import { post } from '@framework/utils/httpPIM';
+import { API_ENDPOINTS_PIM } from '@framework/utils/api-endpoints-pim';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { Product } from '@framework/types';
@@ -20,23 +20,39 @@ export const fetchProductList = async (
   total: number;
   nextPage: number | null;
 }> => {
-  const perPage = params.per_page || 12;
+  const perPage = params.per_page || params.rows || 12;
 
-  // Adjust backend params to request correct offset/limit
-  const finalParams = {
-    ...params,
-    start: pageParam, // ✅ pageParam now acts like a page index
-    rows: perPage, // if your backend supports it
+  // Build POST body matching PIM API structure (same as fetchPimProductList)
+  const finalParams: Record<string, any> = {
+    lang: params.lang || 'it',
+    text: params.q || params.text || '',
+    start: pageParam,
+    rows: perPage,
+    group_variants: true,
   };
 
-  const response = await post<{ results: RawProduct[]; numFound: number }>(
-    API_ENDPOINTS_B2B.SEARCH,
-    finalParams,
-  );
+  // Only add filters if there are any (PIM API doesn't like empty filters)
+  const rawFilters = params.filters || {};
+  if (Object.keys(rawFilters).length > 0) {
+    finalParams.filters = rawFilters;
+  }
 
-  const rawProducts = response.results || [];
+  console.log('[fetchProductList] Sending to PIM:', JSON.stringify(finalParams, null, 2));
+
+  // PIM API wraps response in { success, data: { results, numFound } }
+  const response = await post<{
+    success?: boolean;
+    data?: { results: RawProduct[]; numFound?: number; total?: number };
+    results?: RawProduct[];
+    numFound?: number;
+  }>(API_ENDPOINTS_PIM.SEARCH, finalParams);
+
+  console.log('[fetchProductList] PIM response:', JSON.stringify(response, null, 2).slice(0, 500));
+
+  // Handle both wrapped { success, data } and direct { results, numFound } formats
+  const rawProducts = response.data?.results || response.results || [];
+  const total = response.data?.numFound ?? response.data?.total ?? response.numFound ?? 0;
   const products = transformProduct(rawProducts);
-  const total = response.numFound || 0;
 
   // Calculate if there is a next page
   const hasNext = (pageParam + 1) * perPage < total;
@@ -64,7 +80,7 @@ export const useProductListQuery = (
   }, [JSON.stringify(params), enabled]);
 
   const query = useQuery<Product[], Error>({
-    queryKey: [API_ENDPOINTS_B2B.SEARCH, finalParams],
+    queryKey: [API_ENDPOINTS_PIM.SEARCH, finalParams],
     queryFn: async () => {
       const { items } = await fetchProductList(finalParams, 0);
       return items;
@@ -82,7 +98,7 @@ export const useProductListInfinitQuery = (params: any) => {
   const finalParams = transformSearchParams(params);
 
   return useInfiniteQuery({
-    queryKey: [API_ENDPOINTS_B2B.SEARCH, finalParams],
+    queryKey: [API_ENDPOINTS_PIM.SEARCH, finalParams],
     queryFn: async ({ pageParam = 0 }) =>
       fetchProductList(finalParams, pageParam),
     getNextPageParam: (lastPage) => lastPage.nextPage ?? undefined,

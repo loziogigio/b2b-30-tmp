@@ -1,8 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import {
-  API_ENDPOINTS_PIM,
-  PIM_API_BASE_URL,
-} from '@framework/utils/api-endpoints-pim';
+import { get } from '@framework/utils/httpPIM';
+import { API_ENDPOINTS_PIM } from '@framework/utils/api-endpoints-pim';
 
 export interface CollectionHeroImage {
   url: string;
@@ -37,49 +35,25 @@ interface CollectionResponse {
   collection: Collection;
 }
 
-// Fetch all collections
+// Fetch all collections via proxy (credentials injected server-side)
 async function fetchCollections(): Promise<Collection[]> {
-  const url = `${PIM_API_BASE_URL}${API_ENDPOINTS_PIM.COLLECTIONS}`;
-
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-API-Key': process.env.NEXT_PUBLIC_API_KEY_ID!,
-      'X-API-Secret': process.env.NEXT_PUBLIC_API_SECRET!,
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error('Failed to fetch collections');
-  }
-
-  const result: CollectionsResponse = await response.json();
+  const result = await get<CollectionsResponse>(API_ENDPOINTS_PIM.COLLECTIONS);
   return result.collections || [];
 }
 
-// Fetch single collection by slug
+// Fetch single collection by slug via proxy (credentials injected server-side)
 async function fetchCollectionBySlug(slug: string): Promise<Collection | null> {
-  const url = `${PIM_API_BASE_URL}${API_ENDPOINTS_PIM.COLLECTION_BY_SLUG}/${slug}`;
-
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-API-Key': process.env.NEXT_PUBLIC_API_KEY_ID!,
-      'X-API-Secret': process.env.NEXT_PUBLIC_API_SECRET!,
-    },
-  });
-
-  if (!response.ok) {
-    if (response.status === 404) {
+  try {
+    const result = await get<CollectionResponse>(
+      `${API_ENDPOINTS_PIM.COLLECTION_BY_SLUG}/${slug}`,
+    );
+    return result.collection || null;
+  } catch (error: any) {
+    if (error?.response?.status === 404) {
       return null;
     }
-    throw new Error('Failed to fetch collection');
+    throw error;
   }
-
-  const result: CollectionResponse = await response.json();
-  return result.collection || null;
 }
 
 // Hook to get all collections

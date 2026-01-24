@@ -270,5 +270,16 @@
   "text-cart-already-saved-generic": "This cart is already saved.",
   "text-deactivate-cart": "Deactivate",
   "text-deactivating-cart": "Deactivating...",
-  "text-saved-cart-missing-items": "Add items to your cart before saving it."
+  "text-saved-cart-missing-items": "Add items to your cart before saving it.",
+
+  "tenant-disabled-title": "Servicio No Activo",
+  "tenant-disabled-message": "El acceso a este portal ha sido temporalmente suspendido. Para información sobre la reactivación, contacte con su representante comercial.",
+  "tenant-disabled-contact": "Si cree que esto es un error, contacte con soporte.",
+
+  "tenant-config-error-title": "Error de Configuración",
+  "tenant-config-error-message": "La configuración del sistema está incompleta. Contacte al administrador para verificar la configuración del portal.",
+  "tenant-config-error-contact": "Si el problema persiste, contacte al soporte técnico.",
+
+  "text-404-message": "¡Lo sentimos! Esta página no está disponible actualmente. Por favor, inténtelo de nuevo más tarde.",
+  "text-back-to-home": "Volver a la página principal"
 }

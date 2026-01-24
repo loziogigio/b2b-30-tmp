@@ -10,7 +10,6 @@ import Container from '@components/ui/container';
 interface HomePageWithPreviewProps {
   lang: string;
   serverBlocks: PageBlock[];
-  cmsData: any;
   isPreview?: boolean;
   templateTags?: PageVersionTags;
   matchInfo?: string | null;
@@ -103,7 +102,6 @@ const HomePageSkeleton = () => (
 export function HomePageWithPreview({
   lang,
   serverBlocks,
-  cmsData,
   isPreview = false,
   templateTags,
   matchInfo,
@@ -200,26 +198,52 @@ export function HomePageWithPreview({
               </div>
             )}
             <div className={showPreviewUI ? 'pt-14' : ''}>
-              {blocks.map((block: any, index: number) => {
-                const position = block._builderPosition || index + 1;
-                return (
-                  <div key={block.id} className="relative group">
-                    {showPreviewUI && (
-                      <div className="absolute left-2 top-2 z-40 flex items-center gap-2 rounded-md bg-slate-800/60 px-2 py-1 text-xs font-semibold text-white shadow-lg backdrop-blur-sm">
-                        <span className="flex h-5 w-5 items-center justify-center rounded bg-emerald-500 text-[10px]">
-                          {position}
-                        </span>
-                        <span className="opacity-80">{block.type}</span>
-                      </div>
-                    )}
-                    <HomeBlockRenderer
-                      block={block}
-                      lang={lang}
-                      cmsData={cmsData}
-                    />
+              {blocks.length === 0 ? (
+                <Container>
+                  <div className="flex flex-col items-center justify-center py-20 text-center">
+                    <div className="mb-4 text-6xl text-gray-300">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        strokeWidth={1}
+                        stroke="currentColor"
+                        className="h-20 w-20"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"
+                        />
+                      </svg>
+                    </div>
+                    <h2 className="mb-2 text-xl font-semibold text-gray-700">
+                      No Content Available
+                    </h2>
+                    <p className="max-w-md text-gray-500">
+                      The home page content has not been configured yet. Please
+                      contact your administrator to set up the home page.
+                    </p>
                   </div>
-                );
-              })}
+                </Container>
+              ) : (
+                blocks.map((block: any, index: number) => {
+                  const position = block._builderPosition || index + 1;
+                  return (
+                    <div key={block.id} className="relative group">
+                      {showPreviewUI && (
+                        <div className="absolute left-2 top-2 z-40 flex items-center gap-2 rounded-md bg-slate-800/60 px-2 py-1 text-xs font-semibold text-white shadow-lg backdrop-blur-sm">
+                          <span className="flex h-5 w-5 items-center justify-center rounded bg-emerald-500 text-[10px]">
+                            {position}
+                          </span>
+                          <span className="opacity-80">{block.type}</span>
+                        </div>
+                      )}
+                      <HomeBlockRenderer block={block} lang={lang} />
+                    </div>
+                  );
+                })
+              )}
             </div>
           </>
         );

@@ -5,21 +5,22 @@ import { USFlag } from '@components/icons/language/USFlag';
 import { DEFlag } from '@components/icons/language/DEFlag';
 import { ESFlag } from '@components/icons/language/ESFlag';
 import { ITFlag } from '@components/icons/language/ITFlag';
-const siteLogo =
-  'https://hidros.s3.eu-de.cloud-object-storage.appdomain.cloud/hidros/eshop/mymb_settings/logoHidrosPoint.png';
+
+// Default logo - override via home-settings from backend
+const siteLogo = '/assets/images/logo-placeholder.svg';
 
 export const siteSettings = {
-  name: 'Hidros B2B',
+  name: 'VINC B2B',
   description:
-    'Fastest E-commerce template built with React, NextJS, TypeScript, TanStack-React-Query and Tailwind CSS.',
+    'B2B E-commerce platform built with React, NextJS, TypeScript, TanStack-React-Query and Tailwind CSS.',
   author: {
-    name: 'REDQ',
-    websiteUrl: 'https://redq.io',
+    name: 'VINC',
+    websiteUrl: 'https://vendereincloud.it',
     address: '',
   },
   logo: {
     url: siteLogo,
-    alt: 'Hidros B2B',
+    alt: 'VINC B2B',
     href: '/it',
     width: 128,
     height: 30,

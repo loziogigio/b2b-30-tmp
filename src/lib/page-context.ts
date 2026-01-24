@@ -18,7 +18,7 @@ export interface PageContext extends PageVersionTags {
   addressState?: string; // User's selected address province (e.g., "TO")
 }
 
-export const PAGE_CONTEXT_COOKIE = 'hidros_campaign_context';
+export const PAGE_CONTEXT_COOKIE = 'vinc_campaign_context';
 export const PAGE_CONTEXT_COOKIE_MAX_AGE = 60 * 60 * 24; // 24 hours (seconds)
 
 // Address state cookie for server-side home page filtering by province

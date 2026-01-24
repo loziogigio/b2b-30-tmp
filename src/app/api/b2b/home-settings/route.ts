@@ -24,50 +24,15 @@ export async function GET() {
       },
     });
 
-    if (response.status === 404) {
-      return NextResponse.json(DEFAULT_HOME_SETTINGS);
-    }
-
-    if (response.status === 401) {
-      console.warn(
-        '[HomeSettings] 401 Unauthorized - API keys may be missing or invalid.',
-        {
-          apiKeyId: apiKeyId ? 'set' : 'missing',
-          apiSecret: apiSecret ? 'set' : 'missing',
-        },
-      );
-      return NextResponse.json(DEFAULT_HOME_SETTINGS, {
-        headers: {
-          'x-home-settings-fallback': 'unauthorized',
-        },
-      });
-    }
-
-    if (response.status === 429) {
-      console.warn(
-        'Rate limited when fetching home settings; returning defaults.',
-      );
-      return NextResponse.json(DEFAULT_HOME_SETTINGS, {
-        headers: {
-          'x-home-settings-fallback': 'rate-limited',
-        },
-      });
-    }
-
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(
-        '[HomeSettings] Backend error:',
-        response.status,
-        errorText,
-      );
-      throw new Error(`Failed to fetch settings: ${response.statusText}`);
+      // Return default branding settings when PIM API doesn't have config
+      return NextResponse.json(DEFAULT_HOME_SETTINGS);
     }
 
     const data = await response.json();
     return NextResponse.json(data);
-  } catch (error) {
-    console.error('Error in GET /api/b2b/home-settings:', error);
+  } catch {
+    // Return default branding settings on error
     return NextResponse.json(DEFAULT_HOME_SETTINGS);
   }
 }

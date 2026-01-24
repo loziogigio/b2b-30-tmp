@@ -13,6 +13,8 @@ interface Props {
   limitSkus?: number;
   sectionTitle?: string;
   className?: string;
+  /** Optional URL filters to apply (e.g., { 'filters-brand_id': 'MOB' }) */
+  urlFilters?: Record<string, string>;
 }
 
 export default function TrendingProductsCarousel({
@@ -22,6 +24,7 @@ export default function TrendingProductsCarousel({
   limitSkus = 24,
   sectionTitle,
   className,
+  urlFilters = {},
 }: Props) {
   const [skuList, setSkuList] = React.useState<string[]>([]);
   const { t } = useTranslation(lang, 'common');
@@ -53,21 +56,31 @@ export default function TrendingProductsCarousel({
 
   const hasSkus = skuList.length > 0;
 
-  const {
-    data = [],
-    isLoading,
-    error,
-  } = usePimProductListQuery(
-    {
+  // Merge URL filters into query params
+  const queryParams = React.useMemo(() => {
+    const params: Record<string, any> = {
       limit: limitSkus,
       filters: {
         sku: skuList,
       },
-    },
-    { enabled: hasSkus },
-  );
+    };
+    // Add URL filters (e.g., filters-brand_id -> brand_id filter)
+    Object.entries(urlFilters).forEach(([key, value]) => {
+      if (key.startsWith('filters-') && value) {
+        params[key] = value;
+      }
+    });
+    return params;
+  }, [limitSkus, skuList, urlFilters]);
 
-  if (!hasSkus || error) return null;
+  const {
+    data = [],
+    isLoading,
+    error,
+  } = usePimProductListQuery(queryParams, { enabled: hasSkus });
+
+  // Hide when no SKUs, error, or no products found after loading
+  if (!hasSkus || error || (!isLoading && data.length === 0)) return null;
 
   return (
     <ProductsCarousel

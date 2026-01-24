@@ -1,9 +1,7 @@
 import { StreamEvent } from './types';
 
-// Use the B2B API endpoint from environment
-const API_URL =
-  process.env.NEXT_PUBLIC_B2B_PUBLIC_REST_API_ENDPOINT ||
-  'http://localhost:8000/api/v1';
+// Use proxy route to keep API URL server-side
+const API_URL = '/api/proxy/b2b';
 
 export class EliaClient {
   private baseUrl: string;

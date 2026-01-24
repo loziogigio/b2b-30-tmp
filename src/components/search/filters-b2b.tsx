@@ -17,6 +17,12 @@ import {
 } from '@framework/likes';
 import { ProductTypeBreadcrumb } from './product-type-breadcrumb';
 import { TechSpecsFilters } from './tech-specs-filters';
+import { IoIosArrowUp, IoIosArrowDown } from 'react-icons/io';
+import {
+  Disclosure,
+  DisclosureButton,
+  DisclosurePanel,
+} from '@headlessui/react';
 
 export const SearchFiltersB2B: React.FC<{ lang: string; text?: string }> = ({
   lang,
@@ -189,16 +195,6 @@ export const SearchFiltersB2B: React.FC<{ lang: string; text?: string }> = ({
 
   return (
     <div className="space-y-3">
-      {/* Product Type Breadcrumb (when selected or single) */}
-      {effectiveProductTypeCode && effectiveProductTypeLabel && (
-        <ProductTypeBreadcrumb
-          lang={lang}
-          productType={effectiveProductTypeCode}
-          label={effectiveProductTypeLabel}
-          onClear={handleClearProductType}
-        />
-      )}
-
       {/* Selected Filters (Clear All) */}
       <SelectedFilters
         lang={lang}
@@ -229,17 +225,47 @@ export const SearchFiltersB2B: React.FC<{ lang: string; text?: string }> = ({
         ) : (
           /* Single scrollable area for ALL filters */
           <div className="max-h-[calc(100vh-320px)] overflow-y-auto">
+            {/* Product Type Section (when selected or single) */}
+            {effectiveProductTypeCode && effectiveProductTypeLabel && (
+              <>
+                <ProductTypeBreadcrumb
+                  lang={lang}
+                  productType={effectiveProductTypeCode}
+                  label={effectiveProductTypeLabel}
+                  onClear={handleClearProductType}
+                />
+                <hr className="border-border-base mx-4" />
+              </>
+            )}
+
             {/* Tech Specs Section (when product type is active) */}
             {effectiveProductTypeCode && (
               <>
-                <div className="px-4 py-2 bg-gray-50 text-xs font-bold uppercase tracking-wide text-gray-500 sticky top-0 border-b border-border-base">
-                  {t('text-technical-specs')}
+                <div className="block">
+                  <Disclosure defaultOpen>
+                    {({ open }) => (
+                      <div>
+                        <DisclosureButton className="w-full flex items-center justify-between px-4 py-2">
+                          <span className="text-brand-dark font-semibold text-sm uppercase">
+                            {t('text-technical-specs')}
+                          </span>
+                          {open ? (
+                            <IoIosArrowUp className="text-brand-dark text-opacity-80 text-sm" />
+                          ) : (
+                            <IoIosArrowDown className="text-brand-dark text-opacity-80 text-sm" />
+                          )}
+                        </DisclosureButton>
+                        <DisclosurePanel>
+                          <TechSpecsFilters
+                            lang={lang}
+                            productType={effectiveProductTypeCode}
+                            currentFilters={currentFilters}
+                          />
+                        </DisclosurePanel>
+                      </div>
+                    )}
+                  </Disclosure>
                 </div>
-                <TechSpecsFilters
-                  lang={lang}
-                  productType={effectiveProductTypeCode}
-                  currentFilters={currentFilters}
-                />
                 {/* Thicker separator between sections */}
                 {mainFilters && mainFilters.length > 0 && (
                   <hr className="border-t-2 border-border-base" />

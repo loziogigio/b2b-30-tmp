@@ -1,7 +1,8 @@
-import { NextResponse } from 'next/server';
-import { vincApi, VincApiError } from '@/lib/vinc-api';
+import { NextRequest, NextResponse } from 'next/server';
+import { vincApi, VincApiError, getVincApiForTenant } from '@/lib/vinc-api';
 import type { B2BAddress } from '@/lib/vinc-api/types';
 import type { AddressB2B } from '@framework/acccount/types-b2b-account';
+import { resolveTenant, isMultiTenant } from '@/lib/tenant';
 
 /**
  * Transform VINC API B2BAddress to AddressB2B format
@@ -54,7 +55,7 @@ function transformVincAddress(addr: B2BAddress): AddressB2B {
   };
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { customer_id } = body;
@@ -66,8 +67,28 @@ export async function POST(request: Request) {
       );
     }
 
+    // Get VINC API client (multi-tenant aware)
+    let api = vincApi;
+    if (isMultiTenant) {
+      const hostname =
+        request.headers.get('x-tenant-hostname') ||
+        request.headers.get('host') ||
+        'localhost';
+      const tenant = await resolveTenant(hostname);
+
+      if (!tenant) {
+        console.error('[b2b/addresses] Tenant not found for hostname:', hostname);
+        return NextResponse.json(
+          { success: false, message: 'Tenant not found' },
+          { status: 404 },
+        );
+      }
+
+      api = getVincApiForTenant({ projectCode: tenant.projectCode });
+    }
+
     // Call VINC API to get addresses
-    const addresses = await vincApi.b2b.getAddresses(customer_id);
+    const addresses = await api.b2b.getAddresses(customer_id);
 
     // Transform to AddressB2B format and sort default address first
     const transformedAddresses = addresses

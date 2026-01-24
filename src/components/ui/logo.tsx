@@ -5,8 +5,8 @@ import cn from 'classnames';
 import { siteSettings } from '@settings/site-settings';
 import { useHomeSettings } from '@/hooks/use-home-settings';
 
-const GRAY_LOGO_URL =
-  'https://hidros.s3.eu-de.cloud-object-storage.appdomain.cloud/hidros/eshop/mymb_settings/logo_gray.png';
+// Gray logo variant - override via home-settings from backend
+const GRAY_LOGO_URL = '/assets/images/logo-gray-placeholder.svg';
 
 interface LogoProps extends React.AnchorHTMLAttributes<HTMLAnchorElement> {
   variant?: 'default' | 'gray';

@@ -6,10 +6,13 @@ module.exports = {
     extend: {
       colors: {
         brand: {
-          DEFAULT: '#405BA8',
-          dark: '#000000',
-          light: '#ffffff',
-          muted: '#595959',
+          // Use CSS variables for dynamic theming, with fallbacks
+          DEFAULT: 'var(--color-brand, #009f7f)',
+          secondary: 'var(--color-brand-secondary, #02b290)',
+          dark: 'var(--color-text, #000000)',
+          light: 'var(--color-background, #ffffff)',
+          muted: 'var(--color-muted, #595959)',
+          accent: 'var(--color-accent, var(--color-brand, #009f7f))',
           tree: '#6fb48e',
           'tree-dark': '#0B4635',
           danger: '#dc2626',
@@ -122,6 +125,7 @@ module.exports = {
         vendorSidebar:
           '0px 1px 2px rgba(0, 0, 0, 0.03), 0px 1px 3px rgba(0, 0, 0, 0.05)',
         searchBox: '0px 4px 4px rgba(99, 113, 134, 0.1)',
+        modal: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)',
       },
     },
   },

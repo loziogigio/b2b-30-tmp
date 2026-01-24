@@ -1,7 +1,8 @@
-import { NextResponse } from 'next/server';
-import { vincApi, VincApiError } from '@/lib/vinc-api';
+import { NextRequest, NextResponse } from 'next/server';
+import { vincApi, VincApiError, getVincApiForTenant } from '@/lib/vinc-api';
+import { resolveTenant, isMultiTenant } from '@/lib/tenant';
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { refresh_token } = body;
@@ -13,8 +14,28 @@ export async function POST(request: Request) {
       );
     }
 
+    // Get VINC API client (multi-tenant aware)
+    let api = vincApi;
+    if (isMultiTenant) {
+      const hostname =
+        request.headers.get('x-tenant-hostname') ||
+        request.headers.get('host') ||
+        'localhost';
+      const tenant = await resolveTenant(hostname);
+
+      if (!tenant) {
+        console.error('[refresh] Tenant not found for hostname:', hostname);
+        return NextResponse.json(
+          { success: false, message: 'Tenant not found' },
+          { status: 404 },
+        );
+      }
+
+      api = getVincApiForTenant({ projectCode: tenant.projectCode });
+    }
+
     // Call VINC API to refresh token
-    const refreshResponse = await vincApi.auth.refreshToken(refresh_token);
+    const refreshResponse = await api.auth.refreshToken(refresh_token);
 
     return NextResponse.json({
       success: true,

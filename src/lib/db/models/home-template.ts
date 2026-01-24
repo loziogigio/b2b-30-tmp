@@ -1,4 +1,4 @@
-import { Schema, model, models } from 'mongoose';
+import { Schema, Connection } from 'mongoose';
 import type { PageVersionTags } from '@/lib/types/blocks';
 
 // Home template version
@@ -155,6 +155,18 @@ HomeTemplateSchema.index({ templateId: 1, version: 1 }, { unique: true });
 HomeTemplateSchema.index({ templateId: 1, isCurrent: 1 });
 HomeTemplateSchema.index({ templateId: 1, isCurrentPublished: 1 });
 
-export const HomeTemplateModel =
-  models.HomeTemplate ||
-  model<HomeTemplateDocument>('HomeTemplate', HomeTemplateSchema);
+/**
+ * Get the HomeTemplate model for a specific connection
+ * This ensures the model uses the correct tenant database
+ */
+export function getHomeTemplateModel(connection: Connection) {
+  // Check if model already exists on this connection
+  if (connection.models.HomeTemplate) {
+    return connection.models.HomeTemplate;
+  }
+  // Register the model on this connection
+  return connection.model<HomeTemplateDocument>('HomeTemplate', HomeTemplateSchema);
+}
+
+// Export schema for external use
+export { HomeTemplateSchema };

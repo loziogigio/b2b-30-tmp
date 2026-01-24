@@ -1,8 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import {
-  API_ENDPOINTS_PIM,
-  PIM_API_BASE_URL,
-} from '../utils/api-endpoints-pim';
+import { API_ENDPOINTS_PIM } from '../utils/api-endpoints-pim';
 import type {
   EliaIntentRequest,
   EliaIntentResponse,
@@ -86,16 +83,14 @@ export function useEliaSearch(): UseEliaSearchReturn {
           status: 'active',
         });
 
-        // Step 1: Call intent endpoint
+        // Step 1: Call intent endpoint via proxy (credentials injected server-side)
         const intentRequest: EliaIntentRequest = { query, language };
         const intentResponse = await fetch(
-          `${PIM_API_BASE_URL}${API_ENDPOINTS_PIM.ELIA_INTENT}`,
+          `/api/proxy/pim/${API_ENDPOINTS_PIM.ELIA_INTENT}`,
           {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'X-API-Key': process.env.NEXT_PUBLIC_API_KEY_ID!,
-              'X-API-Secret': process.env.NEXT_PUBLIC_API_SECRET!,
             },
             body: JSON.stringify(intentRequest),
             signal: abortRef.current.signal,
@@ -132,14 +127,13 @@ export function useEliaSearch(): UseEliaSearchReturn {
           limit: 10,
         };
 
+        // Step 2: Call search endpoint via proxy (credentials injected server-side)
         const searchResponse = await fetch(
-          `${PIM_API_BASE_URL}${API_ENDPOINTS_PIM.ELIA_SEARCH}`,
+          `/api/proxy/pim/${API_ENDPOINTS_PIM.ELIA_SEARCH}`,
           {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'X-API-Key': process.env.NEXT_PUBLIC_API_KEY_ID!,
-              'X-API-Secret': process.env.NEXT_PUBLIC_API_SECRET!,
             },
             body: JSON.stringify(searchRequest),
             signal: abortRef.current.signal,
