@@ -18,7 +18,7 @@ interface PreviewMessage {
 
 interface ProductPreviewListenerProps {
   children: (state: PreviewState | null) => React.ReactNode;
-  allowedOrigin?: string;
+  allowedOrigins?: string[];
   currentProductId?: string;
 }
 
@@ -36,25 +36,44 @@ const isWildcardProduct = (value: string | null | undefined) =>
  * Falls back to sessionStorage if page refreshes during preview
  * Then falls back to server-provided blocks if no preview data available
  */
-const resolveAllowedOrigin = () => {
+
+// Trusted builder origins (always allowed regardless of env)
+const TRUSTED_BUILDER_ORIGINS = [
+  'https://cs.vendereincloud.it',
+  'https://pim.vendereincloud.it',
+];
+
+const resolveAllowedOrigins = (): string[] => {
+  const origins: string[] = [...TRUSTED_BUILDER_ORIGINS];
+
   const envOrigin =
     typeof process !== 'undefined'
       ? process.env.NEXT_PUBLIC_B2B_BUILDER_URL ||
         process.env.NEXT_PUBLIC_BUILDER_ORIGIN
       : undefined;
+
   if (envOrigin) {
     try {
-      return new URL(envOrigin).origin;
+      origins.push(new URL(envOrigin).origin);
     } catch {
-      return envOrigin.replace(/\/$/, '');
+      origins.push(envOrigin.replace(/\/$/, ''));
     }
   }
-  return 'http://localhost:3001';
+
+  // Add localhost for development
+  if (process.env.NODE_ENV === 'development') {
+    origins.push('http://localhost:3001');
+    origins.push('http://localhost:3000');
+    origins.push('http://127.0.0.1:3001');
+    origins.push('http://127.0.0.1:3000');
+  }
+
+  return [...new Set(origins)]; // Remove duplicates
 };
 
 export function ProductPreviewListener({
   children,
-  allowedOrigin = resolveAllowedOrigin(),
+  allowedOrigins = resolveAllowedOrigins(),
   currentProductId,
 }: ProductPreviewListenerProps) {
   const [previewState, setPreviewState] = useState<PreviewState | null>(() => {
@@ -125,19 +144,14 @@ export function ProductPreviewListener({
         return;
       }
 
-      // In development, also allow localhost origins for local testing
-      const isDev = process.env.NODE_ENV === 'development';
-      const isLocalhost =
-        event.origin.includes('localhost') ||
-        event.origin.includes('127.0.0.1');
-      const isAllowedOrigin =
-        event.origin === allowedOrigin || (isDev && isLocalhost);
+      // Check if origin is in the allowed list
+      const isAllowedOrigin = allowedOrigins.includes(event.origin);
 
       if (!isAllowedOrigin) {
-        if (isDev) {
+        if (process.env.NODE_ENV === 'development') {
           console.warn(
-            '[ProductPreviewListener] ❌ Origin rejected. Expected:',
-            allowedOrigin,
+            '[ProductPreviewListener] ❌ Origin rejected. Allowed:',
+            allowedOrigins,
             'Got:',
             event.origin,
           );
@@ -210,7 +224,7 @@ export function ProductPreviewListener({
       window.removeEventListener('message', handleMessage);
       clearStoredPreview();
     };
-  }, [allowedOrigin, currentProductId]);
+  }, [allowedOrigins, currentProductId]);
 
   return <>{children(previewState)}</>;
 }

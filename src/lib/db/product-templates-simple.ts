@@ -1,8 +1,6 @@
 import { connectToDatabase } from './connection';
-import {
-  ProductTemplateModel,
-  type ProductTemplateDocument,
-} from './models/product-template-simple';
+import { getProductTemplateSimpleModelForDb } from './model-registry';
+import { type ProductTemplateDocument } from './models/product-template-simple';
 import type { PageBlock } from '@/lib/types/blocks';
 
 /**
@@ -13,7 +11,12 @@ export async function findMatchingTemplate(
   productSku: string,
   parentSku?: string,
 ): Promise<ProductTemplateDocument | null> {
-  await connectToDatabase();
+  const connection = await connectToDatabase();
+
+  // Get model from the tenant-specific connection (not default mongoose)
+  const ProductTemplateModel = await getProductTemplateSimpleModelForDb(
+    connection.name,
+  );
 
   // Build query to find all potentially matching templates
   const matchConditions: any[] = [

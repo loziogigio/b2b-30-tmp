@@ -98,6 +98,7 @@ const ProductTemplateSchema = new Schema(
   },
   {
     timestamps: true,
+    collection: 'producttemplates', // Explicit collection name for multi-tenant
   },
 );
 
@@ -139,5 +140,9 @@ export type ProductTemplateDocument = InferSchemaType<
   }>;
 };
 
+// Export schema for model registry (multi-tenant support)
+export { ProductTemplateSchema };
+
+// Legacy: Direct model for single-tenant mode (avoid using in multi-tenant)
 export const ProductTemplateModel =
   models.ProductTemplate ?? model('ProductTemplate', ProductTemplateSchema);

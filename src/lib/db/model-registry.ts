@@ -15,11 +15,16 @@ import {
   ProductTemplateSchema,
   type ProductTemplateDocument,
 } from './models/product-template';
+import {
+  ProductTemplateSchema as ProductTemplateSimpleSchema,
+  type ProductTemplateDocument as ProductTemplateSimpleDocument,
+} from './models/product-template-simple';
 
 // Model name to schema mapping
 const MODEL_SCHEMAS: Record<string, mongoose.Schema> = {
   HomeTemplate: HomeTemplateSchema,
   ProductTemplate: ProductTemplateSchema,
+  ProductTemplateSimple: ProductTemplateSimpleSchema,
 };
 
 /**
@@ -68,4 +73,12 @@ export async function getHomeTemplateModelForDb(dbName: string) {
  */
 export async function getProductTemplateModelForDb(dbName: string) {
   return getModel<ProductTemplateDocument>(dbName, 'ProductTemplate');
+}
+
+/**
+ * Get ProductTemplateSimple model for a specific tenant database
+ * Used by product-templates-simple.ts for product detail page blocks
+ */
+export async function getProductTemplateSimpleModelForDb(dbName: string) {
+  return getModel<ProductTemplateSimpleDocument>(dbName, 'ProductTemplateSimple');
 }
