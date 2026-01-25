@@ -25,7 +25,7 @@ const LoginForm: React.FC<LoginFormProps> = ({
   isPopup = true,
   className,
 }) => {
-  const { t } = useTranslation(lang, 'common');
+  const { t } = useTranslation(lang, ['common', 'forms']);
   const { closeModal, openModal } = useModalAction();
   const homeSettings = useHomeSettingsContext();
   const [loginError, setLoginError] = useState<string | null>(null);
@@ -62,17 +62,15 @@ const LoginForm: React.FC<LoginFormProps> = ({
   }
 
   return (
-    <div
-      className={cn(
-        'w-full md:w-[420px] relative',
-        className,
-      )}
-    >
+    <div className={cn('w-full md:w-[420px] relative', className)}>
       {isPopup === true && <CloseButton onClick={closeModal} />}
 
       <div className="flex flex-col mx-auto overflow-hidden rounded-xl bg-white shadow-2xl ring-1 ring-black/5">
         <div className="px-6 pt-8 pb-6 text-center">
-          <div onClick={closeModal} className="inline-block mb-4 cursor-pointer">
+          <div
+            onClick={closeModal}
+            className="inline-block mb-4 cursor-pointer"
+          >
             <Logo className="h-10 w-auto mx-auto" />
           </div>
           {branding?.title && (
@@ -103,8 +101,16 @@ const LoginForm: React.FC<LoginFormProps> = ({
           >
             {loginError && (
               <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 flex items-center gap-2">
-                <svg className="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                <svg
+                  className="w-4 h-4 shrink-0"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                    clipRule="evenodd"
+                  />
                 </svg>
                 {loginError}
               </div>

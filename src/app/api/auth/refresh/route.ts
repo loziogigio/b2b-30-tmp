@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { vincApi, VincApiError, getVincApiForTenant } from '@/lib/vinc-api';
+import { getSsoApiForTenant, SSOApiError } from '@/lib/sso-api';
 import { resolveTenant, isMultiTenant } from '@/lib/tenant';
 
 export async function POST(request: NextRequest) {
@@ -14,8 +14,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get VINC API client (multi-tenant aware)
-    let api = vincApi;
+    // Resolve tenant
+    let tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'default';
+    // Always use SSO_API_URL from env if set
+    const ssoApiUrl = process.env.SSO_API_URL || process.env.PIM_API_URL;
+
     if (isMultiTenant) {
       const hostname =
         request.headers.get('x-tenant-hostname') ||
@@ -31,11 +34,13 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      api = getVincApiForTenant({ projectCode: tenant.projectCode });
+      tenantId = tenant.id;
+      // Note: SSO_API_URL from env takes priority over tenant.api.pimApiUrl
     }
 
-    // Call VINC API to refresh token
-    const refreshResponse = await api.auth.refreshToken(refresh_token);
+    // Call SSO API to refresh token
+    const ssoApi = getSsoApiForTenant({ tenantId, ssoApiUrl });
+    const refreshResponse = await ssoApi.refresh(refresh_token);
 
     return NextResponse.json({
       success: true,
@@ -46,7 +51,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('[refresh] Error:', error);
 
-    if (error instanceof VincApiError) {
+    if (error instanceof SSOApiError) {
       const status = error.status === 401 ? 401 : 400;
       return NextResponse.json(
         {

@@ -5,12 +5,15 @@ import * as React from 'react';
 import cn from 'classnames';
 import { useChangePasswordMutation } from '@framework/acccount/change-password';
 import { useTranslation } from 'src/app/i18n/client';
+import { ERP_STATIC } from '@framework/utils/static';
 
 export default function ChangePasswordClient({ lang }: { lang: string }) {
   const { t } = useTranslation(lang, 'common');
   const { mutateAsync, isPending } = useChangePasswordMutation();
 
-  const [username, setUsername] = React.useState('');
+  // Get email from ERP_STATIC (set after login)
+  const userEmail = ERP_STATIC.username || '';
+
   const [currentPassword, setCurrentPassword] = React.useState('');
   const [newPassword, setNewPassword] = React.useState('');
   const [showCurrent, setShowCurrent] = React.useState(false);
@@ -19,7 +22,7 @@ export default function ChangePasswordClient({ lang }: { lang: string }) {
   const [error, setError] = React.useState('');
   const [success, setSuccess] = React.useState('');
 
-  const canSubmit = username.trim() && currentPassword && newPassword;
+  const canSubmit = currentPassword && newPassword;
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,7 +34,7 @@ export default function ChangePasswordClient({ lang }: { lang: string }) {
     }
     try {
       const res = await mutateAsync({
-        username: username.trim(),
+        username: userEmail, // Still pass for backwards compatibility but not used
         currentPassword,
         password: newPassword,
       });
@@ -64,7 +67,7 @@ export default function ChangePasswordClient({ lang }: { lang: string }) {
           </div>
         )}
 
-        {/* Username */}
+        {/* Email (read-only, for user reference) */}
         <div className="mb-3">
           <label className="mb-1 block text-sm text-gray-700">
             {t('text-email-label')} *
@@ -72,10 +75,10 @@ export default function ChangePasswordClient({ lang }: { lang: string }) {
           <input
             type="email"
             autoComplete="username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder={`${t('text-email-label')} *`}
-            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-600"
+            value={userEmail}
+            readOnly
+            disabled
+            className="w-full rounded-md border border-gray-200 bg-gray-100 px-3 py-2 text-sm text-gray-600"
           />
         </div>
 

@@ -1,4 +1,10 @@
-import { Schema, models, model, type InferSchemaType, Connection } from 'mongoose';
+import {
+  Schema,
+  models,
+  model,
+  type InferSchemaType,
+  Connection,
+} from 'mongoose';
 
 const BlockSchema = new Schema(
   {
@@ -103,5 +109,8 @@ export function getProductTemplateModel(connection: Connection) {
   if (connection.models.ProductTemplate) {
     return connection.models.ProductTemplate;
   }
-  return connection.model<ProductTemplateDocument>('ProductTemplate', ProductTemplateSchema);
+  return connection.model<ProductTemplateDocument>(
+    'ProductTemplate',
+    ProductTemplateSchema,
+  );
 }

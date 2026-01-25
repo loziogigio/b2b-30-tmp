@@ -7,11 +7,7 @@
  */
 
 import { MongoClient, Db } from 'mongodb';
-import {
-  isMultiTenant,
-  isSingleTenant,
-  TENANT_CACHE_TTL,
-} from './config';
+import { isMultiTenant, isSingleTenant, TENANT_CACHE_TTL } from './config';
 import {
   TenantConfig,
   TenantRequestConfig,
@@ -62,8 +58,14 @@ function fromDocument(doc: TenantDocument): TenantConfig {
       isActive: d.is_active,
     })),
     api: {
-      pimApiUrl: doc.api?.pim_api_url || process.env.PIM_API_URL || 'http://localhost:3001',
-      b2bApiUrl: doc.api?.b2b_api_url || process.env.B2B_API_URL || 'http://localhost:8000/api/v1',
+      pimApiUrl:
+        doc.api?.pim_api_url ||
+        process.env.PIM_API_URL ||
+        'http://localhost:3001',
+      b2bApiUrl:
+        doc.api?.b2b_api_url ||
+        process.env.B2B_API_URL ||
+        'http://localhost:8000/api/v1',
       apiKeyId: doc.api?.api_key_id || '',
       apiSecret: doc.api?.api_secret || '',
     },
@@ -174,7 +176,10 @@ function buildHostnameVariations(hostname: string): string[] {
   const withoutPort = lower.split(':')[0];
   if (withoutPort !== lower) {
     variations.push(withoutPort);
-    if (!withoutPort.startsWith('http://') && !withoutPort.startsWith('https://')) {
+    if (
+      !withoutPort.startsWith('http://') &&
+      !withoutPort.startsWith('https://')
+    ) {
       variations.push(`http://${withoutPort}`);
       variations.push(`https://${withoutPort}`);
     }
@@ -337,31 +342,57 @@ export interface TenantConfigError {
  * Validate tenant configuration for required fields
  * Returns list of configuration issues
  */
-export function validateTenantConfig(tenant: TenantConfig): TenantConfigError[] {
+export function validateTenantConfig(
+  tenant: TenantConfig,
+): TenantConfigError[] {
   const errors: TenantConfigError[] = [];
 
   // Required fields
   if (!tenant.id) {
-    errors.push({ field: 'id', message: 'Tenant ID is missing', severity: 'error' });
+    errors.push({
+      field: 'id',
+      message: 'Tenant ID is missing',
+      severity: 'error',
+    });
   }
   if (!tenant.projectCode) {
-    errors.push({ field: 'projectCode', message: 'Project code is missing', severity: 'error' });
+    errors.push({
+      field: 'projectCode',
+      message: 'Project code is missing',
+      severity: 'error',
+    });
   }
 
   // API URLs
   if (!tenant.api.pimApiUrl) {
-    errors.push({ field: 'api.pimApiUrl', message: 'PIM API URL is missing', severity: 'error' });
+    errors.push({
+      field: 'api.pimApiUrl',
+      message: 'PIM API URL is missing',
+      severity: 'error',
+    });
   }
   if (!tenant.api.b2bApiUrl) {
-    errors.push({ field: 'api.b2bApiUrl', message: 'B2B API URL is missing', severity: 'error' });
+    errors.push({
+      field: 'api.b2bApiUrl',
+      message: 'B2B API URL is missing',
+      severity: 'error',
+    });
   }
 
   // Warnings for optional but recommended fields
   if (!tenant.api.apiKeyId) {
-    errors.push({ field: 'api.apiKeyId', message: 'API Key ID is not configured', severity: 'warning' });
+    errors.push({
+      field: 'api.apiKeyId',
+      message: 'API Key ID is not configured',
+      severity: 'warning',
+    });
   }
   if (!tenant.api.apiSecret) {
-    errors.push({ field: 'api.apiSecret', message: 'API Secret is not configured', severity: 'warning' });
+    errors.push({
+      field: 'api.apiSecret',
+      message: 'API Secret is not configured',
+      severity: 'warning',
+    });
   }
 
   return errors;
@@ -372,19 +403,22 @@ export function validateTenantConfig(tenant: TenantConfig): TenantConfigError[] 
  */
 export function hasCriticalErrors(tenant: TenantConfig): boolean {
   const errors = validateTenantConfig(tenant);
-  return errors.some(e => e.severity === 'error');
+  return errors.some((e) => e.severity === 'error');
 }
 
 /**
  * Log tenant configuration issues
  */
-export function logTenantConfigIssues(tenant: TenantConfig, context?: string): void {
+export function logTenantConfigIssues(
+  tenant: TenantConfig,
+  context?: string,
+): void {
   const errors = validateTenantConfig(tenant);
   if (errors.length === 0) return;
 
   const prefix = context ? `[${context}]` : '[TenantConfig]';
 
-  errors.forEach(err => {
+  errors.forEach((err) => {
     if (err.severity === 'error') {
       console.error(`${prefix} ERROR: ${err.field} - ${err.message}`);
     } else {

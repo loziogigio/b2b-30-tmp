@@ -57,7 +57,9 @@ export async function getModel<T extends mongoose.Document>(
     );
   }
 
-  console.log(`[ModelRegistry] Registering new model ${modelName} on db: ${connection.name}`);
+  console.log(
+    `[ModelRegistry] Registering new model ${modelName} on db: ${connection.name}`,
+  );
   return connection.model<T>(modelName, schema);
 }
 
@@ -80,5 +82,8 @@ export async function getProductTemplateModelForDb(dbName: string) {
  * Used by product-templates-simple.ts for product detail page blocks
  */
 export async function getProductTemplateSimpleModelForDb(dbName: string) {
-  return getModel<ProductTemplateSimpleDocument>(dbName, 'ProductTemplateSimple');
+  return getModel<ProductTemplateSimpleDocument>(
+    dbName,
+    'ProductTemplateSimple',
+  );
 }

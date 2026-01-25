@@ -44,7 +44,7 @@ export function ConfigurableHeader({ lang }: ConfigurableHeaderProps) {
       <header
         className={cn(
           'w-full md:sticky md:top-0 z-40 transition-shadow',
-          isElevated && 'shadow-sm'
+          isElevated && 'shadow-sm',
         )}
       >
         {headerConfig.rows.map((row, index) => (

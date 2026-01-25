@@ -14,7 +14,10 @@ import { useProductListQuery } from '@framework/product/get-b2b-product';
 import Link from 'next/link';
 
 // Helper to find a node by path in the menu tree
-function findNodeByPath(tree: MenuTreeNode[], pathSegments: string[]): MenuTreeNode | null {
+function findNodeByPath(
+  tree: MenuTreeNode[],
+  pathSegments: string[],
+): MenuTreeNode | null {
   if (!pathSegments.length) return null;
   let current: MenuTreeNode | undefined;
   let children = tree;

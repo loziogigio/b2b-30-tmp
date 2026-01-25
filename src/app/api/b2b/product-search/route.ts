@@ -22,7 +22,10 @@ export async function GET(request: Request) {
     per_page: perPage,
   });
 
-  console.log('[product-search] Transformed params:', JSON.stringify(params, null, 2));
+  console.log(
+    '[product-search] Transformed params:',
+    JSON.stringify(params, null, 2),
+  );
 
   try {
     const { items } = await fetchProductList(params, 0);

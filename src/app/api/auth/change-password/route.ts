@@ -1,24 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { vincApi, VincApiError, getVincApiForTenant } from '@/lib/vinc-api';
+import { getSsoApiForTenant, SSOApiError } from '@/lib/sso-api';
 import { resolveTenant, isMultiTenant } from '@/lib/tenant';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { username, currentPassword, password } = body;
+    const { currentPassword, password } = body;
 
-    if (!username || !currentPassword || !password) {
+    if (!currentPassword || !password) {
       return NextResponse.json(
         {
           success: false,
-          message: 'Username, current password, and new password are required',
+          message: 'Current password and new password are required',
         },
         { status: 400 },
       );
     }
 
-    // Get auth token from cookies
+    // Get SSO access token from cookies
     const cookieStore = await cookies();
     const authToken = cookieStore.get('auth_token')?.value;
 
@@ -29,9 +29,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get VINC API client and PIM URL (multi-tenant aware)
-    let api = vincApi;
-    let pimApiUrl = process.env.PIM_API_URL || 'http://localhost:3001';
+    // Resolve tenant
+    let tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'default';
+    // Always use SSO_API_URL from env for auth endpoints
+    const ssoApiUrl = process.env.SSO_API_URL || process.env.PIM_API_URL;
 
     if (isMultiTenant) {
       const hostname =
@@ -41,46 +42,36 @@ export async function POST(request: NextRequest) {
       const tenant = await resolveTenant(hostname);
 
       if (!tenant) {
-        console.error('[change-password] Tenant not found for hostname:', hostname);
+        console.error(
+          '[change-password] Tenant not found for hostname:',
+          hostname,
+        );
         return NextResponse.json(
           { success: false, message: 'Tenant not found' },
           { status: 404 },
         );
       }
 
-      api = getVincApiForTenant({ projectCode: tenant.projectCode });
-      pimApiUrl = tenant.api.pimApiUrl;
+      tenantId = tenant.id;
     }
 
-    // Call VINC API to change password (validates current password and changes it)
-    await api.auth.changePassword(authToken, currentPassword, password);
-
-    // Send confirmation email via PIM API
-    const emailPayload = {
-      toEmail: username,
-      email: username,
-      ragioneSociale: '',
-      contactName: '',
-    };
-
-    try {
-      await fetch(`${pimApiUrl}/api/b2b/emails/reset-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(emailPayload),
-      });
-    } catch (emailError) {
-      console.error('[change-password] Email send failed:', emailError);
-    }
+    // Call SSO API to change password
+    // SSO API extracts email from access token and verifies current password internally
+    const ssoApi = getSsoApiForTenant({ tenantId, ssoApiUrl });
+    const result = await ssoApi.changePassword({
+      accessToken: authToken,
+      currentPassword,
+      password,
+    });
 
     return NextResponse.json({
       success: true,
-      message: 'Password cambiata con successo',
+      message: result.message || 'Password cambiata con successo',
     });
   } catch (error) {
     console.error('[change-password] Error:', error);
 
-    if (error instanceof VincApiError) {
+    if (error instanceof SSOApiError) {
       const status = error.status === 401 ? 401 : 400;
 
       // Map error messages to translated versions
@@ -88,15 +79,7 @@ export async function POST(request: NextRequest) {
       if (error.status === 401) {
         message = 'La password attuale non è corretta';
       } else if (error.status === 422) {
-        // Validation error - check for password length
-        if (
-          error.detail?.includes('at least') ||
-          error.detail?.includes('min_length')
-        ) {
-          message = 'La nuova password deve essere di almeno 4 caratteri';
-        } else {
-          message = 'Dati non validi. Controlla i campi inseriti';
-        }
+        message = 'La nuova password deve essere di almeno 4 caratteri';
       } else if (error.detail) {
         message = error.detail;
       }

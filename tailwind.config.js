@@ -125,7 +125,8 @@ module.exports = {
         vendorSidebar:
           '0px 1px 2px rgba(0, 0, 0, 0.03), 0px 1px 3px rgba(0, 0, 0, 0.05)',
         searchBox: '0px 4px 4px rgba(99, 113, 134, 0.1)',
-        modal: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)',
+        modal:
+          '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)',
       },
     },
   },

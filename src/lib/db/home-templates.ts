@@ -58,10 +58,20 @@ export async function getPublishedHomeTemplate(options?: {
     isActive: true,
   }).lean<HomeTemplateDocument[]>();
 
-  console.log('[getPublishedHomeTemplate] Found', versions?.length || 0, 'versions');
+  console.log(
+    '[getPublishedHomeTemplate] Found',
+    versions?.length || 0,
+    'versions',
+  );
   if (versions?.length > 0) {
-    console.log('[getPublishedHomeTemplate] First version _id:', versions[0]._id?.toString());
-    console.log('[getPublishedHomeTemplate] First version name:', versions[0].name);
+    console.log(
+      '[getPublishedHomeTemplate] First version _id:',
+      versions[0]._id?.toString(),
+    );
+    console.log(
+      '[getPublishedHomeTemplate] First version name:',
+      versions[0].name,
+    );
   }
 
   if (!versions || versions.length === 0) {
@@ -72,7 +82,10 @@ export async function getPublishedHomeTemplate(options?: {
   // Find the current published version as fallback
   const currentPublished = versions.find((v) => v.isCurrentPublished);
   const fallbackVersionNumber = currentPublished?.version;
-  console.log('[getPublishedHomeTemplate] Fallback version:', fallbackVersionNumber);
+  console.log(
+    '[getPublishedHomeTemplate] Fallback version:',
+    fallbackVersionNumber,
+  );
 
   const resolution = resolveVersion({
     versions: versions as any,
@@ -82,14 +95,23 @@ export async function getPublishedHomeTemplate(options?: {
     respectActiveWindow: true,
   });
 
-  console.log('[getPublishedHomeTemplate] Resolution:', resolution ? `v${resolution.version.version} (${resolution.matchedBy})` : 'null');
+  console.log(
+    '[getPublishedHomeTemplate] Resolution:',
+    resolution
+      ? `v${resolution.version.version} (${resolution.matchedBy})`
+      : 'null',
+  );
 
   if (!resolution) {
     return null;
   }
 
   const result = buildReturnPayload(resolution.version, resolution.matchedBy);
-  console.log('[getPublishedHomeTemplate] Returning', result.blocks?.length || 0, 'blocks');
+  console.log(
+    '[getPublishedHomeTemplate] Returning',
+    result.blocks?.length || 0,
+    'blocks',
+  );
   return result;
 }
 

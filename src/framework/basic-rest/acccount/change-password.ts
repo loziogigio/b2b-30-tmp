@@ -6,7 +6,8 @@ import type {
   ChangePasswordResult,
 } from './types-b2b-account';
 
-// Change password (requires username + current password + new password)
+// Change password (requires current password + new password)
+// Email is extracted from SSO access token on server side
 export async function changePassword(
   body: ChangePasswordPayload,
 ): Promise<ChangePasswordResult> {
@@ -14,7 +15,6 @@ export async function changePassword(
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      username: body.username,
       currentPassword: body.currentPassword,
       password: body.password,
     }),

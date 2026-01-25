@@ -33,7 +33,9 @@ export const findMatchingTemplate = async (
   context: ProductContext,
 ): Promise<ProductTemplateDocument | null> => {
   const connection = await connectToDatabase();
-  const ProductTemplateModel = await getProductTemplateModelForDb(connection.name);
+  const ProductTemplateModel = await getProductTemplateModelForDb(
+    connection.name,
+  );
 
   const { productId, categoryIds = [], tags = [] } = context;
 
@@ -134,7 +136,9 @@ export const getProductDetailBlocks = async (
  */
 export const ensureDefaultTemplate = async () => {
   const connection = await connectToDatabase();
-  const ProductTemplateModel = await getProductTemplateModelForDb(connection.name);
+  const ProductTemplateModel = await getProductTemplateModelForDb(
+    connection.name,
+  );
 
   let template = await ProductTemplateModel.findOne({
     templateId: 'default-product-detail',
@@ -169,7 +173,9 @@ export const createCategoryTemplate = async (
   name: string,
 ): Promise<ProductTemplateDocument> => {
   const connection = await connectToDatabase();
-  const ProductTemplateModel = await getProductTemplateModelForDb(connection.name);
+  const ProductTemplateModel = await getProductTemplateModelForDb(
+    connection.name,
+  );
 
   const now = new Date();
   const template = await ProductTemplateModel.create({
@@ -198,7 +204,9 @@ export const createProductTemplate = async (
   name: string,
 ): Promise<ProductTemplateDocument> => {
   const connection = await connectToDatabase();
-  const ProductTemplateModel = await getProductTemplateModelForDb(connection.name);
+  const ProductTemplateModel = await getProductTemplateModelForDb(
+    connection.name,
+  );
 
   const now = new Date();
   const template = await ProductTemplateModel.create({

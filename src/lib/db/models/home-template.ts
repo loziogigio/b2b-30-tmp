@@ -165,7 +165,10 @@ export function getHomeTemplateModel(connection: Connection) {
     return connection.models.HomeTemplate;
   }
   // Register the model on this connection
-  return connection.model<HomeTemplateDocument>('HomeTemplate', HomeTemplateSchema);
+  return connection.model<HomeTemplateDocument>(
+    'HomeTemplate',
+    HomeTemplateSchema,
+  );
 }
 
 // Export schema for external use

@@ -18,7 +18,7 @@ const ConfigurableHeader = dynamic(
         <div className="h-12 w-full bg-gray-50" />
       </>
     ),
-  }
+  },
 );
 
 const MobileSearchOverlay = dynamic(() => import('./mobile-search-overlay'), {

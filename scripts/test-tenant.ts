@@ -16,7 +16,10 @@ function buildHostnameVariations(hostname: string): string[] {
   const withoutPort = lower.split(':')[0];
   if (withoutPort !== lower) {
     variations.push(withoutPort);
-    if (!withoutPort.startsWith('http://') && !withoutPort.startsWith('https://')) {
+    if (
+      !withoutPort.startsWith('http://') &&
+      !withoutPort.startsWith('https://')
+    ) {
       variations.push(`http://${withoutPort}`);
       variations.push(`https://${withoutPort}`);
     }
@@ -25,7 +28,9 @@ function buildHostnameVariations(hostname: string): string[] {
 }
 
 async function test() {
-  const mongoUrl = process.env.MONGO_URL || 'mongodb://root:root@149.81.163.109:27017/?authSource=admin';
+  const mongoUrl =
+    process.env.MONGO_URL ||
+    'mongodb://root:root@149.81.163.109:27017/?authSource=admin';
   const client = new MongoClient(mongoUrl);
 
   try {
@@ -43,10 +48,7 @@ async function test() {
     });
 
     // Test hostnames (customize these for your setup)
-    const testHostnames = [
-      'localhost:3001',
-      'localhost:3000',
-    ];
+    const testHostnames = ['localhost:3001', 'localhost:3000'];
 
     for (const hostname of testHostnames) {
       console.log(`\n=== Testing hostname: ${hostname} ===`);
@@ -68,7 +70,6 @@ async function test() {
         console.log('✗ No tenant found');
       }
     }
-
   } catch (err: any) {
     console.error('Error:', err.message);
   } finally {

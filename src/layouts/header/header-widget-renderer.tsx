@@ -22,7 +22,10 @@ interface HeaderWidgetRendererProps {
   lang: string;
 }
 
-export function HeaderWidgetRenderer({ widget, lang }: HeaderWidgetRendererProps) {
+export function HeaderWidgetRenderer({
+  widget,
+  lang,
+}: HeaderWidgetRendererProps) {
   switch (widget.type) {
     case 'logo':
       return <LogoWidget config={widget.config} lang={lang} />;

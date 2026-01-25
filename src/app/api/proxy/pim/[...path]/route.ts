@@ -27,7 +27,10 @@ async function getTenantConfig(req: NextRequest) {
   }
 
   // Multi-tenant: resolve from hostname
-  const hostname = req.headers.get('x-tenant-hostname') || req.headers.get('host') || 'localhost';
+  const hostname =
+    req.headers.get('x-tenant-hostname') ||
+    req.headers.get('host') ||
+    'localhost';
   const tenant = await resolveTenant(hostname);
 
   if (!tenant) {
@@ -42,7 +45,9 @@ async function getTenantConfig(req: NextRequest) {
 
   // Log tenant config for debugging
   if (!tenant.api.pimApiUrl) {
-    console.warn(`[PIM Proxy] Tenant ${tenant.id} missing pimApiUrl, using default`);
+    console.warn(
+      `[PIM Proxy] Tenant ${tenant.id} missing pimApiUrl, using default`,
+    );
   }
   if (!tenant.api.apiKeyId || !tenant.api.apiSecret) {
     console.warn(`[PIM Proxy] Tenant ${tenant.id} missing API credentials`);
@@ -120,7 +125,9 @@ async function proxyRequest(
     const response = await fetch(targetUrl.toString(), fetchOptions);
 
     // Log the response status
-    console.log(`[PIM Proxy] Response: ${response.status} ${response.statusText}`);
+    console.log(
+      `[PIM Proxy] Response: ${response.status} ${response.statusText}`,
+    );
 
     // Handle non-JSON responses
     const contentType = response.headers.get('content-type');

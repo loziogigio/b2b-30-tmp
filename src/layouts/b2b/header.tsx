@@ -77,7 +77,9 @@ function Header({ lang }: HeaderProps) {
   const { settings } = useHomeSettings();
   const brandingTitle = useMemo(
     () =>
-      settings?.branding?.title || siteSettings?.site_header?.title || 'VINC B2B',
+      settings?.branding?.title ||
+      siteSettings?.site_header?.title ||
+      'VINC B2B',
     [settings?.branding?.title],
   );
 

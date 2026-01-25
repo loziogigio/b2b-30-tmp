@@ -1,44 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { vincApi, VincApiError, getVincApiForTenant } from '@/lib/vinc-api';
+import { getSsoApiForTenant, SSOApiError } from '@/lib/sso-api';
 import { resolveTenant, isMultiTenant } from '@/lib/tenant';
-import * as crypto from 'crypto';
-
-/**
- * Generate a secure random password
- * Similar to VINC API's generate_random_password function
- */
-function generateSecurePassword(length: number = 12): string {
-  const lowercase = 'abcdefghijklmnopqrstuvwxyz';
-  const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  const digits = '0123456789';
-  const special = '!@#$%^&*';
-  const all = lowercase + uppercase + digits + special;
-
-  // Ensure at least one of each type
-  let password =
-    lowercase[crypto.randomInt(lowercase.length)] +
-    uppercase[crypto.randomInt(uppercase.length)] +
-    digits[crypto.randomInt(digits.length)] +
-    special[crypto.randomInt(special.length)];
-
-  // Fill the rest randomly
-  for (let i = password.length; i < length; i++) {
-    password += all[crypto.randomInt(all.length)];
-  }
-
-  // Shuffle the password
-  const shuffled = password
-    .split('')
-    .sort(() => crypto.randomInt(3) - 1)
-    .join('');
-
-  return shuffled;
-}
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { username, password } = body;
+    const { username, password, ragioneSociale, contactName } = body;
 
     if (!username) {
       return NextResponse.json(
@@ -47,9 +14,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get VINC API client and PIM URL (multi-tenant aware)
-    let api = vincApi;
-    let pimApiUrl = process.env.PIM_API_URL || 'http://localhost:3001';
+    // Resolve tenant
+    let tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'default';
+    let ssoApiUrl = process.env.SSO_API_URL || process.env.PIM_API_URL;
 
     if (isMultiTenant) {
       const hostname =
@@ -59,61 +26,43 @@ export async function POST(request: NextRequest) {
       const tenant = await resolveTenant(hostname);
 
       if (!tenant) {
-        console.error('[reset-password] Tenant not found for hostname:', hostname);
+        console.error(
+          '[reset-password] Tenant not found for hostname:',
+          hostname,
+        );
         return NextResponse.json(
           { success: false, message: 'Tenant not found' },
           { status: 404 },
         );
       }
 
-      api = getVincApiForTenant({ projectCode: tenant.projectCode });
-      pimApiUrl = tenant.api.pimApiUrl;
+      tenantId = tenant.id;
+      ssoApiUrl = tenant.api.pimApiUrl;
     }
 
-    // Determine the password to set
-    let passwordToSet = password;
-    let tempPassword: string | null = null;
-
-    // If no password provided, generate a temporary one (forgot password flow)
-    if (!password) {
-      tempPassword = generateSecurePassword(12);
-      passwordToSet = tempPassword;
-    }
-
-    // Call VINC API to set the password
-    await api.auth.setPasswordByEmail(username, passwordToSet);
-
-    // Send forgot password email with temp password via PIM API
-    if (tempPassword) {
-      const emailPayload = {
-        toEmail: username,
-        email: username,
-        tempPassword: tempPassword,
-        ragioneSociale: '',
-        contactName: '',
-      };
-
-      try {
-        await fetch(`${pimApiUrl}/api/b2b/emails/forgot-password`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(emailPayload),
-        });
-      } catch (emailError) {
-        console.error('[reset-password] Email send failed:', emailError);
-      }
-    }
+    // Call SSO API to reset password
+    // If no password provided, SSO generates temp password and sends email
+    const ssoApi = getSsoApiForTenant({ tenantId, ssoApiUrl });
+    const result = await ssoApi.resetPassword({
+      email: username,
+      tenant_id: tenantId,
+      password,
+      ragioneSociale,
+      contactName,
+    });
 
     return NextResponse.json({
       success: true,
-      message: password
-        ? 'Password cambiata con successo'
-        : 'Email di recupero inviata',
+      message:
+        result.message ||
+        (password
+          ? 'Password cambiata con successo'
+          : 'Email di recupero inviata'),
     });
   } catch (error) {
     console.error('[reset-password] Error:', error);
 
-    if (error instanceof VincApiError) {
+    if (error instanceof SSOApiError) {
       // User not found or other API error
       if (error.status === 404) {
         return NextResponse.json(

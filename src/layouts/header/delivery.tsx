@@ -46,7 +46,9 @@ const Delivery: React.FC<DeliveryProps> = ({ lang, className }) => {
         title={label}
       >
         <LocationIcon className="shrink-0" />
-        <span className="shrink-0 ltr:pl-1.5 lg:rtl:pr-1.5">{t('text-delivery')}:</span>
+        <span className="shrink-0 ltr:pl-1.5 lg:rtl:pr-1.5">
+          {t('text-delivery')}:
+        </span>
         <span className="font-semibold text-brand relative top-[1px] ltr:pl-1 rtl:pr-1 truncate">
           {label}
         </span>

@@ -24,7 +24,7 @@ export function HeaderBlockRenderer({ block, lang }: HeaderBlockRendererProps) {
         'flex items-center gap-2 lg:gap-3',
         // Center block can shrink, others stay fixed
         isCenterBlock ? 'flex-1 min-w-0 overflow-hidden' : 'flex-shrink-0',
-        ALIGNMENT_CLASSES[block.alignment]
+        ALIGNMENT_CLASSES[block.alignment],
       )}
     >
       {block.widgets.map((widget) => (

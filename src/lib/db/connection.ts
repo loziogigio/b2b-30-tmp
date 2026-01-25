@@ -11,7 +11,11 @@ import {
 export { getPooledConnection, closeAllConnections, getPoolStats };
 
 // Re-export model registry utilities
-export { getModel, getHomeTemplateModelForDb, getProductTemplateModelForDb } from './model-registry';
+export {
+  getModel,
+  getHomeTemplateModelForDb,
+  getProductTemplateModelForDb,
+} from './model-registry';
 
 // Default database name from .env
 const defaultMongoDb = process.env.MONGO_DB ?? 'vinc-default';
@@ -44,7 +48,9 @@ export const connectToDatabase = async (): Promise<Connection> => {
   const tenant = await resolveTenant(hostname);
 
   if (!tenant) {
-    console.warn(`[DB] No tenant found for ${hostname}, using default database`);
+    console.warn(
+      `[DB] No tenant found for ${hostname}, using default database`,
+    );
     return getPooledConnection(defaultMongoDb);
   }
 

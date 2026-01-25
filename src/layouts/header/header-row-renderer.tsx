@@ -21,12 +21,17 @@ const LAYOUT_CLASSES: Record<RowLayout, string> = {
   '30-40-30': 'flex justify-between lg:grid lg:grid-cols-[30%_40%_30%]',
 };
 
-export function HeaderRowRenderer({ row, lang, isFirstRow }: HeaderRowRendererProps) {
+export function HeaderRowRenderer({
+  row,
+  lang,
+  isFirstRow,
+}: HeaderRowRendererProps) {
   if (!row.enabled) {
     return null;
   }
 
-  const layoutClass = LAYOUT_CLASSES[row.layout] || 'flex lg:grid lg:grid-cols-3';
+  const layoutClass =
+    LAYOUT_CLASSES[row.layout] || 'flex lg:grid lg:grid-cols-3';
 
   // Calculate sticky top position: first row is top-0, subsequent rows stack below
   // Primary row (first) is typically ~64px, secondary stacks at top-16
@@ -36,7 +41,7 @@ export function HeaderRowRenderer({ row, lang, isFirstRow }: HeaderRowRendererPr
     <div
       className={cn(
         'w-full border-b border-gray-100',
-        row.fixed && `lg:sticky ${stickyTop} z-40`
+        row.fixed && `lg:sticky ${stickyTop} z-40`,
       )}
       style={{
         backgroundColor: row.backgroundColor || '#ffffff',
@@ -44,7 +49,12 @@ export function HeaderRowRenderer({ row, lang, isFirstRow }: HeaderRowRendererPr
         height: row.height ? `${row.height}px` : undefined,
       }}
     >
-      <div className={cn('mx-auto max-w-[1920px] items-center px-4 md:px-6 lg:px-8 2xl:px-10 py-2 gap-2 lg:gap-4', layoutClass)}>
+      <div
+        className={cn(
+          'mx-auto max-w-[1920px] items-center px-4 md:px-6 lg:px-8 2xl:px-10 py-2 gap-2 lg:gap-4',
+          layoutClass,
+        )}
+      >
         {row.blocks.map((block) => (
           <HeaderBlockRenderer key={block.id} block={block} lang={lang} />
         ))}

@@ -389,7 +389,11 @@ export default function SearchOverlayB2B({
             )}
 
             {/* Right: Trending carousel used as recommended products */}
-            <div className={showFiltersSection ? 'xl:col-span-9' : 'xl:col-span-12'}>
+            <div
+              className={
+                showFiltersSection ? 'xl:col-span-9' : 'xl:col-span-12'
+              }
+            >
               {showAutocomplete && (
                 <div className="mb-4">
                   <ProductsCarousel

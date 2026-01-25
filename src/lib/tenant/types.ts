@@ -135,8 +135,7 @@ export function buildTenantFromEnv(): TenantConfig {
   return {
     id: tenantId,
     name: tenantId,
-    projectCode:
-      process.env.NEXT_PUBLIC_PROJECT_CODE || `vinc-${tenantId}`,
+    projectCode: process.env.NEXT_PUBLIC_PROJECT_CODE || `vinc-${tenantId}`,
     domains: [],
     api: {
       pimApiUrl:
@@ -148,13 +147,9 @@ export function buildTenantFromEnv(): TenantConfig {
         process.env.NEXT_PUBLIC_B2B_PUBLIC_REST_API_ENDPOINT ||
         'http://localhost:8000/api/v1',
       apiKeyId:
-        process.env.API_KEY_ID ||
-        process.env.NEXT_PUBLIC_API_KEY_ID ||
-        '',
+        process.env.API_KEY_ID || process.env.NEXT_PUBLIC_API_KEY_ID || '',
       apiSecret:
-        process.env.API_SECRET ||
-        process.env.NEXT_PUBLIC_API_SECRET ||
-        '',
+        process.env.API_SECRET || process.env.NEXT_PUBLIC_API_SECRET || '',
     },
     database: {
       mongoUrl: process.env.MONGO_URL || '',

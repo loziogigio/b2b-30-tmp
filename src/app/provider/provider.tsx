@@ -15,7 +15,12 @@ interface ProvidersProps extends React.PropsWithChildren {
   isMultiTenant?: boolean;
 }
 
-function Providers({ children, initialHomeSettings, tenant, isMultiTenant = false }: ProvidersProps) {
+function Providers({
+  children,
+  initialHomeSettings,
+  tenant,
+  isMultiTenant = false,
+}: ProvidersProps) {
   const queryClientRef = React.useRef<any>(null);
   if (!queryClientRef.current) {
     queryClientRef.current = new QueryClient();

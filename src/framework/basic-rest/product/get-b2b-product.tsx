@@ -37,7 +37,10 @@ export const fetchProductList = async (
     finalParams.filters = rawFilters;
   }
 
-  console.log('[fetchProductList] Sending to PIM:', JSON.stringify(finalParams, null, 2));
+  console.log(
+    '[fetchProductList] Sending to PIM:',
+    JSON.stringify(finalParams, null, 2),
+  );
 
   // PIM API wraps response in { success, data: { results, numFound } }
   const response = await post<{
@@ -47,11 +50,15 @@ export const fetchProductList = async (
     numFound?: number;
   }>(API_ENDPOINTS_PIM.SEARCH, finalParams);
 
-  console.log('[fetchProductList] PIM response:', JSON.stringify(response, null, 2).slice(0, 500));
+  console.log(
+    '[fetchProductList] PIM response:',
+    JSON.stringify(response, null, 2).slice(0, 500),
+  );
 
   // Handle both wrapped { success, data } and direct { results, numFound } formats
   const rawProducts = response.data?.results || response.results || [];
-  const total = response.data?.numFound ?? response.data?.total ?? response.numFound ?? 0;
+  const total =
+    response.data?.numFound ?? response.data?.total ?? response.numFound ?? 0;
   const products = transformProduct(rawProducts);
 
   // Calculate if there is a next page

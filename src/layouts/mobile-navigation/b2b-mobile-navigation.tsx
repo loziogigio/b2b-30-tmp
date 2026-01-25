@@ -8,9 +8,9 @@ import HomeIcon from '@components/icons/home-icon';
 import { useUI } from '@contexts/ui.context';
 import { ROUTES } from '@utils/routes';
 import dynamic from 'next/dynamic';
-import { useModalAction } from '@components/common/modal/modal.context';
 import { useTranslation } from 'src/app/i18n/client';
 import { HiOutlineViewGrid } from 'react-icons/hi';
+import { useSSOLogin } from '@/hooks/use-sso-login';
 
 const CartButton = dynamic(() => import('@components/cart/cart-button'), {
   ssr: false,
@@ -28,7 +28,7 @@ export default function BottomNavigation({ lang }: { lang: string }) {
     closeCategories,
     openCategories,
   } = useUI();
-  const { openModal } = useModalAction();
+  const { login } = useSSOLogin(lang);
 
   // Prevent hydration mismatch - isAuthorized depends on localStorage
   const [mounted, setMounted] = useState(false);
@@ -37,7 +37,7 @@ export default function BottomNavigation({ lang }: { lang: string }) {
   }, []);
 
   function handleLogin() {
-    openModal('LOGIN_VIEW');
+    login();
   }
 
   return (

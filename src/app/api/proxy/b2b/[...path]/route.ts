@@ -20,7 +20,10 @@ async function getTenantConfig(req: NextRequest) {
   }
 
   // Multi-tenant: resolve from hostname
-  const hostname = req.headers.get('x-tenant-hostname') || req.headers.get('host') || 'localhost';
+  const hostname =
+    req.headers.get('x-tenant-hostname') ||
+    req.headers.get('host') ||
+    'localhost';
   const tenant = await resolveTenant(hostname);
 
   if (!tenant) {
@@ -33,7 +36,9 @@ async function getTenantConfig(req: NextRequest) {
 
   // Log tenant config for debugging
   if (!tenant.api.b2bApiUrl) {
-    console.warn(`[B2B Proxy] Tenant ${tenant.id} missing b2bApiUrl, using default`);
+    console.warn(
+      `[B2B Proxy] Tenant ${tenant.id} missing b2bApiUrl, using default`,
+    );
   }
 
   return {
@@ -98,7 +103,9 @@ async function proxyRequest(
     const response = await fetch(targetUrl.toString(), fetchOptions);
 
     // Log the response status
-    console.log(`[B2B Proxy] Response: ${response.status} ${response.statusText}`);
+    console.log(
+      `[B2B Proxy] Response: ${response.status} ${response.statusText}`,
+    );
 
     // Handle non-JSON responses
     const contentType = response.headers.get('content-type');

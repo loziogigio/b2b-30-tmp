@@ -59,14 +59,21 @@ export function transformProduct(rawProducts: RawProduct[]): Product[] {
     const image: Attachment = {
       id: 1,
       thumbnail: mainImageUrl,
-      original: rawImage?.original || (item as any).cover_image_url || firstImage?.url || firstImage?.original || mainImageUrl,
+      original:
+        rawImage?.original ||
+        (item as any).cover_image_url ||
+        firstImage?.url ||
+        firstImage?.original ||
+        mainImageUrl,
     };
 
-    const gallery: Attachment[] = imagesArray.map((img: any, index: number) => ({
-      id: index + 1,
-      thumbnail: img?.url || img?.main || img?.thumbnail || '',
-      original: img?.url || img?.original || '',
-    }));
+    const gallery: Attachment[] = imagesArray.map(
+      (img: any, index: number) => ({
+        id: index + 1,
+        thumbnail: img?.url || img?.main || img?.thumbnail || '',
+        original: img?.url || img?.original || '',
+      }),
+    );
 
     const brand: Brand | undefined = item.brand
       ? {

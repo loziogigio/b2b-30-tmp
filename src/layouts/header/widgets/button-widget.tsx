@@ -13,7 +13,8 @@ interface ButtonWidgetProps {
 const variantStyles: Record<string, string> = {
   primary: 'bg-[#a52a2a] text-white shadow-sm',
   secondary: 'bg-brand text-white shadow-sm',
-  outline: 'border border-slate-300 text-slate-700 hover:border-brand hover:text-brand',
+  outline:
+    'border border-slate-300 text-slate-700 hover:border-brand hover:text-brand',
   ghost: 'text-slate-700 hover:text-brand',
 };
 
@@ -27,7 +28,9 @@ export function ButtonWidget({ config, lang }: ButtonWidgetProps) {
   if (isAccountLink && !isAuthorized) return null;
 
   const variant = config.variant || 'outline';
-  const href = config.url.startsWith('/') ? `/${lang}${config.url}` : config.url;
+  const href = config.url.startsWith('/')
+    ? `/${lang}${config.url}`
+    : config.url;
 
   return (
     <Link

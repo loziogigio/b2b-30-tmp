@@ -4,13 +4,18 @@ import { Inter, Manrope } from 'next/font/google';
 import { dir } from 'i18next';
 import { languages } from '../i18n/settings';
 import ManagedDrawer from '@components/common/drawer/managed-drawer';
-import { Metadata } from 'next';
+import { Metadata, Viewport } from 'next';
 import ToasterProvider from 'src/app/provider/toaster-provider';
 import Providers from 'src/app/provider/provider';
 import { getServerHomeSettings } from '@/lib/home-settings/fetch-server';
 import { EliaDrawer } from '@components/elia/elia-drawer';
 import { headers } from 'next/headers';
-import { resolveTenant, isMultiTenant, hasCriticalErrors, logTenantConfigIssues } from '@/lib/tenant';
+import {
+  resolveTenant,
+  isMultiTenant,
+  hasCriticalErrors,
+  logTenantConfigIssues,
+} from '@/lib/tenant';
 import { toPublicInfo, buildTenantFromEnv } from '@/lib/tenant/types';
 import TenantDisabled from '@components/tenant/tenant-disabled';
 import TenantConfigError from '@components/tenant/tenant-config-error';
@@ -108,11 +113,6 @@ export async function generateMetadata(): Promise<Metadata> {
     }),
   };
 
-  // Theme color
-  if (metaTags?.themeColor) {
-    metadata.themeColor = metaTags.themeColor;
-  }
-
   // Verification
   if (metaTags?.googleSiteVerification || metaTags?.bingSiteVerification) {
     metadata.verification = {
@@ -126,6 +126,18 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 
   return metadata;
+}
+
+// Viewport configuration (themeColor moved here from metadata per Next.js 14+)
+export async function generateViewport(): Promise<Viewport> {
+  const homeSettings = await getServerHomeSettings();
+  const metaTags = homeSettings?.meta_tags;
+
+  return {
+    themeColor: metaTags?.themeColor || '#009f7f',
+    width: 'device-width',
+    initialScale: 1,
+  };
 }
 
 // Force dynamic rendering for all pages to avoid timeout during Docker build

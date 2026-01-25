@@ -1,34 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { vincApi, VincApiError, getVincApiForTenant } from '@/lib/vinc-api';
-import type { B2BAddress } from '@/lib/vinc-api/types';
 import type { AddressB2B } from '@framework/acccount/types-b2b-account';
 import { resolveTenant, isMultiTenant } from '@/lib/tenant';
 
-/**
- * Transform VINC API B2BAddress to AddressB2B format
- * Maps fields from PostgreSQL model to the UI model
- */
-function transformVincAddress(addr: B2BAddress): AddressB2B {
-  const title = addr.city
-    ? `${addr.street || addr.label || ''} - ${addr.city}`
-    : addr.street || addr.label || addr.erp_address_id;
+// PIM API response type
+interface PIMAddressResponse {
+  id: string;
+  title: string;
+  isLegalSeat?: boolean;
+  isDefault?: boolean;
+  address: {
+    street_address: string;
+    city: string;
+    state: string;
+    zip: string;
+    country: string;
+  };
+  contact?: {
+    phone?: string;
+    email?: string;
+  };
+  paymentTerms?: {
+    code?: string;
+  };
+}
 
+/**
+ * Transform PIM API address response to AddressB2B format
+ */
+function transformPimAddress(addr: PIMAddressResponse): AddressB2B {
   return {
-    id: addr.erp_address_id,
-    title,
-    isLegalSeat: false, // VINC API doesn't have legal seat info, ERP fallback provides this
-    isDefault: addr.is_default || false,
+    id: addr.id,
+    title: addr.title,
+    isLegalSeat: addr.isLegalSeat || false,
+    isDefault: addr.isDefault || false,
     address: {
-      street_address: addr.street || '',
-      city: addr.city || '',
-      state: addr.province || '',
-      zip: addr.zip || '',
-      country: addr.country || '',
+      street_address: addr.address.street_address || '',
+      city: addr.address.city || '',
+      state: addr.address.state || '',
+      zip: addr.address.zip || '',
+      country: addr.address.country || '',
     },
     contact: {
-      phone: addr.phone || undefined,
+      phone: addr.contact?.phone,
       mobile: undefined,
-      email: addr.email || undefined,
+      email: addr.contact?.email,
     },
     agent: {
       code: undefined,
@@ -37,7 +52,7 @@ function transformVincAddress(addr: B2BAddress): AddressB2B {
       phone: undefined,
     },
     paymentTerms: {
-      code: addr.payment_terms_code || undefined,
+      code: addr.paymentTerms?.code,
       label: undefined,
     },
     port: {
@@ -67,8 +82,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get VINC API client (multi-tenant aware)
-    let api = vincApi;
+    // Resolve tenant
+    let tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'default';
+    // Use PIM_API_URL for addresses (not SSO)
+    let pimApiUrl = process.env.PIM_API_URL;
+
     if (isMultiTenant) {
       const hostname =
         request.headers.get('x-tenant-hostname') ||
@@ -77,23 +95,68 @@ export async function POST(request: NextRequest) {
       const tenant = await resolveTenant(hostname);
 
       if (!tenant) {
-        console.error('[b2b/addresses] Tenant not found for hostname:', hostname);
+        console.error(
+          '[b2b/addresses] Tenant not found for hostname:',
+          hostname,
+        );
         return NextResponse.json(
           { success: false, message: 'Tenant not found' },
           { status: 404 },
         );
       }
 
-      api = getVincApiForTenant({ projectCode: tenant.projectCode });
+      tenantId = tenant.id;
+      pimApiUrl = tenant.api.pimApiUrl || pimApiUrl;
     }
 
-    // Call VINC API to get addresses
-    const addresses = await api.b2b.getAddresses(customer_id);
+    if (!pimApiUrl) {
+      console.error('[b2b/addresses] PIM_API_URL not configured');
+      return NextResponse.json(
+        { success: false, message: 'PIM API not configured' },
+        { status: 500 },
+      );
+    }
+
+    // Call PIM API to get addresses
+    const endpoint = `${pimApiUrl}/api/b2b/addresses`;
+    console.log('[b2b/addresses] Calling PIM API:', {
+      pimApiUrl,
+      tenantId,
+      customer_id,
+      endpoint,
+    });
+
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Tenant-ID': tenantId,
+      },
+      body: JSON.stringify({
+        customer_id,
+        tenant_id: tenantId,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[b2b/addresses] PIM API error:', {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorText,
+      });
+      return NextResponse.json(
+        { success: false, message: `PIM API error: ${response.status}` },
+        { status: response.status },
+      );
+    }
+
+    const data = await response.json();
 
     // Transform to AddressB2B format and sort default address first
-    const transformedAddresses = addresses
-      .filter((addr) => addr.is_active)
-      .map(transformVincAddress)
+    const addresses = data.addresses || data || [];
+    const transformedAddresses = (Array.isArray(addresses) ? addresses : [])
+      .map(transformPimAddress)
       .sort((a, b) => {
         // Default address first
         if (a.isDefault && !b.isDefault) return -1;
@@ -107,16 +170,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('[b2b/addresses] Error:', error);
-
-    if (error instanceof VincApiError) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: error.detail || 'Failed to fetch addresses',
-        },
-        { status: error.status },
-      );
-    }
 
     return NextResponse.json(
       { success: false, message: 'An error occurred' },

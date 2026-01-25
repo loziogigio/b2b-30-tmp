@@ -93,7 +93,7 @@ export async function POST(request: Request) {
         success: true,
         cleared: 'hostname',
         value: hostname,
-        message: `Cache cleared for hostname: ${hostname}`
+        message: `Cache cleared for hostname: ${hostname}`,
       });
     }
 
@@ -106,7 +106,7 @@ export async function POST(request: Request) {
         success: true,
         cleared: 'all',
         tenantId,
-        message: `All cache cleared for tenant: ${tenantId}`
+        message: `All cache cleared for tenant: ${tenantId}`,
       });
     }
 
@@ -115,13 +115,13 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       cleared: 'all',
-      message: 'All tenant cache cleared'
+      message: 'All tenant cache cleared',
     });
   } catch (error) {
     console.error('[Admin] Failed to clear cache:', error);
     return NextResponse.json(
       { error: 'Failed to clear cache' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

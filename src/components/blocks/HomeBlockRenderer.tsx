@@ -351,7 +351,8 @@ const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({
           // Only show placeholder in builder/preview mode
           showZoneLabels ? (
             <div className="rounded-md border border-dashed border-slate-300 bg-slate-50 px-6 py-8 text-center text-sm text-slate-500">
-              Configure a search keyword in the builder to populate this carousel.
+              Configure a search keyword in the builder to populate this
+              carousel.
             </div>
           ) : null
         ) : error ? (

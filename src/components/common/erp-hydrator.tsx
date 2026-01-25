@@ -1,12 +1,17 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { hydrateErpStatic, hasValidErpContext } from '@framework/utils/static';
+import {
+  hydrateErpStatic,
+  hasValidErpContext,
+  applyVincProfileToErpStatic,
+} from '@framework/utils/static';
 import { useUI } from '@contexts/ui.context';
 import { useAddressQuery } from '@framework/acccount/fetch-account';
 import { useDeliveryAddress } from '@contexts/address/address.context';
 import { API_ENDPOINTS_B2B } from '@framework/utils/api-endpoints-b2b';
+import Cookies from 'js-cookie';
 
 /**
  * ErpHydrator - Ensures ERP_STATIC is properly loaded from localStorage on client-side.
@@ -19,9 +24,10 @@ import { API_ENDPOINTS_B2B } from '@framework/utils/api-endpoints-b2b';
  * from localStorage and invalidates relevant queries to trigger re-fetches.
  */
 export default function ErpHydrator() {
-  const { isAuthorized } = useUI();
+  const { isAuthorized, authorize } = useUI();
   const queryClient = useQueryClient();
   const [hydrated, setHydrated] = useState(false);
+  const [profileFetched, setProfileFetched] = useState(false);
 
   // Track previous auth state to detect login/logout transitions
   const prevIsAuthorizedRef = useRef<boolean | null>(null);
@@ -31,6 +37,97 @@ export default function ErpHydrator() {
   const { data: addresses } = useAddressQuery(isAuthorized && hydrated);
   const { selected, setSelectedAddress, resetSelectedAddress } =
     useDeliveryAddress();
+
+  // Handle SSO callback - fetch user profile if coming from SSO login
+  const fetchSSOProfile = useCallback(async () => {
+    const pendingFlag = Cookies.get('sso_profile_pending');
+    if (!pendingFlag) return;
+
+    // Clear the flag immediately
+    Cookies.remove('sso_profile_pending', { path: '/' });
+
+    try {
+      // First, try to read profile from cookie (set by callback route)
+      const profileCookie = Cookies.get('sso_user_profile');
+      if (profileCookie) {
+        Cookies.remove('sso_user_profile', { path: '/' });
+        try {
+          const user = JSON.parse(profileCookie);
+          console.log('[ErpHydrator] Got user profile from cookie:', user);
+          console.log('[ErpHydrator] user.customers:', user.customers);
+
+          const profile = {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            status: 'active',
+            supplier_id: user.supplier_id,
+            supplier_name: user.supplier_name,
+            customers: user.customers || [],
+          };
+
+          // Store profile in localStorage
+          applyVincProfileToErpStatic(profile);
+
+          // Trigger UI authorization
+          authorize();
+
+          // Mark profile as fetched to trigger hydration
+          setProfileFetched(true);
+          return;
+        } catch (parseError) {
+          console.error(
+            '[ErpHydrator] Failed to parse profile cookie:',
+            parseError,
+          );
+        }
+      }
+
+      // Fallback: Fetch user profile from validate endpoint
+      console.log('[ErpHydrator] Fetching profile from validate endpoint');
+      const response = await fetch('/api/auth/validate', {
+        method: 'GET',
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('[ErpHydrator] Validate response:', data);
+        console.log('[ErpHydrator] data.user.customers:', data.user?.customers);
+
+        if (data.authenticated && data.user) {
+          // Map the validate response to the profile format expected by applyVincProfileToErpStatic
+          const profile = {
+            id: data.user.id,
+            email: data.user.email,
+            name: data.user.name,
+            role: data.user.role,
+            status: 'active',
+            supplier_id: data.user.supplier_id,
+            supplier_name: data.user.supplier_name,
+            customers: data.user.customers || [],
+          };
+
+          // Store profile in localStorage
+          applyVincProfileToErpStatic(profile);
+
+          // Trigger UI authorization
+          authorize();
+
+          // Mark profile as fetched to trigger hydration
+          setProfileFetched(true);
+        }
+      }
+    } catch (error) {
+      console.error('[ErpHydrator] Failed to fetch SSO profile:', error);
+    }
+  }, [authorize]);
+
+  // Check for SSO profile pending on mount
+  useEffect(() => {
+    fetchSSOProfile();
+  }, [fetchSSOProfile]);
 
   useEffect(() => {
     // Only run on client-side
@@ -51,7 +148,7 @@ export default function ErpHydrator() {
     }
 
     setHydrated(true);
-  }, [isAuthorized, queryClient]);
+  }, [isAuthorized, queryClient, profileFetched]);
 
   // Track if we just logged in to force address selection from API
   const justLoggedInRef = useRef(false);
