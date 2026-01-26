@@ -45,7 +45,9 @@ export let ERP_STATIC: ErpStaticState =
   } as ErpStaticState);
 
 export function setErpStatic(next: Partial<ErpStaticState>) {
-  ERP_STATIC = { ...ERP_STATIC, ...next } as ErpStaticState;
+  // IMPORTANT: Mutate the existing object instead of replacing it
+  // This ensures all modules that imported ERP_STATIC see the updated values
+  Object.assign(ERP_STATIC, next);
   saveState(ERP_STATIC);
 }
 
@@ -120,8 +122,8 @@ export function clearErpStatic() {
   try {
     if (typeof window === 'undefined') return;
     window.localStorage.removeItem(LS_KEY);
-    // Reset the in-memory state
-    ERP_STATIC = {
+    // Reset the in-memory state by mutating (not replacing)
+    Object.assign(ERP_STATIC, {
       id_cart: '0',
       customer_code: '0',
       address_code: '0',
@@ -130,7 +132,7 @@ export function clearErpStatic() {
       ext_call: true,
       vinc_customer_id: undefined,
       vinc_address_id: undefined,
-    };
+    });
   } catch {}
 }
 
@@ -144,8 +146,8 @@ export function clearAllB2BSessionData() {
     window.localStorage.removeItem('b2b-delivery-address');
     // Clear cart
     window.localStorage.removeItem('vinc-b2b-cart');
-    // Reset the in-memory state
-    ERP_STATIC = {
+    // Reset the in-memory state by mutating (not replacing)
+    Object.assign(ERP_STATIC, {
       id_cart: '0',
       customer_code: '0',
       address_code: '0',
@@ -154,7 +156,7 @@ export function clearAllB2BSessionData() {
       ext_call: true,
       vinc_customer_id: undefined,
       vinc_address_id: undefined,
-    };
+    });
   } catch {}
 }
 
@@ -169,7 +171,8 @@ export function hydrateErpStatic(): boolean {
       (stored?.customer_code && stored.customer_code !== '0') ||
       stored?.vinc_customer_id;
     if (stored && hasValidContext) {
-      ERP_STATIC = stored;
+      // Mutate the existing object instead of replacing
+      Object.assign(ERP_STATIC, stored);
       return true;
     }
     return false;
