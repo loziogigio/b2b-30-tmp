@@ -37,14 +37,11 @@ export type TenantResolveResult =
 
 /**
  * Get SSO API URL with consistent priority.
- * Priority: SSO_API_URL > NEXT_PUBLIC_SSO_URL > PIM_API_URL
+ * Priority: SSO_API_URL > NEXT_PUBLIC_SSO_URL
  */
 export function getDefaultSsoApiUrl(): string {
   return (
-    process.env.SSO_API_URL ||
-    process.env.NEXT_PUBLIC_SSO_URL ||
-    process.env.PIM_API_URL ||
-    'http://localhost:3001'
+    process.env.SSO_API_URL || process.env.NEXT_PUBLIC_SSO_URL || ''
   );
 }
 

@@ -4,12 +4,9 @@
  * Helpers for OAuth-style redirect flow with Commerce Suite SSO.
  */
 
-// SSO API URL priority: SSO_API_URL > NEXT_PUBLIC_SSO_URL > PIM_API_URL
+// SSO API URL priority: SSO_API_URL > NEXT_PUBLIC_SSO_URL
 const SSO_API_URL =
-  process.env.SSO_API_URL ||
-  process.env.NEXT_PUBLIC_SSO_URL ||
-  process.env.PIM_API_URL ||
-  '';
+  process.env.SSO_API_URL || process.env.NEXT_PUBLIC_SSO_URL || '';
 const APP_URL = process.env.NEXT_PUBLIC_WEBSITE_URL || '';
 const CLIENT_ID = 'vinc-b2b';
 
@@ -77,13 +74,11 @@ export function getSSOLogoutUrl(
 export function getClientSSOLogoutUrl(
   params: { returnUrl?: string; ssoUrl?: string } = {},
 ): string {
-  // Priority: params.ssoUrl (from tenant) > NEXT_PUBLIC_SSO_URL > NEXT_PUBLIC_B2B_BUILDER_URL
+  // Priority: params.ssoUrl (from tenant) > NEXT_PUBLIC_SSO_URL
   const ssoUrl =
     params.ssoUrl ||
     (typeof window !== 'undefined'
-      ? process.env.NEXT_PUBLIC_SSO_URL ||
-        process.env.NEXT_PUBLIC_B2B_BUILDER_URL ||
-        ''
+      ? process.env.NEXT_PUBLIC_SSO_URL || ''
       : SSO_API_URL);
 
   const appUrl =
@@ -105,13 +100,11 @@ export function getClientSSOLogoutUrl(
  * Uses NEXT_PUBLIC_ env vars available in browser
  */
 export function getClientSSOLoginUrl(params: SSORedirectParams = {}): string {
-  // Priority: params.ssoUrl (from tenant) > NEXT_PUBLIC_SSO_URL > NEXT_PUBLIC_B2B_BUILDER_URL
+  // Priority: params.ssoUrl (from tenant) > NEXT_PUBLIC_SSO_URL
   const ssoUrl =
     params.ssoUrl ||
     (typeof window !== 'undefined'
-      ? process.env.NEXT_PUBLIC_SSO_URL ||
-        process.env.NEXT_PUBLIC_B2B_BUILDER_URL ||
-        ''
+      ? process.env.NEXT_PUBLIC_SSO_URL || ''
       : SSO_API_URL);
 
   const appUrl =

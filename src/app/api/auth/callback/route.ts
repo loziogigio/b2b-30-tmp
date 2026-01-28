@@ -23,14 +23,37 @@ export async function GET(request: NextRequest) {
 
   if (isMultiTenant) {
     const hostname = getHostnameFromRequest(request);
+    console.log(
+      '[auth/callback] Multi-tenant mode, resolving tenant for hostname:',
+      hostname,
+    );
+
     const tenant = await resolveTenant(hostname);
 
     if (tenant) {
       tenantId = tenant.id;
       // SSO_API_URL_OVERRIDE takes precedence (for local dev)
+      // Then try api.pimApiUrl, then builderUrl, then fallback
       ssoApiUrl =
-        process.env.SSO_API_URL_OVERRIDE || tenant.api.pimApiUrl || ssoApiUrl;
+        process.env.SSO_API_URL_OVERRIDE ||
+        tenant.api.pimApiUrl ||
+        tenant.builderUrl ||
+        ssoApiUrl;
+      console.log('[auth/callback] Tenant resolved:', {
+        tenantId,
+        pimApiUrl: tenant.api.pimApiUrl,
+        builderUrl: tenant.builderUrl,
+        ssoApiUrl,
+      });
+    } else {
+      console.error('[auth/callback] Tenant not found for hostname:', hostname);
+      console.log('[auth/callback] Using fallback SSO URL:', ssoApiUrl);
     }
+  } else {
+    console.log(
+      '[auth/callback] Single-tenant mode, using SSO URL:',
+      ssoApiUrl,
+    );
   }
 
   // Handle error from SSO
