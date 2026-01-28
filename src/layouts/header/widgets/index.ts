@@ -11,3 +11,4 @@ export { CompanyInfoWidget } from './company-info-widget';
 export { ButtonWidget } from './button-widget';
 export { SpacerWidget } from './spacer-widget';
 export { DividerWidget } from './divider-widget';
+export { PushNotificationWidget } from './push-notification-widget';

@@ -8,6 +8,8 @@ export type ErpStaticState = {
   // VINC API fields (UUIDs)
   vinc_customer_id?: string;
   vinc_address_id?: string;
+  // Tenant/project code for multi-tenant deployments
+  project_code?: string;
 };
 
 // Persistent key
@@ -140,12 +142,19 @@ export function clearErpStatic() {
 export function clearAllB2BSessionData() {
   try {
     if (typeof window === 'undefined') return;
+    console.log('[clearAllB2BSessionData] Clearing all B2B session data...');
     // Clear ERP static
     window.localStorage.removeItem(LS_KEY);
     // Clear delivery address
     window.localStorage.removeItem('b2b-delivery-address');
     // Clear cart
     window.localStorage.removeItem('vinc-b2b-cart');
+    // Clear likes (customer-specific)
+    window.localStorage.removeItem('likes-state');
+    console.log('[clearAllB2BSessionData] Cleared likes-state');
+    // Clear reminders (customer-specific) - uses 'vinc-app-reminders' key
+    window.localStorage.removeItem('vinc-app-reminders');
+    console.log('[clearAllB2BSessionData] Cleared vinc-app-reminders');
     // Reset the in-memory state by mutating (not replacing)
     Object.assign(ERP_STATIC, {
       id_cart: '0',

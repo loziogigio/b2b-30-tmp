@@ -41,10 +41,10 @@ export const useLogoutMutation = (lang: string) => {
       // 4. Clear cookies client-side
       clearAllCookies();
 
-      // 5. Navigate via server redirect endpoint
-      // This ensures cookies are deleted as part of the HTTP 302 redirect response,
-      // which is more reliable than client-side deletion + navigation
-      window.location.href = `/api/auth/logout?lang=${lang}`;
+      // 5. Redirect to home page
+      // Note: SSO federated logout is not implemented yet on the SSO server
+      // For now, just clear local session and redirect to home
+      window.location.href = `/${lang}`;
     },
     onError: (error) => {
       console.log(error, 'logout error response');

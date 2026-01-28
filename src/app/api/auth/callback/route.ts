@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { resolveTenant, isMultiTenant } from '@/lib/tenant';
 
-const SSO_API_URL = process.env.SSO_API_URL || process.env.PIM_API_URL || '';
+// SSO API URL priority: SSO_API_URL > NEXT_PUBLIC_SSO_URL > PIM_API_URL
+const SSO_API_URL =
+  process.env.SSO_API_URL ||
+  process.env.NEXT_PUBLIC_SSO_URL ||
+  process.env.PIM_API_URL ||
+  '';
 const CLIENT_ID = 'vinc-b2b';
 const CLIENT_SECRET = process.env.SSO_CLIENT_SECRET || '';
 
@@ -56,7 +61,21 @@ export async function GET(request: NextRequest) {
 
   try {
     // Build callback URL (must match what was sent to SSO)
-    const callbackUrl = `${request.nextUrl.origin}/api/auth/callback`;
+    // Use x-forwarded-host or host header to get the actual public URL
+    // (request.nextUrl.origin may return internal Docker address like 0.0.0.0:3000)
+    const forwardedHost = request.headers.get('x-forwarded-host');
+    const host = request.headers.get('host');
+    const forwardedProto = request.headers.get('x-forwarded-proto') || 'https';
+
+    let callbackUrl: string;
+    if (forwardedHost) {
+      callbackUrl = `${forwardedProto}://${forwardedHost}/api/auth/callback`;
+    } else if (host && !host.includes('0.0.0.0') && !host.includes('127.0.0.1')) {
+      callbackUrl = `${forwardedProto}://${host}/api/auth/callback`;
+    } else {
+      callbackUrl = `${request.nextUrl.origin}/api/auth/callback`;
+    }
+
     const tokenEndpoint = `${ssoApiUrl}/api/auth/token`;
 
     // Log the request details (without secrets)
@@ -149,11 +168,22 @@ export async function GET(request: NextRequest) {
     const cookieStore = await cookies();
 
     // Access token - must be 'auth_token' to match getToken() in UI context
+    const expiresIn = tokenData.expires_in || 900;
     cookieStore.set('auth_token', tokenData.access_token, {
       httpOnly: false, // Needed for client-side JS (getToken uses js-cookie)
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: tokenData.expires_in || 900,
+      maxAge: expiresIn,
+      path: '/',
+    });
+
+    // Store token expiration timestamp for client-side auto-refresh
+    const expiresAt = Date.now() + expiresIn * 1000;
+    cookieStore.set('auth_token_expires_at', String(expiresAt), {
+      httpOnly: false, // Client needs to read this for auto-refresh
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: expiresIn,
       path: '/',
     });
 
@@ -210,6 +240,15 @@ export async function GET(request: NextRequest) {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 60, // Short-lived, just for the redirect
+      path: '/',
+    });
+
+    // Store tenant ID for multi-tenant deployments (used for likes/reminders user ID)
+    cookieStore.set('sso_tenant_id', tenantId, {
+      httpOnly: false, // Client needs to read this for ERP_STATIC
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7, // 7 days (same as session)
       path: '/',
     });
 

@@ -53,4 +53,11 @@ export const API_ENDPOINTS_B2B = {
     CLEAR_ALL: (userId: string) => `/reminders/user/${userId}/all`,
     HEALTH: '/reminders/health',
   },
+  PUSH: {
+    VAPID_PUBLIC_KEY: '/push/vapid-public-key',
+    SUBSCRIBE: '/push/subscribe',
+    UNSUBSCRIBE: '/push/unsubscribe',
+    PREFERENCES: '/push/preferences',
+    TRACK_CLICK: (pushId: string) => `/push/track/click/${pushId}`,
+  },
 };

@@ -10,6 +10,7 @@ import {
   FavoritesWidget,
   CompareWidget,
   NoPriceWidget,
+  PushNotificationWidget,
   CategoryMenuWidget,
   CompanyInfoWidget,
   ButtonWidget,
@@ -52,6 +53,10 @@ export function HeaderWidgetRenderer({
 
     case 'no-price':
       return <NoPriceWidget config={widget.config} lang={lang} />;
+
+    case 'push-notification':
+    case 'notifications': // Also support 'notifications' type name
+      return <PushNotificationWidget config={widget.config} lang={lang} />;
 
     case 'category-menu':
     case 'categories': // Also support 'categories' type name

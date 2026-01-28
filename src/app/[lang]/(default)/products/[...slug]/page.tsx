@@ -3,45 +3,7 @@ import { getProductDetailBlocks as getProductDetailBlocksOld } from '@/lib/db/pr
 import { getProductDetailBlocks as getProductDetailBlocksNew } from '@/lib/db/product-templates-simple';
 import { ProductDetailWithPreview } from '@components/product/ProductDetailWithPreview';
 import { getServerHomeSettings } from '@/lib/home-settings/fetch-server';
-
-// Server-side product fetch for SEO metadata
-async function fetchProductForSeo(sku: string) {
-  const PIM_API_BASE_URL =
-    process.env.NEXT_PUBLIC_PIM_API_URL || 'http://localhost:3001';
-  const url = `${PIM_API_BASE_URL}/api/search/search`;
-
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-API-Key': process.env.NEXT_PUBLIC_API_KEY_ID || '',
-        'X-API-Secret': process.env.NEXT_PUBLIC_API_SECRET || '',
-      },
-      body: JSON.stringify({
-        lang: 'it',
-        text: '',
-        rows: 1,
-        filters: { sku: [sku] },
-      }),
-      next: { revalidate: 300 }, // Cache for 5 minutes
-    });
-
-    if (!response.ok) return null;
-
-    const data = await response.json();
-    if (!data.success || !data.data?.results?.length) return null;
-
-    const product = data.data.results[0];
-    // If product has variants, use the first variant
-    if (Array.isArray(product.variants) && product.variants.length > 0) {
-      return { ...product, ...product.variants[0] };
-    }
-    return product;
-  } catch {
-    return null;
-  }
-}
+import { fetchProductForSeo } from '@/lib/seo/fetch-product';
 
 // Generate dynamic SEO metadata for product pages
 export async function generateMetadata({
@@ -55,7 +17,7 @@ export async function generateMetadata({
     : slugSegments;
 
   const [product, homeSettings] = await Promise.all([
-    fetchProductForSeo(sku),
+    fetchProductForSeo(sku, lang),
     getServerHomeSettings(),
   ]);
 

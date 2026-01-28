@@ -138,6 +138,7 @@ fi
 echo "  PIM/Commerce Suite:"
 echo "    NEXT_PUBLIC_PIM_API_URL=${NEXT_PUBLIC_PIM_API_URL}"
 echo "    PIM_API_PRIVATE_URL=${PIM_API_PRIVATE_URL}"
+echo "    NEXT_PUBLIC_SSO_URL=${NEXT_PUBLIC_SSO_URL}"
 echo "    NEXT_PUBLIC_B2B_BUILDER_URL=${NEXT_PUBLIC_B2B_BUILDER_URL}"
 echo ""
 echo "  Storefront:"
@@ -171,6 +172,7 @@ docker build \
   --build-arg API_SECRET="${API_SECRET:-}" \
   --build-arg NEXT_PUBLIC_PIM_API_URL="${NEXT_PUBLIC_PIM_API_URL:-}" \
   --build-arg PIM_API_PRIVATE_URL="${PIM_API_PRIVATE_URL:-}" \
+  --build-arg NEXT_PUBLIC_SSO_URL="${NEXT_PUBLIC_SSO_URL:-}" \
   --build-arg NEXT_PUBLIC_B2B_BUILDER_URL="${NEXT_PUBLIC_B2B_BUILDER_URL:-}" \
   --build-arg NEXT_PUBLIC_WEBSITE_URL="${NEXT_PUBLIC_WEBSITE_URL:-}" \
   --build-arg VINC_STOREFRONT_URL="${VINC_STOREFRONT_URL:-}" \

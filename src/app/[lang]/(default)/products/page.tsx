@@ -1,7 +1,115 @@
+import { Metadata } from 'next';
 import { getProductDetailBlocks as getProductDetailBlocksOld } from '@/lib/db/product-templates';
 import { getProductDetailBlocks as getProductDetailBlocksNew } from '@/lib/db/product-templates-simple';
 import { ProductDetailWithPreview } from '@components/product/ProductDetailWithPreview';
+import { getServerHomeSettings } from '@/lib/home-settings/fetch-server';
+import { fetchProductForSeo } from '@/lib/seo/fetch-product';
 import ProductsPageContent from './products-page-content';
+
+// Generate dynamic SEO metadata for product pages (query param version)
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ lang: string }>;
+  searchParams?: Promise<{ sku?: string; preview?: string }>;
+}): Promise<Metadata> {
+  const { lang } = await params;
+  const search = await searchParams;
+  const sku = search?.sku;
+
+  // If no SKU, return default metadata for product list page
+  if (!sku) {
+    const homeSettings = await getServerHomeSettings();
+    const brandingTitle = homeSettings?.branding?.title || 'VINC - B2B';
+    return {
+      title: `Prodotti | ${brandingTitle}`,
+      description: 'Catalogo prodotti',
+    };
+  }
+
+  const [product, homeSettings] = await Promise.all([
+    fetchProductForSeo(sku, lang),
+    getServerHomeSettings(),
+  ]);
+
+  const brandingTitle = homeSettings?.branding?.title || 'VINC - B2B';
+  const siteUrl = process.env.NEXT_PUBLIC_WEBSITE_URL || '';
+
+  // Fallback metadata if product not found
+  if (!product) {
+    return {
+      title: `${sku} | ${brandingTitle}`,
+      description: `Prodotto ${sku}`,
+    };
+  }
+
+  const productName = product.name || sku;
+  const productDescription =
+    product.short_description ||
+    product.description?.replace(/<[^>]*>/g, '').slice(0, 160) ||
+    `${productName} - SKU: ${sku}`;
+
+  // Get product image
+  const productImage =
+    product.cover_image_url ||
+    product.image?.original ||
+    product.images?.[0]?.url ||
+    '';
+
+  // Build canonical URL (prefer slug-based URL as canonical)
+  const canonicalUrl = `${siteUrl}/${lang}/products/${sku}`;
+
+  // Build keywords from brand, SKU, and product name
+  const keywords = [
+    sku,
+    productName,
+    product.brand?.label,
+    product.brand?.slug,
+  ].filter(Boolean);
+
+  const metadata: Metadata = {
+    title: `${productName} | ${sku}`,
+    description: productDescription,
+    keywords: keywords.join(', '),
+    alternates: {
+      canonical: canonicalUrl,
+      languages: {
+        it: `${siteUrl}/it/products/${sku}`,
+        en: `${siteUrl}/en/products/${sku}`,
+      },
+    },
+    openGraph: {
+      title: `${productName} - ${sku}`,
+      description: productDescription,
+      url: canonicalUrl,
+      siteName: brandingTitle,
+      type: 'website',
+      locale: lang === 'it' ? 'it_IT' : 'en_US',
+      images: productImage
+        ? [
+            {
+              url: productImage,
+              width: 1200,
+              height: 1200,
+              alt: productName,
+            },
+          ]
+        : [],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${productName} - ${sku}`,
+      description: productDescription,
+      images: productImage ? [productImage] : [],
+    },
+    robots: {
+      index: true,
+      follow: true,
+    },
+  };
+  return metadata;
+}
 
 export default async function Page({
   params,

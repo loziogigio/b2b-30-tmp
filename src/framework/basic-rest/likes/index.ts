@@ -82,12 +82,18 @@ export interface LikeAnalyticsResponse {
 const EP = API_ENDPOINTS_B2B.LIKES;
 
 // Global user identifier required by Likes API
-// Include project code from env (prefers NEXT_PUBLIC_, falls back to NEXT_PROJECT_CODE)
-const PROJECT_CODE = (process.env.NEXT_PUBLIC_PROJECT_CODE ||
+// Use project_code from ERP_STATIC (set during login) or fall back to env
+const getProjectCode = () =>
+  ERP_STATIC.project_code ||
+  process.env.NEXT_PUBLIC_PROJECT_CODE ||
   process.env.NEXT_PROJECT_CODE ||
-  'APP') as string;
-const getUserId = () =>
-  `${PROJECT_CODE}-${ERP_STATIC.customer_code}-${ERP_STATIC.address_code}`;
+  'APP';
+const getUserId = () => {
+  const projectCode = getProjectCode();
+  const userId = `${projectCode}-${ERP_STATIC.customer_code}-${ERP_STATIC.address_code}`;
+  console.log('[Likes] getUserId:', userId, 'ERP_STATIC:', ERP_STATIC);
+  return userId;
+};
 
 // Core like operations
 export async function addLike(

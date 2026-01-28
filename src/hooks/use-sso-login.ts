@@ -10,8 +10,11 @@ function buildSSOLoginUrl(params: {
   tenantId?: string;
   returnUrl?: string;
   lang?: string;
+  ssoUrl?: string;
 }): string {
+  // Priority: tenant's builderUrl > NEXT_PUBLIC_SSO_URL > NEXT_PUBLIC_B2B_BUILDER_URL
   const ssoUrl =
+    params.ssoUrl ||
     process.env.NEXT_PUBLIC_SSO_URL ||
     process.env.NEXT_PUBLIC_B2B_BUILDER_URL ||
     '';
@@ -47,9 +50,10 @@ function buildSSOLoginUrl(params: {
 export function useSSOLogin(lang: string) {
   const tenantContext = useTenantOptional();
 
-  // Get tenant ID
+  // Get tenant ID and SSO URL from tenant context
   const tenantId =
     tenantContext?.tenant?.id || process.env.NEXT_PUBLIC_TENANT_ID;
+  const tenantSsoUrl = tenantContext?.tenant?.builderUrl;
 
   /**
    * Redirect to SSO login page
@@ -65,11 +69,12 @@ export function useSSOLogin(lang: string) {
         tenantId,
         returnUrl: currentUrl,
         lang,
+        ssoUrl: tenantSsoUrl,
       });
 
       window.location.href = ssoUrl;
     },
-    [tenantId, lang],
+    [tenantId, lang, tenantSsoUrl],
   );
 
   /**
@@ -86,9 +91,10 @@ export function useSSOLogin(lang: string) {
         tenantId,
         returnUrl: currentUrl,
         lang,
+        ssoUrl: tenantSsoUrl,
       });
     },
-    [tenantId, lang],
+    [tenantId, lang, tenantSsoUrl],
   );
 
   return {

@@ -114,6 +114,11 @@ export function RemindersProvider(props: React.PropsWithChildren) {
     bootstrapped.current = true;
     try {
       const snapshot: RemindersState | undefined = JSON.parse(saved ?? '');
+      console.log(
+        '[RemindersContext] Bootstrap from localStorage:',
+        snapshot?.items?.length ?? 0,
+        'items',
+      );
       if (snapshot?.items?.length) {
         dispatch({
           type: 'HYDRATE_REPLACE',
@@ -129,6 +134,11 @@ export function RemindersProvider(props: React.PropsWithChildren) {
   // Persist on change
   React.useEffect(() => {
     try {
+      console.log(
+        '[RemindersContext] Saving state to localStorage:',
+        state.items.length,
+        'items',
+      );
       save(JSON.stringify(state));
     } catch {
       // ignore quota
@@ -163,11 +173,19 @@ export function RemindersProvider(props: React.PropsWithChildren) {
   // ----- Server calls (using your httpB2B wrappers)
   const loadUserReminders = React.useCallback(
     async (page = 1, pageSize = 50, mode: 'replace' | 'merge' = 'replace') => {
+      console.log(
+        '[RemindersContext] loadUserReminders called, fetching from server...',
+      );
       const res = await apiGetUserReminders(
         page,
         pageSize,
         undefined,
         'active',
+      );
+      console.log(
+        '[RemindersContext] loadUserReminders response:',
+        res?.total_count,
+        'reminders',
       );
       const items: ReminderItem[] =
         (res?.reminders ?? []).map((r) => ({
@@ -190,15 +208,29 @@ export function RemindersProvider(props: React.PropsWithChildren) {
   const didRefreshFromServer = React.useRef(false);
   React.useEffect(() => {
     // Only fetch when user is logged in
-    if (!isAuthorized) return;
-    if (didRefreshFromServer.current) return;
+    if (!isAuthorized) {
+      console.log('[RemindersContext] Not authorized, skipping server refresh');
+      return;
+    }
+    if (didRefreshFromServer.current) {
+      console.log('[RemindersContext] Already refreshed from server, skipping');
+      return;
+    }
+    console.log('[RemindersContext] Authorized, refreshing from server...');
     didRefreshFromServer.current = true;
     // fetch within backend limit (<= 100)
-    loadUserReminders(1, 100, 'replace').catch(() => {});
+    loadUserReminders(1, 100, 'replace').catch((err) => {
+      console.error(
+        '[RemindersContext] Failed to load reminders from server:',
+        err,
+      );
+    });
   }, [isAuthorized, loadUserReminders]);
 
   const loadBulkStatus = React.useCallback(
     async (skus: string[]) => {
+      // Don't call API if user is not logged in
+      if (!isAuthorized) return {};
       if (!skus?.length) return {};
 
       try {
@@ -263,7 +295,7 @@ export function RemindersProvider(props: React.PropsWithChildren) {
         return {};
       }
     },
-    [state.items, state.summary],
+    [isAuthorized, state.items, state.summary],
   );
 
   const toggle = React.useCallback(

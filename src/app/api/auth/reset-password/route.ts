@@ -16,7 +16,11 @@ export async function POST(request: NextRequest) {
 
     // Resolve tenant
     let tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'default';
-    let ssoApiUrl = process.env.SSO_API_URL || process.env.PIM_API_URL;
+    // SSO API URL priority: SSO_API_URL > NEXT_PUBLIC_SSO_URL > PIM_API_URL
+    let ssoApiUrl =
+      process.env.SSO_API_URL ||
+      process.env.NEXT_PUBLIC_SSO_URL ||
+      process.env.PIM_API_URL;
 
     if (isMultiTenant) {
       const hostname =

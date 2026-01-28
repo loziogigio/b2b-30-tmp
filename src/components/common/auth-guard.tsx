@@ -7,6 +7,7 @@ import { useModalAction } from '@components/common/modal/modal.context';
 import { useTranslation } from 'src/app/i18n/client';
 import { useTenantOptional } from '@contexts/tenant.context';
 import { useHomeSettingsContext } from '@contexts/home-settings.context';
+import { useAutoRefreshToken } from '@/hooks/use-auto-refresh-token';
 import Logo from '@components/ui/logo';
 import { IoAlertCircle, IoClose } from 'react-icons/io5';
 
@@ -118,6 +119,9 @@ export default function AuthGuard({ children, lang }: AuthGuardProps) {
   const [mounted, setMounted] = useState(false);
   const [showError, setShowError] = useState(true);
 
+  // Auto-refresh token before it expires (only when authorized)
+  useAutoRefreshToken();
+
   // Get auth error from URL params
   const authError = searchParams.get('auth_error');
   const errorMessage = searchParams.get('error_message');
@@ -135,6 +139,22 @@ export default function AuthGuard({ children, lang }: AuthGuardProps) {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Listen for session expired events (from httpPIM interceptor)
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      console.log(
+        '[AuthGuard] Session expired event received, redirecting to home',
+      );
+      // Redirect to home page - user will see login screen if requireLogin is enabled
+      window.location.href = `/${lang}`;
+    };
+
+    window.addEventListener('auth:session-expired', handleSessionExpired);
+    return () => {
+      window.removeEventListener('auth:session-expired', handleSessionExpired);
+    };
+  }, [lang]);
 
   // Get error info
   const errorInfo = authError ? AUTH_ERROR_MESSAGES[authError] : null;

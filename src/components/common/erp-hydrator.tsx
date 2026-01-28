@@ -6,11 +6,13 @@ import {
   hydrateErpStatic,
   hasValidErpContext,
   applyVincProfileToErpStatic,
+  setErpStatic,
 } from '@framework/utils/static';
 import { useUI } from '@contexts/ui.context';
 import { useAddressQuery } from '@framework/acccount/fetch-account';
 import { useDeliveryAddress } from '@contexts/address/address.context';
 import { API_ENDPOINTS_B2B } from '@framework/utils/api-endpoints-b2b';
+import { useTenantOptional } from '@contexts/tenant.context';
 import Cookies from 'js-cookie';
 
 /**
@@ -26,11 +28,24 @@ import Cookies from 'js-cookie';
 export default function ErpHydrator() {
   const { isAuthorized, authorize } = useUI();
   const queryClient = useQueryClient();
+  const tenantContext = useTenantOptional();
   const [hydrated, setHydrated] = useState(false);
   const [profileFetched, setProfileFetched] = useState(false);
 
   // Track previous auth state to detect login/logout transitions
   const prevIsAuthorizedRef = useRef<boolean | null>(null);
+
+  // Set project_code from tenant context (multi-tenant mode)
+  useEffect(() => {
+    const projectCode = tenantContext?.tenant?.projectCode;
+    if (projectCode) {
+      console.log(
+        '[ErpHydrator] Setting project_code from TenantContext:',
+        projectCode,
+      );
+      setErpStatic({ project_code: projectCode });
+    }
+  }, [tenantContext?.tenant?.projectCode]);
 
   // Fetch addresses only when authorized AND after ERP_STATIC is hydrated
   // This prevents fetching with stale/invalid customer_id from SSR

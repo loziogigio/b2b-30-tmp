@@ -102,6 +102,11 @@ export function LikesProvider(props: React.PropsWithChildren) {
     bootstrapped.current = true;
     try {
       const snapshot: LikesState | undefined = JSON.parse(saved ?? '');
+      console.log(
+        '[LikesContext] Bootstrap from localStorage:',
+        snapshot?.items?.length ?? 0,
+        'items',
+      );
       if (snapshot?.items?.length) {
         dispatch({
           type: 'HYDRATE_REPLACE',
@@ -117,6 +122,11 @@ export function LikesProvider(props: React.PropsWithChildren) {
   // Persist on change
   React.useEffect(() => {
     try {
+      console.log(
+        '[LikesContext] Saving state to localStorage:',
+        state.items.length,
+        'items',
+      );
       save(JSON.stringify(state));
     } catch {
       // ignore quota
@@ -151,7 +161,15 @@ export function LikesProvider(props: React.PropsWithChildren) {
   // ----- Server calls (using your httpB2B wrappers)
   const loadUserLikes = React.useCallback(
     async (page = 1, pageSize = 50, mode: 'replace' | 'merge' = 'replace') => {
+      console.log(
+        '[LikesContext] loadUserLikes called, fetching from server...',
+      );
       const res = await apiGetUserLikes(page, pageSize);
+      console.log(
+        '[LikesContext] loadUserLikes response:',
+        res?.total_count,
+        'likes',
+      );
       const items: LikeItem[] =
         (res?.likes ?? []).map((l) => ({
           sku: l.sku,
@@ -171,15 +189,26 @@ export function LikesProvider(props: React.PropsWithChildren) {
   const didRefreshFromServer = React.useRef(false);
   React.useEffect(() => {
     // Only fetch when user is logged in
-    if (!isAuthorized) return;
-    if (didRefreshFromServer.current) return;
+    if (!isAuthorized) {
+      console.log('[LikesContext] Not authorized, skipping server refresh');
+      return;
+    }
+    if (didRefreshFromServer.current) {
+      console.log('[LikesContext] Already refreshed from server, skipping');
+      return;
+    }
+    console.log('[LikesContext] Authorized, refreshing from server...');
     didRefreshFromServer.current = true;
     // fetch within backend limit (<= 100)
-    loadUserLikes(1, 100, 'replace').catch(() => {});
+    loadUserLikes(1, 100, 'replace').catch((err) => {
+      console.error('[LikesContext] Failed to load likes from server:', err);
+    });
   }, [isAuthorized, loadUserLikes]);
 
   const loadBulkStatus = React.useCallback(
     async (skus: string[]) => {
+      // Don't call API if user is not logged in
+      if (!isAuthorized) return {};
       if (!skus?.length) return {};
       const res = await apiGetBulkLikeStatus(skus);
       const map: Record<string, boolean> = {};
@@ -197,7 +226,7 @@ export function LikesProvider(props: React.PropsWithChildren) {
         });
       return map;
     },
-    [state.summary],
+    [isAuthorized, state.summary],
   );
 
   const toggle = React.useCallback(

@@ -11,6 +11,9 @@
     "format": "prettier --write .",
     "check-types": "tsc --pretty --noEmit",
     "check-format": "prettier --check .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "test-all": "pnpm check-format && pnpm lint && pnpm check-types && pnpm build",
     "prepare": "husky"
   },
@@ -65,6 +68,8 @@
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.19",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/js-cookie": "^3.0.6",
     "@types/leaflet": "^1.9.15",
     "@types/lodash": "^4.17.13",
@@ -74,15 +79,18 @@
     "@types/react": "^19.0.2",
     "@types/react-copy-to-clipboard": "^5.0.7",
     "@types/react-scroll": "^1.8.10",
+    "@vitejs/plugin-react": "^5.1.2",
     "autoprefixer": "^10.4.20",
     "eslint": "9.17.0",
     "eslint-config-next": "15.2.6",
     "husky": "^9.1.7",
+    "jsdom": "^27.4.0",
     "postcss": "^8.4.49",
     "prettier": "^3.4.2",
     "rimraf": "^6.0.1",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^4.0.18"
   },
   "packageManager": "pnpm@9.5.0+sha512.140036830124618d624a2187b50d04289d5a087f326c9edfc0ccd733d76c4f52c3a313d4fc148794a2a9d81553016004e6742e8cf850670268a7387fc220c903"
 }
