@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useRef, useCallback } from 'react';
-import Cookies from 'js-cookie';
-
-// Refresh token 2 minutes before expiration
-const REFRESH_BUFFER_MS = 2 * 60 * 1000;
-// Minimum interval between refresh attempts
-const MIN_REFRESH_INTERVAL_MS = 30 * 1000;
+import {
+  getAuthToken,
+  getTokenExpiresAt,
+  refreshAccessToken,
+  REFRESH_BUFFER_MS,
+  MIN_REFRESH_INTERVAL_MS,
+} from '@/lib/auth';
 
 /**
  * Hook to automatically refresh the auth token before it expires.
@@ -17,7 +18,7 @@ export function useAutoRefreshToken() {
   const lastRefreshAttemptRef = useRef<number>(0);
   const isMountedRef = useRef(true);
 
-  const refreshToken = useCallback(async () => {
+  const doRefresh = useCallback(async () => {
     // Prevent rapid refresh attempts
     const now = Date.now();
     if (now - lastRefreshAttemptRef.current < MIN_REFRESH_INTERVAL_MS) {
@@ -25,44 +26,13 @@ export function useAutoRefreshToken() {
     }
     lastRefreshAttemptRef.current = now;
 
-    const refreshTokenCookie = Cookies.get('refresh_token');
-    if (!refreshTokenCookie) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[AutoRefresh] No refresh token available');
-      }
-      return;
-    }
-
     try {
       if (process.env.NODE_ENV === 'development') {
         console.log('[AutoRefresh] Proactively refreshing token...');
       }
-      const response = await fetch('/api/auth/refresh', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refresh_token: refreshTokenCookie }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Refresh failed');
-      }
-
-      const data = await response.json();
-
-      if (data.success && data.token) {
-        // Update cookies with new tokens
-        Cookies.set('auth_token', data.token);
-        if (data.refresh_token) {
-          Cookies.set('refresh_token', data.refresh_token);
-        }
-        // Update expiration timestamp
-        if (data.expires_in) {
-          const expiresAt = Date.now() + data.expires_in * 1000;
-          Cookies.set('auth_token_expires_at', String(expiresAt));
-        }
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[AutoRefresh] Token refreshed successfully');
-        }
+      const success = await refreshAccessToken();
+      if (success && process.env.NODE_ENV === 'development') {
+        console.log('[AutoRefresh] Token refreshed successfully');
       }
     } catch (error) {
       console.error('[AutoRefresh] Failed to refresh token:', error);
@@ -77,13 +47,8 @@ export function useAutoRefreshToken() {
       refreshTimeoutRef.current = null;
     }
 
-    const expiresAtStr = Cookies.get('auth_token_expires_at');
-    if (!expiresAtStr) {
-      return;
-    }
-
-    const expiresAt = parseInt(expiresAtStr, 10);
-    if (isNaN(expiresAt)) {
+    const expiresAt = getTokenExpiresAt();
+    if (!expiresAt) {
       return;
     }
 
@@ -93,7 +58,7 @@ export function useAutoRefreshToken() {
 
     if (timeUntilRefresh <= 0) {
       // Token is about to expire or already expired - refresh immediately
-      refreshToken().then(() => {
+      doRefresh().then(() => {
         if (isMountedRef.current) scheduleNextRefresh();
       });
     } else {
@@ -104,16 +69,16 @@ export function useAutoRefreshToken() {
         );
       }
       refreshTimeoutRef.current = setTimeout(() => {
-        refreshToken().then(() => {
+        doRefresh().then(() => {
           if (isMountedRef.current) scheduleNextRefresh();
         });
       }, timeUntilRefresh);
     }
-  }, [refreshToken]);
+  }, [doRefresh]);
 
   useEffect(() => {
     // Check if we have a token
-    const authToken = Cookies.get('auth_token');
+    const authToken = getAuthToken();
     if (!authToken) {
       return;
     }

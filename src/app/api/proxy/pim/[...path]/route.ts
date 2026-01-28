@@ -7,6 +7,9 @@ const DEFAULT_PIM_API_URL =
   process.env.NEXT_PUBLIC_PIM_API_URL ||
   'http://localhost:3001';
 
+// Local dev override - set in .env.local to override tenant config from MongoDB
+const PIM_API_URL_OVERRIDE = process.env.PIM_API_URL_OVERRIDE;
+
 const DEFAULT_API_KEY_ID =
   process.env.API_KEY_ID || process.env.NEXT_PUBLIC_API_KEY_ID;
 const DEFAULT_API_SECRET =
@@ -54,7 +57,9 @@ async function getTenantConfig(req: NextRequest) {
   }
 
   return {
-    pimApiUrl: tenant.api.pimApiUrl || DEFAULT_PIM_API_URL,
+    // PIM_API_URL_OVERRIDE takes precedence (for local dev)
+    pimApiUrl:
+      PIM_API_URL_OVERRIDE || tenant.api.pimApiUrl || DEFAULT_PIM_API_URL,
     apiKeyId: tenant.api.apiKeyId || DEFAULT_API_KEY_ID,
     apiSecret: tenant.api.apiSecret || DEFAULT_API_SECRET,
   };

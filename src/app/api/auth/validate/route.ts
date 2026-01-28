@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { getSsoApiForTenant, SSOApiError } from '@/lib/sso-api';
-import { resolveTenant, isMultiTenant } from '@/lib/tenant';
+import { SSOApiError } from '@/lib/sso-api';
+import { resolveAuthContext } from '@/lib/auth/server';
+import { AUTH_COOKIES } from '@/lib/auth';
 
 /**
  * Validate access token and get user info
@@ -10,35 +11,16 @@ import { resolveTenant, isMultiTenant } from '@/lib/tenant';
 export async function GET(request: NextRequest) {
   try {
     const cookieStore = await cookies();
-    const accessToken = cookieStore.get('auth_token')?.value;
+    const accessToken = cookieStore.get(AUTH_COOKIES.ACCESS_TOKEN)?.value;
 
     if (!accessToken) {
       return NextResponse.json({ authenticated: false }, { status: 401 });
     }
 
-    // Resolve tenant
-    let tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'default';
-    // SSO API URL priority: SSO_API_URL > NEXT_PUBLIC_SSO_URL > PIM_API_URL
-    const ssoApiUrl =
-      process.env.SSO_API_URL ||
-      process.env.NEXT_PUBLIC_SSO_URL ||
-      process.env.PIM_API_URL;
-
-    if (isMultiTenant) {
-      const hostname =
-        request.headers.get('x-tenant-hostname') ||
-        request.headers.get('host') ||
-        'localhost';
-      const tenant = await resolveTenant(hostname);
-
-      if (tenant) {
-        tenantId = tenant.id;
-        // Note: SSO_API_URL from env takes priority over tenant.api.pimApiUrl
-      }
-    }
-
-    // Call SSO validate endpoint
-    const ssoApi = getSsoApiForTenant({ tenantId, ssoApiUrl });
+    // Resolve tenant and get SSO API client
+    const result = await resolveAuthContext(request, 'validate');
+    if (!result.success) return result.response;
+    const { ssoApi } = result.context;
     const validation = await ssoApi.validate(accessToken);
 
     // Debug: Log the full validation response

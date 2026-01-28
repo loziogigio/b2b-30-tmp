@@ -8,6 +8,7 @@ import {
   CartWidget,
   ProfileWidget,
   FavoritesWidget,
+  RemindersWidget,
   CompareWidget,
   NoPriceWidget,
   PushNotificationWidget,
@@ -47,6 +48,10 @@ export function HeaderWidgetRenderer({
 
     case 'favorites':
       return <FavoritesWidget config={widget.config} lang={lang} />;
+
+    case 'reminders':
+    case 'promemoria': // Italian alias
+      return <RemindersWidget config={widget.config} lang={lang} />;
 
     case 'compare':
       return <CompareWidget config={widget.config} lang={lang} />;

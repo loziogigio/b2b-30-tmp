@@ -16,7 +16,7 @@ import { formatAvailability } from '@utils/format-availability';
 import PackagingGrid from '../packaging-grid';
 import PriceAndPromo from '../price-and-promo';
 import { IoIosHeart, IoIosHeartEmpty } from 'react-icons/io';
-import { IoNotificationsOutline, IoNotifications } from 'react-icons/io5';
+import { ReminderIcon, ReminderIconFilled } from '@components/icons/app-icons';
 import { useLikes } from '@contexts/likes/likes.context';
 import { useReminders } from '@contexts/reminders/reminders.context';
 import { useUI } from '@contexts/ui.context';
@@ -249,11 +249,11 @@ const ProductCardB2BHorizontal: React.FC<ProductProps> = ({
                   }
                 >
                   {hasReminder ? (
-                    <IoNotifications
+                    <ReminderIconFilled
                       className={cn('text-[18px] animate-pulse')}
                     />
                   ) : (
-                    <IoNotificationsOutline className="text-[18px]" />
+                    <ReminderIcon className="text-[18px]" />
                   )}
                 </button>
               )}

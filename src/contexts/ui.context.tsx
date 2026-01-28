@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { getToken } from '@framework/utils/get-token';
+import { getAuthToken } from '@/lib/auth';
 import { CartProvider } from './cart/cart.context';
 import { ModalProvider } from '@components/common/modal/modal.context';
 import { AddressProvider } from './address/address.context';
@@ -30,7 +30,7 @@ const getHidePricesFromStorage = (): boolean => {
 };
 
 const initialState = {
-  isAuthorized: getToken() ? true : false,
+  isAuthorized: getAuthToken() ? true : false,
   displaySidebar: false,
   displayFilter: false,
   displayCart: false,

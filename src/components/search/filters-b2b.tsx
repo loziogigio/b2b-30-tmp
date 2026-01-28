@@ -15,6 +15,7 @@ import {
   getUserLikes as apiGetUserLikes,
   getTrendingProductsPage as apiGetTrendingPage,
 } from '@framework/likes';
+import { getUserReminders as apiGetUserReminders } from '@framework/reminders';
 import { ProductTypeBreadcrumb } from './product-type-breadcrumb';
 import { TechSpecsFilters } from './tech-specs-filters';
 import { IoIosArrowUp, IoIosArrowDown } from 'react-icons/io';
@@ -38,12 +39,13 @@ export const SearchFiltersB2B: React.FC<{ lang: string; text?: string }> = ({
     urlParams[key] = value;
   });
 
-  // Check if we're on trending or likes page
+  // Check if we're on trending, likes, or reminders page
   const source = (searchParams.get('source') || '').toLowerCase();
   const period = (searchParams.get('period') || '7d').toLowerCase();
-  const isLikesOrTrending = source === 'likes' || source === 'trending';
+  const isSpecialSource =
+    source === 'likes' || source === 'trending' || source === 'reminders';
 
-  // Fetch SKUs for likes/trending pages
+  // Fetch SKUs for likes/trending/reminders pages
   const { data: specialSkus, isLoading: isLoadingSkus } = useQuery({
     queryKey: ['facet-skus', source, period],
     queryFn: async () => {
@@ -57,6 +59,19 @@ export const SearchFiltersB2B: React.FC<{ lang: string; text?: string }> = ({
           const res = await apiGetUserLikes(page, MAX_PAGE_SIZE);
           const skus = (res?.likes || [])
             .map((l: any) => l.sku)
+            .filter(Boolean);
+          allSkus.push(...skus);
+          if (!res?.has_next) break;
+        }
+        return allSkus;
+      }
+
+      if (source === 'reminders') {
+        // Fetch multiple pages of reminders
+        for (let page = 1; page <= MAX_PAGES; page++) {
+          const res = await apiGetUserReminders(page, MAX_PAGE_SIZE);
+          const skus = (res?.reminders || [])
+            .map((r: any) => r.sku)
             .filter(Boolean);
           allSkus.push(...skus);
           if (!res?.has_next) break;
@@ -84,7 +99,7 @@ export const SearchFiltersB2B: React.FC<{ lang: string; text?: string }> = ({
 
       return [];
     },
-    enabled: isLikesOrTrending,
+    enabled: isSpecialSource,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
@@ -97,12 +112,12 @@ export const SearchFiltersB2B: React.FC<{ lang: string; text?: string }> = ({
     };
 
     // Add SKU filter for trending/likes pages (same as product search)
-    if (isLikesOrTrending && specialSkus?.length) {
+    if (isSpecialSource && specialSkus?.length) {
       params['filters-sku'] = specialSkus.join(';');
     }
 
     return params;
-  }, [urlParams, lang, text, isLikesOrTrending, specialSkus]);
+  }, [urlParams, lang, text, isSpecialSource, specialSkus]);
 
   const {
     data: filters,
@@ -114,7 +129,7 @@ export const SearchFiltersB2B: React.FC<{ lang: string; text?: string }> = ({
     queryFn: () => fetchPimFilters(mergedParams),
     staleTime: 1000 * 60 * 5, // 5 minutes
     // Don't run facet query until SKUs are loaded (when on trending/likes pages)
-    enabled: !isLikesOrTrending || (isLikesOrTrending && !isLoadingSkus),
+    enabled: !isSpecialSource || (isSpecialSource && !isLoadingSkus),
   });
 
   // Build label map for selected chips: { 'filters-<key>': { value: label } }
@@ -174,12 +189,12 @@ export const SearchFiltersB2B: React.FC<{ lang: string; text?: string }> = ({
     });
 
     // Add SKU filter for trending/likes pages (same as main search)
-    if (isLikesOrTrending && specialSkus?.length) {
+    if (isSpecialSource && specialSkus?.length) {
       f['filters-sku'] = specialSkus.join(';');
     }
 
     return f;
-  }, [searchParams, lang, text, isLikesOrTrending, specialSkus]);
+  }, [searchParams, lang, text, isSpecialSource, specialSkus]);
 
   // Filter out product_type_code from main filters when showing as breadcrumb
   const mainFilters = effectiveProductTypeCode

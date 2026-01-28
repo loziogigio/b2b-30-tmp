@@ -1,13 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { resolveTenant, isMultiTenant } from '@/lib/tenant';
+import { getDefaultSsoApiUrl, getHostnameFromRequest } from '@/lib/auth/server';
 
-// SSO API URL priority: SSO_API_URL > NEXT_PUBLIC_SSO_URL > PIM_API_URL
-const SSO_API_URL =
-  process.env.SSO_API_URL ||
-  process.env.NEXT_PUBLIC_SSO_URL ||
-  process.env.PIM_API_URL ||
-  '';
 const CLIENT_ID = 'vinc-b2b';
 const CLIENT_SECRET = process.env.SSO_CLIENT_SECRET || '';
 
@@ -22,21 +17,19 @@ export async function GET(request: NextRequest) {
   const error = searchParams.get('error');
   const errorDescription = searchParams.get('error_description');
 
-  // Get tenant info
+  // Resolve tenant info
   let tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'default';
-  // Always use SSO_API_URL from env if set, otherwise fall back to tenant config
-  const ssoApiUrl = SSO_API_URL;
+  let ssoApiUrl = getDefaultSsoApiUrl();
 
   if (isMultiTenant) {
-    const hostname =
-      request.headers.get('x-tenant-hostname') ||
-      request.headers.get('host') ||
-      'localhost';
+    const hostname = getHostnameFromRequest(request);
     const tenant = await resolveTenant(hostname);
 
     if (tenant) {
       tenantId = tenant.id;
-      // Note: SSO_API_URL from env takes priority over tenant.api.pimApiUrl
+      // SSO_API_URL_OVERRIDE takes precedence (for local dev)
+      ssoApiUrl =
+        process.env.SSO_API_URL_OVERRIDE || tenant.api.pimApiUrl || ssoApiUrl;
     }
   }
 
@@ -70,7 +63,11 @@ export async function GET(request: NextRequest) {
     let callbackUrl: string;
     if (forwardedHost) {
       callbackUrl = `${forwardedProto}://${forwardedHost}/api/auth/callback`;
-    } else if (host && !host.includes('0.0.0.0') && !host.includes('127.0.0.1')) {
+    } else if (
+      host &&
+      !host.includes('0.0.0.0') &&
+      !host.includes('127.0.0.1')
+    ) {
       callbackUrl = `${forwardedProto}://${host}/api/auth/callback`;
     } else {
       callbackUrl = `${request.nextUrl.origin}/api/auth/callback`;

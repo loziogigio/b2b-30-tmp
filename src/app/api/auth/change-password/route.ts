@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { getSsoApiForTenant, SSOApiError } from '@/lib/sso-api';
-import { resolveTenant, isMultiTenant } from '@/lib/tenant';
+import { SSOApiError } from '@/lib/sso-api';
+import { resolveAuthContext } from '@/lib/auth/server';
+import { AUTH_COOKIES } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,7 +21,7 @@ export async function POST(request: NextRequest) {
 
     // Get SSO access token from cookies
     const cookieStore = await cookies();
-    const authToken = cookieStore.get('auth_token')?.value;
+    const authToken = cookieStore.get(AUTH_COOKIES.ACCESS_TOKEN)?.value;
 
     if (!authToken) {
       return NextResponse.json(
@@ -29,39 +30,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Resolve tenant
-    let tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'default';
-    // SSO API URL priority: SSO_API_URL > NEXT_PUBLIC_SSO_URL > PIM_API_URL
-    const ssoApiUrl =
-      process.env.SSO_API_URL ||
-      process.env.NEXT_PUBLIC_SSO_URL ||
-      process.env.PIM_API_URL;
-
-    if (isMultiTenant) {
-      const hostname =
-        request.headers.get('x-tenant-hostname') ||
-        request.headers.get('host') ||
-        'localhost';
-      const tenant = await resolveTenant(hostname);
-
-      if (!tenant) {
-        console.error(
-          '[change-password] Tenant not found for hostname:',
-          hostname,
-        );
-        return NextResponse.json(
-          { success: false, message: 'Tenant not found' },
-          { status: 404 },
-        );
-      }
-
-      tenantId = tenant.id;
-    }
+    // Resolve tenant and get SSO API client
+    const authResult = await resolveAuthContext(request, 'change-password');
+    if (!authResult.success) return authResult.response;
+    const { ssoApi } = authResult.context;
 
     // Call SSO API to change password
-    // SSO API extracts email from access token and verifies current password internally
-    const ssoApi = getSsoApiForTenant({ tenantId, ssoApiUrl });
-    const result = await ssoApi.changePassword({
+    const changeResult = await ssoApi.changePassword({
       accessToken: authToken,
       currentPassword,
       password,
@@ -69,7 +44,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: result.message || 'Password cambiata con successo',
+      message: changeResult.message || 'Password cambiata con successo',
     });
   } catch (error) {
     console.error('[change-password] Error:', error);

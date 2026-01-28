@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSsoApiForTenant, SSOApiError } from '@/lib/sso-api';
-import { resolveTenant, isMultiTenant } from '@/lib/tenant';
+import { SSOApiError } from '@/lib/sso-api';
+import { resolveAuthContext } from '@/lib/auth/server';
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,40 +14,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Resolve tenant
-    let tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'default';
-    // SSO API URL priority: SSO_API_URL > NEXT_PUBLIC_SSO_URL > PIM_API_URL
-    let ssoApiUrl =
-      process.env.SSO_API_URL ||
-      process.env.NEXT_PUBLIC_SSO_URL ||
-      process.env.PIM_API_URL;
-
-    if (isMultiTenant) {
-      const hostname =
-        request.headers.get('x-tenant-hostname') ||
-        request.headers.get('host') ||
-        'localhost';
-      const tenant = await resolveTenant(hostname);
-
-      if (!tenant) {
-        console.error(
-          '[reset-password] Tenant not found for hostname:',
-          hostname,
-        );
-        return NextResponse.json(
-          { success: false, message: 'Tenant not found' },
-          { status: 404 },
-        );
-      }
-
-      tenantId = tenant.id;
-      ssoApiUrl = tenant.api.pimApiUrl;
-    }
+    // Resolve tenant and get SSO API client
+    const authResult = await resolveAuthContext(request, 'reset-password');
+    if (!authResult.success) return authResult.response;
+    const { tenantId, ssoApi } = authResult.context;
 
     // Call SSO API to reset password
-    // If no password provided, SSO generates temp password and sends email
-    const ssoApi = getSsoApiForTenant({ tenantId, ssoApiUrl });
-    const result = await ssoApi.resetPassword({
+    const resetResult = await ssoApi.resetPassword({
       email: username,
       tenant_id: tenantId,
       password,
@@ -58,7 +31,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message:
-        result.message ||
+        resetResult.message ||
         (password
           ? 'Password cambiata con successo'
           : 'Email di recupero inviata'),

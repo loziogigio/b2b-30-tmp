@@ -17,7 +17,7 @@ import { useLikes } from '@contexts/likes/likes.context';
 import { useReminders } from '@contexts/reminders/reminders.context';
 import { useUI } from '@contexts/ui.context';
 import { IoIosHeart, IoIosHeartEmpty } from 'react-icons/io';
-import { IoNotificationsOutline, IoNotifications } from 'react-icons/io5';
+import { ReminderIcon, ReminderIconFilled } from '@components/icons/app-icons';
 import VariantsFilterBar from './variants-filter-bar';
 import { fetchErpPrices } from '@framework/erp/prices';
 import { ERP_STATIC } from '@framework/utils/static';
@@ -39,6 +39,8 @@ interface Props {
   filterThreshold?: number;
   // Only hide search+sort below this threshold; tags remain visible
   searchSortThreshold?: number;
+  /** Show reminder toggle even if product is in stock (e.g., on reminders page) */
+  forceShowReminderToggle?: boolean;
 }
 
 // Parent row: 3 columns (image | info | brand)
@@ -70,6 +72,7 @@ export default function ProductRowB2B({
   className,
   filterThreshold = 0,
   searchSortThreshold = 10,
+  forceShowReminderToggle = false,
 }: Props) {
   const { t } = useTranslation(lang, 'common');
   const { openModal } = useModalAction();
@@ -442,7 +445,9 @@ export default function ProductRowB2B({
                     <div className="min-w-0">
                       {isAuthorized ? (
                         <div className="flex flex-col gap-1 text-[12px] text-gray-600 mb-1">
-                          {isOutOfStock && targetSku ? (
+                          {(isOutOfStock ||
+                            (forceShowReminderToggle && reminderActive)) &&
+                          targetSku ? (
                             <div className="flex items-center gap-1">
                               <span>{t('text-reminder')}</span>
                               <button
@@ -478,9 +483,9 @@ export default function ProductRowB2B({
                                 }
                               >
                                 {reminderActive ? (
-                                  <IoNotifications className="animate-pulse" />
+                                  <ReminderIconFilled className="animate-pulse" />
                                 ) : (
-                                  <IoNotificationsOutline />
+                                  <ReminderIcon />
                                 )}
                               </button>
                             </div>

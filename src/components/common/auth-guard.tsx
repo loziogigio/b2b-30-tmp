@@ -8,6 +8,7 @@ import { useTranslation } from 'src/app/i18n/client';
 import { useTenantOptional } from '@contexts/tenant.context';
 import { useHomeSettingsContext } from '@contexts/home-settings.context';
 import { useAutoRefreshToken } from '@/hooks/use-auto-refresh-token';
+import { getClientSSOLoginUrl } from '@/lib/sso-api';
 import Logo from '@components/ui/logo';
 import { IoAlertCircle, IoClose } from 'react-icons/io5';
 
@@ -63,42 +64,6 @@ const AUTH_ERROR_MESSAGES: Record<
 
 // Fallback to env variable if tenant context not available
 const ENV_REQUIRE_LOGIN = process.env.NEXT_PUBLIC_REQUIRE_LOGIN === 'true';
-
-/**
- * Build SSO login URL for redirect (client-side)
- */
-function buildSSOLoginUrl(params: {
-  tenantId?: string;
-  returnUrl?: string;
-  lang?: string;
-}): string {
-  const ssoUrl =
-    process.env.NEXT_PUBLIC_SSO_URL ||
-    process.env.NEXT_PUBLIC_B2B_BUILDER_URL ||
-    '';
-
-  const appUrl = typeof window !== 'undefined' ? window.location.origin : '';
-  const callbackUrl = `${appUrl}/api/auth/callback`;
-
-  const searchParams = new URLSearchParams({
-    redirect_uri: callbackUrl,
-    client_id: 'vinc-b2b',
-  });
-
-  if (params.tenantId) {
-    searchParams.set('tenant_id', params.tenantId);
-  }
-
-  if (params.returnUrl) {
-    searchParams.set('state', encodeURIComponent(params.returnUrl));
-  }
-
-  if (params.lang) {
-    searchParams.set('lang', params.lang);
-  }
-
-  return `${ssoUrl}/auth/login?${searchParams.toString()}`;
-}
 
 /**
  * AuthGuard - Optionally blocks access to the app if user is not authenticated.
@@ -175,7 +140,7 @@ export default function AuthGuard({ children, lang }: AuthGuardProps) {
   const handleLogin = () => {
     const currentUrl =
       typeof window !== 'undefined' ? window.location.href : `/${lang}`;
-    const ssoUrl = buildSSOLoginUrl({
+    const ssoUrl = getClientSSOLoginUrl({
       tenantId,
       returnUrl: currentUrl,
       lang,

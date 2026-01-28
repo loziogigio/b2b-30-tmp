@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSsoApiForTenant, SSOApiError } from '@/lib/sso-api';
-import { resolveTenant, isMultiTenant } from '@/lib/tenant';
+import { SSOApiError } from '@/lib/sso-api';
+import { resolveAuthContext } from '@/lib/auth/server';
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,35 +14,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Resolve tenant
-    let tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'default';
-    // SSO API URL priority: SSO_API_URL > NEXT_PUBLIC_SSO_URL > PIM_API_URL
-    let ssoApiUrl =
-      process.env.SSO_API_URL ||
-      process.env.NEXT_PUBLIC_SSO_URL ||
-      process.env.PIM_API_URL;
-
-    if (isMultiTenant) {
-      const hostname =
-        request.headers.get('x-tenant-hostname') ||
-        request.headers.get('host') ||
-        'localhost';
-      const tenant = await resolveTenant(hostname);
-
-      if (!tenant) {
-        console.error('[login] Tenant not found for hostname:', hostname);
-        return NextResponse.json(
-          { success: false, message: 'Tenant not found' },
-          { status: 404 },
-        );
-      }
-
-      tenantId = tenant.id;
-      ssoApiUrl = tenant.api.pimApiUrl;
-    }
-
-    // Call SSO API to login
-    const ssoApi = getSsoApiForTenant({ tenantId, ssoApiUrl });
+    // Resolve tenant and get SSO API client
+    const result = await resolveAuthContext(request, 'login');
+    if (!result.success) return result.response;
+    const { tenantId, ssoApi } = result.context;
     const loginResponse = await ssoApi.login({
       email,
       password,

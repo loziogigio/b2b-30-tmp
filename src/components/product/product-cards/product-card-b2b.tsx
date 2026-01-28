@@ -10,7 +10,7 @@ import { ErpPriceData } from '@utils/transform/erp-prices';
 import { formatAvailability } from '@utils/format-availability';
 import PriceAndPromo from '../price-and-promo';
 import { IoIosHeart, IoIosHeartEmpty } from 'react-icons/io';
-import { IoNotificationsOutline, IoNotifications } from 'react-icons/io5';
+import { ReminderIcon, ReminderIconFilled } from '@components/icons/app-icons';
 import { useLikes } from '@contexts/likes/likes.context';
 import { useReminders } from '@contexts/reminders/reminders.context';
 import { useUI } from '@contexts/ui.context';
@@ -109,6 +109,8 @@ interface ProductProps {
   className?: string;
   priceData?: ErpPriceData;
   customStyle?: React.CSSProperties;
+  /** Show reminder toggle even if product is in stock (e.g., on reminders page) */
+  forceShowReminderToggle?: boolean;
 }
 
 const ProductCardB2B: React.FC<ProductProps> = ({
@@ -117,6 +119,7 @@ const ProductCardB2B: React.FC<ProductProps> = ({
   lang,
   priceData,
   customStyle,
+  forceShowReminderToggle = false,
 }) => {
   const {
     name,
@@ -279,8 +282,8 @@ const ProductCardB2B: React.FC<ProductProps> = ({
 
           {isAuthorized && priceData && (
             <div className="flex items-center gap-1">
-              {/* Reminder Bell - only show when out of stock */}
-              {isOutOfStock && (
+              {/* Reminder Bell - show when out of stock OR when item has active reminder on reminders page */}
+              {(isOutOfStock || (forceShowReminderToggle && hasReminder)) && (
                 <button
                   type="button"
                   aria-label="Toggle reminder"
@@ -308,11 +311,11 @@ const ProductCardB2B: React.FC<ProductProps> = ({
                   }
                 >
                   {hasReminder ? (
-                    <IoNotifications
+                    <ReminderIconFilled
                       className={cn('text-[18px] animate-pulse')}
                     />
                   ) : (
-                    <IoNotificationsOutline className="text-[18px]" />
+                    <ReminderIcon className="text-[18px]" />
                   )}
                 </button>
               )}

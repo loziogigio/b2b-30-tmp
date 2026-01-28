@@ -4,6 +4,7 @@ export { RadioWidget } from './radio-widget';
 export { CartWidget } from './cart-widget';
 export { ProfileWidget } from './profile-widget';
 export { FavoritesWidget } from './favorites-widget';
+export { RemindersWidget } from './reminders-widget';
 export { CompareWidget } from './compare-widget';
 export { NoPriceWidget } from './no-price-widget';
 export { CategoryMenuWidget } from './category-menu-widget';

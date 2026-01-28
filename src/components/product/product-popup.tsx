@@ -6,12 +6,8 @@ import { useRouter } from 'next/navigation';
 import { ROUTES } from '@utils/routes';
 import ThumbnailCarousel from '@components/ui/carousel/thumbnail-carousel';
 import Image from '@components/ui/image';
-import {
-  IoArrowRedoOutline,
-  IoArrowForwardOutline,
-  IoNotificationsOutline,
-  IoNotifications,
-} from 'react-icons/io5';
+import { IoArrowRedoOutline, IoArrowForwardOutline } from 'react-icons/io5';
+import { ReminderIcon, ReminderIconFilled } from '@components/icons/app-icons';
 import {
   HiOutlineSwitchHorizontal,
   HiOutlineCheckCircle,
@@ -246,9 +242,9 @@ export default function ProductPopup({ lang }: { lang: string }) {
                       )}
                     >
                       {hasReminder ? (
-                        <IoNotifications className="h-5 w-5 animate-pulse" />
+                        <ReminderIconFilled className="h-5 w-5 animate-pulse" />
                       ) : (
-                        <IoNotificationsOutline className="h-5 w-5" />
+                        <ReminderIcon className="h-5 w-5" />
                       )}
                     </button>
                     <span className="hidden sm:block mt-1 text-[10px] text-slate-500 text-center whitespace-nowrap">

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getToken } from './get-token';
+import { addAuthInterceptors } from '@/lib/auth';
 
 /**
  * Get base URL for API proxy
@@ -19,6 +19,7 @@ const getBaseUrl = () => {
 /**
  * HTTP client for B2B API calls.
  * Routes through /api/proxy/b2b to keep external API URLs server-side.
+ * Now includes 401 handling with automatic token refresh.
  */
 const http = axios.create({
   baseURL: getBaseUrl(),
@@ -29,16 +30,8 @@ const http = axios.create({
   },
 });
 
-http.interceptors.request.use(
-  (config) => {
-    const token = getToken();
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error),
-);
+// Add auth interceptors (request header + 401 response handling)
+addAuthInterceptors(http);
 
 const get = async <T = any>(url: string, params?: Record<string, any>) => {
   const response = await http.get<T>(url, { params });

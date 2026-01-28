@@ -1,17 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-// Helper to clear all auth cookies
-function clearAuthCookies(response: NextResponse) {
-  const cookieOptions = {
-    path: '/',
-    expires: new Date(0),
-    maxAge: 0,
-  };
-
-  response.cookies.set('auth_token', '', cookieOptions);
-  response.cookies.set('access_token', '', cookieOptions);
-  response.cookies.set('refresh_token', '', cookieOptions);
-}
+import { clearAuthCookiesServer } from '@/lib/auth/server';
 
 // POST - First step: clear cookies
 export async function POST(request: NextRequest) {
@@ -29,7 +17,7 @@ export async function POST(request: NextRequest) {
   });
 
   // Clear all auth cookies
-  clearAuthCookies(response);
+  clearAuthCookiesServer(response);
 
   return response;
 }
@@ -58,7 +46,7 @@ export async function GET(request: NextRequest) {
   const response = NextResponse.redirect(redirectUrl);
 
   // Clear all auth cookies again
-  clearAuthCookies(response);
+  clearAuthCookiesServer(response);
 
   return response;
 }

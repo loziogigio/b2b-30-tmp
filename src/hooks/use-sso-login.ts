@@ -2,45 +2,7 @@
 
 import { useCallback } from 'react';
 import { useTenantOptional } from '@contexts/tenant.context';
-
-/**
- * Build SSO login URL for redirect (client-side)
- */
-function buildSSOLoginUrl(params: {
-  tenantId?: string;
-  returnUrl?: string;
-  lang?: string;
-  ssoUrl?: string;
-}): string {
-  // Priority: tenant's builderUrl > NEXT_PUBLIC_SSO_URL > NEXT_PUBLIC_B2B_BUILDER_URL
-  const ssoUrl =
-    params.ssoUrl ||
-    process.env.NEXT_PUBLIC_SSO_URL ||
-    process.env.NEXT_PUBLIC_B2B_BUILDER_URL ||
-    '';
-
-  const appUrl = typeof window !== 'undefined' ? window.location.origin : '';
-  const callbackUrl = `${appUrl}/api/auth/callback`;
-
-  const searchParams = new URLSearchParams({
-    redirect_uri: callbackUrl,
-    client_id: 'vinc-b2b',
-  });
-
-  if (params.tenantId) {
-    searchParams.set('tenant_id', params.tenantId);
-  }
-
-  if (params.returnUrl) {
-    searchParams.set('state', encodeURIComponent(params.returnUrl));
-  }
-
-  if (params.lang) {
-    searchParams.set('lang', params.lang);
-  }
-
-  return `${ssoUrl}/auth/login?${searchParams.toString()}`;
-}
+import { getClientSSOLoginUrl } from '@/lib/sso-api';
 
 /**
  * Hook for SSO login redirect
@@ -65,7 +27,7 @@ export function useSSOLogin(lang: string) {
         returnUrl ||
         (typeof window !== 'undefined' ? window.location.href : `/${lang}`);
 
-      const ssoUrl = buildSSOLoginUrl({
+      const ssoUrl = getClientSSOLoginUrl({
         tenantId,
         returnUrl: currentUrl,
         lang,
@@ -87,7 +49,7 @@ export function useSSOLogin(lang: string) {
         returnUrl ||
         (typeof window !== 'undefined' ? window.location.href : `/${lang}`);
 
-      return buildSSOLoginUrl({
+      return getClientSSOLoginUrl({
         tenantId,
         returnUrl: currentUrl,
         lang,

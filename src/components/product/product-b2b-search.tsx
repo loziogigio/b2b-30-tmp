@@ -28,6 +28,7 @@ import {
   getUserLikes as apiGetUserLikes,
   getTrendingProductsPage as apiGetTrendingPage,
 } from '@framework/likes';
+import { getUserReminders as apiGetUserReminders } from '@framework/reminders';
 import React from 'react';
 
 interface ProductSearchProps {
@@ -121,7 +122,8 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
     Math.max(1, Number(searchParams.get('page_size') || 24)),
   );
 
-  const likesOrTrending = source === 'likes' || source === 'trending';
+  const isSpecialSource =
+    source === 'likes' || source === 'trending' || source === 'reminders';
 
   // Extract URL filters for likes/trending queries
   const urlFiltersForSpecialQuery = useMemo(() => {
@@ -138,7 +140,7 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
     return filters;
   }, [urlParams]);
 
-  const likesTrendingQuery = useInfiniteQuery({
+  const specialSourceQuery = useInfiniteQuery({
     queryKey: [
       'search-special',
       source,
@@ -151,6 +153,23 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
       if (source === 'likes') {
         const res = await apiGetUserLikes(pageParam, pageSizeParam);
         const skus = (res?.likes || []).map((l: any) => l.sku).filter(Boolean);
+        if (!skus.length) {
+          return { items: [], nextPage: null };
+        }
+        // Use PIM search with SKU filter + URL filters
+        const result = await fetchPimProductList({
+          lang,
+          filters: { sku: skus, ...urlFiltersForSpecialQuery },
+          rows: skus.length,
+        });
+        const nextPage = res?.has_next ? pageParam + 1 : null;
+        return { items: result.items, nextPage };
+      }
+      if (source === 'reminders') {
+        const res = await apiGetUserReminders(pageParam, pageSizeParam);
+        const skus = (res?.reminders || [])
+          .map((r: any) => r.sku)
+          .filter(Boolean);
         if (!skus.length) {
           return { items: [], nextPage: null };
         }
@@ -183,7 +202,7 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
       const nextPage = trendingPage?.has_next ? pageParam + 1 : null;
       return { items: result.items, nextPage };
     },
-    enabled: likesOrTrending,
+    enabled: isSpecialSource,
     getNextPageParam: (lastPage) => lastPage?.nextPage ?? undefined,
     initialPageParam: 1,
   });
@@ -192,21 +211,21 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
     groupByParent: true,
   });
 
-  const data = likesOrTrending ? likesTrendingQuery.data : baseQuery.data;
-  const error = likesOrTrending
-    ? (likesTrendingQuery.error as any)
+  const data = isSpecialSource ? specialSourceQuery.data : baseQuery.data;
+  const error = isSpecialSource
+    ? (specialSourceQuery.error as any)
     : baseQuery.error;
-  const isLoading = likesOrTrending
-    ? likesTrendingQuery.isFetching
+  const isLoading = isSpecialSource
+    ? specialSourceQuery.isFetching
     : baseQuery.isFetching;
-  const fetchNextPage = likesOrTrending
-    ? likesTrendingQuery.fetchNextPage
+  const fetchNextPage = isSpecialSource
+    ? specialSourceQuery.fetchNextPage
     : baseQuery.fetchNextPage;
-  const loadingMore = likesOrTrending
-    ? likesTrendingQuery.isFetchingNextPage
+  const loadingMore = isSpecialSource
+    ? specialSourceQuery.isFetchingNextPage
     : baseQuery.isFetchingNextPage;
-  const hasNextPage = likesOrTrending
-    ? !!likesTrendingQuery.hasNextPage
+  const hasNextPage = isSpecialSource
+    ? !!specialSourceQuery.hasNextPage
     : baseQuery.hasNextPage;
 
   // ⬇️ Include ALL variant ids so list view has prices when expanded
@@ -220,13 +239,13 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
   // Reset ERP cache when search signature changes
   const searchSignature = useMemo(() => {
     const base = JSON.stringify(pimParams);
-    if (likesOrTrending) {
-      return source === 'likes'
-        ? `likes:${pageSizeParam}`
-        : `trending:${period}:${pageSizeParam}`;
+    if (isSpecialSource) {
+      if (source === 'likes') return `likes:${pageSizeParam}`;
+      if (source === 'reminders') return `reminders:${pageSizeParam}`;
+      return `trending:${period}:${pageSizeParam}`;
     }
     return `base:${base}`;
-  }, [likesOrTrending, source, period, pageSizeParam, pimParams]);
+  }, [isSpecialSource, source, period, pageSizeParam, pimParams]);
 
   const prevSig = useRef<string>('');
   useEffect(() => {
@@ -395,6 +414,7 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
                     product={target}
                     getPrice={getPrice}
                     priceData={priceData}
+                    forceShowReminderToggle={source === 'reminders'}
                   />
                 );
               }
@@ -405,6 +425,7 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
                   product={target}
                   lang={lang}
                   priceData={priceData}
+                  forceShowReminderToggle={source === 'reminders'}
                 />
               );
             }),
