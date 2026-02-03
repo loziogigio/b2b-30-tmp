@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import { resolveTenant, isMultiTenant } from '@/lib/tenant';
 import { getDefaultSsoApiUrl, getHostnameFromRequest } from '@/lib/auth/server';
 
-const CLIENT_ID = 'vinc-b2b';
+const CLIENT_ID = process.env.SSO_CLIENT_ID || 'vinc-b2b';
 const CLIENT_SECRET = process.env.SSO_CLIENT_SECRET || '';
 
 /**

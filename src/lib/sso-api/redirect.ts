@@ -8,7 +8,10 @@
 const SSO_API_URL =
   process.env.SSO_API_URL || process.env.NEXT_PUBLIC_SSO_URL || '';
 const APP_URL = process.env.NEXT_PUBLIC_WEBSITE_URL || '';
-const CLIENT_ID = 'vinc-b2b';
+const CLIENT_ID =
+  process.env.SSO_CLIENT_ID ||
+  process.env.NEXT_PUBLIC_SSO_CLIENT_ID ||
+  'vinc-b2b';
 
 export interface SSORedirectParams {
   tenantId?: string;

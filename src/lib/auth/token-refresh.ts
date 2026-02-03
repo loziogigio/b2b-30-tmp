@@ -8,7 +8,7 @@
  * This ensures consistent behavior and eliminates code duplication.
  */
 
-import { setAuthTokensClient, getRefreshToken } from './cookies';
+import { setAuthTokensClient } from './cookies';
 
 // =============================================================================
 // TYPES
@@ -20,6 +20,8 @@ export interface RefreshResult {
   refreshToken?: string;
   expiresIn?: number;
   error?: string;
+  /** HTTP status code from refresh endpoint (if failed) */
+  status?: number;
 }
 
 // =============================================================================
@@ -33,29 +35,26 @@ export interface RefreshResult {
  * Used by both proactive refresh (useAutoRefreshToken) and
  * reactive refresh (HTTP 401 interceptor).
  *
- * @param refreshToken - Optional refresh token. If not provided, reads from cookie.
+ * The server reads the refresh token from the httpOnly cookie,
+ * so we don't need to send it from the client.
+ *
  * @returns RefreshResult with new tokens on success, or error on failure.
  */
-export async function refreshAccessToken(
-  refreshToken?: string,
-): Promise<RefreshResult> {
-  const token = refreshToken || getRefreshToken();
-
-  if (!token) {
-    return { success: false, error: 'No refresh token available' };
-  }
-
+export async function refreshAccessToken(): Promise<RefreshResult> {
   try {
+    // Server will read refresh_token from httpOnly cookie
+    // We send credentials: 'include' to ensure cookies are sent
     const response = await fetch('/api/auth/refresh', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refresh_token: token }),
+      credentials: 'include',
     });
 
     if (!response.ok) {
       return {
         success: false,
         error: `Refresh request failed with status ${response.status}`,
+        status: response.status,
       };
     }
 

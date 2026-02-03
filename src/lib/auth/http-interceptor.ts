@@ -10,11 +10,7 @@
  */
 
 import { AxiosError, InternalAxiosRequestConfig, AxiosInstance } from 'axios';
-import {
-  getAuthToken,
-  clearAuthCookiesClient,
-  getRefreshToken,
-} from './cookies';
+import { getAuthToken, clearAuthCookiesClient } from './cookies';
 import { refreshAccessToken, dispatchSessionExpired } from './token-refresh';
 
 // =============================================================================
@@ -131,17 +127,9 @@ export function addAuthInterceptors(http: AxiosInstance): void {
       originalRequest._retry = true;
       isRefreshing = true;
 
-      const refreshToken = getRefreshToken();
-
-      if (!refreshToken) {
-        isRefreshing = false;
-        processQueue(error, null);
-        handleAuthFailure();
-        return Promise.reject(error);
-      }
-
       try {
-        const result = await refreshAccessToken(refreshToken);
+        // Don't pass refresh token - the server will read it from httpOnly cookie
+        const result = await refreshAccessToken();
 
         if (result.success && result.token) {
           // Update the original request with new token
@@ -149,12 +137,20 @@ export function addAuthInterceptors(http: AxiosInstance): void {
           processQueue(null, result.token);
           return http(originalRequest);
         } else {
-          throw new Error(result.error || 'Refresh failed');
+          // Only dispatch session-expired if refresh token is truly expired (401)
+          // Other errors (400, 500, network) should just fail silently
+          if (result.status === 401) {
+            handleAuthFailure();
+          }
+          // Don't retry - just reject with original error
+          processQueue(error, null);
+          return Promise.reject(error);
         }
       } catch (refreshError) {
-        processQueue(refreshError, null);
-        handleAuthFailure();
-        return Promise.reject(refreshError);
+        // On unexpected errors, just propagate the original 401 error
+        // Don't trigger full logout - let the component handle it
+        processQueue(error, null);
+        return Promise.reject(error);
       } finally {
         isRefreshing = false;
       }

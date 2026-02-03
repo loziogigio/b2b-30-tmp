@@ -30,9 +30,12 @@ export function useAutoRefreshToken() {
       if (process.env.NODE_ENV === 'development') {
         console.log('[AutoRefresh] Proactively refreshing token...');
       }
-      const success = await refreshAccessToken();
-      if (success && process.env.NODE_ENV === 'development') {
+      const result = await refreshAccessToken();
+      if (result.success && process.env.NODE_ENV === 'development') {
         console.log('[AutoRefresh] Token refreshed successfully');
+      }
+      if (!result.success && process.env.NODE_ENV === 'development') {
+        console.log('[AutoRefresh] Token refresh failed:', result.error);
       }
     } catch (error) {
       console.error('[AutoRefresh] Failed to refresh token:', error);

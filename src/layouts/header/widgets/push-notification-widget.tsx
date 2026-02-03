@@ -210,12 +210,20 @@ export function PushNotificationWidget({
   }, [isOpen, activeTab, isSubscribed, isAuthorized]);
 
   // Periodically refresh unread count when subscribed (fallback, every 60s)
+  // Add a small delay on initial fetch to avoid race condition with auth cookies after login
   React.useEffect(() => {
     if (!isSubscribed || !isAuthorized) return;
 
-    fetchUnreadCount();
+    // Delay first fetch to allow auth system to settle after login
+    const initialDelay = setTimeout(() => {
+      fetchUnreadCount();
+    }, 1000);
+
     const interval = setInterval(fetchUnreadCount, 60000);
-    return () => clearInterval(interval);
+    return () => {
+      clearTimeout(initialDelay);
+      clearInterval(interval);
+    };
   }, [isSubscribed, isAuthorized]);
 
   // Real-time updates: Listen for Service Worker push messages

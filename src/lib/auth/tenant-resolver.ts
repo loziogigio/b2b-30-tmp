@@ -40,9 +40,7 @@ export type TenantResolveResult =
  * Priority: SSO_API_URL > NEXT_PUBLIC_SSO_URL
  */
 export function getDefaultSsoApiUrl(): string {
-  return (
-    process.env.SSO_API_URL || process.env.NEXT_PUBLIC_SSO_URL || ''
-  );
+  return process.env.SSO_API_URL || process.env.NEXT_PUBLIC_SSO_URL || '';
 }
 
 /**
