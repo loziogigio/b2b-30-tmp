@@ -757,10 +757,10 @@ export function PushNotificationWidget({
                                   );
                                 })()}
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-sm text-gray-900">
-                                    <span className="font-semibold">
-                                      {notification.title}
-                                    </span>{' '}
+                                  <p className="text-sm font-semibold text-gray-900 truncate">
+                                    {notification.title}
+                                  </p>
+                                  <p className="text-sm text-gray-600 line-clamp-2 mt-0.5">
                                     {notification.body}
                                   </p>
                                   <p

@@ -402,13 +402,8 @@ export function NotificationDetailModal({
       }
       return t('text-view-offer', { defaultValue: "Vai all'Offerta" });
     }
-    if (payload?.category === 'generic' && payload.url) {
-      // Check if it's a PDF or document
-      const url = payload.url.toLowerCase();
-      if (url.endsWith('.pdf')) {
-        return t('text-open-document', { defaultValue: 'Apri Documento' });
-      }
-      return t('text-open-link', { defaultValue: 'Apri Link' });
+    if (payload?.category === 'generic') {
+      return t('text-open', { defaultValue: 'Apri' });
     }
     return t('text-view-details', { defaultValue: 'Visualizza' });
   };
