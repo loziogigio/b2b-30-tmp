@@ -55,6 +55,29 @@ export function getHostnameFromRequest(request: NextRequest): string {
 }
 
 /**
+ * Get public origin from forwarded headers (for Docker/proxy environments).
+ * Falls back to request.nextUrl.origin if no forwarded headers.
+ *
+ * In Docker with reverse proxy:
+ * - Internal: Container runs on 0.0.0.0:3000
+ * - External: Accessed via https://tenant.vendereincloud.it
+ * - Proxy sets x-forwarded-host and x-forwarded-proto headers
+ */
+export function getPublicOrigin(request: NextRequest): string {
+  const forwardedHost = request.headers.get('x-forwarded-host');
+  const host = request.headers.get('host');
+  const forwardedProto = request.headers.get('x-forwarded-proto') || 'https';
+
+  if (forwardedHost) {
+    return `${forwardedProto}://${forwardedHost}`;
+  }
+  if (host && !host.includes('0.0.0.0') && !host.includes('127.0.0.1')) {
+    return `${forwardedProto}://${host}`;
+  }
+  return request.nextUrl.origin;
+}
+
+/**
  * Resolve auth context from request.
  *
  * Use in API routes to avoid duplicating tenant resolution logic.

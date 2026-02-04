@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { resolveTenant, isMultiTenant } from '@/lib/tenant';
-import { getDefaultSsoApiUrl, getHostnameFromRequest } from '@/lib/auth/server';
+import {
+  getDefaultSsoApiUrl,
+  getHostnameFromRequest,
+  OAUTH_CONFIG,
+} from '@/lib/auth/server';
 import { AUTH_COOKIES } from '@/lib/auth/cookies';
-
-const CLIENT_ID = process.env.SSO_CLIENT_ID || 'vinc-b2b';
 
 export async function POST(request: NextRequest) {
   try {
@@ -62,7 +64,7 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({
         refresh_token,
-        client_id: CLIENT_ID,
+        client_id: OAUTH_CONFIG.CLIENT_ID,
       }),
     });
 

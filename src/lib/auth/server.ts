@@ -16,9 +16,14 @@ export {
   resolveTenantContext,
   getDefaultSsoApiUrl,
   getHostnameFromRequest,
+  getPublicOrigin,
   type ResolvedAuthContext,
   type TenantResolveResult,
 } from './tenant-resolver';
 
 // Server-side cookie utilities (uses NextResponse)
-export { clearAuthCookiesServer, setAuthTokensServer } from './cookies';
+export {
+  clearAuthCookiesServer,
+  setAuthTokensServer,
+  OAUTH_CONFIG,
+} from './cookies';

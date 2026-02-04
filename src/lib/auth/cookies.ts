@@ -39,6 +39,19 @@ export const AUTH_COOKIES = {
 export const ALL_AUTH_COOKIES = Object.values(AUTH_COOKIES);
 
 // =============================================================================
+// OAUTH CONFIGURATION - Single source of truth for OAuth client credentials
+// =============================================================================
+
+/**
+ * OAuth client credentials from environment.
+ * Used for authorization code exchange and token refresh.
+ */
+export const OAUTH_CONFIG = {
+  CLIENT_ID: process.env.SSO_CLIENT_ID || 'vinc-b2b',
+  CLIENT_SECRET: process.env.SSO_CLIENT_SECRET || '',
+} as const;
+
+// =============================================================================
 // CLIENT-SIDE COOKIE OPERATIONS (using js-cookie)
 // =============================================================================
 

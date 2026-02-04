@@ -1,28 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { resolveTenant, isMultiTenant } from '@/lib/tenant';
-import { getDefaultSsoApiUrl, getHostnameFromRequest } from '@/lib/auth/server';
-
-const CLIENT_ID = process.env.SSO_CLIENT_ID || 'vinc-b2b';
-const CLIENT_SECRET = process.env.SSO_CLIENT_SECRET || '';
-
-/**
- * Get public origin from forwarded headers (for Docker/proxy environments)
- * Falls back to request.nextUrl.origin if no forwarded headers
- */
-function getPublicOrigin(request: NextRequest): string {
-  const forwardedHost = request.headers.get('x-forwarded-host');
-  const host = request.headers.get('host');
-  const forwardedProto = request.headers.get('x-forwarded-proto') || 'https';
-
-  if (forwardedHost) {
-    return `${forwardedProto}://${forwardedHost}`;
-  }
-  if (host && !host.includes('0.0.0.0') && !host.includes('127.0.0.1')) {
-    return `${forwardedProto}://${host}`;
-  }
-  return request.nextUrl.origin;
-}
+import {
+  getDefaultSsoApiUrl,
+  getHostnameFromRequest,
+  getPublicOrigin,
+  OAUTH_CONFIG,
+} from '@/lib/auth/server';
 
 /**
  * OAuth callback handler
@@ -99,8 +83,8 @@ export async function GET(request: NextRequest) {
     console.log('[auth/callback] Token exchange request:', {
       endpoint: tokenEndpoint,
       tenantId,
-      clientId: CLIENT_ID,
-      hasClientSecret: !!CLIENT_SECRET,
+      clientId: OAUTH_CONFIG.CLIENT_ID,
+      hasClientSecret: !!OAUTH_CONFIG.CLIENT_SECRET,
       redirectUri: callbackUrl,
       codeLength: code?.length,
     });
@@ -127,8 +111,8 @@ export async function GET(request: NextRequest) {
           grant_type: 'authorization_code',
           code,
           redirect_uri: callbackUrl,
-          client_id: CLIENT_ID,
-          client_secret: CLIENT_SECRET,
+          client_id: OAUTH_CONFIG.CLIENT_ID,
+          client_secret: OAUTH_CONFIG.CLIENT_SECRET,
         }),
       });
     } catch (fetchError) {
