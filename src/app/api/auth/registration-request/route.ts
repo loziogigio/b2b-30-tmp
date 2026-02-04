@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-const PIM_API_URL = process.env.PIM_API_PRIVATE_URL || 'http://localhost:3001';
+const PIM_API_URL = process.env.PIM_API_PRIVATE_URL || '';
 
 export async function POST(request: Request) {
   try {

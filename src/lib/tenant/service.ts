@@ -59,13 +59,9 @@ function fromDocument(doc: TenantDocument): TenantConfig {
     })),
     api: {
       pimApiUrl:
-        doc.api?.pim_api_url ||
-        process.env.PIM_API_URL ||
-        'http://localhost:3001',
+        doc.api?.pim_api_url || process.env.PIM_API_URL || '',
       b2bApiUrl:
-        doc.api?.b2b_api_url ||
-        process.env.B2B_API_URL ||
-        'http://localhost:8000/api/v1',
+        doc.api?.b2b_api_url || process.env.B2B_API_URL || '',
       apiKeyId: doc.api?.api_key_id || '',
       apiSecret: doc.api?.api_secret || '',
     },

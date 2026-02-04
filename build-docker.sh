@@ -247,7 +247,10 @@ if [[ "$IS_MULTI_TENANT" == "true" ]]; then
     echo "Multi-tenant deployment:"
     echo "  docker run -p 3000:3000 \\"
     echo "    -e MONGO_URL=mongodb://... \\"
-    echo "    -e MONGO_DB=vinc-tenants \\"
+    echo "    -e TENANTS_DB=vinc-tenants \\"
+    echo "    -e SSO_API_URL=https://cs.vendereincloud.it \\"
+    echo "    -e SSO_CLIENT_ID=vinc-b2b \\"
+    echo "    -e SSO_CLIENT_SECRET=your-secret \\"
     echo "    ${IMAGE_NAME}:${VERSION}"
     echo ""
 fi

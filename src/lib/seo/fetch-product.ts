@@ -13,7 +13,7 @@ import { resolveTenant, isSingleTenant } from '@/lib/tenant';
 const DEFAULT_PIM_API_URL =
   process.env.PIM_API_PRIVATE_URL ||
   process.env.NEXT_PUBLIC_PIM_API_URL ||
-  'http://localhost:3001';
+  '';
 const DEFAULT_API_KEY_ID =
   process.env.API_KEY_ID || process.env.NEXT_PUBLIC_API_KEY_ID;
 const DEFAULT_API_SECRET =

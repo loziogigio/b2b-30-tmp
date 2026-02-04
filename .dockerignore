@@ -1,0 +1,44 @@
+# Ignore local env files (these have localhost values)
+.env
+.env.local
+.env.*.local
+.env.hidros-it
+.env.dfl-eventi-it
+
+# Deploy configs are used by build script, not Docker
+.env.deploy.*
+
+# Development
+node_modules
+.next
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Test
+coverage
+.nyc_output
+
+# Build artifacts
+dist
+build
+
+# Documentation
+doc
+*.md
+!README.md
+
+# Docker
+Dockerfile*
+docker-compose*
+.dockerignore

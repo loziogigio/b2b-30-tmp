@@ -7,6 +7,24 @@ const CLIENT_ID = process.env.SSO_CLIENT_ID || 'vinc-b2b';
 const CLIENT_SECRET = process.env.SSO_CLIENT_SECRET || '';
 
 /**
+ * Get public origin from forwarded headers (for Docker/proxy environments)
+ * Falls back to request.nextUrl.origin if no forwarded headers
+ */
+function getPublicOrigin(request: NextRequest): string {
+  const forwardedHost = request.headers.get('x-forwarded-host');
+  const host = request.headers.get('host');
+  const forwardedProto = request.headers.get('x-forwarded-proto') || 'https';
+
+  if (forwardedHost) {
+    return `${forwardedProto}://${forwardedHost}`;
+  }
+  if (host && !host.includes('0.0.0.0') && !host.includes('127.0.0.1')) {
+    return `${forwardedProto}://${host}`;
+  }
+  return request.nextUrl.origin;
+}
+
+/**
  * OAuth callback handler
  * Exchanges authorization code for tokens after SSO login
  */
@@ -32,17 +50,11 @@ export async function GET(request: NextRequest) {
 
     if (tenant) {
       tenantId = tenant.id;
-      // SSO_API_URL_OVERRIDE takes precedence (for local dev)
-      // Then try api.pimApiUrl, then builderUrl, then fallback
-      ssoApiUrl =
-        process.env.SSO_API_URL_OVERRIDE ||
-        tenant.api.pimApiUrl ||
-        tenant.builderUrl ||
-        ssoApiUrl;
+      // SSO_API_URL_OVERRIDE for local dev, otherwise use NEXT_PUBLIC_SSO_URL
+      // Note: Don't use tenant.api.pimApiUrl - it may have localhost for dev
+      ssoApiUrl = process.env.SSO_API_URL_OVERRIDE || ssoApiUrl;
       console.log('[auth/callback] Tenant resolved:', {
         tenantId,
-        pimApiUrl: tenant.api.pimApiUrl,
-        builderUrl: tenant.builderUrl,
         ssoApiUrl,
       });
     } else {
@@ -56,10 +68,13 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  // Get public origin for redirects (Docker uses internal 0.0.0.0 address)
+  const publicOrigin = getPublicOrigin(request);
+
   // Handle error from SSO
   if (error) {
     console.error('[auth/callback] SSO error:', error, errorDescription);
-    const redirectUrl = new URL('/it', request.url);
+    const redirectUrl = new URL('/it', publicOrigin);
     redirectUrl.searchParams.set('auth_error', error);
     if (errorDescription) {
       redirectUrl.searchParams.set('error_message', errorDescription);
@@ -70,32 +85,14 @@ export async function GET(request: NextRequest) {
   // No code provided
   if (!code) {
     console.error('[auth/callback] No authorization code provided');
-    const redirectUrl = new URL('/it', request.url);
+    const redirectUrl = new URL('/it', publicOrigin);
     redirectUrl.searchParams.set('auth_error', 'no_code');
     return NextResponse.redirect(redirectUrl);
   }
 
   try {
-    // Build callback URL (must match what was sent to SSO)
-    // Use x-forwarded-host or host header to get the actual public URL
-    // (request.nextUrl.origin may return internal Docker address like 0.0.0.0:3000)
-    const forwardedHost = request.headers.get('x-forwarded-host');
-    const host = request.headers.get('host');
-    const forwardedProto = request.headers.get('x-forwarded-proto') || 'https';
-
-    let callbackUrl: string;
-    if (forwardedHost) {
-      callbackUrl = `${forwardedProto}://${forwardedHost}/api/auth/callback`;
-    } else if (
-      host &&
-      !host.includes('0.0.0.0') &&
-      !host.includes('127.0.0.1')
-    ) {
-      callbackUrl = `${forwardedProto}://${host}/api/auth/callback`;
-    } else {
-      callbackUrl = `${request.nextUrl.origin}/api/auth/callback`;
-    }
-
+    // Build callback URL using public origin (for Docker environments)
+    const callbackUrl = `${publicOrigin}/api/auth/callback`;
     const tokenEndpoint = `${ssoApiUrl}/api/auth/token`;
 
     // Log the request details (without secrets)
@@ -111,7 +108,7 @@ export async function GET(request: NextRequest) {
     // Validate configuration
     if (!ssoApiUrl) {
       console.error('[auth/callback] SSO_API_URL is not configured');
-      const redirectUrl = new URL('/it', request.url);
+      const redirectUrl = new URL('/it', publicOrigin);
       redirectUrl.searchParams.set('auth_error', 'config_error');
       redirectUrl.searchParams.set('error_message', 'SSO non configurato');
       return NextResponse.redirect(redirectUrl);
@@ -137,7 +134,7 @@ export async function GET(request: NextRequest) {
     } catch (fetchError) {
       // Network error - SSO server unreachable
       console.error('[auth/callback] Failed to connect to SSO:', fetchError);
-      const redirectUrl = new URL('/it', request.url);
+      const redirectUrl = new URL('/it', publicOrigin);
       redirectUrl.searchParams.set('auth_error', 'sso_unreachable');
       redirectUrl.searchParams.set(
         'error_message',
@@ -161,7 +158,7 @@ export async function GET(request: NextRequest) {
         error: errorData,
       });
 
-      const redirectUrl = new URL('/it', request.url);
+      const redirectUrl = new URL('/it', publicOrigin);
       redirectUrl.searchParams.set('auth_error', 'token_exchange_failed');
 
       // Include more specific error message if available
@@ -279,20 +276,20 @@ export async function GET(request: NextRequest) {
       // Decode the original URL from state
       try {
         const decodedState = decodeURIComponent(state);
-        redirectUrl = new URL(decodedState, request.url);
+        redirectUrl = new URL(decodedState, publicOrigin);
       } catch {
-        redirectUrl = new URL('/it', request.url);
+        redirectUrl = new URL('/it', publicOrigin);
       }
     } else {
       // Default redirect
-      redirectUrl = new URL('/it', request.url);
+      redirectUrl = new URL('/it', publicOrigin);
     }
 
     // Redirect to the original page or home
     return NextResponse.redirect(redirectUrl);
   } catch (error) {
     console.error('[auth/callback] Error:', error);
-    const redirectUrl = new URL('/it', request.url);
+    const redirectUrl = new URL('/it', publicOrigin);
     redirectUrl.searchParams.set('auth_error', 'internal_error');
     return NextResponse.redirect(redirectUrl);
   }

@@ -11,7 +11,7 @@ import { DEFAULT_HOME_SETTINGS } from '@/lib/home-settings/defaults';
 const rawPimApiUrl =
   process.env.PIM_API_PRIVATE_URL ||
   process.env.NEXT_PUBLIC_PIM_API_URL ||
-  'http://localhost:3001';
+  '';
 
 function resolveBaseUrl(raw: string): string {
   try {

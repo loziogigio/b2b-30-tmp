@@ -7,7 +7,7 @@ export async function GET() {
     const pimApiUrl =
       process.env.PIM_API_PRIVATE_URL ||
       process.env.NEXT_PUBLIC_PIM_API_URL ||
-      'http://localhost:3001';
+      '';
 
     // Get API keys from environment (use server-side vars if available)
     const apiKeyId =

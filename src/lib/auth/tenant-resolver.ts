@@ -4,10 +4,9 @@
  * Centralizes tenant resolution logic used across all auth API routes.
  * Eliminates duplication of tenant/SSO URL resolution code.
  *
- * URL Resolution Priority (multi-tenant mode):
+ * URL Resolution Priority:
  * 1. SSO_API_URL_OVERRIDE (local dev only, set in .env.local)
- * 2. tenant.api.pimApiUrl (from MongoDB tenant config)
- * 3. SSO_API_URL / PIM_API_URL (fallback from .env)
+ * 2. NEXT_PUBLIC_SSO_URL (production SSO URL from .env)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -100,11 +99,9 @@ export async function resolveAuthContext(
     tenantId = resolvedTenant.id;
     tenant = resolvedTenant;
 
-    // URL priority: Override > MongoDB tenant config > .env fallback
-    ssoApiUrl =
-      process.env.SSO_API_URL_OVERRIDE ||
-      resolvedTenant.api.pimApiUrl ||
-      getDefaultSsoApiUrl();
+    // SSO_API_URL_OVERRIDE for local dev, otherwise use NEXT_PUBLIC_SSO_URL
+    // Note: Don't use tenant.api.pimApiUrl - it may have localhost for dev
+    ssoApiUrl = process.env.SSO_API_URL_OVERRIDE || ssoApiUrl;
   }
 
   // Create pre-configured SSO API client

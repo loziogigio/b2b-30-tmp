@@ -22,8 +22,7 @@ interface MenuTreeNode {
 
 // Server-side menu fetch for SEO metadata
 async function fetchMenuForSeo(): Promise<MenuTreeNode[]> {
-  const PIM_API_BASE_URL =
-    process.env.NEXT_PUBLIC_PIM_API_URL || 'http://localhost:3001';
+  const PIM_API_BASE_URL = process.env.NEXT_PUBLIC_PIM_API_URL || '';
   const url = `${PIM_API_BASE_URL}/api/public/menu?location=header`;
 
   try {

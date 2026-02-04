@@ -6,8 +6,7 @@ import { getServerHomeSettings } from '@/lib/home-settings/fetch-server';
 
 // Server-side collection fetch for SEO metadata
 async function fetchCollectionForSeo(slug: string) {
-  const PIM_API_BASE_URL =
-    process.env.NEXT_PUBLIC_PIM_API_URL || 'http://localhost:3001';
+  const PIM_API_BASE_URL = process.env.NEXT_PUBLIC_PIM_API_URL || '';
   const url = `${PIM_API_BASE_URL}/api/public/collections/${slug}`;
 
   try {

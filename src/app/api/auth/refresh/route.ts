@@ -41,11 +41,8 @@ export async function POST(request: NextRequest) {
 
       if (tenant) {
         tenantId = tenant.id;
-        ssoApiUrl =
-          process.env.SSO_API_URL_OVERRIDE ||
-          tenant.api.pimApiUrl ||
-          tenant.builderUrl ||
-          ssoApiUrl;
+        // SSO_API_URL_OVERRIDE for local dev, otherwise use NEXT_PUBLIC_SSO_URL
+        ssoApiUrl = process.env.SSO_API_URL_OVERRIDE || ssoApiUrl;
       }
     }
 

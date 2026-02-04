@@ -3,9 +3,7 @@ import { resolveTenant, isSingleTenant } from '@/lib/tenant';
 
 // Default values from .env (used in single-tenant mode)
 const DEFAULT_PIM_API_URL =
-  process.env.PIM_API_URL ||
-  process.env.NEXT_PUBLIC_PIM_API_URL ||
-  'http://localhost:3001';
+  process.env.PIM_API_URL || process.env.NEXT_PUBLIC_PIM_API_URL || '';
 
 // Local dev override - set in .env.local to override tenant config from MongoDB
 const PIM_API_URL_OVERRIDE = process.env.PIM_API_URL_OVERRIDE;

@@ -141,11 +141,11 @@ export function buildTenantFromEnv(): TenantConfig {
       pimApiUrl:
         process.env.PIM_API_URL ||
         process.env.NEXT_PUBLIC_PIM_API_URL ||
-        'http://localhost:3001',
+        '',
       b2bApiUrl:
         process.env.B2B_API_URL ||
         process.env.NEXT_PUBLIC_B2B_PUBLIC_REST_API_ENDPOINT ||
-        'http://localhost:8000/api/v1',
+        '',
       apiKeyId:
         process.env.API_KEY_ID || process.env.NEXT_PUBLIC_API_KEY_ID || '',
       apiSecret:
