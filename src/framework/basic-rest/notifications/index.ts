@@ -7,6 +7,7 @@ const EP = {
   UNREAD_COUNT: 'api/b2b/notifications/unread-count',
   BULK: 'api/b2b/notifications/bulk',
   SINGLE: (id: string) => `api/b2b/notifications/${id}`,
+  TRACK: 'api/b2b/notifications/track',
 };
 
 export type NotificationTrigger =
@@ -58,8 +59,14 @@ export interface PriceProductItem extends ProductItem {
   discount?: string;
 }
 
+/** Base payload fields shared by all categories */
+interface BasePayload {
+  /** Notification log ID for tracking analytics */
+  notification_log_id?: string;
+}
+
 /** Generic payload - for welcome, announcements, system messages */
-export interface GenericPayload {
+export interface GenericPayload extends BasePayload {
   category: 'generic';
   media?: PayloadMedia;
   /** URL for documents, catalogs, external links */
@@ -81,16 +88,18 @@ export interface NotificationFilters {
 }
 
 /** Product payload - for new arrivals, back in stock, wishlist */
-export interface ProductPayload {
+export interface ProductPayload extends BasePayload {
   category: 'product';
   products?: ProductItem[];
   media?: PayloadMedia;
   /** Search filters for navigation */
   filters?: NotificationFilters;
+  /** URL for "See All" button (e.g., "search?text=condizionatore") */
+  products_url?: string;
 }
 
 /** Order payload - for confirmation, shipped, delivered, cancelled */
-export interface OrderPayload {
+export interface OrderPayload extends BasePayload {
   category: 'order';
   order?: {
     id?: string;
@@ -105,7 +114,7 @@ export interface OrderPayload {
 }
 
 /** Price payload - for discounts, flash sales, price drops */
-export interface PricePayload {
+export interface PricePayload extends BasePayload {
   category: 'price';
   expires_at?: string;
   discount_label?: string;
@@ -113,6 +122,8 @@ export interface PricePayload {
   media?: PayloadMedia;
   /** Search filters for navigation */
   filters?: NotificationFilters;
+  /** URL for "See All" button (e.g., "search?text=offerta") */
+  products_url?: string;
 }
 
 export type NotificationPayload =
@@ -131,6 +142,8 @@ export interface NotificationItem {
   icon?: string;
   action_url?: string;
   payload?: NotificationPayload;
+  /** Campaign ID reference */
+  campaign_id?: string;
   is_read: boolean;
   read_at?: string;
   created_at: string;
@@ -262,4 +275,39 @@ export async function deleteNotifications(
   notificationIds: string[],
 ): Promise<BulkActionResponse> {
   return bulkAction('delete', notificationIds);
+}
+
+/** Metadata for tracking notification events */
+export interface TrackMetadata {
+  /** Product SKU (for product clicks) */
+  sku?: string;
+  /** Click type: product, link, order */
+  type?: 'product' | 'link' | 'order';
+  /** Screen navigated to */
+  screen?: string;
+  /** URL that was clicked */
+  url?: string;
+  /** Order number (for order clicks) */
+  order_number?: string;
+}
+
+/**
+ * Track notification event for analytics
+ * Call this when user opens or clicks a notification
+ *
+ * @param logId - The log ID from notification.log_id
+ * @param event - Event type: opened, clicked, read, dismissed
+ * @param metadata - Additional event data
+ */
+export async function trackNotification(
+  logId: string,
+  event: 'delivered' | 'opened' | 'clicked' | 'read' | 'dismissed',
+  metadata?: TrackMetadata,
+): Promise<{ success: boolean }> {
+  return post<{ success: boolean }>(EP.TRACK, {
+    log_id: logId,
+    event,
+    platform: 'web',
+    ...(metadata && Object.keys(metadata).length > 0 ? { metadata } : {}),
+  });
 }

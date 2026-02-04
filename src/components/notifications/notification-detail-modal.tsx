@@ -20,9 +20,10 @@ import {
 } from 'react-icons/hi2';
 import type { IconType } from 'react-icons';
 import { useTranslation } from 'src/app/i18n/client';
-import type {
-  NotificationItem,
-  NotificationTrigger,
+import {
+  trackNotification,
+  type NotificationItem,
+  type NotificationTrigger,
 } from '@framework/notifications';
 
 interface NotificationDetailModalProps {
@@ -107,11 +108,10 @@ function getTriggerConfig(trigger: NotificationTrigger) {
 }
 
 /**
- * Build navigation URL based on item_ref and category
- * This handles frontend-specific routing based on payload data
- * - Single product: redirect to product detail page
- * - Multiple products: redirect to search page with SKUs
- * - Order: redirect to order detail page
+ * Build navigation URL for "See All" / main action button
+ * - Product/Price category: Use products_url field (e.g., "search?text=condizionatore")
+ * - Order category: Navigate to order detail page
+ * - Generic category: Use url field for external links
  */
 function buildNavigationUrl(
   notification: NotificationItem,
@@ -130,9 +130,15 @@ function buildNavigationUrl(
     return `/${lang}/account/orders/${payload.order.item_ref}`;
   }
 
-  // Product category - use filters if available, fallback to item_ref
+  // Product category - use products_url for "See All"
   if (payload.category === 'product') {
-    // Priority 1: Use filters object if available
+    // Priority 1: Use products_url if available (e.g., "search?text=condizionatore")
+    if (payload.products_url) {
+      // Prepend language to the URL
+      return `/${lang}/${payload.products_url.replace(/^\//, '')}`;
+    }
+
+    // Priority 2: Use filters object if available
     if (payload.filters && Object.keys(payload.filters).length > 0) {
       const params = new URLSearchParams();
       for (const [key, values] of Object.entries(payload.filters)) {
@@ -143,23 +149,28 @@ function buildNavigationUrl(
       return `/${lang}/search?${params.toString()}`;
     }
 
-    // Priority 2: Fallback to item_ref from products
+    // Priority 3: Fallback to SKUs from products
     if (payload.products?.length) {
-      const productsWithRef = payload.products.filter((p) => p.item_ref);
-      if (productsWithRef.length === 0) return null;
+      const productsWithSku = payload.products.filter((p) => p.sku);
+      if (productsWithSku.length === 0) return null;
 
-      if (productsWithRef.length === 1) {
-        return `/${lang}/products?sku=${productsWithRef[0].item_ref}`;
+      if (productsWithSku.length === 1) {
+        return `/${lang}/products?sku=${productsWithSku[0].sku}`;
       } else {
-        const skus = productsWithRef.map((p) => p.item_ref).join(';');
+        const skus = productsWithSku.map((p) => p.sku).join(';');
         return `/${lang}/search?filters-sku=${skus}`;
       }
     }
   }
 
-  // Price category - use filters if available, fallback to item_ref
+  // Price category - use products_url for "See All"
   if (payload.category === 'price') {
-    // Priority 1: Use filters object if available
+    // Priority 1: Use products_url if available
+    if (payload.products_url) {
+      return `/${lang}/${payload.products_url.replace(/^\//, '')}`;
+    }
+
+    // Priority 2: Use filters object if available
     if (payload.filters && Object.keys(payload.filters).length > 0) {
       const params = new URLSearchParams();
       for (const [key, values] of Object.entries(payload.filters)) {
@@ -170,15 +181,15 @@ function buildNavigationUrl(
       return `/${lang}/search?${params.toString()}`;
     }
 
-    // Priority 2: Fallback to item_ref from products
+    // Priority 3: Fallback to SKUs from products
     if (payload.products?.length) {
-      const productsWithRef = payload.products.filter((p) => p.item_ref);
-      if (productsWithRef.length === 0) return null;
+      const productsWithSku = payload.products.filter((p) => p.sku);
+      if (productsWithSku.length === 0) return null;
 
-      if (productsWithRef.length === 1) {
-        return `/${lang}/products?sku=${productsWithRef[0].item_ref}`;
+      if (productsWithSku.length === 1) {
+        return `/${lang}/products?sku=${productsWithSku[0].sku}`;
       } else {
-        const skus = productsWithRef.map((p) => p.item_ref).join(';');
+        const skus = productsWithSku.map((p) => p.sku).join(';');
         return `/${lang}/search?filters-sku=${skus}`;
       }
     }
@@ -238,6 +249,14 @@ export function NotificationDetailModal({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
+  // Track notification opened event
+  React.useEffect(() => {
+    const logId = notification?.payload?.notification_log_id;
+    if (isOpen && logId) {
+      trackNotification(logId, 'opened').catch(() => {});
+    }
+  }, [isOpen, notification?.payload?.notification_log_id]);
+
   // Close on outside click
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
@@ -252,23 +271,46 @@ export function NotificationDetailModal({
   const payload = notification.payload;
 
   // Get product items to display as cards
-  const getProductItems = (): Array<{ name: string; image?: string }> => {
+  const getProductItems = (): Array<{
+    name: string;
+    image?: string;
+    sku?: string;
+    item_ref?: string;
+  }> => {
     // Product category - products array
     if (payload?.category === 'product' && payload.products) {
-      return payload.products.slice(0, 4);
+      return payload.products.slice(0, 6);
     }
 
     // Order category - order items
     if (payload?.category === 'order' && payload.order?.items) {
-      return payload.order.items.slice(0, 4);
+      return payload.order.items.slice(0, 6);
     }
 
     // Price category - products with pricing
     if (payload?.category === 'price' && payload.products) {
-      return payload.products.slice(0, 4);
+      return payload.products.slice(0, 6);
     }
 
     return [];
+  };
+
+  // Handle product item click - navigate to product detail by SKU
+  const handleProductClick = (item: { sku?: string }) => {
+    if (!item.sku) return;
+
+    // Track click event if notification_log_id exists
+    const logId = notification.payload?.notification_log_id;
+    if (logId) {
+      trackNotification(logId, 'clicked', {
+        type: 'product',
+        sku: item.sku,
+        screen: 'product_detail',
+      }).catch(() => {});
+    }
+
+    onNavigate(`/${lang}/products?sku=${item.sku}`);
+    onClose();
   };
 
   // Get media images for generic category
@@ -308,6 +350,26 @@ export function NotificationDetailModal({
 
   const handleActionClick = () => {
     if (navigationUrl) {
+      // Track click event if notification_log_id exists
+      const logId = payload?.notification_log_id;
+      if (logId) {
+        // Determine click type based on payload category
+        const clickType =
+          payload?.category === 'order'
+            ? 'order'
+            : payload?.category === 'generic'
+              ? 'link'
+              : 'product';
+
+        trackNotification(logId, 'clicked', {
+          type: clickType,
+          url: navigationUrl,
+          ...(payload?.category === 'order' && payload.order?.number
+            ? { order_number: payload.order.number }
+            : {}),
+        }).catch(() => {});
+      }
+
       // Check if should open in new tab (external URLs, documents, etc.)
       if (shouldOpenInNewTab(notification)) {
         window.open(navigationUrl, '_blank', 'noopener,noreferrer');
@@ -362,7 +424,7 @@ export function NotificationDetailModal({
     >
       <div
         ref={modalRef}
-        className="relative w-full max-w-md mx-4 bg-white rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+        className="relative w-full max-w-2xl mx-4 bg-white rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200"
       >
         {/* Close button */}
         <button
@@ -374,39 +436,51 @@ export function NotificationDetailModal({
 
         {/* Product cards section - for product/order/price categories */}
         {productItems.length > 0 && (
-          <div className="bg-gray-50 p-3">
+          <div className="bg-gray-50 p-4">
             <div
               className={`grid gap-3 ${
                 productItems.length === 1
                   ? 'grid-cols-1 max-w-[200px] mx-auto'
-                  : 'grid-cols-2'
+                  : productItems.length === 2
+                    ? 'grid-cols-2 max-w-[400px] mx-auto'
+                    : 'grid-cols-3'
               }`}
             >
-              {productItems.map((item, i) => (
-                <div
-                  key={i}
-                  className="bg-white rounded-lg overflow-hidden shadow-sm"
-                >
-                  {item.image ? (
-                    <div className="aspect-square bg-gray-100">
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="w-full h-full object-contain"
-                      />
+              {productItems.map((item, i) => {
+                const isClickable = !!item.sku;
+                return (
+                  <div
+                    key={i}
+                    onClick={
+                      isClickable ? () => handleProductClick(item) : undefined
+                    }
+                    className={`bg-white rounded-lg overflow-hidden shadow-sm ${
+                      isClickable
+                        ? 'cursor-pointer hover:shadow-md hover:ring-2 hover:ring-brand/20 transition-all'
+                        : ''
+                    }`}
+                  >
+                    {item.image ? (
+                      <div className="aspect-square bg-gray-100">
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                    ) : (
+                      <div className="aspect-square bg-gray-100 flex items-center justify-center">
+                        <HiOutlineCube className="w-10 h-10 text-gray-300" />
+                      </div>
+                    )}
+                    <div className="p-2">
+                      <p className="text-xs text-gray-700 line-clamp-2 text-center">
+                        {item.name}
+                      </p>
                     </div>
-                  ) : (
-                    <div className="aspect-square bg-gray-100 flex items-center justify-center">
-                      <HiOutlineCube className="w-10 h-10 text-gray-300" />
-                    </div>
-                  )}
-                  <div className="p-2">
-                    <p className="text-xs text-gray-700 line-clamp-2 text-center">
-                      {item.name}
-                    </p>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

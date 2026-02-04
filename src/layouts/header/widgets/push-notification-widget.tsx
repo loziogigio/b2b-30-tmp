@@ -197,7 +197,7 @@ export function PushNotificationWidget({
     };
   }, []);
 
-  // Fetch notifications when panel opens
+  // Fetch notifications when panel opens - refresh in background without clearing
   React.useEffect(() => {
     if (
       isOpen &&
@@ -205,6 +205,7 @@ export function PushNotificationWidget({
       isSubscribed &&
       isAuthorized
     ) {
+      // Fetch in background - keep existing notifications visible during load
       fetchNotifications();
     }
   }, [isOpen, activeTab, isSubscribed, isAuthorized]);
@@ -219,12 +220,39 @@ export function PushNotificationWidget({
       fetchUnreadCount();
     }, 1000);
 
-    const interval = setInterval(fetchUnreadCount, 60000);
+    const interval = setInterval(fetchUnreadCount, 5 * 60 * 1000); // 5 minutes
     return () => {
       clearTimeout(initialDelay);
       clearInterval(interval);
     };
   }, [isSubscribed, isAuthorized]);
+
+  // Update browser tab title with notification count (like WhatsApp)
+  React.useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    const updateTitle = () => {
+      const currentTitle = document.title;
+      // Remove any existing count prefix like "(3) "
+      const cleanTitle = currentTitle.replace(/^\(\d+\)\s*/, '');
+
+      if (unreadCount > 0 && isSubscribed && isAuthorized) {
+        document.title = `(${unreadCount}) ${cleanTitle}`;
+      } else if (currentTitle !== cleanTitle) {
+        // Restore clean title if count was removed
+        document.title = cleanTitle;
+      }
+    };
+
+    updateTitle();
+
+    // Cleanup: remove count prefix when unmounting
+    return () => {
+      if (typeof document !== 'undefined') {
+        document.title = document.title.replace(/^\(\d+\)\s*/, '');
+      }
+    };
+  }, [unreadCount, isSubscribed, isAuthorized]);
 
   // Real-time updates: Listen for Service Worker push messages
   React.useEffect(() => {
@@ -260,12 +288,16 @@ export function PushNotificationWidget({
     };
   }, [isSubscribed, isAuthorized, isOpen]);
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = async (showLoading = false) => {
     // Cancel any previous in-flight request
     abortControllerRef.current?.abort();
     abortControllerRef.current = new AbortController();
 
-    setIsLoadingNotifications(true);
+    // Only show loading spinner on first load (when no notifications exist)
+    const shouldShowLoading = showLoading || notifications.length === 0;
+    if (shouldShowLoading) {
+      setIsLoadingNotifications(true);
+    }
     setFetchError(null);
     try {
       const response = await getNotifications({
@@ -289,7 +321,10 @@ export function PushNotificationWidget({
       if (axiosError?.response?.status === 401) {
         setFetchError('Sessione scaduta. Effettua nuovamente il login.');
       } else {
-        setFetchError('Errore nel caricamento delle notifiche');
+        // Only show error if no notifications exist (don't replace existing list with error)
+        if (notifications.length === 0) {
+          setFetchError('Errore nel caricamento delle notifiche');
+        }
         console.error('[PushWidget] Failed to fetch notifications:', err);
       }
     } finally {
@@ -312,28 +347,48 @@ export function PushNotificationWidget({
     }
   };
 
-  const handleMarkAsRead = async (id: string) => {
-    try {
-      await markAsRead(id);
+  const handleMarkAsRead = (id: string) => {
+    // Find the notification to check if already read
+    const notification = notifications.find((n) => n.notification_id === id);
+    if (!notification || notification.is_read) return;
+
+    // Optimistic update - update UI immediately
+    setNotifications((prev) =>
+      prev.map((n) =>
+        n.notification_id === id ? { ...n, is_read: true } : n,
+      ),
+    );
+    setUnreadCount((prev) => Math.max(0, prev - 1));
+
+    // Fire and forget - API call in background, revert on failure
+    markAsRead(id).catch((err) => {
+      console.error('[PushWidget] Failed to mark as read:', err);
+      // Revert optimistic update on failure
       setNotifications((prev) =>
         prev.map((n) =>
-          n.notification_id === id ? { ...n, is_read: true } : n,
+          n.notification_id === id ? { ...n, is_read: false } : n,
         ),
       );
-      setUnreadCount((prev) => Math.max(0, prev - 1));
-    } catch (err) {
-      console.error('[PushWidget] Failed to mark as read:', err);
-    }
+      setUnreadCount((prev) => prev + 1);
+    });
   };
 
-  const handleMarkAllAsRead = async () => {
-    try {
-      await markAllNotificationsAsRead();
-      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
-      setUnreadCount(0);
-    } catch (err) {
+  const handleMarkAllAsRead = () => {
+    // Store previous state for rollback
+    const previousNotifications = notifications;
+    const previousUnreadCount = unreadCount;
+
+    // Optimistic update - update UI immediately
+    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    setUnreadCount(0);
+
+    // Fire and forget - API call in background, revert on failure
+    markAllNotificationsAsRead().catch((err) => {
       console.error('[PushWidget] Failed to mark all as read:', err);
-    }
+      // Revert optimistic update on failure
+      setNotifications(previousNotifications);
+      setUnreadCount(previousUnreadCount);
+    });
   };
 
   const handleNotificationClick = (notification: NotificationItem) => {
@@ -355,14 +410,42 @@ export function PushNotificationWidget({
     handleModalClose();
   };
 
-  const handleDeleteNotification = async (id: string) => {
-    try {
-      await deleteNotification(id);
-      setNotifications((prev) => prev.filter((n) => n.notification_id !== id));
-      handleModalClose();
-    } catch (err) {
-      console.error('[PushWidget] Failed to delete notification:', err);
+  const handleDeleteNotification = (id: string) => {
+    // Find the notification for potential rollback
+    const deletedNotification = notifications.find(
+      (n) => n.notification_id === id,
+    );
+    const deletedIndex = notifications.findIndex(
+      (n) => n.notification_id === id,
+    );
+
+    // Optimistic update - remove from UI immediately
+    setNotifications((prev) => prev.filter((n) => n.notification_id !== id));
+    handleModalClose();
+
+    // Update unread count if notification was unread
+    if (deletedNotification && !deletedNotification.is_read) {
+      setUnreadCount((prev) => Math.max(0, prev - 1));
     }
+
+    // Fire and forget - API call in background, revert on failure
+    deleteNotification(id).catch((err) => {
+      console.error('[PushWidget] Failed to delete notification:', err);
+      // Revert optimistic update on failure
+      if (deletedNotification) {
+        setNotifications((prev) => {
+          const newList = [...prev];
+          newList.splice(deletedIndex, 0, deletedNotification);
+          return newList;
+        });
+        if (!deletedNotification.is_read) {
+          setUnreadCount((prev) => prev + 1);
+        }
+      }
+      toast.error(
+        t('text-delete-failed', { defaultValue: 'Eliminazione fallita' }),
+      );
+    });
   };
 
   const handleBellClick = () => {
