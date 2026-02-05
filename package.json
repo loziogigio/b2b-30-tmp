@@ -18,7 +18,8 @@
     "prepare": "husky"
   },
   "dependencies": {
-    "@vinc/auth": "file:../packages/vinc-auth",
+    "vinc-auth": "^1.0.0",
+    "vinc-mongo-db": "^1.0.0",
     "@google/model-viewer": "^4.1.0",
     "@headlessui/react": "^2.2.0",
     "@react-google-maps/api": "^2.20.5",

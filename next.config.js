@@ -3,6 +3,7 @@
 module.exports = {
   reactStrictMode: true,
   output: 'standalone',
+  transpilePackages: ['vinc-mongo-db'],
   // Skip static page generation during build for faster Docker builds
   generateBuildId: async () => {
     return 'build-' + Date.now();

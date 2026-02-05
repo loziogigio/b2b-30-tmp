@@ -29,9 +29,6 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.62.11
         version: 5.62.11(react@19.0.0)
-      '@vinc/auth':
-        specifier: file:../packages/vinc-auth
-        version: file:../packages/vinc-auth(js-cookie@3.0.5)(next@15.2.6(@babel/core@7.26.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))
       accept-language:
         specifier: ^3.0.20
         version: 3.0.20
@@ -152,6 +149,12 @@ importers:
       swiper:
         specifier: ^11.1.15
         version: 11.1.15
+      vinc-auth:
+        specifier: ^1.0.0
+        version: 1.0.0(axios@1.7.9)(js-cookie@3.0.5)(next@15.2.6(@babel/core@7.26.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))
+      vinc-mongo-db:
+        specifier: ^1.0.0
+        version: 1.0.0(lru-cache@11.2.4)(mongoose@8.19.1)
     devDependencies:
       '@tailwindcss/typography':
         specifier: ^0.5.19
@@ -1792,12 +1795,6 @@ packages:
   '@typescript-eslint/visitor-keys@8.19.0':
     resolution: {integrity: sha512-mCFtBbFBJDCNCWUl5y6sZSCHXw1DEFEk3c/M3nRK2a4XUB8StGFtmcEMizdjKuBzB6e/smJAAWYug3VrdLMr1w==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
-
-  '@vinc/auth@file:../packages/vinc-auth':
-    resolution: {directory: ../packages/vinc-auth, type: directory}
-    peerDependencies:
-      js-cookie: ^3.0.0
-      next: '>=14.0.0'
 
   '@vitejs/plugin-react@5.1.2':
     resolution: {integrity: sha512-EcA07pHJouywpzsoTUqNh5NwGayl2PPVEJKUSinGGSxFGYn+shYbqMGBg6FXDqgXum9Ou/ecb+411ssw8HImJQ==}
@@ -4484,6 +4481,19 @@ packages:
   utrie@1.0.2:
     resolution: {integrity: sha512-1MLa5ouZiOmQzUbjbu9VmjLzn1QLXBhwpUa7kdLUQK+KQ5KA9I1vk5U4YHe/X2Ch7PYnJfWuWT+VbuxbGwljhw==}
 
+  vinc-auth@1.0.0:
+    resolution: {integrity: sha512-PRJKhWFuVyidsa51bs1CP/6mIrJRuqN8ddJHQjTKwXJRC4uFnUvWab2YK6qUolAlK9dVV3jYGzMhWJGqhgVnYQ==}
+    peerDependencies:
+      axios: ^1.0.0
+      js-cookie: ^3.0.0
+      next: '>=14.0.0'
+
+  vinc-mongo-db@1.0.0:
+    resolution: {integrity: sha512-M1GtycYkEAd+qFOWbAjPBbgq5w1s2BvK8kj3TI0oRsEBR0QuMp9BNnC95MhgffebxU98wYm3thUXeCnFYKACWQ==}
+    peerDependencies:
+      lru-cache: ^11.0.0
+      mongoose: ^8.0.0
+
   vite@7.3.1:
     resolution: {integrity: sha512-w+N7Hifpc3gRjZ63vYBXA56dvvRlNWRczTdmCBBa+CotUzAPf5b7YMdMR/8CQoeYE5LX3W4wj6RYTgonm1b9DA==}
     engines: {node: ^20.19.0 || >=22.12.0}
@@ -6384,11 +6394,6 @@ snapshots:
     dependencies:
       '@typescript-eslint/types': 8.19.0
       eslint-visitor-keys: 4.2.0
-
-  '@vinc/auth@file:../packages/vinc-auth(js-cookie@3.0.5)(next@15.2.6(@babel/core@7.26.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))':
-    dependencies:
-      js-cookie: 3.0.5
-      next: 15.2.6(@babel/core@7.26.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
 
   '@vitejs/plugin-react@5.1.2(vite@7.3.1(@types/node@22.10.3)(jiti@2.3.3)(terser@5.37.0)(yaml@2.7.0))':
     dependencies:
@@ -9388,6 +9393,17 @@ snapshots:
     dependencies:
       base64-arraybuffer: 1.0.2
     optional: true
+
+  vinc-auth@1.0.0(axios@1.7.9)(js-cookie@3.0.5)(next@15.2.6(@babel/core@7.26.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)):
+    dependencies:
+      axios: 1.7.9
+      js-cookie: 3.0.5
+      next: 15.2.6(@babel/core@7.26.0)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
+
+  vinc-mongo-db@1.0.0(lru-cache@11.2.4)(mongoose@8.19.1):
+    dependencies:
+      lru-cache: 11.2.4
+      mongoose: 8.19.1
 
   vite@7.3.1(@types/node@22.10.3)(jiti@2.3.3)(terser@5.37.0)(yaml@2.7.0):
     dependencies:

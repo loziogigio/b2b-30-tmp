@@ -5,7 +5,7 @@ import {
   getPooledConnection,
   closeAllConnections,
   getPoolStats,
-} from './connection-pool';
+} from 'vinc-mongo-db';
 
 // Re-export pool utilities
 export { getPooledConnection, closeAllConnections, getPoolStats };

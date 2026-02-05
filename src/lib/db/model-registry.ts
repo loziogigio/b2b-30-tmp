@@ -6,7 +6,7 @@
  */
 
 import mongoose from 'mongoose';
-import { getPooledConnection } from './connection-pool';
+import { getPooledConnection } from 'vinc-mongo-db';
 import {
   HomeTemplateSchema,
   type HomeTemplateDocument,
