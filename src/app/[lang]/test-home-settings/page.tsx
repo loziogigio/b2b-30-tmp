@@ -253,12 +253,12 @@ export default function TestHomeSettingsPage() {
           <li>
             Go to{' '}
             <a
-              href="http://localhost:3001/b2b/home-settings"
+              href="/b2b/home-settings"
               target="_blank"
               rel="noopener noreferrer"
               className="text-brand hover:underline font-medium"
             >
-              http://localhost:3001/b2b/home-settings
+              /b2b/home-settings
             </a>
           </li>
           <li>

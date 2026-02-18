@@ -18,7 +18,7 @@ import {
   useModalAction,
   useModalState,
 } from '@components/common/modal/modal.context';
-import CloseButton from '@components/ui/close-button';
+import { IoClose } from 'react-icons/io5';
 import { useTranslation } from 'src/app/i18n/client';
 
 // ERP prices
@@ -132,8 +132,15 @@ export default function ProductPopup({ lang }: { lang: string }) {
   };
 
   return (
-    <div className="md:w-[600px] lg:w-[940px] xl:w-[1180px] 2xl:w-[1360px] mx-auto p-1 lg:p-0 xl:p-3 bg-brand-light rounded-md">
-      <CloseButton onClick={closeModal} />
+    <div className="h-full overflow-y-auto mx-auto p-3 sm:p-4 lg:p-6 bg-brand-light relative">
+      {/* Close button */}
+      <button
+        onClick={closeModal}
+        aria-label="Close"
+        className="absolute top-2 right-2 sm:top-3 sm:right-3 z-10 inline-flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 hover:text-gray-900 shadow-sm transition-colors"
+      >
+        <IoClose className="text-2xl" />
+      </button>
 
       <div className="pt-6 pb-2 md:pt-7">
         <div className="grid-cols-10 lg:grid gap-7 2xl:gap-8">
@@ -177,7 +184,7 @@ export default function ProductPopup({ lang }: { lang: string }) {
                     onClick={navigateToProductPage}
                     className="inline-flex items-center px-4 py-2 rounded-md bg-brand text-brand-light text-sm font-medium transition-all hover:bg-brand/90"
                   >
-                    {t('text-view-product').toLowerCase()}
+                    {t('text-view-full-product', { defaultValue: 'vedi scheda completa' })}
                     <IoArrowForwardOutline className="ml-2 text-base" />
                   </button>
                 </div>

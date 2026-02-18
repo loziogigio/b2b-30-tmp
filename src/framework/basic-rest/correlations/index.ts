@@ -1,38 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
 import { get } from '@framework/utils/httpPIM';
 import { API_ENDPOINTS_PIM } from '@framework/utils/api-endpoints-pim';
+import type { CorrelationsResponse } from 'vinc-pim';
 
-// Types for correlation API response
-export interface CorrelatedProduct {
-  entity_code: string;
-  sku: string;
-  name: Record<string, string>; // { it: "...", en: "..." }
-  cover_image_url?: string;
-  price?: number;
-}
-
-export interface Correlation {
-  correlation_id: string;
-  source_entity_code: string;
-  target_entity_code: string;
-  correlation_type: 'related' | 'accessory' | 'alternative' | 'spare_part';
-  source_product: CorrelatedProduct;
-  target_product: CorrelatedProduct;
-  position: number;
-  is_bidirectional: boolean;
-  is_active: boolean;
-  created_at: string;
-}
-
-export interface CorrelationsResponse {
-  correlations: Correlation[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
-}
+// Re-export types for consumers that import from this file
+export type {
+  CorrelatedProduct,
+  Correlation,
+  CorrelationsResponse,
+} from 'vinc-pim';
 
 // Fetch correlations for a product via proxy (credentials injected server-side)
 export async function fetchCorrelations(

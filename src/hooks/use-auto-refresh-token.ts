@@ -5,6 +5,8 @@ import {
   getAuthToken,
   getTokenExpiresAt,
   refreshAccessToken,
+  clearAuthCookiesClient,
+  dispatchSessionExpired,
   REFRESH_BUFFER_MS,
   MIN_REFRESH_INTERVAL_MS,
 } from '@/lib/auth';
@@ -18,11 +20,11 @@ export function useAutoRefreshToken() {
   const lastRefreshAttemptRef = useRef<number>(0);
   const isMountedRef = useRef(true);
 
-  const doRefresh = useCallback(async () => {
+  const doRefresh = useCallback(async (): Promise<boolean> => {
     // Prevent rapid refresh attempts
     const now = Date.now();
     if (now - lastRefreshAttemptRef.current < MIN_REFRESH_INTERVAL_MS) {
-      return;
+      return true; // Skip but allow rescheduling
     }
     lastRefreshAttemptRef.current = now;
 
@@ -31,15 +33,33 @@ export function useAutoRefreshToken() {
         console.log('[AutoRefresh] Proactively refreshing token...');
       }
       const result = await refreshAccessToken();
-      if (result.success && process.env.NODE_ENV === 'development') {
-        console.log('[AutoRefresh] Token refreshed successfully');
+
+      if (result.success) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[AutoRefresh] Token refreshed successfully');
+        }
+        return true;
       }
-      if (!result.success && process.env.NODE_ENV === 'development') {
+
+      // Refresh token is expired/invalid — session is over.
+      // Clear cookies and dispatch immediately instead of waiting
+      // for API calls to fail with 401 one by one.
+      if (result.status === 401) {
+        console.log(
+          '[AutoRefresh] Refresh token expired (401), ending session',
+        );
+        clearAuthCookiesClient();
+        dispatchSessionExpired('refresh_token_expired');
+        return false; // Stop rescheduling
+      }
+
+      if (process.env.NODE_ENV === 'development') {
         console.log('[AutoRefresh] Token refresh failed:', result.error);
       }
+      return true; // Non-401 failure — allow retry later
     } catch (error) {
       console.error('[AutoRefresh] Failed to refresh token:', error);
-      // Don't dispatch session-expired here - let the 401 interceptor handle it
+      return true; // Network error — allow retry later
     }
   }, []);
 
@@ -61,8 +81,8 @@ export function useAutoRefreshToken() {
 
     if (timeUntilRefresh <= 0) {
       // Token is about to expire or already expired - refresh immediately
-      doRefresh().then(() => {
-        if (isMountedRef.current) scheduleNextRefresh();
+      doRefresh().then((shouldContinue) => {
+        if (shouldContinue && isMountedRef.current) scheduleNextRefresh();
       });
     } else {
       // Schedule refresh for later
@@ -72,8 +92,8 @@ export function useAutoRefreshToken() {
         );
       }
       refreshTimeoutRef.current = setTimeout(() => {
-        doRefresh().then(() => {
-          if (isMountedRef.current) scheduleNextRefresh();
+        doRefresh().then((shouldContinue) => {
+          if (shouldContinue && isMountedRef.current) scheduleNextRefresh();
         });
       }, timeUntilRefresh);
     }

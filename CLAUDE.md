@@ -1,81 +1,105 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code when working in this repository.
 
-## Build Commands
+## Rules
 
-**NEVER run `npm run build` or `pnpm build`** - The build process is slow and resource-intensive. The user will run builds manually when needed.
+- **NEVER run `npm run build` or `pnpm build`** — slow and resource-intensive; the user runs builds manually
+- **NEVER include `Co-Authored-By:` lines** in commit messages
+- **NEVER include `Generated with [Claude Code]` lines** in commit messages
+- **NEVER use specific company/tenant names** (e.g., hidros, dfl-eventi) in documentation — use generic placeholders (`your-tenant-id`, `tenant-a`, `your-domain.com`)
+- Use `--no-verify` flag if pre-existing lint errors block a commit
 
 ## Development
 
-- Use `pnpm dev` for development - The dev server handles hot reload and is sufficient for testing changes.
-- Use `pnpm format` to fix formatting issues before commits.
+```bash
+pnpm dev              # Dev server with hot reload (sufficient for testing)
+pnpm format           # Fix formatting before commits
+pnpm test             # Run all tests
+pnpm test --watch     # Watch mode
+```
 
-## Type Checking
-
-If you need to verify types, use `npx tsc --noEmit` on specific files only, not the whole project:
+Type-check specific files only (never the whole project):
 
 ```bash
 npx tsc --noEmit src/path/to/file.ts
 ```
 
-## Commits
+## Coding Principles
 
-When committing changes:
-
-- Use `--no-verify` flag if pre-existing lint errors block the commit
-- **NEVER include `Co-Authored-By:` lines** in commit messages
-- **NEVER include `🤖 Generated with [Claude Code]` lines** in commit messages
-
-## Documentation
-
-- **NEVER use specific company/tenant names** (e.g., hidros, dfl-eventi) in documentation files
-- Use generic placeholders instead: `your-tenant-id`, `tenant-a`, `your-domain.com`, etc.
-- This keeps documentation reusable across different deployments
+1. **Clean Code** — easy to read and understand
+2. **Reusability** — no code duplication (DRY)
+3. **No Hardcoding** — use parameters, configs, or route params
 
 ## Project Overview
 
-This is a Next.js 15 B2B e-commerce application with:
+Next.js 16 B2B e-commerce application with multi-language i18n, dynamic page building, PIM product catalog, shopping cart/checkout, and customer account management.
 
-- Multi-language support (i18n)
-- Dynamic page building
-- Product catalog with PIM integration
-- Shopping cart and checkout
-- Customer account management
+### Key Directories
 
-## Core Coding Principles
+- `src/app/` — Next.js App Router pages and API routes
+- `src/components/` — React components
+- `src/framework/basic-rest/` — API abstraction layer with React Query
+- `src/lib/vinc-api/` — VINC API client for internal service calls
+- `src/contexts/` — React Context providers
+- `src/utils/` — Helper functions
 
-**These principles are mandatory for all code changes:**
+### Shared Packages
 
-1. **Clean Code** - Easy to read and understand
-2. **Reusability** - No code duplication (DRY principle)
-3. **No Hardcoding** - Use parameters, configs, or route params instead of hardcoded values
+- `vinc-pim` — PIM types and interfaces (`PimProduct`, `PimSearchResponse`)
 
-## Key Directories
+## Modal System
 
-- `src/app/` - Next.js App Router pages and API routes
-- `src/components/` - React components
-- `src/framework/basic-rest/` - API abstraction layer with React Query
-- `src/lib/vinc-api/` - VINC API client for internal service calls
-- `src/contexts/` - React Context providers
-- `src/utils/` - Helper functions
+Stack-based modal with three variants (`src/components/common/modal/`):
 
-## Environment Variables
+- **`center`** (default) — scale-in animation, used for auth forms, addresses, etc.
+- **`bottom`** — slide-up, used for category popup
+- **`fullscreen`** — slide-from-right, full viewport panel, used for product popup and variants quick view
 
-Key variables are in `.env`:
+Modal stack supports push/pop: opening a product from the variants view pushes onto the stack; closing returns to the variants view.
 
-- `VINC_API_URL` - VINC API base URL
-- `VINC_INTERNAL_API_KEY` - API key for internal calls
-- `NEXT_PUBLIC_PROJECT_CODE` - Tenant ID (e.g., vinc-your-tenant-id) - **only for single-tenant mode**
-- `NEXT_PUBLIC_B2B_PUBLIC_REST_API_ENDPOINT` - Public B2B API endpoint
+### Key Files
+
+- `modal.tsx` — Headless UI Dialog wrapper with variant animations
+- `modal.context.tsx` — Stack-based state (`openModal`/`closeModal`/`closeAll`/`goBack`)
+- `managed-modal.tsx` — Routes `view` to the correct component and modal variant
+
+## Product Variants Architecture
+
+### Variant Display (3 patterns)
+
+1. **Fullscreen modal** (`B2BProductVariantsQuickView`) — triggered from product cards in search results
+2. **Inline on product detail page** (`ProductB2BDetails`) — when navigating to a parent product URL
+3. **Expandable rows** (`ProductRowB2B`) — inline variant table in list view
+
+All three use `B2BVariantsGridContent` as the shared component (`src/components/product/b2b-variants-grid-content.tsx`):
+- Parent product header (image + SKU + brand + name + description)
+- Filter/sort controls (text search, sort dropdown, model tag chips)
+- Responsive card grid with infinite scroll ERP price loading
+- `useWindowScroll` prop: `false` for modal (contained scroll), `true` for page (viewport scroll)
+
+### PIM Product Fetching
+
+- `usePimProductListQuery` with `groupByParent: true` returns products with inline `variations[]`
+- Product detail page fallback: if SKU search returns no results, searches by `parent_sku` to find children
+- `transformPimProduct()` maps PIM API response: `raw.variants` → `variations`, `raw.entity_code` → `id`
+
+### Variant Detection Logic
+
+```typescript
+const hasVariants = (product.variantCount && product.variantCount > 1) || variations.length > 1;
+```
+
+- Multi-variant parent → opens `B2B_PRODUCT_VARIANTS_QUICK_VIEW` modal
+- Single variant or simple product → opens `PRODUCT_VIEW` modal
 
 ## Multi-Tenant Architecture
 
 In multi-tenant mode (`TENANT_MODE=multi`):
 
 - **Tenant detection**: Hostname → MongoDB tenant registry → tenant config
-- **Project code**: Comes from `tenant.projectCode` in DB, NOT from `NEXT_PUBLIC_PROJECT_CODE` env var
-- **TenantContext**: Use `useTenantOptional()` or `useTenant()` to access tenant info client-side
+- **Project code**: From `tenant.projectCode` in DB, NOT from `NEXT_PUBLIC_PROJECT_CODE`
+- **TenantContext**: `useTenantOptional()` or `useTenant()` for client-side access
 - **ERP_STATIC**: Global state for customer context (customer_code, address_code, project_code)
 
 ### Likes/Reminders User ID Format
@@ -84,35 +108,28 @@ In multi-tenant mode (`TENANT_MODE=multi`):
 {project_code}-{customer_code}-{address_code}
 ```
 
-- `project_code`: From `ERP_STATIC.project_code` (set from TenantContext)
-- `customer_code`: From SSO profile (`customers[0].erp_customer_id`)
-- `address_code`: From SSO profile (`customers[0].addresses[0].erp_address_id`)
+### Key Files
 
-### Key Files for Multi-Tenant
+- `src/lib/tenant/service.ts` — Tenant resolution from hostname
+- `src/contexts/tenant.context.tsx` — TenantContext and hooks
+- `src/framework/basic-rest/utils/static.ts` — ERP_STATIC state management
+- `src/components/common/erp-hydrator.tsx` — Hydrates ERP_STATIC from localStorage/SSO
 
-- `src/lib/tenant/service.ts` - Tenant resolution from hostname
-- `src/contexts/tenant.context.tsx` - TenantContext and hooks
-- `src/framework/basic-rest/utils/static.ts` - ERP_STATIC state management
-- `src/components/common/erp-hydrator.tsx` - Hydrates ERP_STATIC from localStorage/SSO
+## Environment Variables
+
+Key variables in `.env`:
+
+- `VINC_API_URL` — VINC API base URL
+- `VINC_INTERNAL_API_KEY` — API key for internal calls
+- `NEXT_PUBLIC_PROJECT_CODE` — Tenant ID (single-tenant mode only)
+- `NEXT_PUBLIC_B2B_PUBLIC_REST_API_ENDPOINT` — Public B2B API endpoint
 
 ## Testing
 
 See [src/test/TESTING_STANDARDS.md](src/test/TESTING_STANDARDS.md) for comprehensive testing standards.
 
-### Quick Reference
-
-```bash
-pnpm test              # Run all tests
-pnpm test push         # Run specific file
-pnpm test --watch      # Watch mode
-pnpm test --coverage   # With coverage
-```
-
-### Test Structure
-
 ```text
 src/test/
-  TESTING_STANDARDS.md  # Full testing documentation
   setup.ts              # Vitest global setup
   conftest.ts           # Shared fixtures & factories
   unit/                 # Unit tests

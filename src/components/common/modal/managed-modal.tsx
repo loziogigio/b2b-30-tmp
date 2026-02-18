@@ -51,20 +51,29 @@ export default function ManagedModal({ lang }: { lang: string }) {
     );
   }
 
+  if (
+    view === 'B2B_PRODUCT_VARIANTS_QUICK_VIEW' ||
+    view === 'PRODUCT_VIEW'
+  ) {
+    return (
+      <Modal open={isOpen} onClose={closeModal} variant="fullscreen">
+        {view === 'B2B_PRODUCT_VARIANTS_QUICK_VIEW' && (
+          <B2BProductVariantsQuickView lang={lang} />
+        )}
+        {view === 'PRODUCT_VIEW' && <ProductPopup lang={lang} />}
+      </Modal>
+    );
+  }
+
   return (
     <Modal open={isOpen} onClose={closeModal}>
       {view === 'LOGIN_VIEW' && <LoginForm lang={lang} />}
       {view === 'SIGN_UP_VIEW' && <SignUpForm lang={lang} />}
       {view === 'FORGET_PASSWORD' && <ForgetPasswordForm lang={lang} />}
-      {view === 'PRODUCT_VIEW' && <ProductPopup lang={lang} />}
       {view === 'ADDRESS_VIEW_AND_EDIT' && <AddressPopup lang={lang} />}
       {view === 'PAYMENT' && <PaymentPopup lang={lang} />}
       {view === 'PHONE_NUMBER' && <PhoneNumberPopup lang={lang} />}
       {view === 'DELIVERY_VIEW' && <DeliveryAddresses lang={lang} />}
-
-      {view === 'B2B_PRODUCT_VARIANTS_QUICK_VIEW' && (
-        <B2BProductVariantsQuickView lang={lang} />
-      )}
     </Modal>
   );
 }

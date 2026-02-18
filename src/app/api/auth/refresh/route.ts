@@ -56,17 +56,43 @@ export async function POST(request: NextRequest) {
       tenantId,
     });
 
-    const tokenResponse = await fetch(refreshEndpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Tenant-ID': tenantId,
-      },
-      body: JSON.stringify({
-        refresh_token,
-        client_id: OAUTH_CONFIG.CLIENT_ID,
-      }),
-    });
+    // 10s timeout to prevent hanging if SSO is unreachable
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10_000);
+
+    let tokenResponse: Response;
+    try {
+      tokenResponse = await fetch(refreshEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tenant-ID': tenantId,
+        },
+        body: JSON.stringify({
+          refresh_token,
+          client_id: OAUTH_CONFIG.CLIENT_ID,
+        }),
+        signal: controller.signal,
+      });
+    } catch (fetchError) {
+      clearTimeout(timeout);
+      const isAbort =
+        fetchError instanceof Error && fetchError.name === 'AbortError';
+      console.error(
+        `[refresh] SSO ${isAbort ? 'timed out' : 'unreachable'}:`,
+        fetchError,
+      );
+      return NextResponse.json(
+        {
+          success: false,
+          message: isAbort
+            ? 'SSO server timed out'
+            : 'SSO server unreachable',
+        },
+        { status: 503 },
+      );
+    }
+    clearTimeout(timeout);
 
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text();

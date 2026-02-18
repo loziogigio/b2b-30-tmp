@@ -3,106 +3,11 @@ import { useMemo } from 'react';
 import { Product } from '@framework/types';
 import { API_ENDPOINTS_PIM } from '@framework/utils/api-endpoints-pim';
 import { post } from '@framework/utils/httpPIM';
-
-// ===============================
-// Types for PIM API response
-// ===============================
-interface PimProductImage {
-  id?: string;
-  thumbnail?: string;
-  medium?: string;
-  large?: string;
-  original?: string;
-}
-
-interface PimProductBrand {
-  brand_id?: string;
-  label?: string;
-  slug?: string;
-  description?: string;
-  is_active?: boolean;
-  logo_url?: string;
-}
-
-interface PimProductAttribute {
-  key: string;
-  label: string;
-  value: string;
-  order?: number;
-}
-
-interface PimMediaItem {
-  type: 'document' | 'video' | '3d-model' | string;
-  url: string;
-  label?: string;
-  file_type?: string;
-  is_external_link?: boolean;
-  position?: number;
-}
-
-interface PimTechnicalSpec {
-  key: string;
-  value: string;
-  label?: string;
-  uom?: string;
-  order?: number;
-}
-
-interface PimProduct {
-  id: string;
-  sku: string;
-  entity_code?: string;
-  name: string;
-  slug: string;
-  description?: string;
-  short_description?: string;
-  quantity?: number;
-  unit?: string;
-  image?: PimProductImage;
-  images?: Array<{ url: string }>;
-  brand?: PimProductBrand;
-  attributes?: PimProductAttribute[];
-  parent_sku?: string;
-  parent_entity_code?: string;
-  product_model?: string;
-  cover_image_url?: string;
-  media?: PimMediaItem[];
-  is_parent?: boolean;
-  variants?: PimProduct[]; // Variants array when group_variants=true
-  has_active_promo?: boolean;
-  promotions?: any[];
-  // Marketing and technical specs
-  marketing_features?: { [lang: string]: string[] } | string[];
-  technical_specifications?:
-    | { [lang: string]: PimTechnicalSpec[] }
-    | PimTechnicalSpec[];
-}
-
-interface PimGroupedResult {
-  groupValue: string; // Parent entity code
-  numFound: number; // Variants in this group
-  docs: PimProduct[]; // Products (max = group.limit)
-}
-
-interface PimGroupedData {
-  field: string;
-  ngroups: number; // Total unique groups
-  matches: number; // Total matching documents
-  groups: PimGroupedResult[];
-}
-
-interface PimSearchResponse {
-  success: boolean;
-  data: {
-    results: PimProduct[];
-    numFound?: number; // Solr standard field name
-    total?: number; // Legacy fallback
-    start?: number;
-    page?: number;
-    limit?: number;
-    grouped?: PimGroupedData; // Grouped results when group param is used
-  };
-}
+import type {
+  PimProduct,
+  PimProductAttribute,
+  PimSearchResponse,
+} from 'vinc-pim';
 
 // ===============================
 // Transform PIM product to internal Product type

@@ -11,7 +11,7 @@ type ModalProps = {
   open?: boolean;
   children?: React.ReactNode;
   onClose: () => void;
-  variant?: 'center' | 'bottom';
+  variant?: 'center' | 'bottom' | 'fullscreen';
 };
 
 const Modal: FC<ModalProps> = ({
@@ -27,78 +27,100 @@ const Modal: FC<ModalProps> = ({
         className="fixed inset-0 z-[9999] overflow-x-hidden overflow-y-auto"
         onClose={onClose}
       >
-        <div
-          className={cn('min-h-screen lg:px-4 text-center', {
-            'flex justify-center items-end': variant === 'bottom',
-          })}
+        {/* Backdrop */}
+        <TransitionChild
+          as={Fragment}
+          enter="ease-out duration-300"
+          enterFrom="opacity-0"
+          enterTo="opacity-100"
+          leave="ease-in duration-200"
+          leaveFrom="opacity-100"
+          leaveTo="opacity-0"
         >
+          <div className="fixed inset-0 z-[9998] cursor-pointer bg-black/60 backdrop-blur-sm" />
+        </TransitionChild>
+
+        {variant === 'fullscreen' ? (
           <TransitionChild
             as={Fragment}
-            enter="ease-out duration-300"
-            enterFrom="opacity-0"
-            enterTo="opacity-100"
-            leave="ease-in duration-200"
-            leaveFrom="opacity-100"
-            leaveTo="opacity-0"
+            enter="transform transition-transform ease-in-out duration-300"
+            enterFrom="translate-x-full"
+            enterTo="translate-x-0"
+            leave="transform transition-transform ease-in-out duration-200"
+            leaveFrom="translate-x-0"
+            leaveTo="translate-x-full"
           >
-            <div className="fixed inset-0 z-[9998] cursor-pointer bg-black/60 backdrop-blur-sm" />
+            <DialogPanel className="fixed inset-0 z-[9999] bg-white flex flex-col overflow-hidden">
+              <button
+                onClick={onClose}
+                aria-label="Close panel"
+                className="absolute opacity-0"
+              />
+              {children}
+            </DialogPanel>
           </TransitionChild>
-
-          {/* This element is to trick the browser into centering the modal contents. */}
-          <span
-            className={cn({
-              'h-screen align-middle inline-block': variant === 'center',
-              'h-screen align-bottom': variant === 'bottom',
+        ) : (
+          <div
+            className={cn('min-h-screen lg:px-4 text-center', {
+              'flex justify-center items-end': variant === 'bottom',
             })}
-            aria-hidden="true"
           >
-            &#8203;
-          </span>
+            {/* This element is to trick the browser into centering the modal contents. */}
+            <span
+              className={cn({
+                'h-screen align-middle inline-block': variant === 'center',
+                'h-screen align-bottom': variant === 'bottom',
+              })}
+              aria-hidden="true"
+            >
+              &#8203;
+            </span>
 
-          {variant === 'bottom' ? (
-            <TransitionChild
-              as={Fragment}
-              enter="transition-top ease-linear duration-500"
-              enterFrom="top-[100vh]"
-              enterTo="top-0"
-              leave="transition-top ease-out duration-500"
-              leaveFrom="top-0"
-              leaveTo="top-[100vh]"
-            >
-              <div className="w-full md:w-[500px] xl:w-auto inline-block p-0 ltr:text-left rtl:text-right align-middle transition-all shadow-xl relative z-[9999] h-[75vh] overflow-hidden">
-                <div className="relative h-full">
-                  <button
-                    onClick={onClose}
-                    aria-label="Close panel"
-                    className="absolute opacity-0 top-2 md:top-4 ltr:right-2 rtl:left-2 md:ltr:right-4 md:rtl:left-4"
-                  />
-                  {children}
+            {variant === 'bottom' ? (
+              <TransitionChild
+                as={Fragment}
+                enter="transition-top ease-linear duration-500"
+                enterFrom="top-[100vh]"
+                enterTo="top-0"
+                leave="transition-top ease-out duration-500"
+                leaveFrom="top-0"
+                leaveTo="top-[100vh]"
+              >
+                <div className="w-full md:w-[500px] xl:w-auto inline-block p-0 ltr:text-left rtl:text-right align-middle transition-all shadow-xl relative z-[9999] h-[75vh] overflow-hidden">
+                  <div className="relative h-full">
+                    <button
+                      onClick={onClose}
+                      aria-label="Close panel"
+                      className="absolute opacity-0 top-2 md:top-4 ltr:right-2 rtl:left-2 md:ltr:right-4 md:rtl:left-4"
+                    />
+                    {children}
+                  </div>
                 </div>
-              </div>
-            </TransitionChild>
-          ) : (
-            <TransitionChild
-              as={Fragment}
-              enter="ease-out duration-300"
-              enterFrom="opacity-0 scale-110"
-              enterTo="opacity-100 scale-100"
-              leave="ease-in duration-200"
-              leaveFrom="opacity-100 scale-100"
-              leaveTo="opacity-0 scale-110"
-            >
-              <DialogPanel className="relative z-[9999] inline-block w-full p-4 overflow-hidden align-middle transition-all transform md:w-auto md:p-6 xl:p-8 ltr:text-left rtl:text-right">
-                <div className="relative rounded-md">
-                  <button
-                    onClick={onClose}
-                    aria-label="Close panel"
-                    className="absolute opacity-0 top-2 md:top-4 ltr:right-2 rtl:left-2 md:ltr:right-4 md:rtl:left-4"
-                  />
-                  {children}
-                </div>
-              </DialogPanel>
-            </TransitionChild>
-          )}
-        </div>
+              </TransitionChild>
+            ) : (
+              <TransitionChild
+                as={Fragment}
+                enter="ease-out duration-300"
+                enterFrom="opacity-0 scale-110"
+                enterTo="opacity-100 scale-100"
+                leave="ease-in duration-200"
+                leaveFrom="opacity-100 scale-100"
+                leaveTo="opacity-0 scale-110"
+              >
+                <DialogPanel className="relative z-[9999] inline-block w-full p-4 overflow-hidden align-middle transition-all transform md:w-auto md:p-6 xl:p-8 ltr:text-left rtl:text-right">
+                  <div className="relative rounded-md">
+                    <button
+                      onClick={onClose}
+                      aria-label="Close panel"
+                      className="absolute opacity-0 top-2 md:top-4 ltr:right-2 rtl:left-2 md:ltr:right-4 md:rtl:left-4"
+                    />
+                    {children}
+                  </div>
+                </DialogPanel>
+              </TransitionChild>
+            )}
+          </div>
+        )}
       </Dialog>
     </Transition>
   );

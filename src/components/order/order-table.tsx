@@ -4,20 +4,14 @@ import { useState } from 'react';
 import Pagination from '@components/ui/pagination';
 import ActionsButton from '@components/ui/action-button';
 import { TotalPrice } from '@components/order/price';
-import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc';
-import relativeTime from 'dayjs/plugin/relativeTime';
-import timezone from 'dayjs/plugin/timezone';
+import { formatDistanceToNow } from 'date-fns';
 import { GrNext, GrPrevious } from 'react-icons/gr';
 import { BsSearch } from 'react-icons/bs';
 
 export const CreatedAt: React.FC<{ createdAt?: any }> = ({ createdAt }) => {
-  dayjs.extend(relativeTime);
-  dayjs.extend(utc);
-  dayjs.extend(timezone);
   return (
     <span className="whitespace-nowrap">
-      {dayjs.utc(createdAt).tz(dayjs.tz.guess()).fromNow()}
+      {formatDistanceToNow(new Date(createdAt), { addSuffix: true })}
     </span>
   );
 };

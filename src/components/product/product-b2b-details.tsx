@@ -46,6 +46,7 @@ import { useCompareList } from '@/contexts/compare/compare.context';
 import { printProductDetail } from '@utils/print-product';
 import CorrelatedProductsCarousel from './feeds/correlated-products-carousel';
 import ProductJsonLd from '@components/seo/product-json-ld';
+import B2BVariantsGridContent from './b2b-variants-grid-content';
 
 // add inside ProductB2BDetails.tsx (same file, above the component's return)
 
@@ -103,7 +104,7 @@ const ProductB2BDetails: React.FC<{
     );
   };
 
-  // Load product from PIM
+  // Load product from PIM (always group by parent to get inline variants)
   const skuToSearch = search?.sku ? [search.sku] : [];
   const { data: pimResults = [], isLoading } = usePimProductListQuery(
     {
@@ -112,17 +113,46 @@ const ProductB2BDetails: React.FC<{
         sku: skuToSearch,
       },
     },
-    { enabled: skuToSearch.length > 0 },
+    { enabled: skuToSearch.length > 0, groupByParent: true },
   );
 
-  const first = pimResults?.[0];
-  const data =
-    Array.isArray(first?.variations) && first.variations.length > 0
-      ? first.variations[0]
+  // Fallback: if SKU search found nothing, search for children by parent_sku
+  const skuNotFound = !isLoading && skuToSearch.length > 0 && pimResults.length === 0;
+  const { data: parentSkuResults = [], isLoading: isLoadingParent } =
+    usePimProductListQuery(
+      {
+        limit: 200,
+        filters: {
+          parent_sku: skuToSearch,
+        },
+      },
+      { enabled: skuNotFound, groupByParent: true },
+    );
+
+  // Use whichever query returned results
+  const resolvedResults = pimResults.length > 0 ? pimResults : parentSkuResults;
+  const first = resolvedResults?.[0];
+
+  // If found via parent_sku, all results are children — build a synthetic parent
+  const isFromParentSearch = pimResults.length === 0 && parentSkuResults.length > 1;
+  const variations = isFromParentSearch
+    ? parentSkuResults
+    : Array.isArray(first?.variations) ? first.variations : [];
+  const isMultiVariantParent = variations.length > 1;
+
+  const data = isMultiVariantParent
+    ? isFromParentSearch
+      ? { ...first, sku: search.sku, name: first?.name, variations }
+      : first
+    : !isMultiVariantParent && variations.length === 1
+      ? variations[0]
       : first;
 
   // ---- ERP prices (entity_codes must be string[]) ----
-  const entityCodes = [String(data?.id ?? '')].filter(Boolean); // string[]
+  // Skip for multi-variant parents (prices are fetched per-variant in the grid)
+  const entityCodes = isMultiVariantParent
+    ? []
+    : [String(data?.id ?? '')].filter(Boolean);
   const erpPayload = { ...ERP_STATIC, entity_codes: entityCodes };
 
   const { isAuthorized: isAuthForPrices } = useUI();
@@ -288,6 +318,47 @@ const ProductB2BDetails: React.FC<{
 
   if (isLoading) return <p>Loading...</p>;
   if (!data) return null;
+
+  // ---- Multi-variant parent: show variant grid inline ----
+  if (isMultiVariantParent) {
+    return (
+      <div className="pt-6 pb-2 md:pt-7">
+        <B2BVariantsGridContent
+          lang={lang}
+          product={data}
+          useWindowScroll={true}
+        />
+
+        <ProductB2BDetailsTab
+          lang={lang}
+          product={data}
+          zone3Blocks={zone3Blocks}
+        />
+
+        {zone4Blocks.length > 0 && (
+          <div className="pt-6 space-y-4">
+            {zone4Blocks.map((block, index) => (
+              <BlockRenderer
+                key={block.id || `zone4-${index}`}
+                block={block}
+                productData={{ sku: String(data?.sku ?? ''), lang }}
+              />
+            ))}
+          </div>
+        )}
+
+        {data?.id && (
+          <div className="pt-8">
+            <CorrelatedProductsCarousel
+              lang={lang}
+              entityCode={String(data.id)}
+              limit={12}
+            />
+          </div>
+        )}
+      </div>
+    );
+  }
 
   const toggleShare = () => setShareButtonStatus((s) => !s);
 

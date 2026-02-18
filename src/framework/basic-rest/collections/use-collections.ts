@@ -1,39 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
 import { get } from '@framework/utils/httpPIM';
 import { API_ENDPOINTS_PIM } from '@framework/utils/api-endpoints-pim';
+import type {
+  Collection,
+  CollectionsResponse,
+  CollectionResponse,
+} from 'vinc-pim';
 
-export interface CollectionHeroImage {
-  url: string;
-  alt_text?: string;
-  cdn_key?: string;
-}
-
-export interface Collection {
-  id: string;
-  name: string;
-  slug: string;
-  description?: string;
-  hero_image?: CollectionHeroImage;
-  product_count?: number;
-  display_order?: number;
-  created_at: string;
-  seo?: {
-    title?: string;
-    description?: string;
-    keywords?: string[];
-  };
-}
-
-interface CollectionsResponse {
-  success: boolean;
-  collections: Collection[];
-  total: number;
-}
-
-interface CollectionResponse {
-  success: boolean;
-  collection: Collection;
-}
+// Re-export types for consumers that import from this file
+export type { CollectionHeroImage, Collection } from 'vinc-pim';
 
 // Fetch all collections via proxy (credentials injected server-side)
 async function fetchCollections(): Promise<Collection[]> {

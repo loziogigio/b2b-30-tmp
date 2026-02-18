@@ -7,59 +7,16 @@ import {
   STOCK_STATUS_LABELS,
   BOOLEAN_LABELS,
 } from '@framework/utils/filters';
+import type {
+  PimFacetEntity,
+  PimFacetValue,
+  PimFacetResponse,
+  PimFilterValue,
+  PimTransformedFilter,
+} from 'vinc-pim';
 
-// ===============================
-// Types for PIM Facet API
-// ===============================
-interface PimFacetEntity {
-  brand_id?: string;
-  category_id?: string;
-  label?: string | Record<string, string>;
-  slug?: string;
-  logo_url?: string;
-  is_active?: boolean;
-  product_count?: number;
-  [key: string]: any;
-}
-
-interface PimFacetValue {
-  value: string;
-  count: number;
-  label: string;
-  key_label: string;
-  level?: number;
-  parent_id?: string;
-  path?: string;
-  entity?: PimFacetEntity;
-}
-
-interface PimFacetResponse {
-  success: boolean;
-  data?: {
-    facet_results: {
-      [field: string]: PimFacetValue[];
-    };
-  };
-  facet_results?: {
-    [field: string]: PimFacetValue[];
-  };
-}
-
-// Transformed filter value for UI
-export interface PimFilterValue {
-  value: string;
-  label: string;
-  count: number;
-  logo_url?: string;
-  entity?: PimFacetEntity;
-}
-
-// Transformed filter for UI
-export interface PimTransformedFilter {
-  key: string;
-  label: string;
-  values: PimFilterValue[];
-}
+// Re-export for consumers that import from this file
+export type { PimFilterValue, PimTransformedFilter } from 'vinc-pim';
 
 // Filter key pass-through (no legacy mapping needed)
 function mapFilterKey(key: string): string {

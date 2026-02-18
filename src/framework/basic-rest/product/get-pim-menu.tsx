@@ -2,43 +2,10 @@ import { useQuery } from '@tanstack/react-query';
 import { API_ENDPOINTS_PIM } from '@framework/utils/api-endpoints-pim';
 import { get } from '@framework/utils/httpPIM';
 import { slugify } from '@utils/slugify';
+import type { PimMenuTreeItem, PimMenuResponse } from 'vinc-pim';
 
-// ===============================
-// Types for PIM Menu API response
-// ===============================
-export interface PimMenuTreeItem {
-  id: string;
-  type:
-    | 'collection'
-    | 'category'
-    | 'brand'
-    | 'tag'
-    | 'product_type'
-    | 'product'
-    | 'page'
-    | 'url'
-    | 'search'
-    | 'divider';
-  label: string;
-  reference_id?: string;
-  url?: string;
-  icon?: string;
-  rich_text?: string;
-  image_url?: string;
-  mobile_image_url?: string;
-  include_children: boolean;
-  max_depth?: number;
-  open_in_new_tab: boolean;
-  css_class?: string;
-  level: number;
-  children: PimMenuTreeItem[];
-}
-
-interface PimMenuResponse {
-  success: boolean;
-  menuItems: PimMenuTreeItem[];
-  flat: PimMenuTreeItem[];
-}
+// Re-export for consumers that import from this file
+export type { PimMenuTreeItem } from 'vinc-pim';
 
 // ===============================
 // Transform PIM menu to MenuTreeNode format (compatible with existing code)

@@ -162,12 +162,12 @@ export default function CheckoutFlow({
       {/* Split panel layout */}
       <div className="grid gap-4 lg:grid-cols-[280px_1fr] xl:grid-cols-[320px_1fr]">
         {/* Left sidebar - Cart list */}
-        <div className="hidden lg:block lg:sticky lg:top-20 lg:self-start lg:max-h-[calc(100vh-6rem)]">
+        <div className="hidden lg:block lg:sticky lg:top-20 lg:self-start lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto">
           <CartListSidebar lang={lang} />
         </div>
 
         {/* Right content - Cart items and checkout */}
-        <div className="flex flex-col">
+        <div className="flex min-w-0 flex-col">
           {/* Mobile cart list - shown only on mobile/tablet */}
           <div className="mb-4 lg:hidden">
             <CartListSidebar lang={lang} />
