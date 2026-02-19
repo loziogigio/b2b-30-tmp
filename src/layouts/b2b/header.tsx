@@ -27,6 +27,7 @@ import {
   HiOutlineEyeOff,
 } from 'react-icons/hi';
 import { RadioWidget } from '@layouts/header/widgets/radio-widget';
+import AppLauncher from '@layouts/header/app-launcher';
 import type { WidgetConfig } from '@/lib/home-settings/types';
 
 const Delivery = dynamic(() => import('@layouts/header/delivery'), {
@@ -139,6 +140,7 @@ function Header({ lang }: HeaderProps) {
 
           {/* Mobile icons - show all when logged in, login icon when not */}
           <div className="flex items-center gap-2 lg:hidden">
+            <AppLauncher />
             {isAuthorized ? (
               <>
                 <button
@@ -227,6 +229,7 @@ function Header({ lang }: HeaderProps) {
 
           {/* Right - Buttons (hidden on mobile, shown on desktop) */}
           <div className="hidden lg:flex lg:w-[20%] items-center justify-end gap-4 text-slate-600">
+            <AppLauncher />
             {isAuthorized ? (
               <>
                 <div className="flex flex-col items-center group">

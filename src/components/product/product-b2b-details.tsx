@@ -117,7 +117,8 @@ const ProductB2BDetails: React.FC<{
   );
 
   // Fallback: if SKU search found nothing, search for children by parent_sku
-  const skuNotFound = !isLoading && skuToSearch.length > 0 && pimResults.length === 0;
+  const skuNotFound =
+    !isLoading && skuToSearch.length > 0 && pimResults.length === 0;
   const { data: parentSkuResults = [], isLoading: isLoadingParent } =
     usePimProductListQuery(
       {
@@ -134,10 +135,13 @@ const ProductB2BDetails: React.FC<{
   const first = resolvedResults?.[0];
 
   // If found via parent_sku, all results are children — build a synthetic parent
-  const isFromParentSearch = pimResults.length === 0 && parentSkuResults.length > 1;
+  const isFromParentSearch =
+    pimResults.length === 0 && parentSkuResults.length > 1;
   const variations = isFromParentSearch
     ? parentSkuResults
-    : Array.isArray(first?.variations) ? first.variations : [];
+    : Array.isArray(first?.variations)
+      ? first.variations
+      : [];
   const isMultiVariantParent = variations.length > 1;
 
   const data = isMultiVariantParent

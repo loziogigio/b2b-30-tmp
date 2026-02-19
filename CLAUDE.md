@@ -73,6 +73,7 @@ Modal stack supports push/pop: opening a product from the variants view pushes o
 3. **Expandable rows** (`ProductRowB2B`) — inline variant table in list view
 
 All three use `B2BVariantsGridContent` as the shared component (`src/components/product/b2b-variants-grid-content.tsx`):
+
 - Parent product header (image + SKU + brand + name + description)
 - Filter/sort controls (text search, sort dropdown, model tag chips)
 - Responsive card grid with infinite scroll ERP price loading
@@ -87,7 +88,8 @@ All three use `B2BVariantsGridContent` as the shared component (`src/components/
 ### Variant Detection Logic
 
 ```typescript
-const hasVariants = (product.variantCount && product.variantCount > 1) || variations.length > 1;
+const hasVariants =
+  (product.variantCount && product.variantCount > 1) || variations.length > 1;
 ```
 
 - Multi-variant parent → opens `B2B_PRODUCT_VARIANTS_QUICK_VIEW` modal

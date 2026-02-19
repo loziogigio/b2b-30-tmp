@@ -68,7 +68,8 @@ export type HeaderWidgetType =
   | 'profile' // User profile/login
   | 'button' // Custom button/link (multiple allowed)
   | 'spacer' // Flexible space (multiple allowed)
-  | 'divider'; // Vertical divider (multiple allowed)
+  | 'divider' // Vertical divider (multiple allowed)
+  | 'app-launcher'; // Cross-app navigation (B2B ↔ Vetrina)
 
 export interface RadioStation {
   id: string;

@@ -9,9 +9,7 @@ import { DEFAULT_HOME_SETTINGS } from '@/lib/home-settings/defaults';
 // =============================================================================
 
 const rawPimApiUrl =
-  process.env.PIM_API_PRIVATE_URL ||
-  process.env.NEXT_PUBLIC_PIM_API_URL ||
-  '';
+  process.env.PIM_API_PRIVATE_URL || process.env.NEXT_PUBLIC_PIM_API_URL || '';
 
 function resolveBaseUrl(raw: string): string {
   try {

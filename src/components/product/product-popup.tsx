@@ -184,7 +184,9 @@ export default function ProductPopup({ lang }: { lang: string }) {
                     onClick={navigateToProductPage}
                     className="inline-flex items-center px-4 py-2 rounded-md bg-brand text-brand-light text-sm font-medium transition-all hover:bg-brand/90"
                   >
-                    {t('text-view-full-product', { defaultValue: 'vedi scheda completa' })}
+                    {t('text-view-full-product', {
+                      defaultValue: 'vedi scheda completa',
+                    })}
                     <IoArrowForwardOutline className="ml-2 text-base" />
                   </button>
                 </div>

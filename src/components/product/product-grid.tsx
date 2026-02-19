@@ -40,10 +40,9 @@ export const ProductGrid: FC<ProductGridProps> = ({ className = '', lang }) => {
   });
 
   // Check if there are any products in the data
-  const hasProducts = data?.pages?.some(
-    (page: any) => page?.data?.length > 0,
-  );
-  const isEmptyResult = !isLoading && !error && data?.pages?.length && !hasProducts;
+  const hasProducts = data?.pages?.some((page: any) => page?.data?.length > 0);
+  const isEmptyResult =
+    !isLoading && !error && data?.pages?.length && !hasProducts;
 
   return (
     <>

@@ -51,10 +51,7 @@ export default function ManagedModal({ lang }: { lang: string }) {
     );
   }
 
-  if (
-    view === 'B2B_PRODUCT_VARIANTS_QUICK_VIEW' ||
-    view === 'PRODUCT_VIEW'
-  ) {
+  if (view === 'B2B_PRODUCT_VARIANTS_QUICK_VIEW' || view === 'PRODUCT_VIEW') {
     return (
       <Modal open={isOpen} onClose={closeModal} variant="fullscreen">
         {view === 'B2B_PRODUCT_VARIANTS_QUICK_VIEW' && (

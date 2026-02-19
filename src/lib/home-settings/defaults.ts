@@ -37,6 +37,7 @@ export const DEFAULT_HEADER_CONFIG: HeaderConfig = {
           id: 'right',
           alignment: 'right',
           widgets: [
+            { id: 'app-launcher', type: 'app-launcher', config: {} },
             { id: 'no-price', type: 'no-price', config: { showLabel: true } },
             { id: 'favorites', type: 'favorites', config: { showLabel: true } },
             { id: 'compare', type: 'compare', config: { showLabel: true } },

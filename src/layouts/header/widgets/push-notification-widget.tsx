@@ -354,9 +354,7 @@ export function PushNotificationWidget({
 
     // Optimistic update - update UI immediately
     setNotifications((prev) =>
-      prev.map((n) =>
-        n.notification_id === id ? { ...n, is_read: true } : n,
-      ),
+      prev.map((n) => (n.notification_id === id ? { ...n, is_read: true } : n)),
     );
     setUnreadCount((prev) => Math.max(0, prev - 1));
 

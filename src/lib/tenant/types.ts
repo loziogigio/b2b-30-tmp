@@ -139,9 +139,7 @@ export function buildTenantFromEnv(): TenantConfig {
     domains: [],
     api: {
       pimApiUrl:
-        process.env.PIM_API_URL ||
-        process.env.NEXT_PUBLIC_PIM_API_URL ||
-        '',
+        process.env.PIM_API_URL || process.env.NEXT_PUBLIC_PIM_API_URL || '',
       b2bApiUrl:
         process.env.B2B_API_URL ||
         process.env.NEXT_PUBLIC_B2B_PUBLIC_REST_API_ENDPOINT ||

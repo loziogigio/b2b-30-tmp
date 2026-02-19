@@ -13,3 +13,4 @@ export { ButtonWidget } from './button-widget';
 export { SpacerWidget } from './spacer-widget';
 export { DividerWidget } from './divider-widget';
 export { PushNotificationWidget } from './push-notification-widget';
+export { AppLauncherWidget } from './app-launcher-widget';

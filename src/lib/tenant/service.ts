@@ -58,10 +58,8 @@ function fromDocument(doc: TenantDocument): TenantConfig {
       isActive: d.is_active,
     })),
     api: {
-      pimApiUrl:
-        doc.api?.pim_api_url || process.env.PIM_API_URL || '',
-      b2bApiUrl:
-        doc.api?.b2b_api_url || process.env.B2B_API_URL || '',
+      pimApiUrl: doc.api?.pim_api_url || process.env.PIM_API_URL || '',
+      b2bApiUrl: doc.api?.b2b_api_url || process.env.B2B_API_URL || '',
       apiKeyId: doc.api?.api_key_id || '',
       apiSecret: doc.api?.api_secret || '',
     },

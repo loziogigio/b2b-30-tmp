@@ -85,9 +85,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          message: isAbort
-            ? 'SSO server timed out'
-            : 'SSO server unreachable',
+          message: isAbort ? 'SSO server timed out' : 'SSO server unreachable',
         },
         { status: 503 },
       );

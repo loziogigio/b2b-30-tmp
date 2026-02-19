@@ -12,7 +12,7 @@ const ActiveLink = ({
   const isActive = lang === href;
   const className = isActive
     ? `${propClassName ?? ''} ${activeClassName}`.trim()
-    : propClassName ?? '';
+    : (propClassName ?? '');
 
   return (
     <Link href={href} className={className || undefined} {...props}>
