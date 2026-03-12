@@ -10,10 +10,7 @@ import {
   getBulkLikeStatus as apiGetBulkLikeStatus,
   getUserLikes as apiGetUserLikes,
   clearAllUserLikes as apiClearAllUserLikes,
-  getUserLikesSummary as apiGetUserLikesSummary,
 } from '@framework/likes';
-import { API_ENDPOINTS_B2B } from '@framework/utils/api-endpoints-b2b';
-import { hasValidErpContext } from '@framework/utils/static';
 import {
   likesReducer,
   initialState,
@@ -42,18 +39,6 @@ type BulkStatusResponse = {
   user_id: string;
   like_statuses: { sku: string; is_liked: boolean; total_likes: number }[];
 };
-
-const FALLBACK_LIKES_ENDPOINTS = {
-  ROOT: '/api/likes',
-  TOGGLE: '/api/likes/toggle',
-  STATUS: (userId: string, sku: string) => `/api/likes/status/${userId}/${sku}`,
-  BULK_STATUS: '/api/likes/status/bulk',
-  USER: (userId: string) => `/api/likes/user/${userId}`,
-  USER_SUMMARY: (userId: string) => `/api/likes/user/${userId}/summary`,
-  CLEAR_ALL: (userId: string) => `/api/likes/user/${userId}/all`,
-};
-
-const EP = (API_ENDPOINTS_B2B?.LIKES as any) ?? FALLBACK_LIKES_ENDPOINTS;
 
 export interface LikesProviderState extends LikesState {
   isLiked: (sku: string) => boolean;
@@ -186,19 +171,9 @@ export function LikesProvider(props: React.PropsWithChildren) {
     [hydrateFromServer],
   );
 
-  // Refresh likes from server when user is authorized AND ERP context is valid
+  // Refresh likes from server when user is authorized
   const didRefreshFromServer = React.useRef(false);
   const prevIsAuthorized = React.useRef<boolean | null>(null);
-  const retryTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
-
-  React.useEffect(() => {
-    // Cleanup retry timeout on unmount
-    return () => {
-      if (retryTimeoutRef.current) {
-        clearTimeout(retryTimeoutRef.current);
-      }
-    };
-  }, []);
 
   React.useEffect(() => {
     // Reset flag on ANY auth state change (login or logout)
@@ -206,60 +181,13 @@ export function LikesProvider(props: React.PropsWithChildren) {
       prevIsAuthorized.current !== null &&
       prevIsAuthorized.current !== isAuthorized
     ) {
-      console.log(
-        '[LikesContext] Auth state changed:',
-        prevIsAuthorized.current,
-        '->',
-        isAuthorized,
-      );
       didRefreshFromServer.current = false;
     }
     prevIsAuthorized.current = isAuthorized;
 
-    // Only fetch when user is logged in
-    if (!isAuthorized) {
-      console.log('[LikesContext] Not authorized, skipping server refresh');
-      return;
-    }
+    if (!isAuthorized || didRefreshFromServer.current) return;
 
-    // Wait for valid ERP context (customer_code, address_code populated)
-    if (!hasValidErpContext()) {
-      console.log('[LikesContext] No valid ERP context yet, will retry...');
-      // Retry after a short delay (ERP hydration should complete soon)
-      if (!retryTimeoutRef.current) {
-        retryTimeoutRef.current = setTimeout(() => {
-          retryTimeoutRef.current = null;
-          // Force re-check by toggling a dummy state or just calling loadUserLikes
-          if (
-            isAuthorized &&
-            hasValidErpContext() &&
-            !didRefreshFromServer.current
-          ) {
-            console.log(
-              '[LikesContext] Retry: ERP context now valid, fetching...',
-            );
-            didRefreshFromServer.current = true;
-            loadUserLikes(1, 100, 'replace').catch((err) => {
-              console.error(
-                '[LikesContext] Failed to load likes from server:',
-                err,
-              );
-            });
-          }
-        }, 500);
-      }
-      return;
-    }
-
-    if (didRefreshFromServer.current) {
-      console.log('[LikesContext] Already refreshed from server, skipping');
-      return;
-    }
-    console.log(
-      '[LikesContext] Authorized with valid ERP context, refreshing from server...',
-    );
     didRefreshFromServer.current = true;
-    // fetch within backend limit (<= 100)
     loadUserLikes(1, 100, 'replace').catch((err) => {
       console.error('[LikesContext] Failed to load likes from server:', err);
     });

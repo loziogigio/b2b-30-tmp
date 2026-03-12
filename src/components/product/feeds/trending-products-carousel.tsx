@@ -39,7 +39,6 @@ export default function TrendingProductsCarousel({
           timePeriod,
           1,
           limitSkus,
-          false,
         );
         const skus = (page?.items || []).map((r) => r.sku).filter(Boolean);
         if (!mounted) return;

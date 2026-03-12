@@ -1,8 +1,14 @@
 import { Suspense } from 'react';
+import {
+  QueryClient,
+  dehydrate,
+  HydrationBoundary,
+} from '@tanstack/react-query';
 import Divider from '@components/ui/divider';
 import CollectionDetailContent from './collection-detail-content';
 import { Metadata } from 'next';
 import { getServerHomeSettings } from '@/lib/home-settings/fetch-server';
+import { serverFetchCollectionBySlug } from '@/lib/pim/server-fetch';
 
 // Server-side collection fetch for SEO metadata
 async function fetchCollectionForSeo(slug: string) {
@@ -123,12 +129,22 @@ export default async function Page({
 }) {
   const { lang, slug } = await params;
 
+  // Prefetch collection data into React Query cache for SSR
+  const queryClient = new QueryClient();
+
+  await queryClient.prefetchQuery({
+    queryKey: ['collection', slug],
+    queryFn: () => serverFetchCollectionBySlug(slug),
+  });
+
   return (
     <>
       <Divider />
-      <Suspense fallback={<CollectionFallback />}>
-        <CollectionDetailContent lang={lang} slug={slug} />
-      </Suspense>
+      <HydrationBoundary state={dehydrate(queryClient)}>
+        <Suspense fallback={<CollectionFallback />}>
+          <CollectionDetailContent lang={lang} slug={slug} />
+        </Suspense>
+      </HydrationBoundary>
     </>
   );
 }

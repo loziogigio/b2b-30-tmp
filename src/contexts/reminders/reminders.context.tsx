@@ -9,8 +9,6 @@ import {
   getUserReminders as apiGetUserReminders,
   clearAllUserReminders as apiClearAllUserReminders,
 } from '@framework/reminders';
-import { API_ENDPOINTS_B2B } from '@framework/utils/api-endpoints-b2b';
-import { hasValidErpContext } from '@framework/utils/static';
 import {
   remindersReducer,
   initialState,
@@ -47,20 +45,6 @@ type BulkStatusResponse = {
     reminder_created_at?: string | null;
   }>;
 };
-
-const FALLBACK_REMINDERS_ENDPOINTS = {
-  ROOT: '/api/reminders',
-  TOGGLE: '/api/reminders/toggle',
-  STATUS: (userId: string, sku: string) =>
-    `/api/reminders/status/${userId}/${sku}`,
-  BULK_STATUS: '/api/reminders/status/bulk',
-  USER: (userId: string) => `/api/reminders/user/${userId}`,
-  USER_SUMMARY: (userId: string) => `/api/reminders/user/${userId}/summary`,
-  CLEAR_ALL: (userId: string) => `/api/reminders/user/${userId}/all`,
-};
-
-const EP =
-  (API_ENDPOINTS_B2B?.REMINDERS as any) ?? FALLBACK_REMINDERS_ENDPOINTS;
 
 export interface RemindersProviderState extends RemindersState {
   hasReminder: (sku: string) => boolean;
@@ -205,19 +189,9 @@ export function RemindersProvider(props: React.PropsWithChildren) {
     [hydrateFromServer],
   );
 
-  // Refresh reminders from server when user is authorized AND ERP context is valid
+  // Refresh reminders from server when user is authorized
   const didRefreshFromServer = React.useRef(false);
   const prevIsAuthorized = React.useRef<boolean | null>(null);
-  const retryTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
-
-  React.useEffect(() => {
-    // Cleanup retry timeout on unmount
-    return () => {
-      if (retryTimeoutRef.current) {
-        clearTimeout(retryTimeoutRef.current);
-      }
-    };
-  }, []);
 
   React.useEffect(() => {
     // Reset flag on ANY auth state change (login or logout)
@@ -225,60 +199,13 @@ export function RemindersProvider(props: React.PropsWithChildren) {
       prevIsAuthorized.current !== null &&
       prevIsAuthorized.current !== isAuthorized
     ) {
-      console.log(
-        '[RemindersContext] Auth state changed:',
-        prevIsAuthorized.current,
-        '->',
-        isAuthorized,
-      );
       didRefreshFromServer.current = false;
     }
     prevIsAuthorized.current = isAuthorized;
 
-    // Only fetch when user is logged in
-    if (!isAuthorized) {
-      console.log('[RemindersContext] Not authorized, skipping server refresh');
-      return;
-    }
+    if (!isAuthorized || didRefreshFromServer.current) return;
 
-    // Wait for valid ERP context (customer_code, address_code populated)
-    if (!hasValidErpContext()) {
-      console.log('[RemindersContext] No valid ERP context yet, will retry...');
-      // Retry after a short delay (ERP hydration should complete soon)
-      if (!retryTimeoutRef.current) {
-        retryTimeoutRef.current = setTimeout(() => {
-          retryTimeoutRef.current = null;
-          // Force re-check by toggling a dummy state or just calling loadUserReminders
-          if (
-            isAuthorized &&
-            hasValidErpContext() &&
-            !didRefreshFromServer.current
-          ) {
-            console.log(
-              '[RemindersContext] Retry: ERP context now valid, fetching...',
-            );
-            didRefreshFromServer.current = true;
-            loadUserReminders(1, 100, 'replace').catch((err) => {
-              console.error(
-                '[RemindersContext] Failed to load reminders from server:',
-                err,
-              );
-            });
-          }
-        }, 500);
-      }
-      return;
-    }
-
-    if (didRefreshFromServer.current) {
-      console.log('[RemindersContext] Already refreshed from server, skipping');
-      return;
-    }
-    console.log(
-      '[RemindersContext] Authorized with valid ERP context, refreshing from server...',
-    );
     didRefreshFromServer.current = true;
-    // fetch within backend limit (<= 100)
     loadUserReminders(1, 100, 'replace').catch((err) => {
       console.error(
         '[RemindersContext] Failed to load reminders from server:',

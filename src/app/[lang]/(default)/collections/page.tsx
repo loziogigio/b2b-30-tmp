@@ -1,8 +1,14 @@
 import { Suspense } from 'react';
+import {
+  QueryClient,
+  dehydrate,
+  HydrationBoundary,
+} from '@tanstack/react-query';
 import Divider from '@components/ui/divider';
 import CollectionPageContent from './collection-page-content';
 import { Metadata } from 'next';
 import { getServerHomeSettings } from '@/lib/home-settings/fetch-server';
+import { serverFetchCollections } from '@/lib/pim/server-fetch';
 
 // Generate dynamic SEO metadata for collections list page
 export async function generateMetadata({
@@ -65,12 +71,22 @@ export default async function Page({
 }) {
   const { lang } = await params;
 
+  // Prefetch collections into React Query cache for SSR
+  const queryClient = new QueryClient();
+
+  await queryClient.prefetchQuery({
+    queryKey: ['collections'],
+    queryFn: () => serverFetchCollections(),
+  });
+
   return (
     <>
       <Divider />
-      <Suspense fallback={<CollectionFallback />}>
-        <CollectionPageContent lang={lang} />
-      </Suspense>
+      <HydrationBoundary state={dehydrate(queryClient)}>
+        <Suspense fallback={<CollectionFallback />}>
+          <CollectionPageContent lang={lang} />
+        </Suspense>
+      </HydrationBoundary>
     </>
   );
 }

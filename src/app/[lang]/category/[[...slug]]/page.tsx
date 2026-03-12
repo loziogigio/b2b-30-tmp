@@ -1,11 +1,18 @@
 // app/[lang]/category/[[...slug]]/page.tsx  (Next.js App Router)
 
 import { Metadata } from 'next';
+import {
+  QueryClient,
+  dehydrate,
+  HydrationBoundary,
+} from '@tanstack/react-query';
 import CategoryPage from '@components/category/category-page';
 import { getServerHomeSettings } from '@/lib/home-settings/fetch-server';
+import { serverFetchPimMenu } from '@/lib/pim/server-fetch';
+import { transformPimMenuTree } from '@framework/product/get-pim-menu';
 import { slugify } from '@utils/slugify';
 
-// Types for menu tree
+// Types for menu tree (used by generateMetadata)
 interface MenuTreeNode {
   id: string;
   slug: string;
@@ -218,5 +225,24 @@ export default async function Page({
   params: Promise<{ lang: string; slug?: string[] }>;
 }) {
   const { lang, slug } = await params;
-  return <CategoryPage lang={lang} slug={slug ?? []} />;
+
+  // Prefetch menu data into React Query cache for SSR
+  const queryClient = new QueryClient();
+
+  await queryClient.prefetchQuery({
+    queryKey: ['pim-menu', 'header'],
+    queryFn: async () => {
+      const rawItems = await serverFetchPimMenu('header');
+      return {
+        menuItems: transformPimMenuTree(rawItems),
+        flat: rawItems,
+      };
+    },
+  });
+
+  return (
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <CategoryPage lang={lang} slug={slug ?? []} />
+    </HydrationBoundary>
+  );
 }

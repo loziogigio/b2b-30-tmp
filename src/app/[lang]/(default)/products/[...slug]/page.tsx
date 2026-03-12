@@ -1,9 +1,16 @@
 import { Metadata } from 'next';
+import {
+  QueryClient,
+  dehydrate,
+  HydrationBoundary,
+} from '@tanstack/react-query';
 import { getProductDetailBlocks as getProductDetailBlocksOld } from '@/lib/db/product-templates';
 import { getProductDetailBlocks as getProductDetailBlocksNew } from '@/lib/db/product-templates-simple';
 import { ProductDetailWithPreview } from '@components/product/ProductDetailWithPreview';
 import { getServerHomeSettings } from '@/lib/home-settings/fetch-server';
 import { fetchProductForSeo } from '@/lib/seo/fetch-product';
+import { serverFetchPimProducts } from '@/lib/pim/server-fetch';
+import { transformPimProducts } from '@framework/product/get-pim-product';
 
 // Generate dynamic SEO metadata for product pages
 export async function generateMetadata({
@@ -110,37 +117,93 @@ export default async function Page({
   const isPreview = search?.preview === 'true';
 
   // Join slug segments to handle SKUs with slashes (e.g., po27011/2zc)
-  // With catch-all route [...slug], the slug param is an array
   const slug = Array.isArray(slugSegments)
     ? slugSegments.join('/')
     : slugSegments;
 
-  // Try new simplified template matching first (sku/parentSku based)
-  // For now, we'll use slug as both sku and parentSku
-  // In production, fetch real product data to get the actual parentSku
-  let blocks = await getProductDetailBlocksNew(
-    slug, // productSku
-    slug, // parentSku (fallback to slug for now)
-    isPreview,
-  );
+  // Fetch blocks and prefetch product data in parallel
+  const queryClient = new QueryClient();
 
-  // If no blocks found with new system, fallback to old system
-  if (!blocks || blocks.length === 0) {
-    blocks = await getProductDetailBlocksOld(
-      slug,
-      undefined, // categoryIds
-      undefined, // tags
-      isPreview,
-    );
-  }
+  // Query params matching what usePimProductListQuery uses in product-b2b-details.tsx
+  const productQueryParams = {
+    limit: 1,
+    filters: { sku: [slug] },
+    group_variants: true,
+  };
 
-  // Use ProductDetailWithPreview wrapper to enable live postMessage updates
+  const [blocks, product] = await Promise.all([
+    // Fetch page layout blocks
+    (async () => {
+      let b = await getProductDetailBlocksNew(slug, slug, isPreview);
+      if (!b || b.length === 0) {
+        b = await getProductDetailBlocksOld(
+          slug,
+          undefined,
+          undefined,
+          isPreview,
+        );
+      }
+      return b;
+    })(),
+    // Fetch product for JSON-LD
+    fetchProductForSeo(slug, lang),
+    // Prefetch product data into React Query cache
+    queryClient.prefetchQuery({
+      queryKey: ['pim-search', productQueryParams],
+      queryFn: async () => {
+        const result = await serverFetchPimProducts({
+          lang,
+          rows: 1,
+          filters: { sku: [slug] },
+          group_variants: true,
+        });
+        return transformPimProducts(result.results).map((p) => ({
+          ...p,
+          variantCount: p.variations?.length || 1,
+        }));
+      },
+    }),
+  ]);
+
+  const siteUrl = process.env.NEXT_PUBLIC_WEBSITE_URL || '';
+
   return (
-    <ProductDetailWithPreview
-      lang={lang}
-      sku={slug}
-      serverBlocks={blocks || []}
-      isPreview={isPreview}
-    />
+    <>
+      {/* Product JSON-LD structured data for Google */}
+      {product && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'Product',
+              name: product.name || slug,
+              description: (
+                product.short_description ||
+                product.description?.replace(/<[^>]*>/g, '') ||
+                ''
+              ).slice(0, 500),
+              sku: slug,
+              image:
+                product.cover_image_url ||
+                product.images?.[0]?.url ||
+                undefined,
+              brand: product.brand
+                ? { '@type': 'Brand', name: product.brand.label }
+                : undefined,
+              url: `${siteUrl}/${lang}/products/${slug}`,
+            }),
+          }}
+        />
+      )}
+      <HydrationBoundary state={dehydrate(queryClient)}>
+        <ProductDetailWithPreview
+          lang={lang}
+          sku={slug}
+          serverBlocks={blocks || []}
+          isPreview={isPreview}
+        />
+      </HydrationBoundary>
+    </>
   );
 }

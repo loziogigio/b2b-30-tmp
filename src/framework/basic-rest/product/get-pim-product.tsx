@@ -12,7 +12,7 @@ import type {
 // ===============================
 // Transform PIM product to internal Product type
 // ===============================
-function transformPimProduct(raw: PimProduct): Product {
+export function transformPimProduct(raw: PimProduct): Product {
   // Extract model from attributes if not directly available
   // Handle both array format and multilingual object format
   let modelAttr: PimProductAttribute | undefined;
@@ -103,7 +103,7 @@ function transformPimProduct(raw: PimProduct): Product {
   } as Product;
 }
 
-function transformPimProducts(products: PimProduct[]): Product[] {
+export function transformPimProducts(products: PimProduct[]): Product[] {
   return products.map(transformPimProduct);
 }
 

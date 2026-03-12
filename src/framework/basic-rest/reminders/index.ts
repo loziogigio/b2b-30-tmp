@@ -1,8 +1,9 @@
-import { get, post, del } from '@framework/utils/httpB2B';
-import { API_ENDPOINTS_B2B } from '@framework/utils/api-endpoints-b2b';
-import { ERP_STATIC } from '@framework/utils/static';
+import { get, post, del } from '@framework/utils/httpPIM';
 
-// Types aligned with the FastAPI spec
+// ============================================
+// TYPES
+// ============================================
+
 export type ReminderToggleAction = 'created' | 'cancelled';
 
 export interface ReminderToggleResponse {
@@ -50,15 +51,6 @@ export interface UserRemindersResponse {
   has_next: boolean;
 }
 
-export interface UserRemindersSummary {
-  user_id: string;
-  total_reminders: number;
-  active: number;
-  notified: number;
-  expired: number;
-  cancelled: number;
-}
-
 export interface ReminderStatsResponse {
   sku: string;
   active_reminders: number;
@@ -66,77 +58,74 @@ export interface ReminderStatsResponse {
   total_reminders: number;
 }
 
-// Convenience alias
-const EP = API_ENDPOINTS_B2B.REMINDERS;
+// ============================================
+// ENDPOINTS (commerce suite via PIM proxy)
+// ============================================
 
-// Global user identifier required by Reminders API
-// Use project_code from ERP_STATIC (set during login) or fall back to env
-const getProjectCode = () =>
-  ERP_STATIC.project_code ||
-  process.env.NEXT_PUBLIC_PROJECT_CODE ||
-  process.env.NEXT_PROJECT_CODE ||
-  'APP';
-const getUserId = () => {
-  const projectCode = getProjectCode();
-  const userId = `${projectCode}-${ERP_STATIC.customer_code}-${ERP_STATIC.address_code}`;
-  console.log('[Reminders] getUserId:', userId, 'ERP_STATIC:', ERP_STATIC);
-  return userId;
-};
+const BASE = 'api/b2b/reminders';
 
-// Core reminder operations
+// Helper to unwrap commerce suite `{ success, data }` envelope
+function unwrap<T>(res: any): T {
+  return res?.data ?? res;
+}
+
+// ============================================
+// CORE OPERATIONS
+// ============================================
+
 export async function addReminder(
   sku: string,
   email?: string,
 ): Promise<{ success?: boolean } | void> {
-  return post(EP.ROOT, {
-    user_id: getUserId(),
+  const res = await post(`${BASE}`, {
     sku,
     email,
     expires_in_days: 30,
   });
+  return unwrap(res);
 }
 
 export async function removeReminder(
   sku: string,
 ): Promise<{ success?: boolean; message?: string } | void> {
-  // Send body with DELETE via axios config
-  return del(EP.ROOT, undefined, { data: { user_id: getUserId(), sku } });
+  return del(`${BASE}`, { data: { sku } });
 }
 
 export async function toggleReminder(
   sku: string,
   email?: string,
 ): Promise<ReminderToggleResponse> {
-  return post<ReminderToggleResponse>(EP.TOGGLE, {
-    user_id: getUserId(),
+  const res = await post<any>(`${BASE}/toggle`, {
     sku,
     email,
     expires_in_days: 30,
   });
+  return unwrap<ReminderToggleResponse>(res);
 }
 
-// Status endpoints
+// ============================================
+// STATUS
+// ============================================
+
 export async function getReminderStatus(
   sku: string,
-  userId: string = getUserId(),
 ): Promise<ReminderStatusResponse> {
-  return get<ReminderStatusResponse>(EP.STATUS(userId, sku));
+  const res = await get<any>(`${BASE}/status/${encodeURIComponent(sku)}`);
+  return unwrap<ReminderStatusResponse>(res);
 }
 
 export async function getBulkReminderStatus(
   skus: string[],
-  userId: string = getUserId(),
 ): Promise<ReminderStatusResponse[]> {
-  const response = await post<
-    BulkReminderStatusResponse | ReminderStatusResponse[]
-  >(EP.BULK_STATUS, { user_id: userId, skus });
+  const res = await post<any>(`${BASE}/status/bulk`, { skus });
+  const data = unwrap<BulkReminderStatusResponse | ReminderStatusResponse[]>(res);
 
-  if (Array.isArray(response)) {
-    return response;
+  if (Array.isArray(data)) {
+    return data;
   }
 
-  if (response && Array.isArray(response.reminder_statuses)) {
-    return response.reminder_statuses.map((status) => ({
+  if (data && Array.isArray(data.reminder_statuses)) {
+    return data.reminder_statuses.map((status) => ({
       sku: status.sku,
       has_active_reminder: status.has_active_reminder,
       product_available: status.product_available,
@@ -147,48 +136,48 @@ export async function getBulkReminderStatus(
   return [];
 }
 
-// User reminders
+// ============================================
+// USER REMINDERS
+// ============================================
+
 export async function getUserReminders(
   page = 1,
   pageSize = 20,
-  userId: string = getUserId(),
+  userId?: string,
   statusFilter?: 'active' | 'notified' | 'expired' | 'cancelled',
 ): Promise<UserRemindersResponse> {
-  const params: any = { page: String(page), page_size: String(pageSize) };
+  const params: Record<string, string> = {
+    page: String(page),
+    limit: String(pageSize),
+  };
   if (statusFilter) {
-    params.status_filter = statusFilter;
+    params.status = statusFilter;
   }
   const qs = new URLSearchParams(params).toString();
-  return get<UserRemindersResponse>(`${EP.USER(userId)}?${qs}`);
+  const res = await get<any>(`${BASE}/user?${qs}`);
+  return unwrap<UserRemindersResponse>(res);
 }
 
-export async function getUserRemindersSummary(
-  userId: string = getUserId(),
-): Promise<UserRemindersSummary> {
-  return get<UserRemindersSummary>(EP.USER_SUMMARY(userId));
-}
+// ============================================
+// STATS
+// ============================================
 
-// Stats
 export async function getProductReminderStats(
   sku: string,
 ): Promise<ReminderStatsResponse> {
-  return get<ReminderStatsResponse>(EP.STATS(sku));
+  const res = await get<any>(`${BASE}/stats/${encodeURIComponent(sku)}`);
+  return unwrap<ReminderStatsResponse>(res);
 }
 
-// Utilities
-export async function clearAllUserReminders(
-  userId: string = getUserId(),
-): Promise<{
+// ============================================
+// UTILITIES
+// ============================================
+
+export async function clearAllUserReminders(): Promise<{
   success?: boolean;
   message?: string;
   deleted_count?: number;
 } | void> {
-  return del(EP.CLEAR_ALL(userId));
-}
-
-export async function remindersHealthCheck(): Promise<{
-  status: string;
-  service: string;
-}> {
-  return get(EP.HEALTH);
+  const res = await del(`${BASE}/user/all`);
+  return unwrap(res);
 }

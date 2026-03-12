@@ -52,7 +52,7 @@ function transformPimMenuItem(
   };
 }
 
-function transformPimMenuTree(items: PimMenuTreeItem[]): MenuTreeNode[] {
+export function transformPimMenuTree(items: PimMenuTreeItem[]): MenuTreeNode[] {
   return items.map((item) => transformPimMenuItem(item, []));
 }
 

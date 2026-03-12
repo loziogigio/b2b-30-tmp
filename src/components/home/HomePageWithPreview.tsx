@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { ProductPreviewListener } from '@components/product/ProductPreviewListener';
 import HomeBlockRenderer from '@components/blocks/HomeBlockRenderer';
 import type { PageBlock, PageVersionTags } from '@/lib/types/blocks';
@@ -106,12 +106,6 @@ export function HomePageWithPreview({
   templateTags,
   matchInfo,
 }: HomePageWithPreviewProps) {
-  const [isHydrated, setIsHydrated] = useState(false);
-
-  useEffect(() => {
-    setIsHydrated(true);
-  }, []);
-
   const tagKey = templateTags ? serializeTagsKey(templateTags) : 'default';
   const previewTargetId = !isPreview ? `home:${tagKey}` : undefined;
 
@@ -136,22 +130,17 @@ export function HomePageWithPreview({
     return parts.join(' | ') || 'default experience';
   }, [templateTags]);
 
-  // Show skeleton until hydrated (after all hooks)
-  if (!isHydrated) {
-    return <HomePageSkeleton />;
-  }
-
   return (
     <ProductPreviewListener currentProductId={previewTargetId}>
       {(previewState) => {
-        const liveBlocks = isHydrated ? previewState?.blocks : undefined;
+        const liveBlocks = previewState?.blocks;
         const hasLiveBlocks = Array.isArray(liveBlocks);
         // Use live blocks from postMessage if available (after hydration), otherwise use server blocks
         const blocks: PageBlock[] = hasLiveBlocks
           ? (liveBlocks as PageBlock[])
           : serverBlocks;
         // Show preview UI (badges, banner) whenever in preview mode - don't wait for postMessage
-        const showPreviewUI = isHydrated && isPreview;
+        const showPreviewUI = isPreview;
         const hasUnsavedChanges = previewState?.isDirty ?? true;
         const blockCount = blocks.length;
 

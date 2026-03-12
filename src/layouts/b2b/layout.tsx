@@ -7,19 +7,7 @@ import B2BMobileNavigation from '@layouts/mobile-navigation/b2b-mobile-navigatio
 import CartHydrator from '@framework/cart/b2b-cart';
 import ErpHydrator from '@components/common/erp-hydrator';
 import AuthGuard from '@components/common/auth-guard';
-
-const ConfigurableHeader = dynamic(
-  () => import('@layouts/header/configurable-header'),
-  {
-    ssr: false,
-    loading: () => (
-      <>
-        <div className="h-16 w-full bg-fill-secondary" />
-        <div className="h-12 w-full bg-gray-50" />
-      </>
-    ),
-  },
-);
+import ConfigurableHeader from '@layouts/header/configurable-header';
 
 const MobileSearchOverlay = dynamic(() => import('./mobile-search-overlay'), {
   ssr: false,
@@ -50,7 +38,6 @@ export default function DefaultLayout({
         <ErpHydrator />
         <CartHydrator />
 
-        {/* Header is client-only to avoid hydration mismatches when UI context mutates */}
         <ConfigurableHeader lang={lang} />
 
         {/* Mobile search overlay - triggered by bottom navigation search icon */}

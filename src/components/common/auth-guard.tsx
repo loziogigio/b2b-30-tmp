@@ -153,14 +153,15 @@ export default function AuthGuard({ children, lang }: AuthGuardProps) {
     openModal('SIGN_UP_VIEW');
   };
 
-  // During SSR or initial hydration, show nothing to prevent flash
-  if (!mounted) {
-    return null;
-  }
-
-  // If login not required, show content
+  // If login not required, always render children (including during SSR for SEO)
   if (!requireLogin) {
     return <>{children}</>;
+  }
+
+  // Login required: wait for client mount to avoid hydration mismatch
+  // (tenant stays fully private — Google sees nothing)
+  if (!mounted) {
+    return null;
   }
 
   // If logged in, show content
