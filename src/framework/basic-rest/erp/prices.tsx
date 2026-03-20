@@ -1,6 +1,5 @@
-import { post } from '@framework/utils/httpB2B';
-import { API_ENDPOINTS_B2B } from '@framework/utils/api-endpoints-b2b';
-import { transformErpPricesResponse } from '@utils/transform/erp-prices'; // adjust path
+import { post } from '@framework/utils/httpPIM';
+import { transformErpPricesResponse } from '@utils/transform/erp-prices';
 
 interface ErpPricesPayload {
   entity_codes: string[];
@@ -22,7 +21,8 @@ export const fetchErpPrices = async (input: ErpPricesPayload) => {
     address_code,
   };
 
-  const rawResponse = await post(API_ENDPOINTS_B2B.ERP_PRICES, finalPayload);
+  // Route through PIM pricing proxy instead of calling ERP directly
+  const rawResponse = await post('api/b2b/pricing/prices', finalPayload);
 
   // Transform response into flat ERP price map
   return transformErpPricesResponse(rawResponse);
