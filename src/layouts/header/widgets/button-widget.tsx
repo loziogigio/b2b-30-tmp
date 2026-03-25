@@ -36,9 +36,10 @@ export function ButtonWidget({ config, lang }: ButtonWidgetProps) {
     <Link
       href={href}
       className={cn(
-        'inline-flex rounded-full px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm font-semibold transition-colors whitespace-nowrap',
+        'inline-flex px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm font-semibold transition-colors whitespace-nowrap',
         variantStyles[variant] || variantStyles.outline,
       )}
+      style={{ borderRadius: 'var(--radius-btn, 9999px)' }}
     >
       {config.label}
     </Link>

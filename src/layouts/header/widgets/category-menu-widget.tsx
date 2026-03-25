@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { HiOutlineMenuAlt3 } from 'react-icons/hi';
+import { HiOutlineViewGrid } from 'react-icons/hi';
 import type { WidgetConfig } from '@/lib/home-settings/types';
 
 const B2BHeaderMenu = dynamic(() => import('@layouts/header/b2b-header-menu'), {
@@ -23,9 +23,10 @@ export function CategoryMenuWidget({ config, lang }: CategoryMenuWidgetProps) {
           <button
             type="button"
             onClick={onClick}
-            className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm text-slate-700 hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 whitespace-nowrap"
+            className="inline-flex items-center gap-2 border border-slate-200 px-4 py-2 text-sm text-slate-700 hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 whitespace-nowrap"
+            style={{ borderRadius: 'var(--radius-btn, 9999px)' }}
           >
-            <HiOutlineMenuAlt3 className="h-5 w-5" />
+            <HiOutlineViewGrid className="h-5 w-5" />
             <span>{config?.label || 'Categorie'}</span>
           </button>
         )}
