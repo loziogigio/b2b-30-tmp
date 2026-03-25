@@ -15,7 +15,7 @@ const Container: React.FC<Props> = ({
   fullWidth,
 }) => {
   const rootClassName = cn(className, {
-    'mx-auto max-w-[1920px] px-4 md:px-6 lg:px-8 2xl:px-10':
+    'mx-auto max-w-[1440px] px-4 md:px-6 lg:px-8 2xl:px-10':
       !clean && !fullWidth,
   });
 

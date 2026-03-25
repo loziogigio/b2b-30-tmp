@@ -1,8 +1,8 @@
 'use client';
 
-import { useRef, useState, useCallback, useEffect } from 'react';
 import Image from 'next/image';
 import Link from '@components/ui/link';
+import { useHorizontalScroll } from '@components/themes/time/shared/use-horizontal-scroll';
 
 interface BannerItem {
   id?: string;
@@ -100,48 +100,30 @@ function BannerSlide({ item }: { item: BannerItem }) {
 export default function TimeBannerCarousel({
   data,
   title,
-  lang,
   itemsPerView = 3,
 }: TimeBannerCarouselProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
-
-  const checkScroll = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    setCanScrollLeft(el.scrollLeft > 10);
-    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 10);
-  }, []);
-
-  useEffect(() => {
-    checkScroll();
-  }, [checkScroll]);
-
-  const scroll = (dir: number) => {
-    const el = scrollRef.current;
-    if (!el) return;
-    el.scrollBy({ left: dir * 400, behavior: 'smooth' });
-    setTimeout(checkScroll, 350);
-  };
+  const {
+    scrollRef,
+    canScrollLeft,
+    canScrollRight,
+    checkScroll,
+    scrollLeft,
+    scrollRight,
+  } = useHorizontalScroll({ scrollAmount: 400 });
 
   if (!data?.length) return null;
 
   const needsScroll = canScrollLeft || canScrollRight;
-
-  // Width: for N items per view, each item takes roughly 100/N %
   const itemWidth = `calc(${100 / itemsPerView}% - ${((itemsPerView - 1) * 16) / itemsPerView}px)`;
 
   return (
     <div>
-      {/* Title */}
       {title && (
         <h2 className="text-[22px] font-extrabold text-[var(--time-dark)] font-[family-name:var(--font-display)] tracking-tight mb-4 px-1">
           {title}
         </h2>
       )}
 
-      {/* Carousel container with overlaid arrows + dots */}
       <div className="relative">
         <div
           ref={scrollRef}
@@ -165,10 +147,10 @@ export default function TimeBannerCarousel({
           ))}
         </div>
 
-        {/* Left arrow — only when scrollable */}
+        {/* Left arrow */}
         {canScrollLeft && (
           <button
-            onClick={() => scroll(-1)}
+            onClick={scrollLeft}
             className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-white shadow-md flex items-center justify-center text-[var(--time-dark)] transition-all hover:bg-white z-10"
           >
             <svg
@@ -185,10 +167,10 @@ export default function TimeBannerCarousel({
           </button>
         )}
 
-        {/* Right arrow — only when scrollable */}
+        {/* Right arrow */}
         {canScrollRight && (
           <button
-            onClick={() => scroll(1)}
+            onClick={scrollRight}
             className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-white shadow-md flex items-center justify-center text-[var(--time-dark)] transition-all hover:bg-white z-10"
           >
             <svg
@@ -205,11 +187,10 @@ export default function TimeBannerCarousel({
           </button>
         )}
 
-        {/* Bottom center dots — only when scrollable */}
+        {/* Bottom dots */}
         {needsScroll && (
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10 bg-white/70 backdrop-blur-sm rounded-full px-2 py-1.5">
             {data.map((_, i) => {
-              // Highlight dot based on scroll position
               const el = scrollRef.current;
               const scrollPos = el ? el.scrollLeft : 0;
               const itemW = el

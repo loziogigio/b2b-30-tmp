@@ -26,7 +26,6 @@ export default function TimeProductCard({
   const hasVariants =
     (product.variantCount && product.variantCount > 1) || variations.length > 1;
 
-  // Price calculations
   const anyPD = priceData as any;
   const netPrice =
     anyPD?.price_discount ?? anyPD?.net_price ?? anyPD?.price_gross ?? null;
@@ -40,7 +39,6 @@ export default function TimeProductCard({
     ? Math.round((1 - Number(netPrice) / Number(listPrice)) * 100)
     : 0;
 
-  // Availability
   const isOutOfStock = priceData ? Number(priceData.availability) <= 0 : false;
 
   function handleClick() {
@@ -56,16 +54,11 @@ export default function TimeProductCard({
   return (
     <article
       onClick={handleClick}
-      className="min-w-[210px] max-w-[210px] shrink-0 bg-white rounded-xl border border-[#eef0f3] overflow-hidden cursor-pointer transition-all duration-[250ms] hover:shadow-[0_8px_28px_rgba(0,0,0,0.08)] hover:-translate-y-[3px]"
+      className="min-w-[210px] max-w-[210px] shrink-0 bg-white rounded-xl border border-[var(--time-gray-100)] overflow-hidden cursor-pointer transition-all duration-[250ms] hover:shadow-[0_8px_28px_rgba(0,0,0,0.08)] hover:-translate-y-[3px]"
       style={{ scrollSnapAlign: 'start' }}
     >
       {/* Image area */}
-      <div
-        className="aspect-square relative"
-        style={{
-          background: 'linear-gradient(145deg, #f8f9fb, #eef0f4)',
-        }}
-      >
+      <div className="aspect-square relative bg-gradient-to-br from-[var(--time-gray-50)] to-[var(--time-gray-100)]">
         <Image
           src={
             image?.thumbnail && image.thumbnail.trim() !== ''
@@ -80,7 +73,7 @@ export default function TimeProductCard({
 
         {/* Discount badge */}
         {discountPercent > 0 && (
-          <span className="absolute top-2 left-2 bg-[#e63946] text-white text-[10px] font-bold px-[7px] py-[3px] rounded-[5px] font-[family-name:var(--font-body)]">
+          <span className="absolute top-2 left-2 bg-[var(--time-red)] text-white text-[10px] font-bold px-[7px] py-[3px] rounded-[5px] font-[family-name:var(--font-body)]">
             -{discountPercent}%
           </span>
         )}
@@ -88,14 +81,14 @@ export default function TimeProductCard({
         {/* Promo badge */}
         {(priceData?.is_promo || product.has_active_promo) &&
           discountPercent === 0 && (
-            <span className="absolute top-2 left-2 bg-[#e63946] text-white text-[10px] font-bold px-[7px] py-[3px] rounded-[5px] font-[family-name:var(--font-body)]">
+            <span className="absolute top-2 left-2 bg-[var(--time-red)] text-white text-[10px] font-bold px-[7px] py-[3px] rounded-[5px] font-[family-name:var(--font-body)]">
               PROMO
             </span>
           )}
 
         {/* Variant count badge */}
         {hasVariants && variantCount > 1 && (
-          <span className="absolute top-2 right-2 bg-[rgba(26,29,35,0.85)] backdrop-blur-[4px] text-white text-[9px] font-semibold px-[7px] py-[3px] rounded-[5px] font-[family-name:var(--font-body)]">
+          <span className="absolute top-2 right-2 bg-[var(--time-dark)]/85 backdrop-blur-[4px] text-white text-[9px] font-semibold px-[7px] py-[3px] rounded-[5px] font-[family-name:var(--font-body)]">
             {variantCount} var.
           </span>
         )}
@@ -103,7 +96,7 @@ export default function TimeProductCard({
         {/* Out of stock overlay */}
         {isOutOfStock && (
           <div className="absolute inset-0 bg-white/70 backdrop-blur-[2px] flex items-center justify-center">
-            <span className="bg-[#1a1d23] text-white text-[10px] font-bold px-2.5 py-1 rounded-md">
+            <span className="bg-[var(--time-dark)] text-white text-[10px] font-bold px-2.5 py-1 rounded-md">
               Non disponibile
             </span>
           </div>
@@ -117,13 +110,13 @@ export default function TimeProductCard({
           <span className="text-[10px] font-bold text-[var(--time-red)] uppercase tracking-wider font-[family-name:var(--font-body)] truncate max-w-[60%]">
             {brand?.name || ''}
           </span>
-          <span className="text-[9px] text-[#9aa1b0] font-mono">
+          <span className="text-[9px] text-[var(--time-gray-400)] font-mono">
             {sku || parent_sku || ''}
           </span>
         </div>
 
         {/* Product name */}
-        <h4 className="text-[13px] font-bold text-[#1a1d23] leading-snug font-[family-name:var(--font-body)] whitespace-nowrap overflow-hidden text-ellipsis mb-2.5">
+        <h4 className="text-[13px] font-bold text-[var(--time-dark)] leading-snug font-[family-name:var(--font-body)] whitespace-nowrap overflow-hidden text-ellipsis mb-2.5">
           {name || 'Product'}
         </h4>
 
@@ -131,11 +124,11 @@ export default function TimeProductCard({
         <div className="flex items-baseline gap-1.5">
           {netPrice != null && Number(netPrice) > 0 ? (
             <>
-              <span className="text-lg font-extrabold text-[#1a1d23] font-[family-name:var(--font-body)] tabular-nums">
+              <span className="text-lg font-extrabold text-[var(--time-dark)] font-[family-name:var(--font-body)] tabular-nums">
                 €{Number(netPrice).toFixed(2)}
               </span>
               {hasDiscount && (
-                <span className="text-xs text-[#b0b7c3] line-through tabular-nums">
+                <span className="text-xs text-[var(--time-gray-400)] line-through tabular-nums">
                   €{Number(listPrice).toFixed(2)}
                 </span>
               )}

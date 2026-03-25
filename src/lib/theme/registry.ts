@@ -33,14 +33,14 @@ const registry: Record<ThemeId, Record<ComponentSlot, () => Promise<any>>> = {
     Layout: () => import('@/components/themes/time/layout/time-layout'),
     ProductCard: () =>
       import('@/components/themes/time/product/time-product-card'),
-    ProductRow: () =>
-      import('@/components/themes/time/product/time-product-row'),
     HomeBlockRenderer: () =>
       import('@/components/themes/time/home/time-block-renderer'),
+    // Fall back to default for slots not yet themed
+    ProductRow: () =>
+      import('@/components/product/product-rows/product-row-b2b'),
     SearchPageContent: () =>
-      import('@/components/themes/time/search/time-search-content'),
-    ProductDetail: () =>
-      import('@/components/themes/time/product/time-product-detail'),
+      import('@/app/[lang]/(default)/search/search-b2b-page-content'),
+    ProductDetail: () => import('@/components/product/product-b2b-details'),
   },
 };
 

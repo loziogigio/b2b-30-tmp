@@ -17,7 +17,7 @@ export default function TimeFooter({ lang }: TimeFooterProps) {
   return (
     <footer className="mt-12 lg:mt-16">
       <div className="bg-[var(--time-dark)] text-white/50 text-xs font-[family-name:var(--font-body)]">
-        <div className="max-w-[1400px] mx-auto px-4 md:px-8 py-6 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="max-w-[1440px] mx-auto px-4 md:px-8 py-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <span>
             &copy; {year} {companyTitle}
           </span>

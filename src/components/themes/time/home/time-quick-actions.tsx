@@ -1,8 +1,8 @@
 'use client';
 
-import { useRef, useState, useCallback, useEffect } from 'react';
 import Link from '@components/ui/link';
 import TimeScrollArrows from '@components/themes/time/shared/time-scroll-arrows';
+import { useHorizontalScroll } from '@components/themes/time/shared/use-horizontal-scroll';
 
 export interface QuickAction {
   label: string;
@@ -58,38 +58,24 @@ function QuickActionCard({
   action: QuickAction & { link?: string };
   index: number;
 }) {
-  const cardRef = useRef<HTMLDivElement>(null);
-
-  const handleEnter = useCallback(() => {
-    const el = cardRef.current;
-    if (!el) return;
-    el.style.boxShadow = '0 6px 24px rgba(0,0,0,0.06)';
-    el.style.transform = 'translateY(-2px)';
-    el.style.borderColor = action.color;
-  }, [action.color]);
-
-  const handleLeave = useCallback(() => {
-    const el = cardRef.current;
-    if (!el) return;
-    el.style.boxShadow = 'none';
-    el.style.transform = 'none';
-    el.style.borderColor = 'var(--time-gray-100)';
-  }, []);
-
   return (
     <div
-      ref={cardRef}
-      onMouseEnter={handleEnter}
-      onMouseLeave={handleLeave}
-      className="rounded-[14px] overflow-hidden cursor-pointer bg-white border border-[var(--time-gray-100)] p-[18px] pb-4 relative transition-all duration-[250ms] min-w-[200px] shrink-0"
+      className="rounded-[var(--radius-card)] overflow-hidden cursor-pointer bg-white border border-[var(--time-gray-100)] p-[18px] pb-4 relative transition-all duration-[250ms] min-w-[200px] shrink-0 hover:shadow-[0_6px_24px_rgba(0,0,0,0.06)] hover:-translate-y-0.5"
       style={{
         scrollSnapAlign: 'start',
         animation: `time-fadeUp 0.4s ease ${0.1 + index * 0.06}s both`,
+        borderColor: undefined,
+        // Dynamic hover border color via CSS custom property
+        ['--action-color' as string]: action.color,
       }}
+      onMouseEnter={(e) => (e.currentTarget.style.borderColor = action.color)}
+      onMouseLeave={(e) =>
+        (e.currentTarget.style.borderColor = 'var(--time-gray-100)')
+      }
     >
       {/* Top color bar */}
       <div
-        className="absolute top-0 left-0 right-0 h-[3px] rounded-t-[14px]"
+        className="absolute top-0 left-0 right-0 h-[3px] rounded-t-[var(--radius-card)]"
         style={{ background: action.color }}
       />
 
@@ -120,27 +106,14 @@ export default function TimeQuickActions({
   actions,
   lang,
 }: TimeQuickActionsProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
-
-  const checkScroll = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    setCanScrollLeft(el.scrollLeft > 10);
-    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 10);
-  }, []);
-
-  useEffect(() => {
-    checkScroll();
-  }, [checkScroll]);
-
-  const scroll = (dir: number) => {
-    const el = scrollRef.current;
-    if (!el) return;
-    el.scrollBy({ left: dir * 240, behavior: 'smooth' });
-    setTimeout(checkScroll, 350);
-  };
+  const {
+    scrollRef,
+    canScrollLeft,
+    canScrollRight,
+    checkScroll,
+    scrollLeft,
+    scrollRight,
+  } = useHorizontalScroll({ scrollAmount: 240 });
 
   const items = actions?.length ? actions : DEFAULT_ACTIONS;
 
@@ -158,8 +131,8 @@ export default function TimeQuickActions({
         <TimeScrollArrows
           canScrollLeft={canScrollLeft}
           canScrollRight={canScrollRight}
-          onScrollLeft={() => scroll(-1)}
-          onScrollRight={() => scroll(1)}
+          onScrollLeft={scrollLeft}
+          onScrollRight={scrollRight}
         />
       </div>
 

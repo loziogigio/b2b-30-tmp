@@ -40,7 +40,7 @@ export function TimeHeaderRowRenderer({
     >
       <div
         className={cn(
-          'mx-auto max-w-[1400px] items-center px-4 md:px-8 py-2 gap-2 lg:gap-4',
+          'mx-auto max-w-[1440px] items-center px-4 md:px-8 py-2 gap-2 lg:gap-4',
           layoutClass,
         )}
       >

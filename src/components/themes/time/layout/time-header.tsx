@@ -59,7 +59,7 @@ export default function TimeHeader({ lang }: TimeHeaderProps) {
       {categories.length > 0 && (
         <nav className="hidden md:flex bg-white border-b border-[var(--time-gray-100)]">
           <div
-            className="max-w-[1400px] mx-auto px-4 md:px-8 flex items-center gap-0 overflow-x-auto w-full"
+            className="max-w-[1440px] mx-auto px-4 md:px-8 flex items-center gap-0 overflow-x-auto w-full"
             style={{ scrollbarWidth: 'none' }}
           >
             {categories.map((cat) => {

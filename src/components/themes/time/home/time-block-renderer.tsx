@@ -88,12 +88,75 @@ const extractSearchText = (urlOrQuery: string | undefined): string => {
   return trimmed;
 };
 
+/** Transform a slide config object to the format expected by carousels */
+const transformSlide = (slide: any, cardStyle?: any) => {
+  const base = {
+    id: slide.id,
+    image: slide.imageDesktop?.url || slide.image?.url || '',
+    mobileImage:
+      slide.imageMobile?.url ||
+      slide.image?.mobile?.url ||
+      slide.imageDesktop?.url ||
+      '',
+    alt: slide.imageDesktop?.alt || slide.image?.alt || '',
+    title: slide.title || '',
+    link: slide.link?.url || '',
+    openInNewTab: slide.link?.openInNewTab || false,
+    ...(cardStyle ? { cardStyle } : {}),
+  };
+
+  if (slide.overlay) {
+    return {
+      ...base,
+      description: slide.description || '',
+      tag: slide.tag || '',
+      overlay: {
+        position: slide.overlay.position || 'bottom',
+        textColor: slide.overlay.textColor || '#ffffff',
+        backgroundColor: slide.overlay.backgroundColor || '#0f172a',
+        backgroundOpacity:
+          typeof slide.overlay.backgroundOpacity === 'number'
+            ? slide.overlay.backgroundOpacity
+            : 0.65,
+      },
+    };
+  }
+
+  return {
+    ...base,
+    description: slide.description || '',
+    tag: slide.tag || '',
+  };
+};
+
+/** Transform a media item (image/video) to carousel format */
+const transformMediaItem = (item: any, cardStyle?: any) => {
+  const base = {
+    id: item.id,
+    title: item.title || '',
+    link: item.link?.url || '',
+    openInNewTab: item.link?.openInNewTab || false,
+    ...(cardStyle ? { cardStyle } : {}),
+  };
+
+  if (item.mediaType === 'video') {
+    return { ...base, videoUrl: item.videoUrl || '' };
+  }
+
+  return {
+    ...base,
+    image: item.imageDesktop?.url || '',
+    mobileImage: item.imageMobile?.url || item.imageDesktop?.url || '',
+    alt: item.imageDesktop?.alt || '',
+  };
+};
+
 /** Standard vertical spacing between all blocks */
 const BLOCK_SPACING = 'mb-10';
 
 /**
  * Block layout wrapper — respects `fullWidth` from block config.
- * - fullWidth=false (default): max-w-[1400px] centered with horizontal padding
+ * - fullWidth=false (default): max-w-[1440px] centered with horizontal padding
  * - fullWidth=true: no max-width constraint, only vertical spacing
  */
 const BlockWrapper: React.FC<{
@@ -104,7 +167,7 @@ const BlockWrapper: React.FC<{
   fullWidth ? (
     <div className={className}>{children}</div>
   ) : (
-    <div className={`max-w-[1400px] mx-auto px-4 md:px-8 ${className}`}>
+    <div className={`max-w-[1440px] mx-auto px-4 md:px-8 ${className}`}>
       {children}
     </div>
   );
@@ -186,21 +249,7 @@ const TimeBlockRenderer: React.FC<TimeBlockRendererProps> = ({
     const slides = block.config?.slides || [];
     if (!Array.isArray(slides) || slides.length === 0) return null;
 
-    const transformedData = slides.map((slide: any) => ({
-      id: slide.id,
-      image: slide.imageDesktop?.url || slide.image?.url || '',
-      mobileImage:
-        slide.imageMobile?.url ||
-        slide.image?.mobile?.url ||
-        slide.imageDesktop?.url ||
-        '',
-      alt: slide.imageDesktop?.alt || slide.image?.alt || '',
-      title: slide.title || '',
-      description: slide.description || '',
-      tag: slide.tag || '',
-      link: slide.link?.url || '',
-      openInNewTab: slide.link?.openInNewTab || false,
-    }));
+    const transformedData = slides.map((slide: any) => transformSlide(slide));
 
     // Side banners from config or default promotional cards
     const sideBanners: Array<{
@@ -286,31 +335,9 @@ const TimeBlockRenderer: React.FC<TimeBlockRendererProps> = ({
     if (slides.length === 0) return null;
 
     const cardStyle = block.config?.cardStyle;
-    const transformedData = slides.map((slide: any) => {
-      const overlayConfig = slide.overlay
-        ? {
-            position: slide.overlay?.position || 'bottom',
-            textColor: slide.overlay?.textColor || '#ffffff',
-            backgroundColor: slide.overlay?.backgroundColor || '#0f172a',
-            backgroundOpacity:
-              typeof slide.overlay?.backgroundOpacity === 'number'
-                ? slide.overlay.backgroundOpacity
-                : 0.65,
-          }
-        : undefined;
-
-      return {
-        id: slide.id,
-        image: slide.imageDesktop?.url || '',
-        mobileImage: slide.imageMobile?.url || slide.imageDesktop?.url || '',
-        alt: slide.imageDesktop?.alt || '',
-        title: slide.title || '',
-        link: slide.link?.url || '',
-        openInNewTab: slide.link?.openInNewTab || false,
-        ...(overlayConfig ? { overlay: overlayConfig } : {}),
-        ...(cardStyle ? { cardStyle } : {}),
-      };
-    });
+    const transformedData = slides.map((slide: any) =>
+      transformSlide(slide, cardStyle),
+    );
 
     const heroItemsPerView = toNumber(block.config?.itemsToShow?.desktop, 1);
 
@@ -337,28 +364,9 @@ const TimeBlockRenderer: React.FC<TimeBlockRendererProps> = ({
     const cardStyle = block.config?.cardStyle;
     if (items.length === 0) return null;
 
-    const transformedData = items.map((item: any) => {
-      if (item.mediaType === 'video') {
-        return {
-          id: item.id,
-          videoUrl: item.videoUrl || '',
-          title: item.title || '',
-          link: item.link?.url || '',
-          openInNewTab: item.link?.openInNewTab || false,
-          ...(cardStyle ? { cardStyle } : {}),
-        };
-      }
-      return {
-        id: item.id,
-        image: item.imageDesktop?.url || '',
-        mobileImage: item.imageMobile?.url || item.imageDesktop?.url || '',
-        alt: item.imageDesktop?.alt || '',
-        title: item.title || '',
-        link: item.link?.url || '',
-        openInNewTab: item.link?.openInNewTab || false,
-        ...(cardStyle ? { cardStyle } : {}),
-      };
-    });
+    const transformedData = items.map((item: any) =>
+      transformMediaItem(item, cardStyle),
+    );
 
     const promoItemsPerView = toNumber(block.config?.itemsToShow?.desktop, 3);
 
