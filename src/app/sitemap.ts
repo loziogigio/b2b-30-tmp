@@ -102,7 +102,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // ===============================
   try {
     // First fetch to get total count
-    const firstBatch = await fetchProductSkusForSitemap(0, PRODUCTS_PER_SITEMAP);
+    const firstBatch = await fetchProductSkusForSitemap(
+      0,
+      PRODUCTS_PER_SITEMAP,
+    );
 
     // Add first batch
     for (const sku of firstBatch.skus) {
@@ -124,7 +127,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     for (let i = 0; i < remainingBatches; i++) {
       const start = (i + 1) * PRODUCTS_PER_SITEMAP;
-      const batch = await fetchProductSkusForSitemap(start, PRODUCTS_PER_SITEMAP);
+      const batch = await fetchProductSkusForSitemap(
+        start,
+        PRODUCTS_PER_SITEMAP,
+      );
 
       for (const sku of batch.skus) {
         for (const lang of LANGUAGES) {

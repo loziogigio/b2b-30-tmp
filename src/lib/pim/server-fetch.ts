@@ -77,9 +77,7 @@ export interface ServerSearchResult {
 }
 
 export const serverFetchPimProducts = cache(
-  async (
-    params: ServerSearchParams,
-  ): Promise<ServerSearchResult> => {
+  async (params: ServerSearchParams): Promise<ServerSearchResult> => {
     const config = await getApiConfig();
     if (!config) return { results: [], total: 0 };
 
@@ -240,9 +238,7 @@ export async function fetchProductSkusForSitemap(
     if (!data.success) return { skus: [], total: 0 };
 
     const results = data.data.results || [];
-    const skus = results
-      .map((p: any) => p.sku)
-      .filter(Boolean) as string[];
+    const skus = results.map((p: any) => p.sku).filter(Boolean) as string[];
 
     return {
       skus,

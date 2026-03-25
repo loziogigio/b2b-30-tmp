@@ -1,6 +1,7 @@
 import ManagedModal from '@components/common/modal/managed-modal';
 import { ManagedUIContext } from '@contexts/ui.context';
-import { Inter, Manrope } from 'next/font/google';
+import { Inter, Manrope, Figtree, Outfit } from 'next/font/google';
+import { getThemeId } from '@/lib/theme/resolver';
 import { dir } from 'i18next';
 import { languages } from '../i18n/settings';
 import ManagedDrawer from '@components/common/drawer/managed-drawer';
@@ -28,6 +29,7 @@ import '@assets/css/scrollbar.css';
 import '@assets/css/swiper-carousel.css';
 import '@assets/css/custom-plugins.css';
 import './globals.css';
+import '@/components/themes/time/css/time-variables.css';
 import '@assets/css/rc-drawer.css';
 
 const inter = Inter({
@@ -43,6 +45,22 @@ const manrope = Manrope({
   display: 'swap',
   variable: '--font-manrope',
 });
+
+const figtree = Figtree({
+  weight: ['400', '500', '600', '700', '800'],
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-body',
+});
+
+const outfit = Outfit({
+  weight: ['400', '500', '600', '700', '800', '900'],
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-display',
+});
+
+const themeId = getThemeId();
 
 // Dynamic metadata based on branding and meta_tags from home settings
 export async function generateMetadata(): Promise<Metadata> {
@@ -212,15 +230,32 @@ export default async function RootLayout({
   };
 
   return (
-    <html lang={lang} dir={dir(lang)} suppressHydrationWarning={true}>
+    <html
+      lang={lang}
+      dir={dir(lang)}
+      data-theme={themeId}
+      suppressHydrationWarning={true}
+    >
       <head />
       <body
-        className={`${inter.variable} ${manrope.variable}`}
-        style={{
-          // Ensure CSS variables available on first paint
-          ['--color-brand' as string]: branding.primaryColor,
-          ['--color-brand-secondary' as string]: branding.secondaryColor,
-        }}
+        className={
+          themeId === 'time'
+            ? `${figtree.variable} ${outfit.variable}`
+            : `${inter.variable} ${manrope.variable}`
+        }
+        style={
+          themeId === 'time'
+            ? {
+                ['--color-brand' as string]: '#e63946',
+                ['--color-brand-secondary' as string]: '#c1121f',
+                fontFamily: 'var(--font-body), sans-serif',
+                background: '#ffffff',
+              }
+            : {
+                ['--color-brand' as string]: branding.primaryColor,
+                ['--color-brand-secondary' as string]: branding.secondaryColor,
+              }
+        }
         suppressHydrationWarning={true}
       >
         <Providers

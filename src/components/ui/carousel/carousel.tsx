@@ -1,7 +1,7 @@
 'use client';
 
 import cn from 'classnames';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { IoIosArrowBack, IoIosArrowForward } from 'react-icons/io';
 import { getDirection } from '@utils/get-direction';
 import {
@@ -61,6 +61,7 @@ export default function Carousel({
   const dir = getDirection(lang);
   const prevRef = useRef<HTMLDivElement>(null);
   const nextRef = useRef<HTMLDivElement>(null);
+  const [isLocked, setIsLocked] = useState(false);
   let nextButtonClasses = cn(
     'w-7 h-7 md:w-8 md:h-8 lg:w-9 lg:h-9 xl:w-10 xl:h-10 text-base lg:text-lg xl:text-xl cursor-pointer flex items-center justify-center rounded-full bg-brand-light absolute transition duration-300 hover:bg-brand hover:text-brand-light focus:outline-none transform shadow-navigation',
     { '3xl:text-2xl': buttonSize === 'default' },
@@ -97,12 +98,16 @@ export default function Carousel({
             : {}
         }
         onSlideChange={onSlideChange}
-        onSwiper={onSwiper}
+        onSwiper={(swiper) => {
+          setIsLocked(swiper.isLocked);
+          onSwiper?.(swiper);
+        }}
+        onResize={(swiper) => setIsLocked(swiper.isLocked)}
         {...props}
       >
         {children}
       </Swiper>
-      {Boolean(navigation) && (
+      {Boolean(navigation) && !isLocked && (
         <div
           className={`flex items-center w-full absolute top-2/4 z-10 bg-transparent pointer-events-none ${buttonGroupClassName}`}
         >

@@ -1,0 +1,129 @@
+/* Time Theme - CSS Variable Overrides & Custom Styles */
+
+[data-theme='time'] {
+  /* Brand colors */
+  --color-brand: #e63946;
+  --color-brand-secondary: #c1121f;
+  --color-accent: #e63946;
+  --color-text: #1a1d23;
+  --color-muted: #6b7280;
+  --color-background: #ffffff;
+  --color-header-bg: #ffffff;
+  --color-footer-bg: #1a1d23;
+  --color-footer-text: rgba(255, 255, 255, 0.5);
+
+  /* Time theme palette */
+  --time-red: #e63946;
+  --time-dark: #1a1d23;
+  --time-gray-50: #f5f6f8;
+  --time-gray-100: #eef0f3;
+  --time-gray-200: #e2e5ea;
+  --time-gray-400: #9aa1b0;
+  --time-gray-500: #6b7280;
+  --time-gray-600: #5a6070;
+  --time-gray-900: #1a1d23;
+
+  /* Border radius */
+  --radius-card: 14px;
+  --radius-btn: 10px;
+  --radius-input: 12px;
+}
+
+/* Animations */
+@keyframes time-fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes time-slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Scrollbar overrides for time theme */
+[data-theme='time'] ::-webkit-scrollbar {
+  height: 4px;
+  width: 4px;
+}
+
+[data-theme='time'] ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+[data-theme='time'] ::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 4px;
+}
+
+/* Utility classes */
+[data-theme='time'] .time-animate-fadeUp {
+  animation: time-fadeUp 0.4s ease both;
+}
+
+[data-theme='time'] .time-glass {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Time theme cart button */
+.time-cart-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 16px;
+  border-radius: 10px;
+  background: var(--time-dark);
+  color: #fff;
+  cursor: pointer;
+  position: relative;
+}
+
+/* "Carrello" label */
+.time-cart-btn > div:first-child > div:first-child {
+  font-size: 9px;
+  opacity: 0.6;
+  font-weight: 500;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Price amount */
+.time-cart-btn > div:first-child > div:last-child {
+  font-size: 15px;
+  font-weight: 800;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Cart icon */
+.time-cart-btn svg {
+  color: #fff;
+}
+
+/* Badge */
+.time-cart-btn span {
+  background: var(--time-red) !important;
+  color: #fff !important;
+  border: 2px solid #fff;
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  top: -6px;
+  right: -6px;
+}

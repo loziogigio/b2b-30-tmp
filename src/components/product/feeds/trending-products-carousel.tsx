@@ -35,11 +35,7 @@ export default function TrendingProductsCarousel({
     let mounted = true;
     (async () => {
       try {
-        const page = await getTrendingProductsPage(
-          timePeriod,
-          1,
-          limitSkus,
-        );
+        const page = await getTrendingProductsPage(timePeriod, 1, limitSkus);
         const skus = (page?.items || []).map((r) => r.sku).filter(Boolean);
         if (!mounted) return;
         setSkuList(skus);

@@ -108,9 +108,7 @@ export async function toggleLike(sku: string): Promise<LikeToggleResponse> {
 // STATUS
 // ============================================
 
-export async function getLikeStatus(
-  sku: string,
-): Promise<LikeStatusResponse> {
+export async function getLikeStatus(sku: string): Promise<LikeStatusResponse> {
   const res = await get<any>(`${BASE}/status/${encodeURIComponent(sku)}`);
   return unwrap<LikeStatusResponse>(res);
 }

@@ -2,10 +2,15 @@
 
 import { useMemo } from 'react';
 import { ProductPreviewListener } from '@components/product/ProductPreviewListener';
-import HomeBlockRenderer from '@components/blocks/HomeBlockRenderer';
+import DefaultBlockRenderer from '@components/blocks/HomeBlockRenderer';
+import TimeBlockRenderer from '@components/themes/time/home/time-block-renderer';
+import { getThemeId } from '@/lib/theme/resolver';
 import type { PageBlock, PageVersionTags } from '@/lib/types/blocks';
 import { serializeTagsKey } from '@/lib/page-context';
 import Container from '@components/ui/container';
+
+const HomeBlockRenderer =
+  getThemeId() === 'time' ? TimeBlockRenderer : DefaultBlockRenderer;
 
 interface HomePageWithPreviewProps {
   lang: string;

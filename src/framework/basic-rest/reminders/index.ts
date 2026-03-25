@@ -118,7 +118,9 @@ export async function getBulkReminderStatus(
   skus: string[],
 ): Promise<ReminderStatusResponse[]> {
   const res = await post<any>(`${BASE}/status/bulk`, { skus });
-  const data = unwrap<BulkReminderStatusResponse | ReminderStatusResponse[]>(res);
+  const data = unwrap<BulkReminderStatusResponse | ReminderStatusResponse[]>(
+    res,
+  );
 
   if (Array.isArray(data)) {
     return data;
