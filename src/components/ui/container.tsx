@@ -4,6 +4,7 @@ interface Props {
   children?: any;
   el?: HTMLElement;
   clean?: boolean;
+  fullWidth?: boolean;
 }
 
 const Container: React.FC<Props> = ({
@@ -11,9 +12,11 @@ const Container: React.FC<Props> = ({
   className,
   el = 'div',
   clean,
+  fullWidth,
 }) => {
   const rootClassName = cn(className, {
-    'mx-auto max-w-[1920px] px-4 md:px-6 lg:px-8 2xl:px-10': !clean,
+    'mx-auto max-w-[1920px] px-4 md:px-6 lg:px-8 2xl:px-10':
+      !clean && !fullWidth,
   });
 
   let Component: React.ComponentType<React.HTMLAttributes<HTMLDivElement>> =

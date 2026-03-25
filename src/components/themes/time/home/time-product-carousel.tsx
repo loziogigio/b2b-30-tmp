@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useCallback, useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Product } from '@framework/types';
 import { fetchErpPrices } from '@framework/erp/prices';
 import { useQuery } from '@tanstack/react-query';
@@ -8,8 +8,9 @@ import { ERP_STATIC } from '@framework/utils/static';
 import { useUI } from '@contexts/ui.context';
 import TimeProductCard from '@components/themes/time/product/time-product-card';
 import TimeScrollArrows from '@components/themes/time/shared/time-scroll-arrows';
+import { useHorizontalScroll } from '@components/themes/time/shared/use-horizontal-scroll';
 import ProductCardLoader from '@components/ui/loaders/product-card-loader';
-import Link from 'next/link';
+import Link from '@components/ui/link';
 
 interface TimeProductCarouselProps {
   title: string;
@@ -27,7 +28,7 @@ interface TimeProductCarouselProps {
 export default function TimeProductCarousel({
   title,
   tag,
-  tagColor = '#e63946',
+  tagColor = 'var(--time-red)',
   products,
   loading,
   error,
@@ -36,27 +37,14 @@ export default function TimeProductCarousel({
   lang,
   categorySlug,
 }: TimeProductCarouselProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
-
-  const checkScroll = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    setCanScrollLeft(el.scrollLeft > 10);
-    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 10);
-  }, []);
-
-  useEffect(() => {
-    checkScroll();
-  }, [checkScroll]);
-
-  const scroll = (dir: number) => {
-    const el = scrollRef.current;
-    if (!el) return;
-    el.scrollBy({ left: dir * 320, behavior: 'smooth' });
-    setTimeout(checkScroll, 350);
-  };
+  const {
+    scrollRef,
+    canScrollLeft,
+    canScrollRight,
+    checkScroll,
+    scrollLeft,
+    scrollRight,
+  } = useHorizontalScroll({ scrollAmount: 320 });
 
   // ERP prices
   const entity_codes = useMemo<string[]>(() => {
@@ -102,13 +90,13 @@ export default function TimeProductCarousel({
           <TimeScrollArrows
             canScrollLeft={canScrollLeft}
             canScrollRight={canScrollRight}
-            onScrollLeft={() => scroll(-1)}
-            onScrollRight={() => scroll(1)}
+            onScrollLeft={scrollLeft}
+            onScrollRight={scrollRight}
           />
           {normalizedSlug && (
             <Link
               href={normalizedSlug}
-              className="h-9 px-4 rounded-[10px] border-[1.5px] border-[var(--time-gray-200)] bg-white text-xs font-semibold text-[var(--time-gray-600)] flex items-center gap-1.5 transition-all hover:border-[var(--time-red)] hover:text-[var(--time-red)]"
+              className="h-9 px-4 rounded-[var(--radius-btn)] border-[1.5px] border-[var(--time-gray-200)] bg-white text-xs font-semibold text-[var(--time-gray-600)] flex items-center gap-1.5 transition-all hover:border-[var(--time-red)] hover:text-[var(--time-red)]"
             >
               Vedi tutti
               <svg

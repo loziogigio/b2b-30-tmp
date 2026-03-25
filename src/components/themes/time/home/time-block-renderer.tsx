@@ -91,14 +91,23 @@ const extractSearchText = (urlOrQuery: string | undefined): string => {
 /** Standard vertical spacing between all blocks */
 const BLOCK_SPACING = 'mb-10';
 
-const TimeContainer: React.FC<{
+/**
+ * Block layout wrapper — respects `fullWidth` from block config.
+ * - fullWidth=false (default): max-w-[1400px] centered with horizontal padding
+ * - fullWidth=true: no max-width constraint, only vertical spacing
+ */
+const BlockWrapper: React.FC<{
   children: React.ReactNode;
+  fullWidth?: boolean;
   className?: string;
-}> = ({ children, className = '' }) => (
-  <div className={`max-w-[1400px] mx-auto px-4 md:px-8 ${className}`}>
-    {children}
-  </div>
-);
+}> = ({ children, fullWidth = false, className = '' }) =>
+  fullWidth ? (
+    <div className={className}>{children}</div>
+  ) : (
+    <div className={`max-w-[1400px] mx-auto px-4 md:px-8 ${className}`}>
+      {children}
+    </div>
+  );
 
 function SideBanner({
   banner,
@@ -170,6 +179,8 @@ const TimeBlockRenderer: React.FC<TimeBlockRendererProps> = ({
   block,
   lang,
 }) => {
+  const isFullWidth = block.config?.fullWidth === true;
+
   // Hero With Widgets — grid: hero carousel + two side banners
   if (block.type === 'hero-with-widgets') {
     const slides = block.config?.slides || [];
@@ -221,15 +232,15 @@ const TimeBlockRenderer: React.FC<TimeBlockRendererProps> = ({
 
     return (
       <>
-        <TimeContainer className={block.config?.className || ''}>
+        <BlockWrapper
+          fullWidth={isFullWidth}
+          className={block.config?.className || ''}
+        >
           <div className="pt-7 pb-10">
             <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] xl:grid-cols-[1fr_340px] gap-4 items-stretch">
-              {/* Hero carousel */}
               <div className="overflow-hidden rounded-2xl">
                 <TimeHeroCarousel slides={transformedData} lang={lang} />
               </div>
-
-              {/* Side banners — stretch to match hero height */}
               <div className="hidden lg:flex flex-col gap-4">
                 {sideBanners.slice(0, 2).map((banner, idx) => (
                   <SideBanner key={idx} banner={banner} />
@@ -237,31 +248,35 @@ const TimeBlockRenderer: React.FC<TimeBlockRendererProps> = ({
               </div>
             </div>
           </div>
-        </TimeContainer>
+        </BlockWrapper>
 
-        <TimeContainer className={BLOCK_SPACING}>
+        <BlockWrapper fullWidth={isFullWidth} className={BLOCK_SPACING}>
           <TimeQuickActions actions={quickActions} lang={lang} />
-        </TimeContainer>
+        </BlockWrapper>
       </>
     );
   }
 
   if (block.type === 'content-custom-html') {
     return (
-      <TimeContainer
+      <BlockWrapper
+        fullWidth={isFullWidth}
         className={`overflow-hidden ${block.config?.className || BLOCK_SPACING}`}
       >
         <CustomHTMLBlock config={block.config} />
-      </TimeContainer>
+      </BlockWrapper>
     );
   }
 
   // Quick Actions (standalone block)
   if (block.type === 'quick-actions') {
     return (
-      <TimeContainer className={block.config?.className || BLOCK_SPACING}>
+      <BlockWrapper
+        fullWidth={isFullWidth}
+        className={block.config?.className || BLOCK_SPACING}
+      >
         <TimeQuickActions actions={block.config?.actions} lang={lang} />
-      </TimeContainer>
+      </BlockWrapper>
     );
   }
 
@@ -300,14 +315,17 @@ const TimeBlockRenderer: React.FC<TimeBlockRendererProps> = ({
     const heroItemsPerView = toNumber(block.config?.itemsToShow?.desktop, 1);
 
     return (
-      <TimeContainer className={block.config?.className || BLOCK_SPACING}>
+      <BlockWrapper
+        fullWidth={isFullWidth}
+        className={block.config?.className || BLOCK_SPACING}
+      >
         <TimeBannerCarousel
           data={transformedData}
           title={block.config?.title}
           lang={lang}
           itemsPerView={heroItemsPerView}
         />
-      </TimeContainer>
+      </BlockWrapper>
     );
   }
 
@@ -345,18 +363,21 @@ const TimeBlockRenderer: React.FC<TimeBlockRendererProps> = ({
     const promoItemsPerView = toNumber(block.config?.itemsToShow?.desktop, 3);
 
     return (
-      <TimeContainer className={block.config?.className || BLOCK_SPACING}>
+      <BlockWrapper
+        fullWidth={isFullWidth}
+        className={block.config?.className || BLOCK_SPACING}
+      >
         <TimeBannerCarousel
           data={transformedData}
           title={block.config?.title}
           lang={lang}
           itemsPerView={promoItemsPerView}
         />
-      </TimeContainer>
+      </BlockWrapper>
     );
   }
 
-  // Product Carousel - time-theme style with horizontal scroll
+  // Product Carousel
   if (block.type === 'carousel-products') {
     const dataSource: 'search' | 'liked' | 'trending' =
       block.config?.dataSource || 'search';
@@ -369,7 +390,7 @@ const TimeBlockRenderer: React.FC<TimeBlockRendererProps> = ({
 
     if (dataSource === 'liked') {
       return (
-        <TimeContainer className={className}>
+        <BlockWrapper fullWidth={isFullWidth} className={className}>
           <LikedProductsProductsCarousel
             lang={lang}
             carouselBreakpoint={
@@ -378,13 +399,13 @@ const TimeBlockRenderer: React.FC<TimeBlockRendererProps> = ({
             limitSkus={limit}
             sectionTitle={sectionTitle}
           />
-        </TimeContainer>
+        </BlockWrapper>
       );
     }
 
     if (dataSource === 'trending') {
       return (
-        <TimeContainer className={className}>
+        <BlockWrapper fullWidth={isFullWidth} className={className}>
           <TrendingProductsCarousel
             lang={lang}
             carouselBreakpoint={
@@ -393,12 +414,12 @@ const TimeBlockRenderer: React.FC<TimeBlockRendererProps> = ({
             limitSkus={limit}
             sectionTitle={sectionTitle}
           />
-        </TimeContainer>
+        </BlockWrapper>
       );
     }
 
     return (
-      <TimeContainer className={className}>
+      <BlockWrapper fullWidth={isFullWidth} className={className}>
         <SearchProductCarousel
           searchQuery={searchQuery}
           limit={limit}
@@ -406,7 +427,7 @@ const TimeBlockRenderer: React.FC<TimeBlockRendererProps> = ({
           blockId={block.id}
           lang={lang}
         />
-      </TimeContainer>
+      </BlockWrapper>
     );
   }
 
@@ -432,7 +453,10 @@ const TimeBlockRenderer: React.FC<TimeBlockRendererProps> = ({
     if (!loading && products.length === 0 && !error) return null;
 
     return (
-      <TimeContainer className={block.config?.className || BLOCK_SPACING}>
+      <BlockWrapper
+        fullWidth={isFullWidth}
+        className={block.config?.className || BLOCK_SPACING}
+      >
         {sectionTitle && (
           <h2 className="mb-4 text-[22px] font-extrabold text-[var(--time-dark)] font-[family-name:var(--font-display)] tracking-tight">
             {sectionTitle}
@@ -453,34 +477,37 @@ const TimeBlockRenderer: React.FC<TimeBlockRendererProps> = ({
             loading={loading}
           />
         )}
-      </TimeContainer>
+      </BlockWrapper>
     );
   }
 
   // RichText
   if (block.type === 'richText' || block.type === 'content-rich-text') {
     return (
-      <TimeContainer>
+      <BlockWrapper fullWidth={isFullWidth}>
         <RichTextBlock config={block.config} />
-      </TimeContainer>
+      </BlockWrapper>
     );
   }
 
   // YouTube
   if (block.type === 'youtubeEmbed') {
     return (
-      <TimeContainer>
+      <BlockWrapper fullWidth={isFullWidth}>
         <YouTubeBlock config={block.config} />
-      </TimeContainer>
+      </BlockWrapper>
     );
   }
 
   // Media Image
   if (block.type === 'media-image') {
     return (
-      <TimeContainer className={block.config?.className || BLOCK_SPACING}>
+      <BlockWrapper
+        fullWidth={isFullWidth}
+        className={block.config?.className || BLOCK_SPACING}
+      >
         <MediaImageBlock config={block.config} />
-      </TimeContainer>
+      </BlockWrapper>
     );
   }
 

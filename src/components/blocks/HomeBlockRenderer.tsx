@@ -123,6 +123,8 @@ const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({
   block,
   lang,
 }) => {
+  const isFullWidth = block.config?.fullWidth === true;
+
   // Hero With Widgets Block (80/20 layout)
   if (block.type === 'hero-with-widgets') {
     const slides = block.config?.slides || [];
@@ -147,7 +149,7 @@ const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({
     }));
 
     return (
-      <Container>
+      <Container fullWidth={isFullWidth}>
         <HeroCarouselWithWidgets
           slides={transformedData}
           lang={lang}
@@ -206,7 +208,10 @@ const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({
       '!right-3 md:!right-4 lg:!right-6 top-1/2 -translate-y-1/2 z-30 !w-10 !h-10 md:!w-12 md:!h-12 !bg-white/90 hover:!bg-white !shadow-lg !text-gray-800';
 
     return (
-      <Container className={block.config?.className || 'mb-6 xl:mb-8 pt-1'}>
+      <Container
+        fullWidth={isFullWidth}
+        className={block.config?.className || 'mb-6 xl:mb-8 pt-1'}
+      >
         <BannerAllCarousel
           data={transformedData}
           className="mb-0"
@@ -266,7 +271,7 @@ const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({
       '!right-3 md:!right-4 lg:!right-6 top-1/2 -translate-y-1/2 z-30 !w-10 !h-10 md:!w-12 md:!h-12 !bg-white/90 hover:!bg-white !shadow-lg !text-gray-800';
 
     return (
-      <Container className={wrapperClass}>
+      <Container fullWidth={isFullWidth} className={wrapperClass}>
         <BannerAllCarousel
           data={transformedData}
           className="mb-0"
@@ -296,7 +301,7 @@ const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({
 
     if (dataSource === 'liked') {
       return (
-        <Container className={className}>
+        <Container fullWidth={isFullWidth} className={className}>
           <LikedProductsProductsCarousel
             lang={lang}
             carouselBreakpoint={
@@ -311,7 +316,7 @@ const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({
 
     if (dataSource === 'trending') {
       return (
-        <Container className={className}>
+        <Container fullWidth={isFullWidth} className={className}>
           <TrendingProductsCarousel
             lang={lang}
             carouselBreakpoint={
@@ -346,7 +351,7 @@ const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({
     }
 
     return (
-      <Container className={className}>
+      <Container fullWidth={isFullWidth} className={className}>
         {!enabled ? (
           // Only show placeholder in builder/preview mode
           showZoneLabels ? (
@@ -410,7 +415,10 @@ const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({
     }
 
     return (
-      <Container className={block.config?.className || 'mb-6 xl:mb-8 pt-1'}>
+      <Container
+        fullWidth={isFullWidth}
+        className={block.config?.className || 'mb-6 xl:mb-8 pt-1'}
+      >
         {sectionTitle ? (
           <h2 className="mb-4 text-2xl font-bold tracking-tight text-brand">
             {sectionTitle}
@@ -445,7 +453,7 @@ const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({
   // RichText Block
   if (block.type === 'richText' || block.type === 'content-rich-text') {
     return (
-      <Container>
+      <Container fullWidth={isFullWidth}>
         <RichTextBlock config={block.config} />
       </Container>
     );
@@ -454,7 +462,7 @@ const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({
   // YouTube Block
   if (block.type === 'youtubeEmbed') {
     return (
-      <Container>
+      <Container fullWidth={isFullWidth}>
         <YouTubeBlock config={block.config} />
       </Container>
     );
@@ -463,7 +471,10 @@ const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({
   // Media Image Block
   if (block.type === 'media-image') {
     return (
-      <Container className={block.config?.className || 'mb-6 xl:mb-8 pt-1'}>
+      <Container
+        fullWidth={isFullWidth}
+        className={block.config?.className || 'mb-6 xl:mb-8 pt-1'}
+      >
         <MediaImageBlock config={block.config} />
       </Container>
     );
