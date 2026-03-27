@@ -3,6 +3,8 @@
 import * as React from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import cn from 'classnames';
+import { toast } from 'react-toastify';
+import { HiOutlineHeart, HiOutlineTrendingUp } from 'react-icons/hi';
 import { useUI } from '@contexts/ui.context';
 import { useTranslation } from 'src/app/i18n/client';
 
@@ -233,9 +235,10 @@ export default function SearchTabs({ lang }: { lang: string }) {
 
   function closeTab(idx: number) {
     if (!tabs[idx]) return;
-    const nonEmpty = tabs[idx].key !== 'empty' && !!tabs[idx].query;
-    if (nonEmpty && !confirm('Close this tab and discard its parameters?'))
-      return;
+    const removed = tabs[idx];
+    const prev = [...tabs];
+    const prevActive = active;
+
     const next = tabs.filter((_, i) => i !== idx);
     const nextActive =
       idx === active
@@ -252,6 +255,31 @@ export default function SearchTabs({ lang }: { lang: string }) {
       });
     } else {
       router.replace(`${pathname}`, { scroll: false });
+    }
+
+    // Show undo toast for non-empty tabs
+    if (removed.key !== 'empty' && removed.query) {
+      toast.info(
+        <span>
+          Tab &quot;{removed.label}&quot; closed.{' '}
+          <button
+            type="button"
+            className="underline font-semibold ml-1"
+            onClick={() => {
+              setTabs(prev);
+              setActive(prevActive);
+              saveTabs(prev);
+              router.replace(`${pathname}?${removed.query}`, {
+                scroll: false,
+              });
+              toast.dismiss();
+            }}
+          >
+            Undo
+          </button>
+        </span>,
+        { autoClose: 5000 },
+      );
     }
   }
 
@@ -290,10 +318,10 @@ export default function SearchTabs({ lang }: { lang: string }) {
   return (
     <div className="mt-3 mb-2 border-b border-gray-200 overflow-x-auto">
       <div className="flex items-end gap-1 min-w-max">
-        {/* Fixed tab: Trending only */}
+        {/* Fixed tabs: Trending + Favorites */}
         <button
           className={cn(
-            'mr-2 px-3 py-2 rounded-t-md text-sm border',
+            'mr-1 px-3 py-2 rounded-t-md text-sm border',
             (searchParams.get('source') || '') === 'trending'
               ? 'bg-white border border-b-white text-indigo-700'
               : 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100',
@@ -307,7 +335,26 @@ export default function SearchTabs({ lang }: { lang: string }) {
           }}
           title={t('text-trending')}
         >
+          <HiOutlineTrendingUp className="h-4 w-4 mr-1.5 inline-block" />
           {t('text-trending')}
+        </button>
+        <button
+          className={cn(
+            'mr-2 px-3 py-2 rounded-t-md text-sm border',
+            (searchParams.get('source') || '') === 'likes'
+              ? 'bg-white border border-b-white text-rose-600'
+              : 'bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100',
+          )}
+          onClick={() => {
+            const qs = new URLSearchParams();
+            qs.set('source', 'likes');
+            qs.set('page_size', '12');
+            router.replace(`${pathname}?${qs.toString()}`, { scroll: false });
+          }}
+          title={t('text-wishlist', { defaultValue: 'Preferiti' })}
+        >
+          <HiOutlineHeart className="h-4 w-4 mr-1.5 inline-block" />
+          {t('text-wishlist', { defaultValue: 'Preferiti' })}
         </button>
 
         {tabs.map((t, i) => (

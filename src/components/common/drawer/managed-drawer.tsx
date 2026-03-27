@@ -7,9 +7,10 @@ import { Drawer } from '@components/common/drawer/drawer';
 import { getDirection } from '@utils/get-direction';
 import motionProps from '@components/common/drawer/motion';
 import CartHydrator, { useCartQuery } from '@framework/cart/b2b-cart';
+import { getThemedComponent } from '@/lib/theme/registry';
 
 // Your components
-const Cart = dynamic(() => import('@components/cart/cart'));
+const Cart = getThemedComponent('Cart');
 const OrderDetails = dynamic(() => import('@components/order/order-drawer'));
 
 // Hydrator + query (default export + named)

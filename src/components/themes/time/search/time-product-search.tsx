@@ -1,9 +1,7 @@
+'use client';
+
 import type { FC } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import Alert from '@components/ui/alert';
-import Button from '@components/ui/button';
-import ProductCardLoader from '@components/ui/loaders/product-card-loader';
-import cn from 'classnames';
 import { LIMITS } from '@framework/utils/limits';
 import { Product } from '@framework/types';
 import { useTranslation } from 'src/app/i18n/client';
@@ -12,16 +10,9 @@ import {
   usePimProductListInfiniteQuery,
   fetchPimProductList,
 } from '@framework/product/get-pim-product';
-import ProductCardB2B from './product-cards/product-card-b2b';
-import ProductRowB2B from './product-rows/product-row-b2b';
 import { fetchErpPrices } from '@framework/erp/prices';
 import { useMemo, useEffect, useRef, useState } from 'react';
 import { ERP_STATIC } from '@framework/utils/static';
-import {
-  IoGridOutline,
-  IoListOutline,
-  IoInformationCircleOutline,
-} from 'react-icons/io5';
 import type { ErpPriceData } from '@utils/transform/erp-prices';
 import { useUI } from '@contexts/ui.context';
 import {
@@ -30,49 +21,60 @@ import {
 } from '@framework/likes';
 import { getUserReminders as apiGetUserReminders } from '@framework/reminders';
 import React from 'react';
+import TimeSearchCard from './time-search-card';
+import TimeSearchRow from './time-search-row';
+import { IoGridOutline, IoListOutline } from 'react-icons/io5';
+import { IoChevronDown } from 'react-icons/io5';
 
-export type ProductCardComponentType = React.ComponentType<{
-  product: Product & { variantCount?: number };
-  lang: string;
-  priceData?: ErpPriceData;
-  className?: string;
-  forceShowReminderToggle?: boolean;
-}>;
-
-interface ProductSearchProps {
+interface TimeProductSearchProps {
   lang: string;
   className?: string;
-  collectionSlug?: string; // Filter products by collection
-  /** Override the card component used in grid view */
-  CardComponent?: ProductCardComponentType;
-  /** Override grid layout classes */
-  gridClassName?: string;
-  /** Class name forwarded to each card */
-  cardClassName?: string;
+  collectionSlug?: string;
+  sidebarOpen?: boolean;
+  onToggleSidebar?: () => void;
 }
 
-const DEFAULT_GRID_CLASSES =
-  'grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4 3xl:grid-cols-4 gap-2 md:gap-4 2xl:gap-5';
+const SORT_OPTIONS = [
+  {
+    name: 'text-sorting-options',
+    value: 'relevance',
+    defaultLabel: 'Rilevanza',
+  },
+  {
+    name: 'text-lowest-price',
+    value: 'lowest',
+    defaultLabel: 'Prezzo crescente',
+  },
+  {
+    name: 'text-highest-price',
+    value: 'highest',
+    defaultLabel: 'Prezzo decrescente',
+  },
+  {
+    name: 'text-new-arrival',
+    value: 'new-arrival',
+    defaultLabel: 'Nuovi arrivi',
+  },
+  {
+    name: 'text-most-order',
+    value: 'most-order',
+    defaultLabel: 'Più ordinati',
+  },
+];
 
-export const ProductB2BSearch: FC<ProductSearchProps> = ({
-  className = '',
+export const TimeProductSearch: FC<TimeProductSearchProps> = ({
   lang,
   collectionSlug,
-  CardComponent = ProductCardB2B,
-  gridClassName,
-  cardClassName,
+  sidebarOpen = true,
+  onToggleSidebar,
 }) => {
   const { t } = useTranslation(lang, 'common');
-
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // view from query
-  // View mode persistence (URL 'view' param OR localStorage fallback)
-  // Default to grid on first SSR render; sync from URL/LS after mount
+  // View mode persistence
   const [view, setViewState] = useState<'grid' | 'list'>('grid');
-
   const isList = view === 'list';
   const setView = (next: 'grid' | 'list') => {
     setViewState(next);
@@ -80,13 +82,11 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
       localStorage.setItem('search-view', next);
     } catch {}
     const params = new URLSearchParams(searchParams as any);
-    // keep URL stable; optionally persist 'view' explicitly
     if (next === 'grid') params.delete('view');
     else params.set('view', next);
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
-  // After mount or when URL changes, sync view from URL or fallback to LS
   useEffect(() => {
     const fromUrl = (searchParams.get('view') || '').toLowerCase();
     let next: 'grid' | 'list' | null = null;
@@ -106,27 +106,18 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
   const urlParams: Record<string, string> = {};
   searchParams.forEach((v, k) => (urlParams[k] = v));
 
-  // Transform URL params to PIM API format
   const pimParams = useMemo(() => {
     const filters: Record<string, any> = {};
-
-    // Extract filters from URL params (filters-xxx -> filters.xxx)
     for (const [key, value] of Object.entries(urlParams)) {
       if (key.startsWith('filters-')) {
         const filterKey = key.replace('filters-', '');
-        // Support semicolon-separated values
         filters[filterKey] =
           typeof value === 'string' && value.includes(';')
             ? value.split(';')
             : value;
       }
     }
-
-    // Add collection filter if provided via prop
-    if (collectionSlug) {
-      filters.collection_slugs = collectionSlug;
-    }
-
+    if (collectionSlug) filters.collection_slugs = collectionSlug;
     return {
       lang,
       text: urlParams.text || urlParams.q || '',
@@ -141,11 +132,9 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
     100,
     Math.max(1, Number(searchParams.get('page_size') || 24)),
   );
-
   const isSpecialSource =
     source === 'likes' || source === 'trending' || source === 'reminders';
 
-  // Extract URL filters for likes/trending queries
   const urlFiltersForSpecialQuery = useMemo(() => {
     const filters: Record<string, any> = {};
     for (const [key, value] of Object.entries(urlParams)) {
@@ -173,36 +162,35 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
       if (source === 'likes') {
         const res = await apiGetUserLikes(pageParam, pageSizeParam);
         const skus = (res?.likes || []).map((l: any) => l.sku).filter(Boolean);
-        if (!skus.length) {
-          return { items: [], nextPage: null };
-        }
-        // Use PIM search with SKU filter + URL filters
+        if (!skus.length) return { items: [], nextPage: null, total: res?.total_count ?? 0 };
         const result = await fetchPimProductList({
           lang,
           filters: { sku: skus, ...urlFiltersForSpecialQuery },
           rows: skus.length,
         });
-        const nextPage = res?.has_next ? pageParam + 1 : null;
-        return { items: result.items, nextPage };
+        return {
+          items: result.items,
+          nextPage: res?.has_next ? pageParam + 1 : null,
+          total: res?.total_count ?? result.items.length,
+        };
       }
       if (source === 'reminders') {
         const res = await apiGetUserReminders(pageParam, pageSizeParam);
         const skus = (res?.reminders || [])
           .map((r: any) => r.sku)
           .filter(Boolean);
-        if (!skus.length) {
-          return { items: [], nextPage: null };
-        }
-        // Use PIM search with SKU filter + URL filters
+        if (!skus.length) return { items: [], nextPage: null, total: res?.total_count ?? 0 };
         const result = await fetchPimProductList({
           lang,
           filters: { sku: skus, ...urlFiltersForSpecialQuery },
           rows: skus.length,
         });
-        const nextPage = res?.has_next ? pageParam + 1 : null;
-        return { items: result.items, nextPage };
+        return {
+          items: result.items,
+          nextPage: res?.has_next ? pageParam + 1 : null,
+          total: res?.total_count ?? result.items.length,
+        };
       }
-      // trending: paginated response
       const trendingPage = await apiGetTrendingPage(
         period,
         pageParam,
@@ -212,15 +200,17 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
       const skus = (trendingPage?.items || [])
         .map((x: any) => x.sku)
         .filter(Boolean);
-      if (!skus.length) return { items: [], nextPage: null };
-      // Use PIM search with SKU filter + URL filters
+      if (!skus.length) return { items: [], nextPage: null, total: trendingPage?.total_count ?? 0 };
       const result = await fetchPimProductList({
         lang,
         filters: { sku: skus, ...urlFiltersForSpecialQuery },
         rows: skus.length,
       });
-      const nextPage = trendingPage?.has_next ? pageParam + 1 : null;
-      return { items: result.items, nextPage };
+      return {
+        items: result.items,
+        nextPage: trendingPage?.has_next ? pageParam + 1 : null,
+        total: trendingPage?.total_count ?? result.items.length,
+      };
     },
     enabled: isSpecialSource,
     getNextPageParam: (lastPage) => lastPage?.nextPage ?? undefined,
@@ -248,15 +238,13 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
     ? !!specialSourceQuery.hasNextPage
     : baseQuery.hasNextPage;
 
-  // ⬇️ Include ALL variant ids so list view has prices when expanded
-  // --- ERP prices: fetch only for newly loaded page and merge (only when authorized)
+  // ERP prices
   const [erpPricesMap, setErpPricesMap] = useState<
     Record<string, ErpPriceData>
   >({});
   const fetchedCodesRef = useRef<Set<string>>(new Set());
   const { isAuthorized } = useUI();
 
-  // Reset ERP cache when search signature changes
   const searchSignature = useMemo(() => {
     const base = JSON.stringify(pimParams);
     if (isSpecialSource) {
@@ -279,12 +267,10 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
   const lastItems: Product[] = useMemo(() => {
     const pages = (data as any)?.pages;
     if (!pages?.length) return [];
-    const last = pages[pages.length - 1];
-    return last?.items ?? [];
+    return pages[pages.length - 1]?.items ?? [];
   }, [data]);
 
   const newCodes = useMemo(() => {
-    // Only fetch ERP prices for single-variant products (variantCount <= 1 or undefined)
     const singleVariantProducts = (lastItems as any[]).filter(
       (p) => !p?.variantCount || p.variantCount <= 1,
     );
@@ -311,11 +297,11 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
     return () => {
       mounted = false;
     };
-  }, [newCodes]);
+  }, [newCodes, isAuthorized]);
 
   const getPrice = (id: string | number) => erpPricesMap[String(id)];
 
-  // Infinite scroll: auto-load more when user scrolls near bottom
+  // Infinite scroll
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const isLoadingMoreRef = useRef(false);
 
@@ -323,7 +309,6 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
     const observer = new IntersectionObserver(
       (entries) => {
         const [entry] = entries;
-        // Auto-load when sentinel is visible, has next page, and not already loading
         if (
           entry.isIntersecting &&
           hasNextPage &&
@@ -336,201 +321,265 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
           });
         }
       },
-      { rootMargin: '200px' }, // Start loading 200px before reaching the sentinel
+      { rootMargin: '200px' },
     );
-
     const sentinel = loadMoreRef.current;
     if (sentinel) observer.observe(sentinel);
-
     return () => {
       if (sentinel) observer.unobserve(sentinel);
     };
   }, [hasNextPage, loadingMore, fetchNextPage]);
 
+  // Sort
+  const currentSort = searchParams.get('sort_by') || 'relevance';
+  const handleSortChange = (value: string) => {
+    const url = new URL(location.href);
+    if (value === 'relevance') url.searchParams.delete('sort_by');
+    else url.searchParams.set('sort_by', value);
+    router.push(`${pathname}${url.search}`, { scroll: false });
+  };
+
+  const totalItems = data?.pages?.[0]?.total
+    ?? (data?.pages
+      ? data.pages.reduce(
+          (sum: number, p: any) => sum + (p?.items?.length || 0),
+          0,
+        )
+      : 0);
+
   return (
     <>
-      {/* view toggle */}
-      <div className="flex items-center justify-end gap-2 mb-3">
-        <button
-          type="button"
-          onClick={() => setView('grid')}
-          className={cn(
-            'h-9 w-9 flex items-center justify-center rounded border',
-            !isList
-              ? 'bg-brand text-white border-brand'
-              : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50',
+      {/* Toolbar */}
+      <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+        {/* Left: sidebar toggle + count */}
+        <div className="flex items-center gap-3">
+          {onToggleSidebar && (
+            <button
+              type="button"
+              onClick={onToggleSidebar}
+              className="hidden lg:flex w-9 h-9 rounded-[var(--radius-btn)] border-[1.5px] border-[var(--time-gray-200)] bg-white cursor-pointer items-center justify-center text-[var(--time-gray-500)] transition-colors hover:border-[var(--time-red)] hover:text-[var(--time-red)]"
+              aria-label="Toggle sidebar"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              >
+                <line x1="2" y1="4" x2="14" y2="4" />
+                <line x1="2" y1="8" x2="10" y2="8" />
+                <line x1="2" y1="12" x2="14" y2="12" />
+              </svg>
+            </button>
           )}
-          aria-label={t('grid', { defaultValue: 'Grid' })}
-          aria-pressed={!isList}
-          title={t('grid', { defaultValue: 'Grid' })}
-        >
-          <IoGridOutline />
-        </button>
-        <button
-          type="button"
-          onClick={() => setView('list')}
-          className={cn(
-            'h-9 w-9 flex items-center justify-center rounded border',
-            isList
-              ? 'bg-brand text-white border-brand'
-              : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50',
-          )}
-          aria-label={t('list', { defaultValue: 'List' })}
-          aria-pressed={isList}
-          title={t('list', { defaultValue: 'List' })}
-        >
-          <IoListOutline />
-        </button>
+          <span className="text-[14px] text-[var(--time-gray-500)] font-[family-name:var(--font-body)]">
+            {data?.pages && (
+              <>
+                <strong className="text-[var(--time-dark)]">
+                  {totalItems}
+                </strong>{' '}
+                {t('text-items-found', { defaultValue: 'prodotti trovati' })}
+              </>
+            )}
+          </span>
+        </div>
+
+        {/* Right: sort + view toggle */}
+        <div className="flex items-center gap-2.5">
+          {/* Sort dropdown */}
+          <div className="relative hidden sm:block">
+            <select
+              value={currentSort}
+              onChange={(e) => handleSortChange(e.target.value)}
+              className="h-9 rounded-[var(--radius-btn)] border-[1.5px] border-[var(--time-gray-200)] pl-3 pr-8 text-[12px] font-[family-name:var(--font-body)] text-[var(--time-gray-500)] bg-white cursor-pointer outline-none appearance-none transition-colors hover:border-[var(--time-gray-400)] focus:border-[var(--time-red)] focus:ring-0"
+            >
+              {SORT_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {t(opt.name, { defaultValue: opt.defaultLabel })}
+                </option>
+              ))}
+            </select>
+            <IoChevronDown
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--time-gray-400)]"
+              size={12}
+            />
+          </div>
+
+          {/* View toggle */}
+          <div className="flex rounded-[var(--radius-btn)] border-[1.5px] border-[var(--time-gray-200)] overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setView('grid')}
+              className="w-9 h-[34px] border-none cursor-pointer flex items-center justify-center transition-all duration-150"
+              style={{
+                background: !isList ? 'var(--time-dark)' : '#fff',
+                color: !isList ? '#fff' : 'var(--time-gray-400)',
+              }}
+              aria-label="Grid"
+              aria-pressed={!isList}
+            >
+              <IoGridOutline size={16} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setView('list')}
+              className="w-9 h-[34px] border-none cursor-pointer flex items-center justify-center transition-all duration-150"
+              style={{
+                background: isList ? 'var(--time-dark)' : '#fff',
+                color: isList ? '#fff' : 'var(--time-gray-400)',
+              }}
+              aria-label="List"
+              aria-pressed={isList}
+            >
+              <IoListOutline size={16} />
+            </button>
+          </div>
+        </div>
       </div>
 
+      {/* Product grid / list */}
       <div
-        className={cn(
+        className={
           isList
-            ? 'grid grid-cols-1 gap-3'
-            : (gridClassName ?? DEFAULT_GRID_CLASSES),
-          className,
-        )}
+            ? 'flex flex-col gap-3'
+            : sidebarOpen
+              ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4'
+              : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
+        }
       >
         {error ? (
-          <div className="col-span-full">
-            <Alert message={error?.message} />
+          <div className="col-span-full text-center py-10">
+            <p className="text-[var(--time-gray-500)]">{error?.message}</p>
           </div>
         ) : isLoading && !data?.pages?.length ? (
-          Array.from({ length: 30 }).map((_, idx) => (
-            <ProductCardLoader
-              key={`product--key-${idx}`}
-              uniqueKey={`product--key-${idx}`}
-            />
+          // Loading skeletons
+          Array.from({ length: 12 }).map((_, idx) => (
+            <div
+              key={`skeleton-${idx}`}
+              className={
+                isList
+                  ? 'bg-white rounded-[var(--radius-card)] border border-[var(--time-gray-100)] h-[160px] animate-pulse'
+                  : 'bg-white rounded-[var(--radius-card)] border border-[var(--time-gray-100)] animate-pulse'
+              }
+            >
+              <div
+                className={
+                  isList ? 'flex items-stretch h-full' : 'flex flex-col'
+                }
+              >
+                <div
+                  className={
+                    isList
+                      ? 'w-[140px] bg-[var(--time-gray-100)] shrink-0'
+                      : 'h-[180px] bg-[var(--time-gray-100)]'
+                  }
+                />
+                <div className="flex-1 p-4 space-y-3">
+                  <div className="h-3 bg-[var(--time-gray-100)] rounded w-1/3" />
+                  <div className="h-4 bg-[var(--time-gray-100)] rounded w-3/4" />
+                  <div className="h-3 bg-[var(--time-gray-100)] rounded w-full" />
+                  <div className="h-6 bg-[var(--time-gray-100)] rounded w-1/4 mt-4" />
+                </div>
+              </div>
+            </div>
           ))
         ) : (
-          data?.pages?.map((page: any) =>
-            page?.items?.map((p: any) => {
-              // With grouped search: p has variantCount attached
-              // Without grouped search: p may have variations array
-              // For single-variant products (variantCount === 1 OR variations.length === 1), use variant's data
+          data?.pages?.map((page: any, pageIdx: number) => {
+            let pageItemIndex = 0;
+            return page?.items?.map((p: any) => {
               const vars = Array.isArray(p.variations) ? p.variations : [];
               const isSingleVariant =
                 vars.length === 1 && (p.variantCount === 1 || !p.variantCount);
               const target = isSingleVariant
                 ? { ...vars[0], variantCount: 1 }
                 : p;
-              // Skip ERP price for grouped products with multiple variants
               const hasMultipleVariants =
                 target.variantCount && target.variantCount > 1;
-              // For single-variant products, use the variant's ID for price lookup (ERP prices are fetched by variant ID)
               const priceId = hasMultipleVariants
                 ? null
                 : vars.length === 1
                   ? vars[0]?.id
                   : target.id;
               const priceData = priceId ? getPrice(priceId) : undefined;
+              // Only stagger animation on first page; subsequent pages appear instantly
+              const animIndex = pageIdx === 0 ? pageItemIndex : 0;
+              pageItemIndex++;
 
               if (isList) {
-                // list: always render parent row; variants appear in the row itself
                 return (
-                  <ProductRowB2B
+                  <TimeSearchRow
                     key={`row-${target.id}`}
-                    lang={lang}
                     product={target}
-                    getPrice={getPrice}
+                    lang={lang}
                     priceData={priceData}
-                    forceShowReminderToggle={source === 'reminders'}
+                    index={animIndex}
                   />
                 );
               }
 
               return (
-                <CardComponent
+                <TimeSearchCard
                   key={`card-${target.id}`}
                   product={target}
                   lang={lang}
                   priceData={priceData}
-                  forceShowReminderToggle={source === 'reminders'}
-                  className={cardClassName}
+                  index={animIndex}
                 />
               );
-            }),
-          )
+            });
+          })
         )}
       </div>
 
       {/* Sentinel for infinite scroll */}
       <div ref={loadMoreRef} className="h-1" />
 
+      {/* Load more */}
       {hasNextPage && (
         <div className="pt-8 text-center xl:pt-10">
-          <Button
-            loading={loadingMore}
-            disabled={loadingMore}
+          <button
             onClick={() => fetchNextPage()}
+            disabled={loadingMore}
+            className="h-10 px-8 rounded-[var(--radius-btn)] border border-[var(--time-gray-200)] bg-white text-[var(--time-dark)] text-[13px] font-semibold font-[family-name:var(--font-body)] cursor-pointer transition-all hover:border-[var(--time-red)] hover:text-[var(--time-red)] disabled:opacity-50 disabled:cursor-default"
           >
-            {t('button-load-more')}
-          </Button>
+            {loadingMore
+              ? t('text-loading', { defaultValue: 'Caricamento...' })
+              : t('button-load-more', { defaultValue: 'Carica altri' })}
+          </button>
         </div>
       )}
 
-      {/* End of results message - only show if we loaded multiple pages */}
+      {/* End of results */}
       {!hasNextPage && data?.pages && data.pages.length > 1 && (
-        <div className="flex items-start gap-3 p-4 my-6 bg-blue-50 border border-blue-200 rounded-lg max-w-2xl mx-auto">
-          <IoInformationCircleOutline className="w-6 h-6 text-blue-600 flex-shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <p className="text-sm font-medium text-blue-900">
-              {t('text-all-products-loaded', {
-                defaultValue: 'Tutti i prodotti sono stati caricati',
-              })}
-            </p>
-            <p className="text-xs text-blue-700 mt-1">
-              {t('text-all-available-results-shown', {
-                defaultValue:
-                  'Hai visualizzato tutti i risultati disponibili per questa ricerca',
-              })}
-            </p>
-          </div>
+        <div className="text-center py-8">
+          <p className="text-[13px] text-[var(--time-gray-400)] font-[family-name:var(--font-body)]">
+            {t('text-all-products-loaded', {
+              defaultValue: 'Tutti i prodotti sono stati caricati',
+            })}
+          </p>
         </div>
       )}
 
-      {/* No results message */}
+      {/* No results */}
       {!isLoading &&
         data?.pages &&
         data.pages.length > 0 &&
         data.pages.every((page: any) => !page?.items?.length) && (
-          <div className="flex items-start gap-3 p-5 my-6 bg-amber-50 border border-amber-200 rounded-lg max-w-2xl mx-auto">
-            <IoInformationCircleOutline className="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <p className="text-base font-semibold text-amber-900 mb-2">
-                {t('text-no-products-found', {
-                  defaultValue: 'Nessun prodotto trovato',
-                })}
-              </p>
-              <p className="text-sm text-amber-800 mb-2">
-                {t('text-try-different-filters', {
-                  defaultValue: 'Prova a modificare i filtri di ricerca',
-                })}
-              </p>
-              <ul className="text-xs text-amber-700 space-y-1 ml-1">
-                <li>
-                  •{' '}
-                  {t('text-search-suggestion-1', {
-                    defaultValue:
-                      'Prova con parole chiave diverse o più generiche',
-                  })}
-                </li>
-                <li>
-                  •{' '}
-                  {t('text-search-suggestion-2', {
-                    defaultValue:
-                      'Rimuovi alcuni filtri per ampliare i risultati',
-                  })}
-                </li>
-                <li>
-                  •{' '}
-                  {t('text-search-suggestion-3', {
-                    defaultValue:
-                      "Verifica l'ortografia dei termini di ricerca",
-                  })}
-                </li>
-              </ul>
-            </div>
+          <div className="text-center py-20">
+            <div className="text-[48px] mb-4">&#x1F50D;</div>
+            <p className="text-[16px] font-semibold text-[var(--time-gray-600)] font-[family-name:var(--font-body)]">
+              {t('text-no-products-found', {
+                defaultValue: 'Nessun prodotto trovato',
+              })}
+            </p>
+            <p className="text-[13px] text-[var(--time-gray-400)] mt-1.5 font-[family-name:var(--font-body)]">
+              {t('text-try-different-filters', {
+                defaultValue: 'Prova a modificare i filtri o la ricerca',
+              })}
+            </p>
           </div>
         )}
     </>

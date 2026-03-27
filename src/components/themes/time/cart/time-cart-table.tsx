@@ -1,0 +1,333 @@
+'use client';
+
+import React, { useMemo, useState, useCallback } from 'react';
+import cn from 'classnames';
+import Image from 'next/image';
+import { useCart } from '@contexts/cart/cart.context';
+import type { Item } from '@contexts/cart/cart.utils';
+import type { AddToCartInput } from '@utils/transform/cart';
+import UpdateCart from '@components/product/update-cart';
+import { TimeCard } from '@/components/themes/time/account/time-account-primitives';
+import { useTranslation } from 'src/app/i18n/client';
+
+// ── helpers ──────────────────────────────────────────────────────────────────
+
+const money = (n: number) =>
+  new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n);
+
+const unitNet = (r: Item) =>
+  Number(r.priceDiscount ?? (r as any).__cartMeta?.price_discount ?? (r as any).price_discount ?? (r as any).price ?? 0);
+
+const unitGross = (r: Item) =>
+  Number(r.priceGross ?? (r as any).__cartMeta?.gross_price ?? (r as any).price_gross ?? (r as any).gross_price ?? (r as any).price ?? 0);
+
+// ── icons ────────────────────────────────────────────────────────────────────
+
+const s = { fill: 'none' as const, stroke: 'currentColor', strokeLinecap: 'round' as const, strokeWidth: 2 };
+
+const TrashIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" {...s}>
+    <polyline points="3,6 5,6 21,6" />
+    <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+    <line x1="10" y1="11" x2="10" y2="17" />
+    <line x1="14" y1="11" x2="14" y2="17" />
+  </svg>
+);
+
+const SearchIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" {...s} strokeWidth={2.5}>
+    <circle cx="11" cy="11" r="8" />
+    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+  </svg>
+);
+
+const AlertIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" {...s}>
+    <circle cx="12" cy="12" r="10" />
+    <line x1="12" y1="8" x2="12" y2="12" />
+    <line x1="12" y1="16" x2="12.01" y2="16" />
+  </svg>
+);
+
+// ── cart row ─────────────────────────────────────────────────────────────────
+
+function TimeCartRow({ item, index, lang }: { item: Item; index: number; lang: string }) {
+  const { clearItemFromCart } = useCart();
+  const net = unitNet(item);
+  const gross = unitGross(item);
+  const qty = Number(item.quantity ?? 0);
+  const lineTotal = net * qty;
+  const discount = gross > 0 && gross > net ? Math.round((1 - net / gross) * 100) : 0;
+  const isAvailable = (item as any).stock !== 0;
+
+  return (
+    <>
+      {/* Desktop row */}
+      <div
+        className={cn(
+          'hidden md:grid grid-cols-[64px_1fr_100px_140px_140px_100px_44px] gap-4 items-center py-[18px] border-b border-[var(--time-gray-100)] last:border-b-0',
+          !isAvailable && 'opacity-60',
+        )}
+        style={{ animationDelay: `${index * 0.04}s` }}
+      >
+        {/* Image */}
+        <div className="w-[60px] h-[60px] rounded-[10px] bg-gradient-to-br from-[#f8f9fb] to-[#eef0f4] flex items-center justify-center overflow-hidden">
+          <Image
+            src={item?.image ?? '/assets/placeholder/cart-item.svg'}
+            width={60}
+            height={60}
+            alt={item?.name || ''}
+            className="h-full w-full object-cover"
+          />
+        </div>
+
+        {/* Info */}
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 mb-0.5">
+            {item.sku && (
+              <span className="font-[var(--font-mono)] text-[11px] font-semibold text-[var(--time-red)] bg-[rgba(230,57,70,0.08)] px-[7px] py-[2px] rounded-[5px]">
+                {item.sku}
+              </span>
+            )}
+            {item.brand?.name && (
+              <span className="text-[10px] font-bold text-[var(--time-gray-400)] uppercase tracking-[0.06em]">
+                {item.brand.name}
+              </span>
+            )}
+          </div>
+          <h4 className="text-[14px] font-bold text-[var(--time-dark)] font-[var(--font-body)] leading-snug truncate">
+            {item.name}
+          </h4>
+          <div className="flex gap-2 text-[10px] text-[var(--time-gray-400)] font-[var(--font-mono)] mt-0.5">
+            {item.model && <span>Mod: {item.model}</span>}
+            {(item as any).uom && <><span>·</span><span>UM: {(item as any).uom}</span></>}
+            {(item as any).mvQty && <span>MV: {(item as any).mvQty}</span>}
+            {(item as any).cfQty && <span>CF: {(item as any).cfQty}</span>}
+          </div>
+          {!isAvailable && (
+            <div className="inline-flex items-center gap-1.5 mt-1.5 bg-red-50 text-red-600 text-[11px] font-semibold px-2.5 py-0.5 rounded-[6px]">
+              <AlertIcon /> Non disponibile
+            </div>
+          )}
+        </div>
+
+        {/* Unit price */}
+        <div className="text-right">
+          <div className="text-[14px] font-bold text-[var(--time-dark)] tabular-nums">{money(net)}</div>
+          {gross > net && (
+            <div className="text-[11px] text-[var(--time-gray-400)] line-through tabular-nums">{money(gross)}</div>
+          )}
+        </div>
+
+        {/* Promo */}
+        <div className="flex justify-center">
+          {discount > 0 ? (
+            <span
+              className={cn(
+                'text-[11px] font-bold text-white px-2.5 py-1 rounded-[6px]',
+                discount >= 40 ? 'bg-[var(--time-red)]' : discount >= 25 ? 'bg-amber-500' : 'bg-gray-500',
+              )}
+            >
+              -{discount}%
+            </span>
+          ) : (
+            <span className="text-[var(--time-gray-400)] text-[11px]">—</span>
+          )}
+        </div>
+
+        {/* Quantity */}
+        <div className="flex justify-center">
+          <UpdateCart item={item} lang={lang} className="justify-center" />
+        </div>
+
+        {/* Line total */}
+        <div className="text-right text-[16px] font-extrabold text-[var(--time-dark)] tabular-nums">
+          {money(lineTotal)}
+        </div>
+
+        {/* Actions */}
+        <div className="flex flex-col items-center gap-1">
+          <button
+            onClick={() => clearItemFromCart(item.id)}
+            title="Rimuovi"
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--time-gray-400)] hover:text-[var(--time-red)] transition-colors"
+          >
+            <TrashIcon />
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile card */}
+      <div className="md:hidden py-3 border-b border-[var(--time-gray-100)] last:border-b-0">
+        <div className="flex gap-3">
+          <div className="w-[52px] h-[52px] shrink-0 rounded-[10px] bg-gradient-to-br from-[#f8f9fb] to-[#eef0f4] overflow-hidden">
+            <Image
+              src={item?.image ?? '/assets/placeholder/cart-item.svg'}
+              width={52}
+              height={52}
+              alt={item?.name || ''}
+              className="h-full w-full object-cover"
+            />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-0.5">
+              {item.sku && (
+                <span className="font-[var(--font-mono)] text-[10px] font-semibold text-[var(--time-red)] bg-[rgba(230,57,70,0.08)] px-1.5 py-0.5 rounded-[4px]">
+                  {item.sku}
+                </span>
+              )}
+              {discount > 0 && (
+                <span className={cn('text-[10px] font-bold text-white px-1.5 py-0.5 rounded-[4px]', discount >= 40 ? 'bg-[var(--time-red)]' : discount >= 25 ? 'bg-amber-500' : 'bg-gray-500')}>
+                  -{discount}%
+                </span>
+              )}
+            </div>
+            <div className="text-[13px] font-semibold text-[var(--time-dark)] truncate">{item.name}</div>
+            <div className="text-[11px] text-[var(--time-gray-400)] mt-0.5">
+              {money(net)} × {qty} = <span className="font-bold text-[var(--time-dark)]">{money(lineTotal)}</span>
+            </div>
+          </div>
+          <button
+            onClick={() => clearItemFromCart(item.id)}
+            className="self-start text-[var(--time-gray-400)] hover:text-[var(--time-red)] transition-colors"
+          >
+            <TrashIcon />
+          </button>
+        </div>
+        <div className="mt-2 pl-[64px]">
+          <UpdateCart item={item} lang={lang} className="justify-start" />
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ── main component ───────────────────────────────────────────────────────────
+
+interface TimeCartTableProps {
+  lang: string;
+  searchQuery: string;
+  onSearchChange: (q: string) => void;
+  onContinue: () => void;
+}
+
+export default function TimeCartTable({ lang, searchQuery, onSearchChange, onContinue }: TimeCartTableProps) {
+  const { t } = useTranslation(lang, 'common');
+  const { items, resetCart, meta } = useCart();
+
+  const baseRows = useMemo<Item[]>(() => items ?? [], [items]);
+
+  const filteredRows = useMemo(() => {
+    if (!searchQuery.trim()) return baseRows;
+    const q = searchQuery.toLowerCase();
+    return baseRows.filter(
+      (r) =>
+        (r.sku ?? '').toLowerCase().includes(q) ||
+        (r.name ?? '').toLowerCase().includes(q) ||
+        (r.model ?? '').toLowerCase().includes(q) ||
+        (r.brand?.name ?? '').toLowerCase().includes(q),
+    );
+  }, [baseRows, searchQuery]);
+
+  const unavailableItems = baseRows.filter((r) => (r as any).stock === 0);
+  const availableCount = baseRows.length - unavailableItems.length;
+
+  return (
+    <div>
+      {/* Title + clear */}
+      <div className="flex items-center justify-between mb-5">
+        <div>
+          <h1 className="text-[28px] font-black text-[var(--time-dark)] font-[var(--font-display)] tracking-tight">
+            Riepilogo Carrello
+          </h1>
+          <p className="text-[13px] text-[var(--time-gray-500)] mt-1">
+            {availableCount} articol{availableCount !== 1 ? 'i' : 'o'} disponibil{availableCount !== 1 ? 'i' : 'e'} · {baseRows.length} totali
+          </p>
+        </div>
+        {baseRows.length > 0 && (
+          <button
+            onClick={() => resetCart()}
+            className="h-9 px-3.5 rounded-lg border-[1.5px] border-[rgba(230,57,70,0.3)] bg-[rgba(230,57,70,0.04)] text-[var(--time-red)] text-[12px] font-semibold font-[var(--font-body)] hover:bg-[rgba(230,57,70,0.1)] transition-colors"
+          >
+            Svuota carrello
+          </button>
+        )}
+      </div>
+
+      {/* Search */}
+      <div className="relative mb-4">
+        <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--time-gray-400)] flex">
+          <SearchIcon />
+        </div>
+        <input
+          type="text"
+          placeholder={t('text-search-cart', { defaultValue: 'Cerca nel carrello...' })}
+          value={searchQuery}
+          onChange={(e) => onSearchChange(e.target.value)}
+          className="w-full h-[42px] rounded-[var(--radius-btn)] border-[1.5px] border-[var(--time-gray-200)] pl-10 pr-4 text-[13px] font-[var(--font-body)] text-[var(--time-dark)] bg-white outline-none transition-colors focus:border-[var(--time-red)] focus:shadow-[0_0_0_3px_rgba(230,57,70,0.1)]"
+        />
+      </div>
+
+      {/* Cart card */}
+      <TimeCard className="overflow-hidden">
+        {/* Table header (desktop) */}
+        <div className="hidden md:grid grid-cols-[64px_1fr_100px_140px_140px_100px_44px] gap-4 px-5 py-3 bg-[var(--time-gray-50)] border-b border-[var(--time-gray-100)] text-[10px] font-bold text-[var(--time-gray-400)] uppercase tracking-[0.08em] font-[var(--font-body)]">
+          <span />
+          <span>Articolo</span>
+          <span className="text-right">Prezzo Unit.</span>
+          <span className="text-center">Promo</span>
+          <span className="text-center">Quantità</span>
+          <span className="text-right">Totale</span>
+          <span />
+        </div>
+
+        {/* Items */}
+        <div className="px-5">
+          {filteredRows.length === 0 ? (
+            <div className="py-16 text-center text-[var(--time-gray-400)]">
+              <div className="text-[40px] mb-3">🛒</div>
+              <div className="text-[15px] font-semibold text-[var(--time-gray-600)]">
+                {baseRows.length === 0 ? 'Il carrello è vuoto' : 'Nessun risultato'}
+              </div>
+              <div className="text-[12px] mt-1">
+                {baseRows.length === 0 ? 'Aggiungi prodotti dal catalogo' : 'Prova con un altro termine di ricerca'}
+              </div>
+            </div>
+          ) : (
+            filteredRows.map((item, i) => (
+              <TimeCartRow key={`${item.id}-${item.rowId ?? i}`} item={item} index={i} lang={lang} />
+            ))
+          )}
+        </div>
+
+        {/* Continue button */}
+        {baseRows.length > 0 && (
+          <div className="px-5 py-4 border-t border-[var(--time-gray-100)] flex justify-end">
+            <button
+              onClick={onContinue}
+              className="h-11 px-7 rounded-[var(--radius-btn)] bg-[var(--time-dark)] text-white text-[13px] font-bold font-[var(--font-body)] flex items-center gap-2 transition-colors hover:bg-[var(--time-red)]"
+            >
+              Continua Ordine
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <line x1="5" y1="12" x2="19" y2="12" />
+                <polyline points="12,5 19,12 12,19" />
+              </svg>
+            </button>
+          </div>
+        )}
+      </TimeCard>
+
+      {/* Unavailable warning */}
+      {unavailableItems.length > 0 && (
+        <div className="mt-4 p-3.5 rounded-xl bg-red-50 border border-red-200 flex items-center gap-2.5 text-[13px] text-red-800">
+          <AlertIcon />
+          <span>
+            <strong>{unavailableItems.length} articol{unavailableItems.length > 1 ? 'i' : 'o'}</strong>{' '}
+            non disponibil{unavailableItems.length > 1 ? 'i' : 'e'} —{' '}
+            {unavailableItems.length > 1 ? 'non saranno inclusi' : 'non sarà incluso'} nell&apos;ordine.
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}

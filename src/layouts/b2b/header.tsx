@@ -40,29 +40,6 @@ const B2BHeaderMenu = dynamic(() => import('@layouts/header/b2b-header-menu'), {
   ssr: false,
 });
 
-const promoButtons = [
-  {
-    label: 'Promozioni',
-    color: 'bg-[#a52a2a] text-white',
-    href: '/search?filters-has_active_promo=true',
-  },
-  {
-    label: 'Nuovi arrivi',
-    color: 'bg-brand text-white',
-    href: '/search?filters-attribute_is_new_b=true',
-  },
-  // Outlet hidden for now
-  // {
-  //   label: 'Outlet',
-  //   color: 'bg-emerald-600 text-white',
-  //   href: '/search?filters-collection_slugs=outlet',
-  // },
-];
-
-const quickLinks = [
-  { label: 'i miei ordini', href: '/account/orders' },
-  { label: 'i miei documenti', href: '/account/documents' },
-];
 
 interface HeaderProps {
   lang: string;
@@ -350,32 +327,11 @@ function Header({ lang }: HeaderProps) {
                 )}
               />
 
-              {promoButtons.map((btn) => (
-                <Link
-                  key={btn.label}
-                  href={`/${lang}${btn.href}`}
-                  className={cn(
-                    'rounded-full px-4 py-2 text-sm font-semibold shadow-sm',
-                    btn.color,
-                  )}
-                >
-                  {btn.label}
-                </Link>
-              ))}
             </div>
 
             {/* Right side - only show when logged in */}
             {isAuthorized && (
               <div className="hidden lg:flex flex-wrap items-center gap-3">
-                {quickLinks.map((link) => (
-                  <Link
-                    key={link.label}
-                    href={`/${lang}${link.href}`}
-                    className="rounded border border-slate-300 px-4 py-2 text-slate-700 hover:border-brand hover:text-brand"
-                  >
-                    {link.label}
-                  </Link>
-                ))}
                 <Suspense fallback={null}>
                   <Delivery lang={lang} />
                 </Suspense>

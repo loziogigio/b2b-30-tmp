@@ -15,7 +15,11 @@ type ComponentSlot =
   | 'ProductRow'
   | 'HomeBlockRenderer'
   | 'SearchPageContent'
-  | 'ProductDetail';
+  | 'ProductDetail'
+  | 'ProductPopup'
+  | 'VariantsQuickView'
+  | 'Cart'
+  | 'SearchOverlay';
 
 const registry: Record<ThemeId, Record<ComponentSlot, () => Promise<any>>> = {
   default: {
@@ -28,6 +32,11 @@ const registry: Record<ThemeId, Record<ComponentSlot, () => Promise<any>>> = {
     SearchPageContent: () =>
       import('@/app/[lang]/(default)/search/search-b2b-page-content'),
     ProductDetail: () => import('@/components/product/product-b2b-details'),
+    ProductPopup: () => import('@/components/product/product-popup'),
+    VariantsQuickView: () =>
+      import('@/components/product/b2b-product-variants-quick-view'),
+    Cart: () => import('@/components/cart/cart'),
+    SearchOverlay: () => import('@/components/search/search-overlay-b2b'),
   },
   time: {
     Layout: () => import('@/components/themes/time/layout/time-layout'),
@@ -35,12 +44,19 @@ const registry: Record<ThemeId, Record<ComponentSlot, () => Promise<any>>> = {
       import('@/components/themes/time/product/time-product-card'),
     HomeBlockRenderer: () =>
       import('@/components/themes/time/home/time-block-renderer'),
+    SearchPageContent: () =>
+      import('@/components/themes/time/search/time-search-content'),
+    ProductDetail: () =>
+      import('@/components/themes/time/product/time-product-detail'),
     // Fall back to default for slots not yet themed
     ProductRow: () =>
       import('@/components/product/product-rows/product-row-b2b'),
-    SearchPageContent: () =>
-      import('@/app/[lang]/(default)/search/search-b2b-page-content'),
-    ProductDetail: () => import('@/components/product/product-b2b-details'),
+    ProductPopup: () =>
+      import('@/components/themes/time/product/time-product-popup'),
+    VariantsQuickView: () =>
+      import('@/components/themes/time/product/time-variants-quick-view'),
+    Cart: () => import('@/components/themes/time/cart/time-cart'),
+    SearchOverlay: () => import('@/components/search/search-overlay-b2b'),
   },
 };
 

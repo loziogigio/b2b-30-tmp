@@ -3,7 +3,7 @@
 import Breadcrumb from '@components/ui/breadcrumb';
 import Container from '@components/ui/container';
 import Divider from '@components/ui/divider';
-import ProductB2BDetails from '../product-b2b-details';
+import { getThemedComponent } from '@/lib/theme/registry';
 import type { PageBlock } from '@/lib/types/blocks';
 
 interface Props {
@@ -12,6 +12,8 @@ interface Props {
   blocks?: PageBlock[];
   showZoneLabels?: boolean;
 }
+
+const ThemedProductDetail = getThemedComponent('ProductDetail');
 
 export default function B2BProductDetail({
   sku,
@@ -28,7 +30,7 @@ export default function B2BProductDetail({
       <div className="pt-6 lg:pt-7">
         <Container>
           <Breadcrumb lang={lang} />
-          <ProductB2BDetails
+          <ThemedProductDetail
             lang={lang}
             search={search}
             blocks={blocks}

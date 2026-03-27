@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from '@components/ui/link';
 import { HiOutlineSwitchHorizontal } from 'react-icons/hi';
 import { useUI } from '@contexts/ui.context';
@@ -17,9 +18,11 @@ export function CompareWidget({ config, lang }: CompareWidgetProps) {
   const { t } = useTranslation(lang, 'common');
   const { isAuthorized } = useUI();
   const { skus: compareSkus } = useCompareList();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
-  // Only show when logged in
-  if (!isAuthorized) return null;
+  // Hide until hydrated to avoid server/client mismatch
+  if (!mounted || !isAuthorized) return null;
 
   return (
     <div className="flex flex-col items-center group">

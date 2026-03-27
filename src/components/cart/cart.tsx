@@ -78,8 +78,8 @@ export default function Cart({ lang }: { lang: string }) {
       {!isEmpty ? (
         <Scrollbar className="flex-grow w-full">
           <div className="h-[calc(100vh-210px)] w-full px-4 py-2 md:px-5">
-            {items?.map((item) => (
-              <CartItem item={item} key={item.id} lang={lang} />
+            {items?.map((item, i) => (
+              <CartItem item={item} key={`${item.id}-${item.rowId ?? i}`} lang={lang} />
             ))}
           </div>
         </Scrollbar>

@@ -1,8 +1,15 @@
 import { Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import Divider from '@components/ui/divider';
 import SearchB2BPageContent from './search-b2b-page-content';
 import { Metadata } from 'next';
 import { getServerHomeSettings } from '@/lib/home-settings/fetch-server';
+import { getThemeId } from '@/lib/theme/resolver';
+
+const TimeSearchContent = dynamic(
+  () => import('@/components/themes/time/search/time-search-content'),
+  { ssr: true },
+);
 
 // Generate dynamic SEO metadata for search page
 export async function generateMetadata({
@@ -104,12 +111,14 @@ export default async function Page({
   params: Promise<{ lang: string }>;
 }) {
   const { lang } = await params;
+  const SearchContent =
+    getThemeId() === 'time' ? TimeSearchContent : SearchB2BPageContent;
 
   return (
     <>
       <Divider />
       <Suspense fallback={<SearchBarFallback />}>
-        <SearchB2BPageContent lang={lang} />
+        <SearchContent lang={lang} />
       </Suspense>
     </>
   );

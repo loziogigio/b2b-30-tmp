@@ -10,12 +10,14 @@ import ProductCardLoader from '@components/ui/loaders/product-card-loader';
 import cn from 'classnames';
 import { getDirection } from '@utils/get-direction';
 import { useMemo, useState } from 'react';
-import ProductCardB2B from './product-cards/product-card-b2b';
+import { getThemedComponent } from '@/lib/theme/registry';
 import { fetchErpPrices } from '@framework/erp/prices';
 import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { ERP_STATIC } from '@framework/utils/static';
 import { useUI } from '@contexts/ui.context';
+
+const ThemedProductCard = getThemedComponent('ProductCard');
 
 interface ProductsCarouselProps {
   sectionHeading: string;
@@ -210,7 +212,7 @@ const ProductsCarousel: React.FC<ProductsCarouselProps> = ({
                         key={`slide-${erpKey}`}
                         className="px-1.5 md:px-2 xl:px-2.5 py-4"
                       >
-                        <ProductCardB2B
+                        <ThemedProductCard
                           product={targetProduct}
                           lang={lang}
                           priceData={priceData}

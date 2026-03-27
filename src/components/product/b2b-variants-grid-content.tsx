@@ -5,8 +5,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { LIMITS } from '@framework/utils/limits';
 import { fetchErpPrices } from '@framework/erp/prices';
-import ProductCardB2B from '@components/product/product-cards/product-card-b2b';
+import { getThemedComponent } from '@/lib/theme/registry';
 import ProductCardLoader from '@components/ui/loaders/product-card-loader';
+
+const ThemedProductCard = getThemedComponent('ProductCard');
 import cn from 'classnames';
 import Image from '@components/ui/image';
 import { productPlaceholder } from '@assets/placeholders';
@@ -207,18 +209,19 @@ export default function B2BVariantsGridContent({
       <div
         className={cn(
           'grid gap-2 md:gap-3 2xl:gap-4',
-          'grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5',
+          'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6',
         )}
       >
         {sorted.map((v) => {
           const id = String(v.id);
           const priceData = priceMap[id];
           return (
-            <ProductCardB2B
+            <ThemedProductCard
               key={`variant-${id}`}
               product={v as any}
               lang={lang}
               priceData={priceData}
+              className="w-full"
             />
           );
         })}

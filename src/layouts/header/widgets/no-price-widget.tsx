@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { HiOutlineEye, HiOutlineEyeOff } from 'react-icons/hi';
 import { useUI } from '@contexts/ui.context';
 import { useTranslation } from 'src/app/i18n/client';
@@ -13,9 +14,11 @@ interface NoPriceWidgetProps {
 export function NoPriceWidget({ config, lang }: NoPriceWidgetProps) {
   const { t } = useTranslation(lang, 'common');
   const { isAuthorized, hidePrices, toggleHidePrices } = useUI();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
-  // Only show when logged in
-  if (!isAuthorized) return null;
+  // Hide until hydrated to avoid server/client mismatch
+  if (!mounted || !isAuthorized) return null;
 
   return (
     <div className="flex flex-col items-center group">

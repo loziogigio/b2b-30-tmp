@@ -2,8 +2,10 @@
 
 import { useState } from 'react';
 import { useUI } from '@contexts/ui.context';
-import SearchOverlayB2B from '@components/search/search-overlay-b2b';
+import { getThemedComponent } from '@/lib/theme/registry';
 import useFreezeBodyScroll from '@utils/use-freeze-body-scroll';
+
+const SearchOverlayB2B = getThemedComponent('SearchOverlay');
 
 interface Props {
   lang: string;

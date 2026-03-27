@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { HiOutlineUserCircle, HiOutlineLogin } from 'react-icons/hi';
 import { useUI } from '@contexts/ui.context';
@@ -53,6 +54,8 @@ export function ProfileWidget({ config, lang }: ProfileWidgetProps) {
   const { isAuthorized } = useUI();
   const tenantContext = useTenantOptional();
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   // Get tenant ID
   const tenantId =
@@ -78,7 +81,9 @@ export function ProfileWidget({ config, lang }: ProfileWidgetProps) {
     }
   };
 
-  // Hide when bottom navigation is visible (below lg breakpoint)
+  // Hide until hydrated to avoid server/client mismatch
+  if (!mounted) return null;
+
   if (isAuthorized) {
     return (
       <div className="hidden lg:flex flex-col items-center group">

@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import type { WidgetConfig } from '@/lib/home-settings/types';
 import { useUI } from '@contexts/ui.context';
@@ -16,9 +16,11 @@ interface CartWidgetProps {
 
 export function CartWidget({ config, lang }: CartWidgetProps) {
   const { isAuthorized } = useUI();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
-  // Only show cart when logged in
-  if (!isAuthorized) return null;
+  // Hide until hydrated to avoid server/client mismatch
+  if (!mounted || !isAuthorized) return null;
 
   // Hide when bottom navigation is visible (below lg breakpoint)
   return (

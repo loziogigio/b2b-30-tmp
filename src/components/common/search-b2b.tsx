@@ -10,7 +10,9 @@ import { useUI } from '@contexts/ui.context';
 import { Product } from '@framework/types';
 import SearchBoxB2B from './search-box-b2b';
 import { useSearchParams, usePathname, useRouter } from 'next/navigation';
-import SearchOverlayB2B from '@components/search/search-overlay-b2b';
+import { getThemedComponent } from '@/lib/theme/registry';
+
+const SearchOverlayB2B = getThemedComponent('SearchOverlay');
 
 type Props = {
   lang: string;

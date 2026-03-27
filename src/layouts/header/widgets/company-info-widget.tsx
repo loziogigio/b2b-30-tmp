@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { useUI } from '@contexts/ui.context';
 import type { WidgetConfig } from '@/lib/home-settings/types';
@@ -16,9 +16,11 @@ interface CompanyInfoWidgetProps {
 
 export function CompanyInfoWidget({ config, lang }: CompanyInfoWidgetProps) {
   const { isAuthorized } = useUI();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
-  // Only show when logged in
-  if (!isAuthorized) return null;
+  // Avoid hydration mismatch — isAuthorized differs between server and client
+  if (!mounted || !isAuthorized) return null;
 
   // Hide when bottom navigation is visible (below lg breakpoint)
   return (

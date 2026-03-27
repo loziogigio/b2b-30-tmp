@@ -5,17 +5,21 @@ import { Product } from '@framework/types';
 import { useModalAction } from '@components/common/modal/modal.context';
 import { productPlaceholder } from '@assets/placeholders';
 import { ErpPriceData } from '@utils/transform/erp-prices';
+import cn from 'classnames';
 
 interface TimeProductCardProps {
   product: Product & { variantCount?: number };
   lang: string;
   priceData?: ErpPriceData;
+  className?: string;
+  forceShowReminderToggle?: boolean;
 }
 
 export default function TimeProductCard({
   product,
   lang,
   priceData,
+  className,
 }: TimeProductCardProps) {
   const { name, image, sku, brand, parent_sku } = product ?? {};
   const { openModal } = useModalAction();
@@ -54,8 +58,11 @@ export default function TimeProductCard({
   return (
     <article
       onClick={handleClick}
-      className="min-w-[210px] max-w-[210px] shrink-0 bg-white rounded-xl border border-[var(--time-gray-100)] overflow-hidden cursor-pointer transition-all duration-[250ms] hover:shadow-[0_8px_28px_rgba(0,0,0,0.08)] hover:-translate-y-[3px]"
-      style={{ scrollSnapAlign: 'start' }}
+      className={cn(
+        'bg-white rounded-xl border border-[var(--time-gray-100)] overflow-hidden cursor-pointer transition-all duration-[250ms] hover:shadow-[0_8px_28px_rgba(0,0,0,0.08)] hover:-translate-y-[3px]',
+        className ?? 'min-w-[210px] max-w-[210px] shrink-0',
+      )}
+      style={className ? undefined : { scrollSnapAlign: 'start' }}
     >
       {/* Image area */}
       <div className="aspect-square relative bg-gradient-to-br from-[var(--time-gray-50)] to-[var(--time-gray-100)]">
@@ -67,7 +74,11 @@ export default function TimeProductCard({
           }
           alt={name || 'Product'}
           fill
-          sizes="210px"
+          sizes={
+            className
+              ? '(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw'
+              : '210px'
+          }
           className="object-cover"
         />
 

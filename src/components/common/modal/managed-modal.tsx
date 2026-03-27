@@ -6,12 +6,13 @@ import {
   useModalAction,
   useModalState,
 } from '@components/common/modal/modal.context';
+import { getThemedComponent } from '@/lib/theme/registry';
 const LoginForm = dynamic(() => import('@components/auth/login-form'));
 const SignUpForm = dynamic(() => import('@components/auth/sign-up-form'));
 const ForgetPasswordForm = dynamic(
   () => import('@components/auth/forget-password-form'),
 );
-const ProductPopup = dynamic(() => import('@components/product/product-popup'));
+const ProductPopup = getThemedComponent('ProductPopup');
 const AddressPopup = dynamic(
   () => import('@components/common/form/add-address'),
 );
@@ -27,9 +28,7 @@ const DeliveryAddresses = dynamic(
 const CategoryPopup = dynamic(
   () => import('@components/category/category-popup'),
 );
-const B2BProductVariantsQuickView = dynamic(
-  () => import('@components/product/b2b-product-variants-quick-view'),
-);
+const B2BProductVariantsQuickView = getThemedComponent('VariantsQuickView');
 const RadioPlayerModal = dynamic(
   () => import('@components/radio/radio-player-modal'),
 );

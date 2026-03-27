@@ -3,12 +3,22 @@
 
 import { useSelectedLayoutSegments, useParams } from 'next/navigation';
 import SidebarMenu from '@components/account/sidebar-menu';
+import { isTimeTheme } from '@/lib/theme/resolver';
+import dynamic from 'next/dynamic';
+
+const TimeAccountLayout = dynamic(
+  () => import('@/components/themes/time/account/time-account-layout'),
+);
 
 export default function AccountLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  if (isTimeTheme()) {
+    return <TimeAccountLayout>{children}</TimeAccountLayout>;
+  }
+
   // Segments inside /[lang]/account/*
   const segments = useSelectedLayoutSegments();
   const params = useParams<{ lang?: string }>();
