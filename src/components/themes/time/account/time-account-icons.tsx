@@ -1,4 +1,8 @@
-const s = { fill: 'none', stroke: 'currentColor', strokeLinecap: 'round' as const };
+const s = {
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeLinecap: 'round' as const,
+};
 
 export function IconGrid() {
   return (

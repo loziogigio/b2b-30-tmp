@@ -12,6 +12,7 @@ import Link from 'next/link';
 import cn from 'classnames';
 import CartTableB2B from '@components/cart/cart-table-b2b';
 import CheckoutSendOrder from '@components/checkout/checkout-send-order';
+import ProcessingOrdersTable from '@components/checkout/processing-orders-table';
 import { useCart } from '@contexts/cart/cart.context';
 import CartTotals from './cart-totals';
 import CartListSidebar from './cart-list-sidebar';
@@ -257,6 +258,11 @@ export default function CheckoutFlow({
                 <CheckoutSendOrder lang={lang} />
               </div>
             </div>
+          </div>
+
+          {/* Processing Orders */}
+          <div className="mt-6">
+            <ProcessingOrdersTable />
           </div>
         </div>
       </div>

@@ -149,8 +149,7 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
     ? product.variations
     : [];
   const isMultiVariantParent =
-    (product.variantCount && product.variantCount > 1) ||
-    variations.length > 1;
+    (product.variantCount && product.variantCount > 1) || variations.length > 1;
 
   if (isMultiVariantParent) {
     return (

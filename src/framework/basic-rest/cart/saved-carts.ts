@@ -1,13 +1,14 @@
-import { post } from '@framework/utils/httpB2B';
-import { API_ENDPOINTS_B2B } from '@framework/utils/api-endpoints-b2b';
+import { get as pimGet, post as pimPost } from '@framework/utils/httpPIM';
+import { CS_CART } from '@framework/utils/api-endpoints-cs';
 import { ERP_STATIC, setErpStatic } from '@framework/utils/static';
+import { ensureActiveCart } from './b2b-cart';
 
 export type SavedCartStatus = 'A' | 'S' | string;
 
 export interface SavedCartSummary {
-  cartId: number;
+  cartId: string;
   label: string;
-  hasCustomLabel: boolean; // true if user explicitly saved with a name
+  hasCustomLabel: boolean;
   status: SavedCartStatus;
   netTotal: number;
   grossTotal: number;
@@ -17,45 +18,6 @@ export interface SavedCartSummary {
   updatedAt?: string | null;
   itemsCount?: number;
 }
-
-interface SavedCartListResponse {
-  data: Array<{
-    customer_code: string;
-    cart_id: number;
-    address_code: string;
-    status: SavedCartStatus;
-    net_total?: number;
-    gross_total?: number;
-    vat_total?: number;
-    document_total?: number;
-    delivery_date?: string | null;
-    updated_at?: string | null;
-    cart_name?: string | null;
-    items_count?: number;
-  }>;
-  count: number;
-  page: number;
-  limit: number;
-}
-
-const toSavedCart = (
-  entry: SavedCartListResponse['data'][number],
-): SavedCartSummary => {
-  const customLabel = entry.cart_name?.trim();
-  return {
-    cartId: entry.cart_id,
-    label: customLabel || `Cart #${entry.cart_id}`,
-    hasCustomLabel: Boolean(customLabel),
-    status: entry.status,
-    netTotal: Number(entry.net_total ?? 0),
-    grossTotal: Number(entry.gross_total ?? 0),
-    vatTotal: Number(entry.vat_total ?? 0),
-    documentTotal: Number(entry.document_total ?? 0),
-    deliveryDate: entry.delivery_date ?? null,
-    updatedAt: entry.updated_at ?? null,
-    itemsCount: entry.items_count,
-  };
-};
 
 const ensureCustomerContext = () => {
   const { customer_code, address_code } = ERP_STATIC;
@@ -71,85 +33,99 @@ export async function listSavedCarts(options?: {
 }) {
   ensureCustomerContext();
 
-  const payload = {
+  const params: Record<string, any> = {
+    customer_code: ERP_STATIC.customer_code,
+    address_code: ERP_STATIC.address_code,
     page: options?.page ?? 1,
     limit: options?.limit ?? 50,
-    filters: {
-      customer_code: ERP_STATIC.customer_code,
-      address_code: ERP_STATIC.address_code,
-      username: ERP_STATIC.username,
-      ...(options?.status ? { status: options.status } : {}),
-    },
   };
 
-  const raw = await post<SavedCartListResponse>(
-    API_ENDPOINTS_B2B.CART_SAVED_LIST,
-    payload,
-  );
-  const carts = (raw?.data ?? []).map(toSavedCart);
+  const raw = await pimGet<any>(CS_CART.SAVED, params);
+  const savedCarts = raw?.saved_carts ?? [];
 
-  // API may update server-side active cart id; keep ERP_STATIC in sync when we detect active
-  const active = carts.find((c) => c.status === 'A');
-  if (active) {
-    setErpStatic({ id_cart: String(active.cartId) });
-  }
+  const carts: SavedCartSummary[] = savedCarts.map((cart: any) => ({
+    cartId: cart.order_id,
+    label:
+      cart.cart_name?.trim() || `Cart #${cart.cart_number ?? cart.order_id}`,
+    hasCustomLabel: Boolean(cart.cart_name?.trim()),
+    status: 'S', // saved carts are always parked
+    netTotal: Number(cart.subtotal_net ?? 0),
+    grossTotal: Number(cart.subtotal_gross ?? 0),
+    vatTotal: 0,
+    documentTotal: Number(cart.order_total ?? 0),
+    deliveryDate: null,
+    updatedAt: cart.updated_at ?? null,
+    itemsCount: cart.item_count ?? 0,
+  }));
 
   return {
     carts,
-    total: raw?.count ?? carts.length,
-    page: raw?.page ?? payload.page,
-    limit: raw?.limit ?? payload.limit,
+    total: raw?.pagination?.total ?? carts.length,
+    page: raw?.pagination?.page ?? options?.page ?? 1,
+    limit: raw?.pagination?.limit ?? options?.limit ?? 50,
   };
 }
 
-export async function saveCart(options: {
-  cartId: number | string;
-  label: string;
-}) {
+export async function saveCart(options: { cartId: string; label: string }) {
   ensureCustomerContext();
 
-  const payload = {
+  const orderId = options.cartId || ERP_STATIC.vinc_order_id;
+  if (!orderId) throw new Error('No active cart to save');
+
+  await pimPost(CS_CART.SAVE, {
+    order_id: orderId,
+    cart_name: options.label,
+  });
+
+  // After saving (parking), create a new active cart
+  await ensureActiveCart();
+
+  return {
+    cartId: orderId,
     label: options.label,
-    cart_id: Number(options.cartId),
-    customer_code: ERP_STATIC.customer_code,
-    address_code: ERP_STATIC.address_code,
-  };
-
-  const raw = await post(API_ENDPOINTS_B2B.CART_SAVE, payload);
-  return toSavedCart(raw as SavedCartListResponse['data'][number]);
+    hasCustomLabel: true,
+    status: 'S' as SavedCartStatus,
+    netTotal: 0,
+    grossTotal: 0,
+    vatTotal: 0,
+    documentTotal: 0,
+    deliveryDate: null,
+    updatedAt: null,
+  } satisfies SavedCartSummary;
 }
 
-export async function activateCart(options: { cartId: number | string }) {
+export async function activateCart(options: { cartId: string }) {
   ensureCustomerContext();
 
-  const payload = {
-    cart_id: Number(options.cartId),
+  const raw = await pimPost<any>(CS_CART.ACTIVATE, {
+    order_id: options.cartId,
     customer_code: ERP_STATIC.customer_code,
     address_code: ERP_STATIC.address_code,
-  };
+  });
 
-  const raw = await post(API_ENDPOINTS_B2B.CART_ACTIVATE, payload);
-  const summary = toSavedCart(raw as SavedCartListResponse['data'][number]);
+  const newOrderId = raw.order_id || raw.cart_id;
+  setErpStatic({ vinc_order_id: newOrderId });
 
-  setErpStatic({ id_cart: String(summary.cartId) });
-
-  return summary;
+  return {
+    cartId: newOrderId,
+    label: raw.cart_name || '',
+    hasCustomLabel: Boolean(raw.cart_name),
+    status: 'A' as SavedCartStatus,
+    netTotal: 0,
+    grossTotal: 0,
+    vatTotal: 0,
+    documentTotal: 0,
+    deliveryDate: null,
+    updatedAt: null,
+  } satisfies SavedCartSummary;
 }
 
 export async function deactivateCart(options: {
-  cartId: number | string;
+  cartId: string;
   label?: string;
 }) {
-  ensureCustomerContext();
-
-  // API requires label field - use existing label or empty string for unsaved carts
-  const payload = {
-    cart_id: Number(options.cartId),
-    customer_code: ERP_STATIC.customer_code,
-    address_code: ERP_STATIC.address_code,
-    label: options.label || '', // Empty string for carts without custom label
-  };
-
-  const raw = await post(API_ENDPOINTS_B2B.CART_SAVE, payload);
-  return toSavedCart(raw as SavedCartListResponse['data'][number]);
+  return saveCart({
+    cartId: options.cartId,
+    label: options.label || '',
+  });
 }

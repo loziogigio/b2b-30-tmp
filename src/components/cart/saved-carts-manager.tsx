@@ -32,7 +32,7 @@ interface SavedCartsManagerProps {
 }
 
 type CartDetailsState = Record<
-  number,
+  string,
   {
     items?: Item[];
     loading: boolean;
@@ -64,26 +64,26 @@ const formatDate = (value?: string | null) => {
   }
 };
 
-const ensureCartId = (id: unknown) => {
-  const num = Number(id);
-  return Number.isFinite(num) ? num : NaN;
+const ensureCartId = (id: unknown): string => {
+  if (id == null || id === '') return '';
+  return String(id);
 };
 
 const SavedCartsManager: React.FC<SavedCartsManagerProps> = ({ lang }) => {
   const { t } = useTranslation(lang, 'common');
   const { meta, getCart, items: activeItems } = useCart();
   const activeCartId = useMemo(
-    () => ensureCartId(meta?.idCart),
-    [meta?.idCart],
+    () => ensureCartId(meta?.orderId ?? meta?.idCart),
+    [meta?.orderId, meta?.idCart],
   );
 
   const [label, setLabel] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [activatingId, setActivatingId] = useState<number | null>(null);
-  const [deactivatingId, setDeactivatingId] = useState<number | null>(null);
-  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [activatingId, setActivatingId] = useState<string | null>(null);
+  const [deactivatingId, setDeactivatingId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [details, setDetails] = useState<CartDetailsState>({});
   const detailsRef = useRef<CartDetailsState>({});
   const [isListOpen, setListOpen] = useState(false);
@@ -115,12 +115,12 @@ const SavedCartsManager: React.FC<SavedCartsManagerProps> = ({ lang }) => {
   );
 
   const activeCartRecord = useMemo(() => {
-    if (!Number.isFinite(activeCartId)) return null;
-    return carts.find((cart) => cart.cartId === Number(activeCartId));
+    if (!!!activeCartId) return null;
+    return carts.find((cart) => cart.cartId === activeCartId);
   }, [carts, activeCartId]);
 
   const canSaveCurrentCart = useMemo(() => {
-    if (!Number.isFinite(activeCartId)) return false;
+    if (!!!activeCartId) return false;
     if (!savedCartsQuery.isSuccess) return true;
     const label = activeCartRecord?.label?.trim();
     return !label;
@@ -128,12 +128,12 @@ const SavedCartsManager: React.FC<SavedCartsManagerProps> = ({ lang }) => {
 
   const activeCartItemsCount = useMemo(() => {
     if (Array.isArray(activeItems)) return activeItems.length;
-    if (!Number.isFinite(activeCartId)) return 0;
-    return details[Number(activeCartId)]?.items?.length ?? 0;
+    if (!!!activeCartId) return 0;
+    return details[activeCartId]?.items?.length ?? 0;
   }, [activeItems, activeCartId, details]);
 
   const prefetchCartDetails = useCallback(
-    async (cartId: number, force = false) => {
+    async (cartId: string, force = false) => {
       const snapshot = detailsRef.current[cartId];
       if (!force && snapshot?.items && !snapshot.error) {
         return snapshot.items;
@@ -181,10 +181,10 @@ const SavedCartsManager: React.FC<SavedCartsManagerProps> = ({ lang }) => {
   );
 
   useEffect(() => {
-    if (!Number.isFinite(activeCartId)) return;
+    if (!!!activeCartId) return;
     setDetails((prev) => ({
       ...prev,
-      [Number(activeCartId)]: {
+      [activeCartId]: {
         items: Array.isArray(activeItems) ? activeItems : [],
         loading: false,
         error: undefined,
@@ -204,8 +204,8 @@ const SavedCartsManager: React.FC<SavedCartsManagerProps> = ({ lang }) => {
         return;
       }
 
-      const cartId = ensureCartId(meta?.idCart);
-      if (!Number.isFinite(cartId)) {
+      const cartId = ensureCartId(meta?.orderId ?? meta?.idCart);
+      if (!cartId) {
         setFormError(t('text-saved-cart-no-active'));
         return;
       }
@@ -226,7 +226,7 @@ const SavedCartsManager: React.FC<SavedCartsManagerProps> = ({ lang }) => {
   );
 
   const handleActivate = useCallback(
-    async (cartId: number) => {
+    async (cartId: string) => {
       setActionError(null);
       setActivatingId(cartId);
       try {
@@ -244,13 +244,13 @@ const SavedCartsManager: React.FC<SavedCartsManagerProps> = ({ lang }) => {
   );
 
   const handleDeactivate = useCallback(
-    async (cartId: number, label?: string | null) => {
+    async (cartId: string, label?: string | null) => {
       setActionError(null);
       setDeactivatingId(cartId);
       try {
         await deactivateSavedCart({ cartId, label: label ?? undefined });
         await savedCartsQuery.refetch();
-        if (Number.isFinite(activeCartId) && Number(activeCartId) === cartId) {
+        if (activeCartId && activeCartId === cartId) {
           await getCart('replace');
         }
       } catch (error) {
@@ -264,7 +264,7 @@ const SavedCartsManager: React.FC<SavedCartsManagerProps> = ({ lang }) => {
   );
 
   const togglePreview = useCallback(
-    async (cartId: number) => {
+    async (cartId: string) => {
       if (expandedId === cartId) {
         setExpandedId(null);
         return;
@@ -427,8 +427,7 @@ const SavedCartsManager: React.FC<SavedCartsManagerProps> = ({ lang }) => {
                   carts.map((cart) => {
                     const cartDetails = details[cart.cartId];
                     const isActive =
-                      Number.isFinite(activeCartId) &&
-                      cart.cartId === activeCartId;
+                      !!activeCartId && cart.cartId === activeCartId;
                     const isExpanded = expandedId === cart.cartId;
                     const itemsCount = cartDetails?.items?.length;
 

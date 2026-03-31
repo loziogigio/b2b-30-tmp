@@ -11,7 +11,9 @@ interface TimeAccountPasswordProps {
   lang: string;
 }
 
-export default function TimeAccountPassword({ lang }: TimeAccountPasswordProps) {
+export default function TimeAccountPassword({
+  lang,
+}: TimeAccountPasswordProps) {
   const { t } = useTranslation(lang, 'common');
   const { mutateAsync, isPending } = useChangePasswordMutation();
 
@@ -58,7 +60,8 @@ export default function TimeAccountPassword({ lang }: TimeAccountPasswordProps) 
       </h3>
       <p className="text-[13px] text-[var(--time-gray-400)] font-[var(--font-body)] mb-6">
         {t('text-change-password-desc', {
-          defaultValue: 'Aggiorna la tua password per mantenere il tuo account sicuro.',
+          defaultValue:
+            'Aggiorna la tua password per mantenere il tuo account sicuro.',
         })}
       </p>
 
@@ -108,7 +111,9 @@ export default function TimeAccountPassword({ lang }: TimeAccountPasswordProps) 
               onClick={() => setShowCurrent((v) => !v)}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-[var(--time-gray-400)] hover:text-[var(--time-dark)]"
             >
-              {showCurrent ? t('HIDE', { defaultValue: 'Nascondi' }) : t('SHOW', { defaultValue: 'Mostra' })}
+              {showCurrent
+                ? t('HIDE', { defaultValue: 'Nascondi' })
+                : t('SHOW', { defaultValue: 'Mostra' })}
             </button>
           </div>
         </div>
@@ -132,7 +137,9 @@ export default function TimeAccountPassword({ lang }: TimeAccountPasswordProps) 
               onClick={() => setShowNew((v) => !v)}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-[var(--time-gray-400)] hover:text-[var(--time-dark)]"
             >
-              {showNew ? t('HIDE', { defaultValue: 'Nascondi' }) : t('SHOW', { defaultValue: 'Mostra' })}
+              {showNew
+                ? t('HIDE', { defaultValue: 'Nascondi' })
+                : t('SHOW', { defaultValue: 'Mostra' })}
             </button>
           </div>
         </div>

@@ -2,20 +2,43 @@
 
 import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { post } from '@framework/utils/httpB2B';
-import { API_ENDPOINTS_B2B } from '@framework/utils/api-endpoints-b2b';
-import { ERP_STATIC } from '@framework/utils/static';
-import { useCart } from '@contexts/cart/cart.context';
-import { mapServerCart } from '@utils/adapter/cart-adapter';
 import {
-  sameLine,
-  type CartSummary,
-  type Item,
-} from '@contexts/cart/cart.utils';
+  get as pimGet,
+  post as pimPost,
+  patch as pimPatch,
+  del as pimDel,
+} from '@framework/utils/httpPIM';
+import { CS_CART } from '@framework/utils/api-endpoints-cs';
+import { ERP_STATIC, setErpStatic } from '@framework/utils/static';
+import { useCart } from '@contexts/cart/cart.context';
+import {
+  mapCSOrderToCart,
+  buildAddItemRequest,
+} from '@utils/adapter/cart-adapter';
+import type { CartSummary, Item } from '@contexts/cart/cart.utils';
 import { AddToCartInput } from '@utils/transform/cart';
 import { useUI } from '@contexts/ui.context';
 
-// ----- fetch cart  -----
+// ----- ensure active cart -----
+
+export async function ensureActiveCart(): Promise<string> {
+  const res = await pimPost<any>(CS_CART.ACTIVE, {
+    customer_code: ERP_STATIC.customer_code,
+    address_code: ERP_STATIC.address_code,
+    channel: 'b2b',
+  });
+  const orderId = res.cart_id || res.order_id;
+  setErpStatic({ vinc_order_id: orderId });
+  return orderId;
+}
+
+async function getOrderId(): Promise<string> {
+  if (ERP_STATIC.vinc_order_id) return ERP_STATIC.vinc_order_id;
+  return ensureActiveCart();
+}
+
+// ----- fetch cart -----
+
 export interface FetchCartOptions {
   cartId?: string | number;
   customerCode?: string;
@@ -26,14 +49,14 @@ export interface FetchCartOptions {
 export const fetchCartData = async (
   options?: FetchCartOptions,
 ): Promise<{ items: Item[]; summary: CartSummary }> => {
-  const res = await post<any>(API_ENDPOINTS_B2B.GET_CART, {
-    id_cart: options?.cartId ?? ERP_STATIC.id_cart,
-    client_id: options?.customerCode ?? ERP_STATIC.customer_code,
-    address_code: options?.addressCode ?? ERP_STATIC.address_code,
-    username: options?.username ?? ERP_STATIC.username,
-    ext_call: ERP_STATIC.ext_call,
-  });
-  return mapServerCart(res);
+  // Always go through cart/active to get or create a valid draft cart,
+  // following the same pattern as dfl-b2b's getCartList.
+  const orderId = options?.cartId
+    ? String(options.cartId)
+    : await ensureActiveCart();
+
+  const res = await pimGet<any>(CS_CART.ORDER(orderId), { limit: 500 });
+  return mapCSOrderToCart(res);
 };
 
 export const useCartQuery = () => {
@@ -50,31 +73,17 @@ export const useCartQuery = () => {
   });
 };
 
-// delete the whole cart (id_cart)
-export async function deleteCart(id_cart: number | string) {
-  const base = {
-    id_cart,
-    client_id: ERP_STATIC.customer_code,
-    address_code: ERP_STATIC.address_code,
-    ext_call: ERP_STATIC.ext_call,
-  };
-  // if your DELETE_CART also accepts row_id, you can add it optionally
-  return post(API_ENDPOINTS_B2B.DELETE_CART, {
-    ...base,
-    id_cart: String(id_cart),
-  });
+// ----- delete cart -----
+
+export async function deleteCart(idCart: number | string) {
+  const orderId = String(idCart) || (await getOrderId());
+  return pimDel(CS_CART.ORDER(orderId));
 }
 
-/**
- * Add or update cart line:
- * - If a matching line exists → /wrapper/update_cart with cart_rows[]
- * - Else → /wrapper/add_to_cart or /wrapper/add_to_cart_promo with FULL BODY like your examples
- */
-// helper to extract the server row id
-const getRowId = (it: any) => it.rowId ?? it.row_id;
+// ----- add / update / remove cart item -----
 
 /**
- * Add / Update / Remove cart line
+ * Add / Update / Remove cart line via commerce-suite API.
  * - quantity === 0  → REMOVE matching row(s)
  * - quantity  >  0  → UPDATE if match, else ADD
  */
@@ -84,7 +93,6 @@ export async function addOrUpdateCartItem(
   summary: CartSummary | null | undefined,
   sourceItem?: Item,
 ) {
-  // basic guards
   if (input.quantity == null || Number.isNaN(Number(input.quantity))) {
     return { status: 'exception', msg: 'no-valid-quantity' };
   }
@@ -92,91 +100,50 @@ export async function addOrUpdateCartItem(
     return { status: 'exception', msg: 'negative-quantity-not-allowed' };
   }
 
-  const id_cart = summary?.idCart ?? 0;
-  const base = {
-    id_cart,
-    client_id: ERP_STATIC.customer_code,
-    address_code: ERP_STATIC.address_code,
-    ext_call: ERP_STATIC.ext_call,
-  };
+  const orderId = summary?.orderId || (await getOrderId());
 
-  // Find matches first (id + promo_code + promo_row per your simplified matcher)
-  const matches = cartItems.filter((it) => sameLine(it, input));
+  // Find matches by entity_code + promo identity
+  const inputId = String(input.item_id);
+  const inputPromoCode = String(input.promo_code ?? 0);
+  const inputPromoRow = String(input.promo_row ?? 0);
+
+  const matches = cartItems.filter((it) => {
+    return (
+      String(it.id) === inputId &&
+      String(it.promo_code ?? 0) === inputPromoCode &&
+      String(it.promo_row ?? 0) === inputPromoRow
+    );
+  });
 
   // --- REMOVE when quantity === 0 ---
   if (input.quantity === 0) {
     if (matches.length === 0) {
       return { status: 'not-found', msg: 'no-matching-row' };
     }
-
-    // one POST per row, with the exact payload shape you specified
-    const removes = matches.map((it) =>
-      post(API_ENDPOINTS_B2B.REMOVE_CART_ITEM, {
-        ...base,
-        row_id: String(getRowId(it)),
-        id_cart: String(id_cart),
-      }),
-    );
-
-    // Return single result if one row, otherwise all results
-    return removes.length === 1 ? removes[0] : Promise.all(removes);
-  }
-
-  if (matches.length > 0) {
-    const cart_rows = matches.map((it) => ({
-      row_id: getRowId(it),
-      quantity: input.quantity,
-      qty_min_packing:
-        input.qty_min_packing ??
-        (it as any).qty_min_packing ??
-        (it as any).qty_min_imballo ??
-        (it as any).__cartMeta?.qty_min_imballo,
-      promo_code: input.promo_code ?? (it as any).promo_code ?? 0,
-      promo_row: input.promo_row ?? (it as any).promo_row ?? 0,
-    }));
-
-    return post(API_ENDPOINTS_B2B.UPDATE_CART, {
-      ...base,
-      cart_rows,
+    const lineNumbers = matches
+      .map((it) => Number(it.rowId))
+      .filter((n) => !isNaN(n));
+    return pimDel(CS_CART.ITEMS(orderId), {
+      data: { line_numbers: lineNumbers },
     });
   }
 
-  // --- ADD if no match ---
-  const body = {
-    ...base,
-    item_id: input.item_id,
-    quantity: input.quantity,
-
-    // prices
-    price: input.price ?? 0,
-    price_discount: input.price_discount ?? 0,
-    vat_perc: input.vat_perc ?? 0,
-
-    // discounts
-    discount1: input.discount1 ?? 0,
-    discount2: input.discount2 ?? 0,
-    discount3: input.discount3 ?? 0,
-    discount4: input.discount4 ?? 0,
-    discount5: input.discount5 ?? 0,
-    discount6: input.discount6 ?? 0,
-
-    // packaging + list
-    qty_min_packing: input.qty_min_packing ?? 1,
-    listino_type: input.listino_type ?? '1',
-    listino_code: input.listino_code ?? 'VEND',
-
-    // promo identity
-    promo_code: input.promo_code ?? 0,
-    promo_row: input.promo_row ?? 0,
-  };
-
-  if (body.promo_code && String(body.promo_code) !== '0') {
-    return post(API_ENDPOINTS_B2B.ADD_TO_CART_PROMO, body);
+  // --- UPDATE if match exists ---
+  if (matches.length > 0) {
+    const items = matches.map((it) => ({
+      line_number: Number(it.rowId),
+      quantity: input.quantity,
+    }));
+    return pimPatch(CS_CART.ITEMS(orderId), { items });
   }
-  return post(API_ENDPOINTS_B2B.ADD_TO_CART, body);
+
+  // --- ADD if no match ---
+  const addBody = buildAddItemRequest(input, sourceItem);
+  return pimPost(CS_CART.ITEMS(orderId), addBody);
 }
 
-// ----- hydrator  -----
+// ----- hydrator -----
+
 export default function CartHydrator() {
   const { data, isSuccess } = useCartQuery();
   const { hydrateFromServer, setCartSummary } = useCart();

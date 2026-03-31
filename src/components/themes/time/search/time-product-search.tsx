@@ -162,7 +162,8 @@ export const TimeProductSearch: FC<TimeProductSearchProps> = ({
       if (source === 'likes') {
         const res = await apiGetUserLikes(pageParam, pageSizeParam);
         const skus = (res?.likes || []).map((l: any) => l.sku).filter(Boolean);
-        if (!skus.length) return { items: [], nextPage: null, total: res?.total_count ?? 0 };
+        if (!skus.length)
+          return { items: [], nextPage: null, total: res?.total_count ?? 0 };
         const result = await fetchPimProductList({
           lang,
           filters: { sku: skus, ...urlFiltersForSpecialQuery },
@@ -179,7 +180,8 @@ export const TimeProductSearch: FC<TimeProductSearchProps> = ({
         const skus = (res?.reminders || [])
           .map((r: any) => r.sku)
           .filter(Boolean);
-        if (!skus.length) return { items: [], nextPage: null, total: res?.total_count ?? 0 };
+        if (!skus.length)
+          return { items: [], nextPage: null, total: res?.total_count ?? 0 };
         const result = await fetchPimProductList({
           lang,
           filters: { sku: skus, ...urlFiltersForSpecialQuery },
@@ -200,7 +202,12 @@ export const TimeProductSearch: FC<TimeProductSearchProps> = ({
       const skus = (trendingPage?.items || [])
         .map((x: any) => x.sku)
         .filter(Boolean);
-      if (!skus.length) return { items: [], nextPage: null, total: trendingPage?.total_count ?? 0 };
+      if (!skus.length)
+        return {
+          items: [],
+          nextPage: null,
+          total: trendingPage?.total_count ?? 0,
+        };
       const result = await fetchPimProductList({
         lang,
         filters: { sku: skus, ...urlFiltersForSpecialQuery },
@@ -339,8 +346,9 @@ export const TimeProductSearch: FC<TimeProductSearchProps> = ({
     router.push(`${pathname}${url.search}`, { scroll: false });
   };
 
-  const totalItems = data?.pages?.[0]?.total
-    ?? (data?.pages
+  const totalItems =
+    data?.pages?.[0]?.total ??
+    (data?.pages
       ? data.pages.reduce(
           (sum: number, p: any) => sum + (p?.items?.length || 0),
           0,

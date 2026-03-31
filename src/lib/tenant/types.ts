@@ -63,6 +63,8 @@ export interface TenantConfig {
   homeSettingsCustomerId?: string;
   /** Builder/preview URL */
   builderUrl?: string;
+  /** B2B storefront theme (e.g., "default", "time") */
+  b2bTheme?: string;
   /** Whether this tenant is active */
   isActive: boolean;
   /** Timestamps */
@@ -95,6 +97,7 @@ export interface TenantPublicInfo {
   projectCode: string;
   requireLogin?: boolean;
   builderUrl?: string;
+  b2bTheme?: string;
 }
 
 /**
@@ -123,6 +126,7 @@ export function toPublicInfo(tenant: TenantConfig): TenantPublicInfo {
     projectCode: tenant.projectCode,
     requireLogin: tenant.requireLogin,
     builderUrl: tenant.builderUrl,
+    b2bTheme: tenant.b2bTheme,
   };
 }
 
@@ -157,6 +161,7 @@ export function buildTenantFromEnv(): TenantConfig {
     homeSettingsCustomerId:
       process.env.NEXT_PUBLIC_HOME_SETTINGS_CUSTOMER_ID || 'default',
     builderUrl: process.env.NEXT_PUBLIC_B2B_BUILDER_URL || '',
+    b2bTheme: process.env.NEXT_PUBLIC_THEME || 'default',
     isActive: true,
   };
 }

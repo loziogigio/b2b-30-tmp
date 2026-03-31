@@ -5,6 +5,7 @@ import { AddToCartInput } from '@utils/transform/cart';
 import { PackagingOption } from '@utils/transform/erp-prices';
 
 export interface CartSummary {
+  orderId?: string;
   idCart: string | number;
   clientId: string | number;
   addressCode?: string;

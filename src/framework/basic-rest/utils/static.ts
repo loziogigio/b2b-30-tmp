@@ -10,6 +10,8 @@ export type ErpStaticState = {
   vinc_address_id?: string;
   // Tenant/project code for multi-tenant deployments
   project_code?: string;
+  // Commerce-suite active cart order_id
+  vinc_order_id?: string;
 };
 
 // Persistent key
@@ -134,6 +136,7 @@ export function clearErpStatic() {
       ext_call: true,
       vinc_customer_id: undefined,
       vinc_address_id: undefined,
+      vinc_order_id: undefined,
     });
   } catch {}
 }
@@ -165,6 +168,7 @@ export function clearAllB2BSessionData() {
       ext_call: true,
       vinc_customer_id: undefined,
       vinc_address_id: undefined,
+      vinc_order_id: undefined,
     });
   } catch {}
 }

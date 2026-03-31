@@ -53,8 +53,8 @@ export default function TimeAccountProfile({ lang }: TimeAccountProfileProps) {
     return (
       <TimeCard className="p-6">
         <div className="rounded-[var(--radius-btn)] border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          {t('text-something-wrong', { defaultValue: 'Something went wrong' })} —{' '}
-          {String(error.message)}
+          {t('text-something-wrong', { defaultValue: 'Something went wrong' })}{' '}
+          — {String(error.message)}
         </div>
       </TimeCard>
     );
@@ -96,7 +96,12 @@ export default function TimeAccountProfile({ lang }: TimeAccountProfileProps) {
                 mono
                 copyable
               />
-              <TimeInfoRow label="SDI" value={customer.sdi ?? '—'} mono copyable />
+              <TimeInfoRow
+                label="SDI"
+                value={customer.sdi ?? '—'}
+                mono
+                copyable
+              />
               <TimeInfoRow label="PEC" value={customer.pec ?? '—'} copyable />
               {customer.firstName && (
                 <TimeInfoRow
@@ -131,7 +136,9 @@ export default function TimeAccountProfile({ lang }: TimeAccountProfileProps) {
             <div className="mb-5">
               <div className="text-[11px] font-bold text-[var(--time-dark)] font-[var(--font-body)] mb-1.5 flex items-center gap-1.5">
                 <IconMapPin />
-                {t('text-billing-address', { defaultValue: 'Indirizzo di Fatturazione' })}
+                {t('text-billing-address', {
+                  defaultValue: 'Indirizzo di Fatturazione',
+                })}
               </div>
               <div className="text-[13px] text-[var(--time-gray-500)] font-[var(--font-body)] bg-[var(--time-gray-50)] p-3 rounded-[var(--radius-btn)]">
                 {legalSeat.address.street_address}
@@ -146,7 +153,9 @@ export default function TimeAccountProfile({ lang }: TimeAccountProfileProps) {
             <div className="space-y-3">
               <div className="text-[11px] font-bold text-[var(--time-dark)] font-[var(--font-body)] mb-1.5 flex items-center gap-1.5">
                 <IconTruck />
-                {t('text-shipping-addresses', { defaultValue: 'Indirizzi di Spedizione' })}
+                {t('text-shipping-addresses', {
+                  defaultValue: 'Indirizzi di Spedizione',
+                })}
               </div>
               {deliveryAddresses.map((addr) => (
                 <div
@@ -167,7 +176,9 @@ export default function TimeAccountProfile({ lang }: TimeAccountProfileProps) {
 
           {addresses.length === 0 && (
             <div className="text-sm text-[var(--time-gray-400)] p-3 bg-[var(--time-gray-50)] rounded-[var(--radius-btn)]">
-              {t('text-no-address-found', { defaultValue: 'Nessun indirizzo trovato' })}
+              {t('text-no-address-found', {
+                defaultValue: 'Nessun indirizzo trovato',
+              })}
             </div>
           )}
         </TimeCard>

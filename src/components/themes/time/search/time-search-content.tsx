@@ -197,7 +197,13 @@ export default function TimeSearchContent({ lang }: { lang: string }) {
         `}</style>
         <SearchTabs lang={lang} />
       </div>
-      <Element name="grid" className={cn("flex pb-16 pt-7 lg:pt-7 lg:pb-20", sidebarOpen && "gap-6")}>
+      <Element
+        name="grid"
+        className={cn(
+          'flex pb-16 pt-7 lg:pt-7 lg:pb-20',
+          sidebarOpen && 'gap-6',
+        )}
+      >
         {/* Sidebar */}
         <div
           className={cn(

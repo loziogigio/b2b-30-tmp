@@ -1,7 +1,7 @@
 import ManagedModal from '@components/common/modal/managed-modal';
 import { ManagedUIContext } from '@contexts/ui.context';
 import { Inter, Manrope, Figtree, Outfit } from 'next/font/google';
-import { getThemeId } from '@/lib/theme/resolver';
+import { getThemeIdForTenant } from '@/lib/theme/resolver';
 import { dir } from 'i18next';
 import { languages } from '../i18n/settings';
 import ManagedDrawer from '@components/common/drawer/managed-drawer';
@@ -59,8 +59,6 @@ const outfit = Outfit({
   display: 'swap',
   variable: '--font-display',
 });
-
-const themeId = getThemeId();
 
 // Dynamic metadata based on branding and meta_tags from home settings
 export async function generateMetadata(): Promise<Metadata> {
@@ -219,6 +217,9 @@ export default async function RootLayout({
 
   // Convert to public info for client-side (no secrets)
   const tenantPublicInfo = toPublicInfo(tenant);
+
+  // Resolve theme: tenant config > env var > "default"
+  const themeId = getThemeIdForTenant(tenant.b2bTheme);
 
   const homeSettings = await getServerHomeSettings();
   const branding = homeSettings?.branding ?? {

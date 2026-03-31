@@ -135,10 +135,7 @@ export default function TimeAccountSidebar({ lang }: TimeAccountSidebarProps) {
               )}
             >
               <span
-                className={cn(
-                  'flex',
-                  active ? 'opacity-100' : 'opacity-60',
-                )}
+                className={cn('flex', active ? 'opacity-100' : 'opacity-60')}
               >
                 <Icon />
               </span>

@@ -7,7 +7,10 @@ import { TimeCard, TimeStatusBadge } from './time-account-primitives';
 
 const money = (n?: number) =>
   typeof n === 'number'
-    ? new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n)
+    ? new Intl.NumberFormat('it-IT', {
+        style: 'currency',
+        currency: 'EUR',
+      }).format(n)
     : '';
 
 interface TimeAccountFidoProps {
@@ -52,19 +55,51 @@ export default function TimeAccountFido({ lang }: TimeAccountFidoProps) {
 
   const creditPct =
     data.creditLimitTotal > 0
-      ? ((data.creditLimitTotal - data.differenceTotal) / data.creditLimitTotal) * 100
+      ? ((data.creditLimitTotal - data.differenceTotal) /
+          data.creditLimitTotal) *
+        100
       : 0;
 
   const rows: Row[] = [
-    { titleKey: 'exposition-row-direct-remittances', expired: data.directRemittancesExpired, toExpire: data.directRemittancesToExpire, total: data.directRemittancesTotal },
-    { titleKey: 'exposition-row-riba', expired: data.ribaExpired, toExpire: data.ribaToExpire, total: data.ribaTotal },
-    { titleKey: 'exposition-row-unbilled-notes', toExpire: data.unbilledBillsToExpire, total: data.unbilledBillsTotal },
-    { titleKey: 'exposition-row-unfulfilled-orders', toExpire: data.ordersNotFulfilledToExpire, total: data.ordersNotFulfilledTotal },
-    { titleKey: 'exposition-row-to-expire', toExpire: data.prebillsToExpire, total: data.prebillsTotal },
+    {
+      titleKey: 'exposition-row-direct-remittances',
+      expired: data.directRemittancesExpired,
+      toExpire: data.directRemittancesToExpire,
+      total: data.directRemittancesTotal,
+    },
+    {
+      titleKey: 'exposition-row-riba',
+      expired: data.ribaExpired,
+      toExpire: data.ribaToExpire,
+      total: data.ribaTotal,
+    },
+    {
+      titleKey: 'exposition-row-unbilled-notes',
+      toExpire: data.unbilledBillsToExpire,
+      total: data.unbilledBillsTotal,
+    },
+    {
+      titleKey: 'exposition-row-unfulfilled-orders',
+      toExpire: data.ordersNotFulfilledToExpire,
+      total: data.ordersNotFulfilledTotal,
+    },
+    {
+      titleKey: 'exposition-row-to-expire',
+      toExpire: data.prebillsToExpire,
+      total: data.prebillsTotal,
+    },
     { titleKey: 'exposition-row-advances', total: data.advancesTotal },
-    { titleKey: 'exposition-row-total', total: data.total2Total, isTotal: true },
+    {
+      titleKey: 'exposition-row-total',
+      total: data.total2Total,
+      isTotal: true,
+    },
     { titleKey: 'exposition-row-trust-assured', total: data.trustAssuredTotal },
-    { titleKey: 'exposition-row-difference', total: data.differenceTotal, isDifference: true },
+    {
+      titleKey: 'exposition-row-difference',
+      total: data.differenceTotal,
+      isDifference: true,
+    },
   ];
 
   return (
@@ -210,7 +245,9 @@ export default function TimeAccountFido({ lang }: TimeAccountFidoProps) {
                 </div>
                 <div>
                   <div className="text-[10px] uppercase text-[var(--time-gray-400)] mb-0.5">
-                    {t('exposition-col-to-expire', { defaultValue: 'A Scadere' })}
+                    {t('exposition-col-to-expire', {
+                      defaultValue: 'A Scadere',
+                    })}
                   </div>
                   <div className="font-semibold text-[var(--time-dark)] tabular-nums">
                     {r.toExpire != null ? money(r.toExpire) : '—'}
@@ -224,7 +261,9 @@ export default function TimeAccountFido({ lang }: TimeAccountFidoProps) {
                     className={cn(
                       'font-semibold tabular-nums',
                       r.isDifference
-                        ? r.total > 0 ? 'text-emerald-600' : 'text-red-600'
+                        ? r.total > 0
+                          ? 'text-emerald-600'
+                          : 'text-red-600'
                         : 'text-[var(--time-dark)]',
                     )}
                   >

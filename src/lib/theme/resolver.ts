@@ -10,6 +10,16 @@ export function getThemeId(): ThemeId {
   return 'default';
 }
 
+/**
+ * Resolve theme from tenant config, falling back to env var then "default".
+ */
+export function getThemeIdForTenant(tenantTheme?: string): ThemeId {
+  if (tenantTheme && VALID_THEMES.includes(tenantTheme as ThemeId)) {
+    return tenantTheme as ThemeId;
+  }
+  return getThemeId();
+}
+
 export function isTimeTheme(): boolean {
   return getThemeId() === 'time';
 }

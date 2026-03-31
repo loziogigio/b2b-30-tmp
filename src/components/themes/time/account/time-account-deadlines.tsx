@@ -7,12 +7,19 @@ import {
   useCustomerQuery,
 } from '@framework/acccount/fetch-account';
 import { openDeadlinesPrintWindow } from '@/app/[lang]/(default)/account/deadlines/deadlines-export';
-import { TimeCard, TimeIconBox, TimeStatusBadge } from './time-account-primitives';
+import {
+  TimeCard,
+  TimeIconBox,
+  TimeStatusBadge,
+} from './time-account-primitives';
 import { IconCalendar, IconCheck, IconPrint } from './time-account-icons';
 
 const money = (n?: number) =>
   typeof n === 'number'
-    ? new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n)
+    ? new Intl.NumberFormat('it-IT', {
+        style: 'currency',
+        currency: 'EUR',
+      }).format(n)
     : '';
 
 const dateLabel = (iso?: string) => {
@@ -24,7 +31,9 @@ interface TimeAccountDeadlinesProps {
   lang: string;
 }
 
-export default function TimeAccountDeadlines({ lang }: TimeAccountDeadlinesProps) {
+export default function TimeAccountDeadlines({
+  lang,
+}: TimeAccountDeadlinesProps) {
   const { t } = useTranslation(lang, 'common');
   const { data, isLoading, isError, error } = usePaymentDeadlineQuery(true);
   const { data: customer } = useCustomerQuery(true);
@@ -80,7 +89,9 @@ export default function TimeAccountDeadlines({ lang }: TimeAccountDeadlinesProps
             <div className="flex flex-wrap gap-8">
               <div className="flex flex-col">
                 <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--time-gray-400)]">
-                  {t('deadlines-total-general', { defaultValue: 'Totale Generale' })}
+                  {t('deadlines-total-general', {
+                    defaultValue: 'Totale Generale',
+                  })}
                 </span>
                 <span className="text-lg font-black text-[var(--time-dark)] font-[var(--font-display)] tabular-nums">
                   {money(data.totalGeneral)}
@@ -88,7 +99,9 @@ export default function TimeAccountDeadlines({ lang }: TimeAccountDeadlinesProps
               </div>
               <div className="flex flex-col">
                 <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--time-gray-400)]">
-                  {t('deadlines-total-expired', { defaultValue: 'Totale Scaduto' })}
+                  {t('deadlines-total-expired', {
+                    defaultValue: 'Totale Scaduto',
+                  })}
                 </span>
                 <span className="text-lg font-black text-red-600 font-[var(--font-display)] tabular-nums">
                   {money(data.totalExpired)}
@@ -96,7 +109,9 @@ export default function TimeAccountDeadlines({ lang }: TimeAccountDeadlinesProps
               </div>
               <div className="flex flex-col">
                 <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--time-gray-400)]">
-                  {t('deadlines-total-to-expire', { defaultValue: 'Totale A Scadere' })}
+                  {t('deadlines-total-to-expire', {
+                    defaultValue: 'Totale A Scadere',
+                  })}
                 </span>
                 <span className="text-lg font-black text-emerald-600 font-[var(--font-display)] tabular-nums">
                   {money(data.totalToExpire)}
@@ -132,7 +147,13 @@ export default function TimeAccountDeadlines({ lang }: TimeAccountDeadlinesProps
                 <TimeIconBox
                   icon={isPaid ? <IconCheck /> : <IconCalendar />}
                   color={isPaid ? '#059669' : isExpired ? '#dc2626' : '#2563eb'}
-                  bg={isPaid ? 'rgba(5,150,105,0.08)' : isExpired ? 'rgba(220,38,38,0.08)' : 'rgba(37,99,235,0.08)'}
+                  bg={
+                    isPaid
+                      ? 'rgba(5,150,105,0.08)'
+                      : isExpired
+                        ? 'rgba(220,38,38,0.08)'
+                        : 'rgba(37,99,235,0.08)'
+                  }
                   size={40}
                 />
                 <div className="min-w-0">
@@ -151,9 +172,17 @@ export default function TimeAccountDeadlines({ lang }: TimeAccountDeadlinesProps
               </div>
               <div className="flex items-center gap-3 shrink-0 ml-3">
                 <TimeStatusBadge
-                  label={isPaid ? 'Pagata' : isExpired ? 'Scaduta' : 'In scadenza'}
+                  label={
+                    isPaid ? 'Pagata' : isExpired ? 'Scaduta' : 'In scadenza'
+                  }
                   color={isPaid ? '#059669' : isExpired ? '#dc2626' : '#2563eb'}
-                  bg={isPaid ? 'rgba(5,150,105,0.08)' : isExpired ? 'rgba(220,38,38,0.08)' : 'rgba(37,99,235,0.08)'}
+                  bg={
+                    isPaid
+                      ? 'rgba(5,150,105,0.08)'
+                      : isExpired
+                        ? 'rgba(220,38,38,0.08)'
+                        : 'rgba(37,99,235,0.08)'
+                  }
                 />
                 <span className="text-base font-extrabold text-[var(--time-dark)] tabular-nums min-w-[90px] text-right">
                   {money(d.amount)}
@@ -164,7 +193,9 @@ export default function TimeAccountDeadlines({ lang }: TimeAccountDeadlinesProps
         })}
         {rows.length === 0 && (
           <div className="py-8 text-center text-sm text-[var(--time-gray-400)]">
-            {t('text-no-deadlines', { defaultValue: 'Nessuna scadenza trovata' })}
+            {t('text-no-deadlines', {
+              defaultValue: 'Nessuna scadenza trovata',
+            })}
           </div>
         )}
       </TimeCard>

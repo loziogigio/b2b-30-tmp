@@ -11,7 +11,11 @@ import {
   useOpenDocumentAction,
   type DocumentActionKind,
 } from '@framework/documents/fetch-documents-list';
-import { TimeCard, TimeIconBox, TimeStatusBadge } from './time-account-primitives';
+import {
+  TimeCard,
+  TimeIconBox,
+  TimeStatusBadge,
+} from './time-account-primitives';
 import { IconFile, IconDownload } from './time-account-icons';
 
 type Tab = 'F' | 'DDT';
@@ -21,7 +25,9 @@ interface TimeAccountDocumentsProps {
   lang: string;
 }
 
-export default function TimeAccountDocuments({ lang }: TimeAccountDocumentsProps) {
+export default function TimeAccountDocuments({
+  lang,
+}: TimeAccountDocumentsProps) {
   const { t } = useTranslation(lang, 'common');
   const [tab, setTab] = useState<Tab>('F');
   const [query, setQuery] = useState('');
@@ -75,7 +81,10 @@ export default function TimeAccountDocuments({ lang }: TimeAccountDocumentsProps
           return (Number(a.number) - Number(b.number)) * dir;
         case 'date':
         default:
-          return (new Date(a.dateISO).getTime() - new Date(b.dateISO).getTime()) * dir;
+          return (
+            (new Date(a.dateISO).getTime() - new Date(b.dateISO).getTime()) *
+            dir
+          );
       }
     });
     return list;
@@ -83,17 +92,30 @@ export default function TimeAccountDocuments({ lang }: TimeAccountDocumentsProps
 
   const handleSort = (key: SortKey) => {
     if (key === sortKey) setSortAsc(!sortAsc);
-    else { setSortKey(key); setSortAsc(false); }
+    else {
+      setSortKey(key);
+      setSortAsc(false);
+    }
   };
 
-  const SortHeader = ({ k, label, className }: { k: SortKey; label: string; className?: string }) => (
+  const SortHeader = ({
+    k,
+    label,
+    className,
+  }: {
+    k: SortKey;
+    label: string;
+    className?: string;
+  }) => (
     <th
       className={cn('cursor-pointer select-none', className)}
       onClick={() => handleSort(k)}
     >
       <span className="inline-flex items-center gap-1">
         {label}
-        {sortKey === k && <span className="text-[9px]">{sortAsc ? '▲' : '▼'}</span>}
+        {sortKey === k && (
+          <span className="text-[9px]">{sortAsc ? '▲' : '▼'}</span>
+        )}
       </span>
     </th>
   );
@@ -136,7 +158,9 @@ export default function TimeAccountDocuments({ lang }: TimeAccountDocumentsProps
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder={t('text-search-documents', { defaultValue: 'Cerca per destinazione / documento…' })}
+              placeholder={t('text-search-documents', {
+                defaultValue: 'Cerca per destinazione / documento…',
+              })}
               className="h-10 w-full sm:w-80 rounded-[var(--radius-btn)] border border-[var(--time-gray-200)] px-3 text-[13px] font-[var(--font-body)] text-[var(--time-dark)] bg-[var(--time-gray-50)] focus:border-[var(--time-red)] focus:ring-2 focus:ring-[rgba(230,57,70,0.1)] focus:outline-none transition-colors"
             />
           </div>
@@ -147,7 +171,9 @@ export default function TimeAccountDocuments({ lang }: TimeAccountDocumentsProps
             <input
               type="date"
               value={from}
-              onChange={(e) => setRange((r) => ({ ...r, from: e.target.value }))}
+              onChange={(e) =>
+                setRange((r) => ({ ...r, from: e.target.value }))
+              }
               className="h-9 rounded-[var(--radius-btn)] border border-[var(--time-gray-200)] px-2 text-[12px] font-[var(--font-body)]"
             />
             <span>A</span>
@@ -200,20 +226,43 @@ export default function TimeAccountDocuments({ lang }: TimeAccountDocumentsProps
             <table className="min-w-[800px] w-full text-[13px] font-[var(--font-body)]">
               <thead className="sticky top-0 z-10 bg-[var(--time-gray-100)] text-[var(--time-gray-400)] border-b border-[var(--time-gray-200)]">
                 <tr className="text-[10px] font-bold uppercase tracking-[0.06em]">
-                  <SortHeader k="destination" label="Destinazione" className="w-[220px] px-[22px] py-3 text-left" />
-                  <SortHeader k="date" label="Data" className="w-28 px-3 py-3 text-left" />
-                  <SortHeader k="document" label="Documento" className="w-40 px-3 py-3 text-left" />
-                  <SortHeader k="number" label="Numero" className="w-24 px-3 py-3 text-right" />
-                  {!isDDT && <th className="w-16 px-3 py-3 text-center">PDF</th>}
+                  <SortHeader
+                    k="destination"
+                    label="Destinazione"
+                    className="w-[220px] px-[22px] py-3 text-left"
+                  />
+                  <SortHeader
+                    k="date"
+                    label="Data"
+                    className="w-28 px-3 py-3 text-left"
+                  />
+                  <SortHeader
+                    k="document"
+                    label="Documento"
+                    className="w-40 px-3 py-3 text-left"
+                  />
+                  <SortHeader
+                    k="number"
+                    label="Numero"
+                    className="w-24 px-3 py-3 text-right"
+                  />
+                  {!isDDT && (
+                    <th className="w-16 px-3 py-3 text-center">PDF</th>
+                  )}
                   <th className="w-20 px-3 py-3 text-center">Barcode</th>
-                  {!isDDT && <th className="w-16 px-3 py-3 text-center">CSV</th>}
+                  {!isDDT && (
+                    <th className="w-16 px-3 py-3 text-center">CSV</th>
+                  )}
                 </tr>
               </thead>
               <tbody>
                 {rows.map((r) => {
-                  const pdfLoading = loadingKey === keyFor(r, 'pdf') && isPending;
-                  const bcLoading = loadingKey === keyFor(r, 'barcode') && isPending;
-                  const csvLoading = loadingKey === keyFor(r, 'csv') && isPending;
+                  const pdfLoading =
+                    loadingKey === keyFor(r, 'pdf') && isPending;
+                  const bcLoading =
+                    loadingKey === keyFor(r, 'barcode') && isPending;
+                  const csvLoading =
+                    loadingKey === keyFor(r, 'csv') && isPending;
 
                   return (
                     <tr
@@ -271,8 +320,13 @@ export default function TimeAccountDocuments({ lang }: TimeAccountDocumentsProps
                 })}
                 {rows.length === 0 && !isLoading && (
                   <tr>
-                    <td colSpan={7} className="py-8 text-center text-sm text-[var(--time-gray-400)]">
-                      {t('text-no-documents', { defaultValue: 'Nessun documento trovato' })}
+                    <td
+                      colSpan={7}
+                      className="py-8 text-center text-sm text-[var(--time-gray-400)]"
+                    >
+                      {t('text-no-documents', {
+                        defaultValue: 'Nessun documento trovato',
+                      })}
                     </td>
                   </tr>
                 )}

@@ -565,11 +565,7 @@ const TimeProductDetail: React.FC<{
       />
 
       {/* ═══ TABS ═══ */}
-      <TimeProductTabs
-        lang={lang}
-        product={data}
-        zone3Blocks={zone3Blocks}
-      />
+      <TimeProductTabs lang={lang} product={data} zone3Blocks={zone3Blocks} />
 
       {/* ═══ RECENTLY BOUGHT (static) ═══ */}
       <RecentlyBoughtByYou />

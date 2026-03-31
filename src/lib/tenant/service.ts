@@ -41,6 +41,7 @@ interface TenantDocument {
   require_login?: boolean;
   home_settings_customer_id?: string;
   builder_url?: string;
+  b2b_theme?: string;
   status: string;
 }
 
@@ -70,6 +71,7 @@ function fromDocument(doc: TenantDocument): TenantConfig {
     requireLogin: doc.require_login,
     homeSettingsCustomerId: doc.home_settings_customer_id,
     builderUrl: doc.builder_url,
+    b2bTheme: doc.b2b_theme || 'default',
     isActive: doc.status === 'active',
   };
 }

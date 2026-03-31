@@ -6,16 +6,18 @@ import { useCart } from '@contexts/cart/cart.context';
 import { useDeliveryAddress } from '@contexts/address/address.context';
 import { useCustomerQuery } from '@framework/acccount/fetch-account';
 import { formatAddress } from '@utils/format-address';
-import { post } from '@framework/utils/httpB2B';
-import { API_ENDPOINTS_B2B } from '@framework/utils/api-endpoints-b2b';
 import { ERP_STATIC } from '@framework/utils/static';
 import { TimeCard } from '@/components/themes/time/account/time-account-primitives';
 import { useTranslation } from 'src/app/i18n/client';
+import { useOrderSubmit } from '@/hooks/use-order-submit';
+import TimeAnomalyModal from './time-anomaly-modal';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 const money = (n: number) =>
-  new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n);
+  new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(
+    n,
+  );
 
 const isWeekend = (d: Date) => d.getDay() === 0 || d.getDay() === 6;
 const nextBusinessDay = (from = new Date()) => {
@@ -31,7 +33,12 @@ const toLocalISODate = (d: Date) => {
 
 // ── icons ────────────────────────────────────────────────────────────────────
 
-const s = { fill: 'none' as const, stroke: 'currentColor', strokeLinecap: 'round' as const, strokeWidth: 2 };
+const s = {
+  fill: 'none' as const,
+  stroke: 'currentColor',
+  strokeLinecap: 'round' as const,
+  strokeWidth: 2,
+};
 
 const TruckIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" {...s}>
@@ -49,14 +56,30 @@ const ShieldIcon = () => (
 );
 
 const ArrowRight = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
+  <svg
+    width="16"
+    height="16"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2.5}
+    strokeLinecap="round"
+  >
     <line x1="5" y1="12" x2="19" y2="12" />
     <polyline points="12,5 19,12 12,19" />
   </svg>
 );
 
 const CheckCircle = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
+  <svg
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2.5}
+    strokeLinecap="round"
+  >
     <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
     <polyline points="22,4 12,14.01 9,11.01" />
   </svg>
@@ -64,8 +87,10 @@ const CheckCircle = () => (
 
 // ── label cls ────────────────────────────────────────────────────────────────
 
-const labelCls = 'block text-[11px] font-bold text-[var(--time-gray-600)] uppercase tracking-[0.06em] mb-1.5 font-[var(--font-body)]';
-const inputCls = 'w-full h-[42px] rounded-[var(--radius-btn)] border-[1.5px] border-[var(--time-gray-200)] px-3.5 text-[13px] font-[var(--font-body)] text-[var(--time-dark)] bg-white outline-none transition-all focus:border-[var(--time-red)] focus:shadow-[0_0_0_3px_rgba(230,57,70,0.1)]';
+const labelCls =
+  'block text-[11px] font-bold text-[var(--time-gray-600)] uppercase tracking-[0.06em] mb-1.5 font-[var(--font-body)]';
+const inputCls =
+  'w-full h-[42px] rounded-[var(--radius-btn)] border-[1.5px] border-[var(--time-gray-200)] px-3.5 text-[13px] font-[var(--font-body)] text-[var(--time-dark)] bg-white outline-none transition-all focus:border-[var(--time-red)] focus:shadow-[0_0_0_3px_rgba(230,57,70,0.1)]';
 
 // ── component ────────────────────────────────────────────────────────────────
 
@@ -75,17 +100,29 @@ interface TimeOrderSummaryProps {
 
 export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
   const { t } = useTranslation(lang, 'common');
-  const { items, meta, resetCart } = useCart();
+  const { items, meta } = useCart();
   const { selected: selectedB2B } = useDeliveryAddress();
   const { data: customer } = useCustomerQuery(true);
+  const {
+    submitOrder,
+    resubmitWithAutofix,
+    isSubmitting,
+    anomalyResult,
+    submitError,
+    clearAnomalies,
+  } = useOrderSubmit(lang);
 
   const [deliveryType, setDeliveryType] = useState('spedizione');
-  const [deliveryDate, setDeliveryDate] = useState(() => toLocalISODate(nextBusinessDay()));
+  const [deliveryDate, setDeliveryDate] = useState(() =>
+    toLocalISODate(nextBusinessDay()),
+  );
   const [notes, setNotes] = useState('');
   const [showConfirm, setShowConfirm] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const availableItems = useMemo(() => (items ?? []).filter((i: any) => i.stock !== 0), [items]);
+  const availableItems = useMemo(
+    () => (items ?? []).filter((i: any) => i.stock !== 0),
+    [items],
+  );
   const totalItems = availableItems.length;
 
   const gross = meta?.totalGross ?? 0;
@@ -99,33 +136,20 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
     return formatAddress(selectedB2B.address ?? selectedB2B);
   }, [selectedB2B]);
 
-  const canSubmit = Boolean(selectedB2B && deliveryDate && !isSubmitting && totalItems > 0);
+  const canSubmit = Boolean(
+    selectedB2B && deliveryDate && !isSubmitting && totalItems > 0,
+  );
+
+  const submitOpts = {
+    delivery_date: deliveryDate,
+    delivery_type: deliveryType === 'ritiro' ? 'pickup' : 'courier',
+    notes,
+  };
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
-    setIsSubmitting(true);
-    try {
-      const payload = {
-        client_id: ERP_STATIC.customer_code,
-        address_code: selectedB2B?.id || ERP_STATIC.address_code,
-        ext_call: ERP_STATIC.ext_call,
-        username: ERP_STATIC.username,
-        id_cart: meta?.idCart || ERP_STATIC.id_cart,
-        note: notes,
-        shipping_date: deliveryDate,
-        transport_cost: 0,
-      };
-      await post(API_ENDPOINTS_B2B.SEND_ORDER, payload);
-      await resetCart();
-      if (typeof window !== 'undefined') {
-        window.location.href = `/${lang}/complete-order`;
-      }
-    } catch (error) {
-      console.error('Failed to send order:', error);
-    } finally {
-      setIsSubmitting(false);
-      setShowConfirm(false);
-    }
+    await submitOrder(submitOpts);
+    setShowConfirm(false);
   };
 
   return (
@@ -136,7 +160,9 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
           <h3 className="text-[16px] font-extrabold text-[var(--time-dark)] font-[var(--font-display)] mb-1">
             Dettagli Ordine
           </h3>
-          <p className="text-[12px] text-[var(--time-gray-500)]">Completa il tuo acquisto</p>
+          <p className="text-[12px] text-[var(--time-gray-500)]">
+            Completa il tuo acquisto
+          </p>
         </div>
 
         {/* Fields */}
@@ -144,7 +170,13 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
           {/* Company */}
           <div>
             <label className={labelCls}>Nome Azienda</label>
-            <div className={cn(inputCls, 'flex items-center bg-[var(--time-gray-50)] cursor-default font-semibold')} suppressHydrationWarning>
+            <div
+              className={cn(
+                inputCls,
+                'flex items-center bg-[var(--time-gray-50)] cursor-default font-semibold',
+              )}
+              suppressHydrationWarning
+            >
               {customer?.businessName || ERP_STATIC.username || '—'}
             </div>
           </div>
@@ -154,7 +186,11 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
             <label className={labelCls}>Tipo di Consegna</label>
             <div className="flex gap-2">
               {[
-                { value: 'spedizione', label: 'Spedizione', icon: <TruckIcon /> },
+                {
+                  value: 'spedizione',
+                  label: 'Spedizione',
+                  icon: <TruckIcon />,
+                },
                 { value: 'ritiro', label: 'Ritiro', icon: <ShieldIcon /> },
               ].map((opt) => (
                 <button
@@ -189,7 +225,13 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
           {/* Address */}
           <div>
             <label className={labelCls}>Indirizzo</label>
-            <div className={cn(inputCls, 'flex items-center bg-[var(--time-gray-50)] cursor-default text-ellipsis overflow-hidden whitespace-nowrap')} suppressHydrationWarning>
+            <div
+              className={cn(
+                inputCls,
+                'flex items-center bg-[var(--time-gray-50)] cursor-default text-ellipsis overflow-hidden whitespace-nowrap',
+              )}
+              suppressHydrationWarning
+            >
               {addressLabel || '—'}
             </div>
           </div>
@@ -214,7 +256,10 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
             { label: 'Totale netto', value: net, bold: true },
             { label: 'IVA (22%)', value: vat },
           ].map((row) => (
-            <div key={row.label} className="flex justify-between items-center text-[13px] text-[var(--time-gray-600)]">
+            <div
+              key={row.label}
+              className="flex justify-between items-center text-[13px] text-[var(--time-gray-600)]"
+            >
               <span>{row.label}</span>
               <span
                 className={cn(
@@ -236,7 +281,9 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
           )}
 
           <div className="flex justify-between items-center pt-3 border-t-2 border-[var(--time-gray-100)] mt-1">
-            <span className="text-[14px] font-bold text-[var(--time-dark)]">Totale</span>
+            <span className="text-[14px] font-bold text-[var(--time-dark)]">
+              Totale
+            </span>
             <span className="text-[26px] font-black text-[var(--time-dark)] font-[var(--font-display)] tabular-nums">
               {money(doc)}
             </span>
@@ -258,9 +305,7 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
             Completa Ordine <ArrowRight />
           </button>
 
-          <div className="flex items-center justify-center gap-1.5 mt-3 text-[11px] text-[var(--time-gray-400)]">
-            <ShieldIcon /> Transazione sicura e protetta
-          </div>
+
         </div>
       </TimeCard>
 
@@ -307,6 +352,24 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── Anomaly Modal (422 ERP validation) ─────────────────────────── */}
+      {anomalyResult && (
+        <TimeAnomalyModal
+          result={anomalyResult}
+          isSubmitting={isSubmitting}
+          onAutofix={() => resubmitWithAutofix(submitOpts)}
+          onEdit={clearAnomalies}
+          onClose={clearAnomalies}
+        />
+      )}
+
+      {/* ── Submit error toast ─────────────────────────────────────────── */}
+      {submitError && !anomalyResult && (
+        <div className="fixed bottom-6 right-6 z-50 max-w-sm bg-[var(--time-red)] text-white px-5 py-3 rounded-xl shadow-lg text-[13px] font-[var(--font-body)] animate-[slideUp_0.3s_ease_both]">
+          {submitError}
         </div>
       )}
     </>

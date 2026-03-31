@@ -10,12 +10,19 @@ import type { OrderSummary } from '@framework/order/types-b2b-orders-list';
 import { useOrdersListQuery } from '@framework/order/fetch-orders-list';
 import { ERP_STATIC } from '@framework/utils/static';
 import { useOrderDetailsQuery } from '@framework/order/fetch-order';
-import { TimeCard, TimeIconBox, TimeStatusBadge } from './time-account-primitives';
+import {
+  TimeCard,
+  TimeIconBox,
+  TimeStatusBadge,
+} from './time-account-primitives';
 import { IconPackage, IconCheck, IconTruck } from './time-account-icons';
 
 const money = (n?: number) =>
   typeof n === 'number'
-    ? new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n)
+    ? new Intl.NumberFormat('it-IT', {
+        style: 'currency',
+        currency: 'EUR',
+      }).format(n)
     : '';
 
 function pad(n: number) {
@@ -46,11 +53,12 @@ function lastMonthDefaults(): Criteria {
   };
 }
 
-const statusMap: Record<string, { color: string; bg: string; label: string }> = {
-  NE: { color: '#2563eb', bg: 'rgba(37,99,235,0.08)', label: 'Da evadere' },
-  E: { color: '#059669', bg: 'rgba(5,150,105,0.08)', label: 'Evaso' },
-  IA: { color: '#d97706', bg: 'rgba(217,119,6,0.08)', label: 'In attesa' },
-};
+const statusMap: Record<string, { color: string; bg: string; label: string }> =
+  {
+    NE: { color: '#2563eb', bg: 'rgba(37,99,235,0.08)', label: 'Da evadere' },
+    E: { color: '#059669', bg: 'rgba(5,150,105,0.08)', label: 'Evaso' },
+    IA: { color: '#d97706', bg: 'rgba(217,119,6,0.08)', label: 'In attesa' },
+  };
 
 export default function TimeAccountOrders() {
   const params = useParams<{ lang?: string }>();
@@ -105,7 +113,11 @@ export default function TimeAccountOrders() {
     const cause = (selected as any).cause;
     const doc_year = (selected as any).doc_year;
     if (!doc_number || !cause || !doc_year) return null;
-    return { doc_number: String(doc_number), cause: String(cause), doc_year: String(doc_year) };
+    return {
+      doc_number: String(doc_number),
+      cause: String(cause),
+      doc_year: String(doc_year),
+    };
   }, [selected]);
 
   const {
@@ -184,7 +196,8 @@ export default function TimeAccountOrders() {
                 {t('text-my-orders', { defaultValue: 'I Miei Ordini' })}
               </h3>
               <span className="text-[11px] text-[var(--time-gray-400)]">
-                {orders.length} {t('text-results', { defaultValue: 'risultati' })}
+                {orders.length}{' '}
+                {t('text-results', { defaultValue: 'risultati' })}
               </span>
             </div>
             {orders.map((o: OrderSummary) => {
@@ -204,7 +217,15 @@ export default function TimeAccountOrders() {
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <TimeIconBox
-                      icon={o.status_code === 'E' ? <IconCheck /> : o.status_code === 'NE' ? <IconPackage /> : <IconTruck />}
+                      icon={
+                        o.status_code === 'E' ? (
+                          <IconCheck />
+                        ) : o.status_code === 'NE' ? (
+                          <IconPackage />
+                        ) : (
+                          <IconTruck />
+                        )
+                      }
                       color={st.color}
                       bg={st.bg}
                     />
@@ -221,7 +242,11 @@ export default function TimeAccountOrders() {
                     <div className="text-sm font-extrabold text-[var(--time-dark)] tabular-nums">
                       {money(o.ordered_total)}
                     </div>
-                    <TimeStatusBadge label={st.label} color={st.color} bg={st.bg} />
+                    <TimeStatusBadge
+                      label={st.label}
+                      color={st.color}
+                      bg={st.bg}
+                    />
                   </div>
                 </button>
               );

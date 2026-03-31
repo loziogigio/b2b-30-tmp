@@ -11,7 +11,12 @@ import { useOrdersListQuery } from '@framework/order/fetch-orders-list';
 import { useDocumentsListQuery } from '@framework/documents/fetch-documents-list';
 import { ERP_STATIC } from '@framework/utils/static';
 import { lastMonthRange, toErpNumericDate } from '@utils/date-to-erp';
-import { TimeCard, TimeSectionHeader, TimeIconBox, TimeStatusBadge } from './time-account-primitives';
+import {
+  TimeCard,
+  TimeSectionHeader,
+  TimeIconBox,
+  TimeStatusBadge,
+} from './time-account-primitives';
 import {
   IconPackage,
   IconFile,
@@ -23,14 +28,19 @@ import {
 
 const money = (n?: number) =>
   typeof n === 'number'
-    ? new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n)
+    ? new Intl.NumberFormat('it-IT', {
+        style: 'currency',
+        currency: 'EUR',
+      }).format(n)
     : '—';
 
 interface TimeAccountDashboardProps {
   lang: string;
 }
 
-export default function TimeAccountDashboard({ lang }: TimeAccountDashboardProps) {
+export default function TimeAccountDashboard({
+  lang,
+}: TimeAccountDashboardProps) {
   const { t } = useTranslation(lang, 'common');
   const { data: customer } = useCustomerQuery(true);
   const { data: exposition } = useExpositionQuery(true);
@@ -169,10 +179,14 @@ export default function TimeAccountDashboard({ lang }: TimeAccountDashboardProps
           <div className="flex items-center justify-between mb-3">
             <div>
               <div className="text-[13px] font-bold text-[var(--time-dark)] font-[var(--font-body)]">
-                {t('text-credit-line', { defaultValue: 'Fido / Linea di Credito' })}
+                {t('text-credit-line', {
+                  defaultValue: 'Fido / Linea di Credito',
+                })}
               </div>
               <div className="text-[11px] text-[var(--time-gray-400)] font-[var(--font-body)] mt-0.5">
-                {money(creditUsed)} {t('text-used-of', { defaultValue: 'utilizzati di' })} {money(creditLimit)}
+                {money(creditUsed)}{' '}
+                {t('text-used-of', { defaultValue: 'utilizzati di' })}{' '}
+                {money(creditLimit)}
               </div>
             </div>
             <span
@@ -217,16 +231,23 @@ export default function TimeAccountDashboard({ lang }: TimeAccountDashboardProps
               >
                 <div className="flex items-center gap-3">
                   <TimeIconBox
-                    icon={o.status === 'consegnato' ? <IconCheck /> : <IconTruck />}
+                    icon={
+                      o.status === 'consegnato' ? <IconCheck /> : <IconTruck />
+                    }
                     color={o.status === 'consegnato' ? '#059669' : '#2563eb'}
-                    bg={o.status === 'consegnato' ? 'rgba(5,150,105,0.08)' : 'rgba(37,99,235,0.08)'}
+                    bg={
+                      o.status === 'consegnato'
+                        ? 'rgba(5,150,105,0.08)'
+                        : 'rgba(37,99,235,0.08)'
+                    }
                   />
                   <div>
                     <div className="text-[13px] font-bold text-[var(--time-dark)] font-[var(--font-mono)] tracking-[-0.01em]">
                       {o.id}
                     </div>
                     <div className="text-[11px] text-[var(--time-gray-400)] font-[var(--font-body)] mt-px">
-                      {o.date} · {o.itemCount ?? ''} {t('text-items', { defaultValue: 'articoli' })}
+                      {o.date} · {o.itemCount ?? ''}{' '}
+                      {t('text-items', { defaultValue: 'articoli' })}
                     </div>
                   </div>
                 </div>
@@ -248,7 +269,9 @@ export default function TimeAccountDashboard({ lang }: TimeAccountDashboardProps
         {/* Recent Documents */}
         <TimeCard>
           <TimeSectionHeader
-            title={t('text-recent-documents', { defaultValue: 'Documenti Recenti' })}
+            title={t('text-recent-documents', {
+              defaultValue: 'Documenti Recenti',
+            })}
           />
           <div>
             {(documents as any[]).slice(0, 4).map((d: any, i: number) => (
@@ -275,14 +298,20 @@ export default function TimeAccountDashboard({ lang }: TimeAccountDashboardProps
                   <TimeStatusBadge
                     label={d.type === 'DDT' ? 'DDT' : 'Fattura'}
                     color={d.type === 'DDT' ? '#059669' : '#2563eb'}
-                    bg={d.type === 'DDT' ? 'rgba(5,150,105,0.08)' : 'rgba(37,99,235,0.08)'}
+                    bg={
+                      d.type === 'DDT'
+                        ? 'rgba(5,150,105,0.08)'
+                        : 'rgba(37,99,235,0.08)'
+                    }
                   />
                 </div>
               </div>
             ))}
             {(documents as any[]).length === 0 && (
               <div className="px-[22px] py-6 text-center text-sm text-[var(--time-gray-400)]">
-                {t('text-no-documents', { defaultValue: 'Nessun documento recente' })}
+                {t('text-no-documents', {
+                  defaultValue: 'Nessun documento recente',
+                })}
               </div>
             )}
           </div>
@@ -294,7 +323,9 @@ export default function TimeAccountDashboard({ lang }: TimeAccountDashboardProps
         {/* Deadlines */}
         <TimeCard>
           <TimeSectionHeader
-            title={t('text-upcoming-deadlines', { defaultValue: 'Prossime Scadenze' })}
+            title={t('text-upcoming-deadlines', {
+              defaultValue: 'Prossime Scadenze',
+            })}
           />
           <div>
             {deadlineItems.map((d, i) => (
@@ -306,14 +337,21 @@ export default function TimeAccountDashboard({ lang }: TimeAccountDashboardProps
                   <TimeIconBox
                     icon={d.amount <= 0 ? <IconCheck /> : <IconCalendar />}
                     color={d.amount <= 0 ? '#059669' : '#2563eb'}
-                    bg={d.amount <= 0 ? 'rgba(5,150,105,0.08)' : 'rgba(37,99,235,0.08)'}
+                    bg={
+                      d.amount <= 0
+                        ? 'rgba(5,150,105,0.08)'
+                        : 'rgba(37,99,235,0.08)'
+                    }
                   />
                   <div>
                     <div className="text-[13px] font-semibold text-[var(--time-dark)] font-[var(--font-body)]">
                       {d.description}
                     </div>
                     <div className="text-[11px] text-[var(--time-gray-400)] font-[var(--font-body)] mt-px">
-                      {d.document} · {d.dueDate ? new Date(d.dueDate).toLocaleDateString('it-IT') : ''}
+                      {d.document} ·{' '}
+                      {d.dueDate
+                        ? new Date(d.dueDate).toLocaleDateString('it-IT')
+                        : ''}
                     </div>
                   </div>
                 </div>

@@ -1,10 +1,10 @@
 // @utils/adapter/cart-adapter.ts
 import type { CartSummary, Item } from '@contexts/cart/cart.utils';
-import type { Brand } from '@framework/types';
 import {
   PackagingOption,
   PackagingOptionLegacy,
 } from '@utils/transform/erp-prices';
+import { AddToCartInput } from '@utils/transform/cart';
 
 // --- helpers -------------------------------------------------
 const num = (v: any, d = 0) => {
@@ -14,205 +14,197 @@ const num = (v: any, d = 0) => {
   return Number.isFinite(n) ? n : d;
 };
 
-const val = <T = any>(...candidates: any[]): T | undefined =>
-  candidates.find((x) => x !== undefined && x !== null && x !== '');
+// =====================================================================
+// Commerce-Suite (CS) mappers — maps VINC order/items → Item/CartSummary
+// =====================================================================
 
-// Guard if API returns an object keyed by rowId: { "10": {...}, "20": {...} }
-const values = (obj: any) => Object.keys(obj ?? {}).map((k) => (obj as any)[k]);
+/** Map a commerce-suite LineItem to the existing Item interface */
+export function mapCSLineItemToItem(li: any): Item {
+  const unitPrice = num(li.unit_price, 0);
+  const listPrice = num(li.list_price, 0);
+  const price = unitPrice || listPrice || 0;
 
-// Optional: pick packaging helpers (keep as-is if not needed)
-function pickDefaultPackaging(imballi: any) {
-  const opts = imballi?.packaging_options ?? [];
-  return opts.find((o: any) => o.IsImballoDiDefaultXVendita) ?? null;
-}
-function pickSmallestPackaging(imballi: any) {
-  const opts = imballi?.packaging_options ?? [];
-  return (
-    opts.find((o: any) => o.IsImballoPiuPiccolo) ??
-    opts
-      .slice()
-      .sort((a: any, b: any) => num(a.QtaXImballo) - num(b.QtaXImballo))[0] ??
-    null
-  );
-}
+  // Build packaging_options_all from erp_data if available
+  const erpImballi = li.erp_data?.imballi?.packaging_options;
+  const packagingAll: PackagingOption[] = erpImballi
+    ? toPackagingOptions(erpImballi)
+    : [];
 
-// --- core mappers --------------------------------------------
-export function mapServerCartToItems(apiResponse: any): Item[] {
-  const rowsDict = apiResponse?.message?.data ?? apiResponse?.data ?? [];
-  const rows = Array.isArray(rowsDict) ? rowsDict : values(rowsDict);
+  return {
+    // Identifiers
+    id: li.entity_code || li.sku,
+    rowId: String(li.line_number),
+    sku: li.sku,
+    slug: undefined,
+    id_parent: li.erp_data?.id_parent,
+    parent_sku: li.erp_data?.parent_sku,
 
-  return rows.map((row: any): Item => {
-    // Stable ids
-    const rowId = String(
-      val(
-        row.row_id,
-        row.id_riga,
-        row.riga,
-        row.riga_id,
-        row.n_riga,
-        row.progressivo,
-        row.id,
-      ) ?? '',
-    );
-    const id: string | number =
-      val(row.id, row.product_id, row.id_prodotto, row.sku) ??
-      `${val(row.id_cart, row.id_carrello) || 'cart'}-${rowId || Math.random()}`;
+    // Descriptive
+    name: li.name,
+    model: li.erp_data?.model,
+    shortDescription: li.erp_data?.short_description,
+    description: undefined,
+    brand: li.brand ? { id: 0, name: li.brand, slug: li.brand } : undefined,
+    image: li.image_url,
 
-    // Pricing
-    const priceDiscount = num(
-      val(row.price_discount, row.prezzo_netto, row.netto, row.price),
-      0,
-    );
-    const priceGross = num(
-      val(row.price_gross, row.gross_price, row.prezzo_lordo, row.price),
-      0,
-    );
-    const vatRate = num(val(row.vat_rate, row.aliquota_iva, row.iva), 0);
+    // Quantities / units
+    quantity: num(li.quantity, 0),
+    uom: li.quantity_unit || li.packaging_code,
+    mvQty: num(li.min_order_quantity),
+    cfQty: num(li.pack_size),
 
-    // Quantity & units
-    const quantity = num(val(row.quantity, row.qty, row.qta, row.quantita), 0);
-    const uom = val(row.um, row.uom, row.unita_misura);
+    // Pricing (canonical)
+    priceDiscount: unitPrice,
+    priceGross: listPrice,
+    isPromo:
+      li.is_gift_line ||
+      Boolean(li.promo_code) ||
+      (unitPrice > 0 && listPrice > 0 && unitPrice < listPrice),
 
-    // Flags
-    const isPromo =
-      Boolean(val(row.is_promo, row.promo, row.promo_row)) ||
-      (priceDiscount > 0 && priceGross > 0 && priceDiscount < priceGross);
+    // Pricing (legacy mirrors)
+    price,
+    price_discount: unitPrice,
+    price_gross: listPrice,
+    gross_price: listPrice,
+    vat_rate: num(li.vat_rate, 0),
+    promo_code: li.promo_code ?? 0,
+    promo_row: li.promo_row ?? 0,
+    packaging_options_all: packagingAll,
+    listing_type_discounts: '',
 
-    // Descriptives
-    const name = val(
-      row.name,
-      row.titolo,
-      row.descrizione_breve,
-      row.descrizione,
-    );
-    const model = val(row.modello, row.model);
-    const shortDescription = val(row.short_descr, row.descrizione_breve);
-    const description = val(row.description, row.descrizione);
-    const image = val(row.image, row.image_url, row.thumbnail, row.thumb);
-    const brand: Brand | undefined = row.brand;
-    const slug = val(row.slug, row.permalink, row.link);
-
-    const id_parent = val(row.id_father, row.parent_id, row.id_parent);
-    const parent_sku = val(row.parent_sku, row.sku_parent);
-
-    const promo_code = row.promo_code ?? 0;
-    const promo_row = row.promo_row ?? 0;
-    const listing_type_discounts = row.listing_type_discounts ?? '';
-
-    const packaging_options_all: PackagingOption[] = toPackagingOptions(
-      row.imballi.packaging_options,
-    );
-
-    // IMPORTANT: keep legacy fields populated for back-compat
-    // Set `price` to the net/discounted unit so existing total calculators still work
-    const price = priceDiscount || priceGross || 0;
-
-    return {
-      // Identifiers
-      id,
-      rowId,
-      sku: row.sku,
-      slug,
-      id_parent,
-      parent_sku,
-
-      // Descriptive
-      name,
-      model,
-      shortDescription,
-      description,
-      brand,
-      image,
-
-      // Quantities / units
-      quantity,
-      uom,
-      mvQty: val(row.mv, row.min_vendita, row.moq),
-      cfQty: val(row.cf, row.conf, row.pz_confezione),
-
-      // Pricing (canonical)
-      priceDiscount,
-      priceGross,
-      isPromo,
-
-      // Pricing (legacy / snake_case mirrors, some UIs still read these)
-      price, // fallback used by older calculators
-      price_discount: priceDiscount,
-      price_gross: priceGross,
-      gross_price: priceGross,
-      vat_rate: vatRate,
-      promo_code: promo_code,
-      promo_row: promo_row,
-      packaging_options_all: packaging_options_all,
-      listing_type_discounts: listing_type_discounts,
-
-      // Meta / raw passthrough
-      __cartMeta: {
-        price_discount: priceDiscount,
-        gross_price: priceGross,
-        vat_rate: vatRate,
-        is_promo: isPromo,
-        totale_no_sconto: num(row.totale_no_sconto),
-        totale_sconto: num(row.totale_sconto),
-        imballi: row.imballi,
-        packaging_option_default: pickDefaultPackaging(row.imballi),
-        packaging_option_smallest: pickSmallestPackaging(row.imballi),
-        availability: row.availability,
-        id_cart: val(row.id_cart, row.id_carrello),
-        row_raw: row, // keep full row for debugging if needed
-      },
-    } satisfies Item;
-  });
+    // Meta / raw passthrough
+    __cartMeta: {
+      price_discount: unitPrice,
+      gross_price: listPrice,
+      vat_rate: num(li.vat_rate, 0),
+      is_promo: li.is_gift_line || Boolean(li.promo_code),
+      imballi: li.erp_data?.imballi,
+      packaging_option_default: packagingAll.find(
+        (p) => p.packaging_is_default,
+      ),
+      packaging_option_smallest: packagingAll.find(
+        (p) => p.packaging_is_smallest,
+      ),
+      availability: li.erp_data?.availability,
+      line_number: li.line_number,
+      row_raw: li,
+    },
+  } satisfies Item;
 }
 
-export function mapServerCartToSummary(apiResponse: any): CartSummary {
-  const msg = apiResponse?.message ?? apiResponse ?? {};
-  const min = msg.min_order ?? {};
+/** Map a commerce-suite order to CartSummary */
+export function mapCSOrderToSummary(order: any): CartSummary {
+  const erpData = order.erp_data || {};
+  const deliveryInfo = erpData.delivery_info || {};
+  const minOrder = deliveryInfo.min_order || {};
 
   const toBool = (v: any) => v === true || v === 1 || v === '1' || v === 'true';
 
-  const num = (v: any, d = 0) => {
-    if (v == null || v === '') return d;
-    const s = typeof v === 'string' ? v.replace(',', '.') : v;
-    const n = Number(s);
-    return Number.isFinite(n) ? n : d;
-  };
-
-  const val = <T = any>(...c: any[]): T | undefined =>
-    c.find((x) => x !== undefined && x !== null && x !== '');
-
   return {
-    idCart: val(msg.id_cart, msg.id_carrello) as any,
-    clientId: msg.client_id,
-    addressCode: msg.address_code,
-    closeEnable: toBool(msg.close_enable),
-    minOrder: {
-      warning: String(min.warning ?? ''),
-      minimumAmount: num(min.minimum_amount, 0),
-      compliant: toBool(min.compliant),
-    },
-    transportCost: num(val(msg.spese_trasporto, msg.shipping_cost), 0),
-    transportFreeAbove: num(
-      val(msg.importo_spese_zero, msg.free_shipping_threshold),
-      0,
-    ),
-    totalNet: num(val(msg.totale_netto, msg.total_net), 0),
-    totalGross: num(val(msg.totale_lordo, msg.total_gross), 0),
-    vat: num(val(msg.iva, msg.vat), 0),
-    totalDoc: num(val(msg.totale_doc, msg.total_doc, msg.total), 0),
-    showDiscountPrice: Boolean(msg.show_discount_price),
-    packaging: msg.imballi,
+    orderId: order.order_id,
+    idCart: order.order_id,
+    clientId: order.customer_code,
+    addressCode: order.shipping_address_code,
+    closeEnable: toBool(deliveryInfo.close_enable),
+    minOrder: minOrder.minimum_amount
+      ? {
+          warning: String(minOrder.warning ?? ''),
+          minimumAmount: num(minOrder.minimum_amount, 0),
+          compliant: toBool(minOrder.compliant),
+        }
+      : undefined,
+    transportCost: num(order.shipping_cost, 0),
+    transportFreeAbove: num(deliveryInfo.free_shipping_threshold, 0),
+    totalNet: num(order.subtotal_net, 0),
+    totalGross: num(order.subtotal_gross, 0),
+    vat: num(order.total_vat, 0),
+    totalDoc: num(order.order_total, 0),
+    showDiscountPrice: Boolean(erpData.show_discount_price),
+    packaging: erpData.imballi,
   };
 }
 
-/** Convenience: everything the cart endpoint returns, normalized */
-export function mapServerCart(apiResponse: any): {
+/** Map full commerce-suite order response → { items, summary } */
+export function mapCSOrderToCart(response: any): {
   items: Item[];
   summary: CartSummary;
 } {
+  const order = response?.order ?? response;
+  const allItems = order?.items ?? [];
   return {
-    items: mapServerCartToItems(apiResponse),
-    summary: mapServerCartToSummary(apiResponse),
+    items: allItems.map(mapCSLineItemToItem),
+    summary: mapCSOrderToSummary(order),
+  };
+}
+
+/** Build commerce-suite AddItemRequest from legacy AddToCartInput */
+export function buildAddItemRequest(
+  input: AddToCartInput,
+  sourceItem?: Item,
+): any {
+  // Build discounts array from discount1-6
+  const discounts: Array<{
+    tier: number;
+    type: string;
+    value: number;
+  }> = [];
+  for (let i = 1; i <= 6; i++) {
+    const value = Number((input as any)[`discount${i}`]) || 0;
+    if (value !== 0) {
+      discounts.push({ tier: i, type: 'percentage', value });
+    }
+  }
+
+  // Resolve promo_code (0 or "0" means no promo)
+  const promoCode =
+    input.promo_code && input.promo_code !== 0 && input.promo_code !== '0'
+      ? String(input.promo_code)
+      : undefined;
+  const promoRow =
+    input.promo_row && Number(input.promo_row) > 0
+      ? Number(input.promo_row)
+      : undefined;
+
+  const pkgDefault = sourceItem?.__cartMeta?.packaging_option_default;
+
+  return {
+    // Required
+    entity_code: String(input.item_id),
+    sku: sourceItem?.sku || String(input.item_id),
+    name: sourceItem?.name || '',
+    quantity: Number(input.quantity) || 0,
+    list_price: Number(input.price) || 0,
+    unit_price: Number(input.price_discount) || Number(input.price) || 0,
+    vat_rate: Number(input.vat_perc) || 0,
+    vat_included: false,
+
+    // Product source
+    product_source: 'external' as const,
+    external_ref: String(input.item_id),
+    added_from: 'b2b_erp',
+    added_via: 'web',
+
+    // Product snapshot
+    image_url: sourceItem?.image || '',
+    brand:
+      typeof sourceItem?.brand === 'object'
+        ? sourceItem?.brand?.name
+        : sourceItem?.brand || '',
+    category: '',
+
+    // Packaging
+    packaging_code: pkgDefault?.packaging_code || sourceItem?.uom || '',
+    packaging_label:
+      pkgDefault?.packaging_uom || pkgDefault?.packaging_uom_description || '',
+    pack_size: pkgDefault?.qty_x_packaging || 1,
+    min_order_quantity: Number(input.qty_min_packing) || 1,
+
+    // Discounts
+    discounts,
+
+    // Promo
+    promo_code: promoCode,
+    promo_row: promoRow,
   };
 }
 

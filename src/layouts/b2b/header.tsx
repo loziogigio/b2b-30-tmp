@@ -40,7 +40,6 @@ const B2BHeaderMenu = dynamic(() => import('@layouts/header/b2b-header-menu'), {
   ssr: false,
 });
 
-
 interface HeaderProps {
   lang: string;
 }
@@ -326,7 +325,6 @@ function Header({ lang }: HeaderProps) {
                   </button>
                 )}
               />
-
             </div>
 
             {/* Right side - only show when logged in */}

@@ -8,10 +8,8 @@ import { useTranslation } from 'src/app/i18n/client';
 import { formatAddress } from '@utils/format-address';
 import { useDeliveryAddress } from '@contexts/address/address.context';
 import type { AddressB2B } from '@framework/acccount/types-b2b-account';
-import { useCart } from '@contexts/cart/cart.context';
-import { post } from '@framework/utils/httpB2B';
-import { API_ENDPOINTS_B2B } from '@framework/utils/api-endpoints-b2b';
-import { ERP_STATIC } from '@framework/utils/static';
+import { useOrderSubmit } from '@/hooks/use-order-submit';
+import AnomalyModal from './anomaly-modal';
 
 // helpers
 const isWeekend = (d: Date) => d.getDay() === 0 || d.getDay() === 6;
@@ -57,14 +55,16 @@ function makeTitle(r: AddressB2B | undefined) {
 
 export default function CheckoutSendOrder({ lang, onSubmit }: Props) {
   const { t } = useTranslation(lang, 'common');
-
-  // selectedB2B can be AddressB2B | null
   const { selected: selectedB2B } = useDeliveryAddress();
+  const {
+    submitOrder,
+    resubmitWithAutofix,
+    isSubmitting,
+    anomalyResult,
+    submitError,
+    clearAnomalies,
+  } = useOrderSubmit(lang);
 
-  // Get cart meta for idCart
-  const { meta, resetCart } = useCart();
-
-  // map to local Address type (undefined instead of null to avoid TS error)
   const selected: Address | undefined = useMemo(() => {
     if (!selectedB2B) return undefined;
     return {
@@ -74,56 +74,23 @@ export default function CheckoutSendOrder({ lang, onSubmit }: Props) {
     };
   }, [selectedB2B]);
 
-  // read-only payment terms from selected address
-  const paymentTerms = selectedB2B?.paymentTerms; // { code, label } | undefined
-
-  // auto-pick first available date (next business day)
+  const paymentTerms = selectedB2B?.paymentTerms;
   const [date] = useState<string>(() => toLocalISODate(nextBusinessDay()));
   const [notes, setNotes] = useState<string>('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const canSubmit = Boolean(selected && date && !isSubmitting);
 
+  const submitOpts = {
+    delivery_date: date,
+    delivery_type: 'courier',
+    notes,
+  };
+
   const handleSubmit = async () => {
     if (!canSubmit || !selected) return;
-
-    setIsSubmitting(true);
-
-    try {
-      // Build payload matching the expected API format
-      const payload = {
-        client_id: ERP_STATIC.customer_code,
-        address_code: selectedB2B?.id || ERP_STATIC.address_code,
-        ext_call: ERP_STATIC.ext_call,
-        username: ERP_STATIC.username,
-        id_cart: meta?.idCart || ERP_STATIC.id_cart,
-        note: notes,
-        shipping_date: date,
-        transport_cost: 0,
-      };
-
-      await post(API_ENDPOINTS_B2B.SEND_ORDER, payload);
-
-      // Call onSubmit callback if provided
-      onSubmit?.({
-        address: selected,
-        paymentTerms,
-        date,
-        notes,
-      });
-
-      // Reset cart after successful order
-      await resetCart();
-
-      // Redirect to order confirmation or show success message
-      if (typeof window !== 'undefined') {
-        window.location.href = `/${lang}/complete-order`;
-      }
-    } catch (error) {
-      console.error('Failed to send order:', error);
-      // Optionally show error to user
-    } finally {
-      setIsSubmitting(false);
+    const outcome = await submitOrder(submitOpts);
+    if (outcome.type === 'success' || outcome.type === 'processing') {
+      onSubmit?.({ address: selected, paymentTerms, date, notes });
     }
   };
 
@@ -135,7 +102,6 @@ export default function CheckoutSendOrder({ lang, onSubmit }: Props) {
         </Heading>
       </div>
 
-      {/* Address (read-only) */}
       <div className="px-2 pb-3">
         {selected ? (
           <div className="relative rounded-md border-2 border-brand/60 bg-white p-4">
@@ -146,7 +112,6 @@ export default function CheckoutSendOrder({ lang, onSubmit }: Props) {
               {formatAddress(selected.address)}
             </div>
 
-            {/* Payment terms (read-only, label + code) */}
             {paymentTerms && (paymentTerms.label || paymentTerms.code) && (
               <div className="mt-2 text-xs text-gray-600">
                 <span className="font-medium">
@@ -158,7 +123,6 @@ export default function CheckoutSendOrder({ lang, onSubmit }: Props) {
               </div>
             )}
 
-            {/* Delivery date (read-only, hidden picker) */}
             <div className="mt-1 text-xs text-gray-600">
               <span className="font-medium">
                 {t('text-delivery-date') ?? 'Delivery date'}:
@@ -173,7 +137,14 @@ export default function CheckoutSendOrder({ lang, onSubmit }: Props) {
         )}
       </div>
 
-      {/* Notes (editable) */}
+      {submitError && !anomalyResult && (
+        <div className="px-2">
+          <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+            {submitError}
+          </div>
+        </div>
+      )}
+
       <div className="px-2">
         <label className="mb-1 block text-sm text-gray-700">
           {t('text-notes') ?? 'Notes'}
@@ -189,7 +160,6 @@ export default function CheckoutSendOrder({ lang, onSubmit }: Props) {
         />
       </div>
 
-      {/* Submit */}
       <div className="flex items-center justify-end gap-3 px-2 pb-2 pt-2">
         <Button
           disabled={!canSubmit}
@@ -203,6 +173,16 @@ export default function CheckoutSendOrder({ lang, onSubmit }: Props) {
           {t('button-send-order', { defaultValue: 'Send Order' })}
         </Button>
       </div>
+
+      {anomalyResult && (
+        <AnomalyModal
+          result={anomalyResult}
+          isSubmitting={isSubmitting}
+          onAutofix={() => resubmitWithAutofix(submitOpts)}
+          onEdit={clearAnomalies}
+          onClose={clearAnomalies}
+        />
+      )}
     </div>
   );
 }

@@ -18,10 +18,18 @@ const Delivery = dynamic(() => import('@layouts/header/delivery'), {
 });
 
 const money = (n: number) =>
-  new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n);
+  new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(
+    n,
+  );
 
 const getUnitNet = (it: any) =>
-  Number(it?.priceDiscount ?? it?.price_discount ?? it?.__cartMeta?.price_discount ?? it?.price ?? 0);
+  Number(
+    it?.priceDiscount ??
+      it?.price_discount ??
+      it?.__cartMeta?.price_discount ??
+      it?.price ??
+      0,
+  );
 
 export default function TimeCart({ lang }: { lang: string }) {
   const { t } = useTranslation(lang, 'common');
@@ -42,7 +50,15 @@ export default function TimeCart({ lang }: { lang: string }) {
             className="w-8 h-8 rounded-[var(--radius-btn)] bg-[var(--time-gray-50)] flex items-center justify-center text-[var(--time-gray-400)] hover:bg-[var(--time-gray-100)] hover:text-[var(--time-dark)] transition-colors"
             aria-label="close"
           >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 14 14"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+            >
               <line x1="3" y1="3" x2="11" y2="11" />
               <line x1="11" y1="3" x2="3" y2="11" />
             </svg>
@@ -103,7 +119,15 @@ export default function TimeCart({ lang }: { lang: string }) {
                       className="absolute inset-0 hidden items-center justify-center bg-black/30 text-white transition md:flex md:opacity-0 md:group-hover:opacity-100"
                       aria-label="remove"
                     >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                      >
                         <polyline points="3,6 5,6 21,6" />
                         <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
                       </svg>
@@ -125,7 +149,11 @@ export default function TimeCart({ lang }: { lang: string }) {
                         {qty} × {money(unit)}
                       </div>
                     )}
-                    <UpdateCart item={item} lang={lang} className="mt-1 justify-start" />
+                    <UpdateCart
+                      item={item}
+                      lang={lang}
+                      className="mt-1 justify-start"
+                    />
                   </div>
 
                   {/* Line total */}
@@ -146,7 +174,9 @@ export default function TimeCart({ lang }: { lang: string }) {
             {t('text-empty-cart', { defaultValue: 'Il carrello è vuoto' })}
           </div>
           <div className="text-[12px] text-[var(--time-gray-400)] mt-1">
-            {t('text-empty-cart-description', { defaultValue: 'Aggiungi prodotti dal catalogo' })}
+            {t('text-empty-cart-description', {
+              defaultValue: 'Aggiungi prodotti dal catalogo',
+            })}
           </div>
         </div>
       )}

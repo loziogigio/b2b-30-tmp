@@ -13,17 +13,37 @@ import { useTranslation } from 'src/app/i18n/client';
 // ── helpers ──────────────────────────────────────────────────────────────────
 
 const money = (n: number) =>
-  new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(n);
+  new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(
+    n,
+  );
 
 const unitNet = (r: Item) =>
-  Number(r.priceDiscount ?? (r as any).__cartMeta?.price_discount ?? (r as any).price_discount ?? (r as any).price ?? 0);
+  Number(
+    r.priceDiscount ??
+      (r as any).__cartMeta?.price_discount ??
+      (r as any).price_discount ??
+      (r as any).price ??
+      0,
+  );
 
 const unitGross = (r: Item) =>
-  Number(r.priceGross ?? (r as any).__cartMeta?.gross_price ?? (r as any).price_gross ?? (r as any).gross_price ?? (r as any).price ?? 0);
+  Number(
+    r.priceGross ??
+      (r as any).__cartMeta?.gross_price ??
+      (r as any).price_gross ??
+      (r as any).gross_price ??
+      (r as any).price ??
+      0,
+  );
 
 // ── icons ────────────────────────────────────────────────────────────────────
 
-const s = { fill: 'none' as const, stroke: 'currentColor', strokeLinecap: 'round' as const, strokeWidth: 2 };
+const s = {
+  fill: 'none' as const,
+  stroke: 'currentColor',
+  strokeLinecap: 'round' as const,
+  strokeWidth: 2,
+};
 
 const TrashIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" {...s}>
@@ -51,13 +71,22 @@ const AlertIcon = () => (
 
 // ── cart row ─────────────────────────────────────────────────────────────────
 
-function TimeCartRow({ item, index, lang }: { item: Item; index: number; lang: string }) {
+function TimeCartRow({
+  item,
+  index,
+  lang,
+}: {
+  item: Item;
+  index: number;
+  lang: string;
+}) {
   const { clearItemFromCart } = useCart();
   const net = unitNet(item);
   const gross = unitGross(item);
   const qty = Number(item.quantity ?? 0);
   const lineTotal = net * qty;
-  const discount = gross > 0 && gross > net ? Math.round((1 - net / gross) * 100) : 0;
+  const discount =
+    gross > 0 && gross > net ? Math.round((1 - net / gross) * 100) : 0;
   const isAvailable = (item as any).stock !== 0;
 
   return (
@@ -65,58 +94,69 @@ function TimeCartRow({ item, index, lang }: { item: Item; index: number; lang: s
       {/* Desktop row */}
       <div
         className={cn(
-          'hidden md:grid grid-cols-[64px_1fr_100px_140px_140px_100px_44px] gap-4 items-center py-[18px] border-b border-[var(--time-gray-100)] last:border-b-0',
-          !isAvailable && 'opacity-60',
+          'hidden md:grid grid-cols-[52px_1fr_auto_90px_70px_120px_90px_36px] gap-x-3 items-center py-3 border-b border-[var(--time-gray-100)] last:border-b-0',
+          !isAvailable && 'opacity-50',
         )}
-        style={{ animationDelay: `${index * 0.04}s` }}
       >
         {/* Image */}
-        <div className="w-[60px] h-[60px] rounded-[10px] bg-gradient-to-br from-[#f8f9fb] to-[#eef0f4] flex items-center justify-center overflow-hidden">
+        <div className="w-[48px] h-[48px] rounded-[8px] bg-gradient-to-br from-[#f8f9fb] to-[#eef0f4] flex items-center justify-center overflow-hidden">
           <Image
             src={item?.image ?? '/assets/placeholder/cart-item.svg'}
-            width={60}
-            height={60}
+            width={48}
+            height={48}
             alt={item?.name || ''}
             className="h-full w-full object-cover"
           />
         </div>
 
-        {/* Info */}
+        {/* Info: SKU + model + name stacked compactly */}
         <div className="min-w-0">
-          <div className="flex items-center gap-2 mb-0.5">
-            {item.sku && (
-              <span className="font-[var(--font-mono)] text-[11px] font-semibold text-[var(--time-red)] bg-[rgba(230,57,70,0.08)] px-[7px] py-[2px] rounded-[5px]">
-                {item.sku}
-              </span>
-            )}
-            {item.brand?.name && (
-              <span className="text-[10px] font-bold text-[var(--time-gray-400)] uppercase tracking-[0.06em]">
-                {item.brand.name}
-              </span>
-            )}
-          </div>
-          <h4 className="text-[14px] font-bold text-[var(--time-dark)] font-[var(--font-body)] leading-snug truncate">
+          {item.sku && (
+            <span className="text-[11px] font-semibold text-[var(--time-red)]" style={{ fontFamily: 'var(--font-mono)' }}>
+              {item.sku}
+            </span>
+          )}
+          {item.model && (
+            <div className="text-[11px] font-semibold text-[var(--time-dark)] leading-tight">
+              MODELLO: {item.model}
+            </div>
+          )}
+          <div className="text-[11px] text-[var(--time-gray-500)] leading-tight truncate" title={item.name || ''}>
             {item.name}
-          </h4>
-          <div className="flex gap-2 text-[10px] text-[var(--time-gray-400)] font-[var(--font-mono)] mt-0.5">
-            {item.model && <span>Mod: {item.model}</span>}
-            {(item as any).uom && <><span>·</span><span>UM: {(item as any).uom}</span></>}
-            {(item as any).mvQty && <span>MV: {(item as any).mvQty}</span>}
-            {(item as any).cfQty && <span>CF: {(item as any).cfQty}</span>}
           </div>
           {!isAvailable && (
-            <div className="inline-flex items-center gap-1.5 mt-1.5 bg-red-50 text-red-600 text-[11px] font-semibold px-2.5 py-0.5 rounded-[6px]">
+            <div className="inline-flex items-center gap-1 mt-0.5 text-red-500 text-[10px] font-semibold">
               <AlertIcon /> Non disponibile
             </div>
           )}
         </div>
 
+        {/* Details: UM / MV / CF in mini grid */}
+        <div className="flex gap-px text-[10px] text-center shrink-0" style={{ fontFamily: 'var(--font-mono)' }}>
+          <div className="flex flex-col items-center w-[28px]">
+            <span className="text-[8px] font-bold text-[var(--time-gray-400)]">UM</span>
+            <span className="text-[var(--time-gray-600)]">{(item as any).uom || '—'}</span>
+          </div>
+          <div className="flex flex-col items-center w-[28px]">
+            <span className="text-[8px] font-bold text-[var(--time-gray-400)]">MV</span>
+            <span className="text-[var(--time-gray-600)]">{(item as any).mvQty || '—'}</span>
+          </div>
+          <div className="flex flex-col items-center w-[28px]">
+            <span className="text-[8px] font-bold text-[var(--time-gray-400)]">CF</span>
+            <span className="text-[var(--time-gray-600)]">{(item as any).cfQty || '—'}</span>
+          </div>
+        </div>
+
         {/* Unit price */}
-        <div className="text-right">
-          <div className="text-[14px] font-bold text-[var(--time-dark)] tabular-nums">{money(net)}</div>
+        <div className="text-right tabular-nums">
           {gross > net && (
-            <div className="text-[11px] text-[var(--time-gray-400)] line-through tabular-nums">{money(gross)}</div>
+            <div className="text-[10px] text-[var(--time-gray-400)] line-through">
+              {money(gross)}
+            </div>
           )}
+          <div className="text-[13px] font-bold text-[var(--time-dark)]">
+            {money(net)}
+          </div>
         </div>
 
         {/* Promo */}
@@ -124,14 +164,18 @@ function TimeCartRow({ item, index, lang }: { item: Item; index: number; lang: s
           {discount > 0 ? (
             <span
               className={cn(
-                'text-[11px] font-bold text-white px-2.5 py-1 rounded-[6px]',
-                discount >= 40 ? 'bg-[var(--time-red)]' : discount >= 25 ? 'bg-amber-500' : 'bg-gray-500',
+                'text-[10px] font-bold text-white px-2 py-0.5 rounded-[5px]',
+                discount >= 40
+                  ? 'bg-[var(--time-red)]'
+                  : discount >= 25
+                    ? 'bg-amber-500'
+                    : 'bg-gray-500',
               )}
             >
               -{discount}%
             </span>
           ) : (
-            <span className="text-[var(--time-gray-400)] text-[11px]">—</span>
+            <span className="text-[var(--time-gray-300)] text-[10px]">—</span>
           )}
         </div>
 
@@ -141,16 +185,16 @@ function TimeCartRow({ item, index, lang }: { item: Item; index: number; lang: s
         </div>
 
         {/* Line total */}
-        <div className="text-right text-[16px] font-extrabold text-[var(--time-dark)] tabular-nums">
+        <div className="text-right text-[14px] font-extrabold text-[var(--time-dark)] tabular-nums">
           {money(lineTotal)}
         </div>
 
         {/* Actions */}
-        <div className="flex flex-col items-center gap-1">
+        <div className="flex items-center justify-center">
           <button
             onClick={() => clearItemFromCart(item.id)}
             title="Rimuovi"
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--time-gray-400)] hover:text-[var(--time-red)] transition-colors"
+            className="w-7 h-7 rounded-md flex items-center justify-center text-[var(--time-gray-400)] hover:text-[var(--time-red)] transition-colors"
           >
             <TrashIcon />
           </button>
@@ -177,14 +221,28 @@ function TimeCartRow({ item, index, lang }: { item: Item; index: number; lang: s
                 </span>
               )}
               {discount > 0 && (
-                <span className={cn('text-[10px] font-bold text-white px-1.5 py-0.5 rounded-[4px]', discount >= 40 ? 'bg-[var(--time-red)]' : discount >= 25 ? 'bg-amber-500' : 'bg-gray-500')}>
+                <span
+                  className={cn(
+                    'text-[10px] font-bold text-white px-1.5 py-0.5 rounded-[4px]',
+                    discount >= 40
+                      ? 'bg-[var(--time-red)]'
+                      : discount >= 25
+                        ? 'bg-amber-500'
+                        : 'bg-gray-500',
+                  )}
+                >
                   -{discount}%
                 </span>
               )}
             </div>
-            <div className="text-[13px] font-semibold text-[var(--time-dark)] truncate">{item.name}</div>
+            <div className="text-[13px] font-semibold text-[var(--time-dark)] truncate">
+              {item.name}
+            </div>
             <div className="text-[11px] text-[var(--time-gray-400)] mt-0.5">
-              {money(net)} × {qty} = <span className="font-bold text-[var(--time-dark)]">{money(lineTotal)}</span>
+              {money(net)} × {qty} ={' '}
+              <span className="font-bold text-[var(--time-dark)]">
+                {money(lineTotal)}
+              </span>
             </div>
           </div>
           <button
@@ -211,7 +269,12 @@ interface TimeCartTableProps {
   onContinue: () => void;
 }
 
-export default function TimeCartTable({ lang, searchQuery, onSearchChange, onContinue }: TimeCartTableProps) {
+export default function TimeCartTable({
+  lang,
+  searchQuery,
+  onSearchChange,
+  onContinue,
+}: TimeCartTableProps) {
   const { t } = useTranslation(lang, 'common');
   const { items, resetCart, meta } = useCart();
 
@@ -241,7 +304,9 @@ export default function TimeCartTable({ lang, searchQuery, onSearchChange, onCon
             Riepilogo Carrello
           </h1>
           <p className="text-[13px] text-[var(--time-gray-500)] mt-1">
-            {availableCount} articol{availableCount !== 1 ? 'i' : 'o'} disponibil{availableCount !== 1 ? 'i' : 'e'} · {baseRows.length} totali
+            {availableCount} articol{availableCount !== 1 ? 'i' : 'o'}{' '}
+            disponibil{availableCount !== 1 ? 'i' : 'e'} · {baseRows.length}{' '}
+            totali
           </p>
         </div>
         {baseRows.length > 0 && (
@@ -261,7 +326,9 @@ export default function TimeCartTable({ lang, searchQuery, onSearchChange, onCon
         </div>
         <input
           type="text"
-          placeholder={t('text-search-cart', { defaultValue: 'Cerca nel carrello...' })}
+          placeholder={t('text-search-cart', {
+            defaultValue: 'Cerca nel carrello...',
+          })}
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           className="w-full h-[42px] rounded-[var(--radius-btn)] border-[1.5px] border-[var(--time-gray-200)] pl-10 pr-4 text-[13px] font-[var(--font-body)] text-[var(--time-dark)] bg-white outline-none transition-colors focus:border-[var(--time-red)] focus:shadow-[0_0_0_3px_rgba(230,57,70,0.1)]"
@@ -271,9 +338,10 @@ export default function TimeCartTable({ lang, searchQuery, onSearchChange, onCon
       {/* Cart card */}
       <TimeCard className="overflow-hidden">
         {/* Table header (desktop) */}
-        <div className="hidden md:grid grid-cols-[64px_1fr_100px_140px_140px_100px_44px] gap-4 px-5 py-3 bg-[var(--time-gray-50)] border-b border-[var(--time-gray-100)] text-[10px] font-bold text-[var(--time-gray-400)] uppercase tracking-[0.08em] font-[var(--font-body)]">
+        <div className="hidden md:grid grid-cols-[52px_1fr_auto_90px_70px_120px_90px_36px] gap-x-3 px-5 py-2.5 bg-[var(--time-gray-50)] border-b border-[var(--time-gray-100)] text-[9px] font-bold text-[var(--time-gray-400)] uppercase tracking-[0.08em]">
           <span />
           <span>Articolo</span>
+          <span className="w-[84px] text-center">Dettagli</span>
           <span className="text-right">Prezzo Unit.</span>
           <span className="text-center">Promo</span>
           <span className="text-center">Quantità</span>
@@ -287,15 +355,24 @@ export default function TimeCartTable({ lang, searchQuery, onSearchChange, onCon
             <div className="py-16 text-center text-[var(--time-gray-400)]">
               <div className="text-[40px] mb-3">🛒</div>
               <div className="text-[15px] font-semibold text-[var(--time-gray-600)]">
-                {baseRows.length === 0 ? 'Il carrello è vuoto' : 'Nessun risultato'}
+                {baseRows.length === 0
+                  ? 'Il carrello è vuoto'
+                  : 'Nessun risultato'}
               </div>
               <div className="text-[12px] mt-1">
-                {baseRows.length === 0 ? 'Aggiungi prodotti dal catalogo' : 'Prova con un altro termine di ricerca'}
+                {baseRows.length === 0
+                  ? 'Aggiungi prodotti dal catalogo'
+                  : 'Prova con un altro termine di ricerca'}
               </div>
             </div>
           ) : (
             filteredRows.map((item, i) => (
-              <TimeCartRow key={`${item.id}-${item.rowId ?? i}`} item={item} index={i} lang={lang} />
+              <TimeCartRow
+                key={`${item.id}-${item.rowId ?? i}`}
+                item={item}
+                index={i}
+                lang={lang}
+              />
             ))
           )}
         </div>
@@ -308,7 +385,15 @@ export default function TimeCartTable({ lang, searchQuery, onSearchChange, onCon
               className="h-11 px-7 rounded-[var(--radius-btn)] bg-[var(--time-dark)] text-white text-[13px] font-bold font-[var(--font-body)] flex items-center gap-2 transition-colors hover:bg-[var(--time-red)]"
             >
               Continua Ordine
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              >
                 <line x1="5" y1="12" x2="19" y2="12" />
                 <polyline points="12,5 19,12 12,19" />
               </svg>
@@ -322,9 +407,15 @@ export default function TimeCartTable({ lang, searchQuery, onSearchChange, onCon
         <div className="mt-4 p-3.5 rounded-xl bg-red-50 border border-red-200 flex items-center gap-2.5 text-[13px] text-red-800">
           <AlertIcon />
           <span>
-            <strong>{unavailableItems.length} articol{unavailableItems.length > 1 ? 'i' : 'o'}</strong>{' '}
+            <strong>
+              {unavailableItems.length} articol
+              {unavailableItems.length > 1 ? 'i' : 'o'}
+            </strong>{' '}
             non disponibil{unavailableItems.length > 1 ? 'i' : 'e'} —{' '}
-            {unavailableItems.length > 1 ? 'non saranno inclusi' : 'non sarà incluso'} nell&apos;ordine.
+            {unavailableItems.length > 1
+              ? 'non saranno inclusi'
+              : 'non sarà incluso'}{' '}
+            nell&apos;ordine.
           </span>
         </div>
       )}
