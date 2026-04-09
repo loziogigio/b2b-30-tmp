@@ -281,5 +281,8 @@
   "tenant-config-error-contact": "Wenn das Problem weiterhin besteht, wenden Sie sich bitte an den technischen Support.",
 
   "text-404-message": "Es tut uns leid! Diese Seite ist derzeit nicht verfügbar. Bitte versuchen Sie es später erneut.",
-  "text-back-to-home": "Zurück zur Startseite"
+  "text-back-to-home": "Zurück zur Startseite",
+  "line-item-note": "Positionsnotiz",
+  "line-item-note-placeholder": "Notiz für diesen Artikel hinzufügen...",
+  "line-item-note-saved": "Notiz gespeichert"
 }

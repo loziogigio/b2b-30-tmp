@@ -15,6 +15,7 @@ import { usePimProductListQuery } from '@framework/product/get-pim-product';
 import BannerCard from '@components/cards/banner-card';
 import CategoryChildrenCarousel from './category-children-carousel';
 import CategorySubcategoriesGrid from './category-subcategories-grid';
+import { useHomeSettings } from '@/hooks/use-home-settings';
 
 const NUM_ITEM = 6;
 const MAX_ROWS = 5;
@@ -154,8 +155,19 @@ export default function CategoryPage({
   slug: string[];
 }) {
   const { t } = useTranslation(lang, 'common');
+  const { settings } = useHomeSettings();
+  const channel = useMemo(() => {
+    const rows = settings?.headerConfig?.rows ?? [];
+    const w = rows
+      .flatMap((r) => r.blocks)
+      .flatMap((b) => b.widgets)
+      .find((w) => w.type === 'category-menu');
+    return w?.config?.channel;
+  }, [settings]);
+
   const { data, isLoading, isError } = usePimMenuQuery({
     location: 'header',
+    channel,
     staleTime: 5 * 60 * 1000,
   });
 

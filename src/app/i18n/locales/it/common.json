@@ -551,5 +551,11 @@
 
   "tenant-config-error-title": "Errore di Configurazione",
   "tenant-config-error-message": "La configurazione del sistema è incompleta. Contatta l'amministratore per verificare le impostazioni del portale.",
-  "tenant-config-error-contact": "Se il problema persiste, contatta l'assistenza tecnica."
+  "tenant-config-error-contact": "Se il problema persiste, contatta l'assistenza tecnica.",
+  "text-save-cart-as": "Salva \"{{name}}\"",
+  "text-current-cart": "Carrello attuale",
+  "text-saved-carts-tab": "Carrelli salvati",
+  "line-item-note": "Nota riga",
+  "line-item-note-placeholder": "Aggiungi una nota per questo articolo...",
+  "line-item-note-saved": "Nota salvata"
 }

@@ -26,6 +26,7 @@ export type RawOrderItem = {
   decimali_valore: number;
   image: string;
   link: string; // e.g. "/prodotto/529836"
+  note?: string;
 };
 
 export type RawOrderResponse = {
@@ -61,6 +62,7 @@ export type TransformedOrderItem = {
   quantity: number; // ordered qty
   sku: string;
   reviewUrl?: string; // product detail link if available
+  note?: string;
   delivered_in_quantity: number;
   ordered_in_quantity: number;
   delivered_in_price: number;
@@ -127,6 +129,7 @@ export function transformOrderItem(row: RawOrderItem): TransformedOrderItem {
     quantity: qty,
     sku: row.articolo,
     reviewUrl: row.link || undefined,
+    note: row.note || undefined,
     delivered_in_quantity: row.quantita.consegnato,
     ordered_in_quantity: row.quantita.ordinato,
     delivered_in_price: row.valore.consegnato,

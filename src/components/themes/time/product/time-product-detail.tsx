@@ -26,7 +26,9 @@ import {
   IoIosArrowForward,
 } from 'react-icons/io';
 import { IoArrowRedoOutline } from 'react-icons/io5';
-import { HiOutlinePrinter } from 'react-icons/hi';
+import { HiOutlinePrinter, HiOutlineSwitchHorizontal, HiOutlineCheckCircle } from 'react-icons/hi';
+import { ReminderIcon, ReminderIconFilled } from '@components/icons/app-icons';
+import { useCompareList } from '@/contexts/compare/compare.context';
 import cn from 'classnames';
 
 import type { PageBlock } from '@/lib/types/blocks';
@@ -128,7 +130,11 @@ const TimeProductDetail: React.FC<{
   const reminders = useReminders();
   const sku = String(data?.sku ?? '');
   const favorite = isAuthorized && sku ? likes.isLiked(sku) : false;
+  const hasReminder = isAuthorized && sku ? reminders.hasReminder(sku) : false;
+  const { addSku: addSkuToCompare, removeSku: removeSkuFromCompare, hasSku } = useCompareList();
+  const isInCompare = hasSku(sku);
   const [wishlistLoading, setWishlistLoading] = useState(false);
+  const [reminderLoading, setReminderLoading] = useState(false);
 
   React.useEffect(() => {
     if (!sku) return;
@@ -146,6 +152,22 @@ const TimeProductDetail: React.FC<{
       setWishlistLoading(false);
     }
   };
+
+  const toggleReminder = async () => {
+    if (!sku) return;
+    setReminderLoading(true);
+    try {
+      await reminders.toggle(sku);
+    } finally {
+      setReminderLoading(false);
+    }
+  };
+
+  const handleToggleCompare = useCallback(() => {
+    if (!sku) return;
+    if (hasSku(sku)) removeSkuFromCompare(sku);
+    else addSkuToCompare(sku);
+  }, [sku, hasSku, addSkuToCompare, removeSkuFromCompare]);
 
   const handlePrint = useCallback(() => {
     if (!data) return;
@@ -264,7 +286,7 @@ const TimeProductDetail: React.FC<{
                   </span>
                 )}
                 {promoLabel && (
-                  <span className="bg-[var(--time-dark)] text-white text-[10px] font-bold px-2.5 py-1 rounded-md font-mono tracking-wide uppercase">
+                  <span className="bg-[var(--time-dark)] text-white text-[11px] sm:text-xs font-bold px-2.5 py-1 rounded-md font-mono tracking-wide uppercase">
                     DISCOUNT
                   </span>
                 )}
@@ -329,13 +351,13 @@ const TimeProductDetail: React.FC<{
           {/* Brand + SKU + Fig */}
           <div className="flex items-center gap-2.5 flex-wrap mb-4">
             {data.brand?.name && (
-              <span className="bg-[var(--time-red)] text-white text-[12px] font-extrabold px-3 py-[5px] rounded-[7px] font-[family-name:var(--font-body)] uppercase">
+              <span className="bg-[var(--time-red)] text-white text-xs sm:text-[13px] font-extrabold px-3 py-[5px] rounded-[7px] font-[family-name:var(--font-body)] uppercase">
                 {data.brand.name}
               </span>
             )}
             <button
               onClick={copySkuToClipboard}
-              className="flex items-center gap-1.5 bg-[var(--time-gray-50)] border border-[var(--time-gray-200)] text-[11px] font-semibold text-[var(--time-dark)] px-2.5 py-1 rounded-md cursor-pointer hover:border-[var(--time-gray-400)] transition-colors font-mono"
+              className="flex items-center gap-1.5 bg-[var(--time-gray-50)] border border-[var(--time-gray-200)] text-[11px] sm:text-xs font-semibold text-[var(--time-dark)] px-2.5 py-1 rounded-md cursor-pointer hover:border-[var(--time-gray-400)] transition-colors font-mono"
               title={copied ? 'Copiato!' : 'Copia SKU'}
             >
               {sku}
@@ -355,20 +377,20 @@ const TimeProductDetail: React.FC<{
               </svg>
             </button>
             {data.figure_code && (
-              <span className="text-[10px] text-[var(--time-gray-400)] font-mono">
+              <span className="text-[11px] sm:text-xs text-[var(--time-gray-400)] font-mono">
                 Fig: {data.figure_code}
               </span>
             )}
           </div>
 
           {/* Title */}
-          <h1 className="text-[28px] font-[900] text-[var(--time-dark)] font-[family-name:var(--font-heading)] tracking-[-0.03em] leading-tight mb-3">
+          <h1 className="text-2xl sm:text-[28px] lg:text-[32px] font-[900] text-[var(--time-dark)] font-[family-name:var(--font-heading)] tracking-[-0.03em] leading-tight mb-3">
             {data.name}
           </h1>
 
           {/* Description */}
           {data.description && (
-            <p className="text-[14px] text-[var(--time-gray-600)] leading-[1.65] mb-5 max-w-[560px] font-[family-name:var(--font-body)]">
+            <p className="text-sm sm:text-[15px] text-[var(--time-gray-600)] leading-[1.65] mb-5 max-w-[560px] font-[family-name:var(--font-body)]">
               {data.description}
             </p>
           )}
@@ -377,37 +399,37 @@ const TimeProductDetail: React.FC<{
           <div className="grid grid-cols-2 gap-x-6 gap-y-2 p-[14px_18px] rounded-xl bg-[var(--time-gray-50)] border border-[var(--time-gray-100)] mb-5">
             {data.model && (
               <>
-                <span className="text-[12px] text-[var(--time-gray-400)] font-medium">
+                <span className="text-xs sm:text-[13px] text-[var(--time-gray-400)] font-medium">
                   {t('text-model', { defaultValue: 'Modello' })}
                 </span>
-                <span className="text-[12px] font-bold text-[var(--time-dark)]">
+                <span className="text-xs sm:text-[13px] font-bold text-[var(--time-dark)]">
                   {data.model}
                 </span>
               </>
             )}
             {data.weight && (
               <>
-                <span className="text-[12px] text-[var(--time-gray-400)] font-medium">
+                <span className="text-xs sm:text-[13px] text-[var(--time-gray-400)] font-medium">
                   {t('text-weight', { defaultValue: 'Peso' })}
                 </span>
-                <span className="text-[12px] font-bold text-[var(--time-dark)]">
+                <span className="text-xs sm:text-[13px] font-bold text-[var(--time-dark)]">
                   {data.weight} kg
                 </span>
               </>
             )}
             {data.volume && (
               <>
-                <span className="text-[12px] text-[var(--time-gray-400)] font-medium">
+                <span className="text-xs sm:text-[13px] text-[var(--time-gray-400)] font-medium">
                   {t('text-volume', { defaultValue: 'Volume' })}
                 </span>
-                <span className="text-[12px] font-bold text-[var(--time-dark)]">
+                <span className="text-xs sm:text-[13px] font-bold text-[var(--time-dark)]">
                   {data.volume}
                 </span>
               </>
             )}
             {erpPrice && (
               <>
-                <span className="text-[12px] text-[var(--time-gray-400)] font-medium">
+                <span className="text-xs sm:text-[13px] text-[var(--time-gray-400)] font-medium">
                   {t('text-status', { defaultValue: 'Stato' })}
                 </span>
                 <span className="flex items-center gap-1.5">
@@ -418,7 +440,7 @@ const TimeProductDetail: React.FC<{
                     }}
                   />
                   <span
-                    className="text-[12px] font-bold"
+                    className="text-xs sm:text-[13px] font-bold"
                     style={{ color: isOutOfStock ? '#dc2626' : '#059669' }}
                   >
                     {isOutOfStock
@@ -437,11 +459,11 @@ const TimeProductDetail: React.FC<{
             <div className="p-5 rounded-[14px] border-2 border-[var(--time-gray-100)] bg-white mb-4">
               {/* List price + packaging info */}
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[12px] text-[var(--time-gray-400)] font-medium">
+                <span className="text-xs sm:text-[13px] text-[var(--time-gray-400)] font-medium">
                   {t('text-list-price', { defaultValue: 'Listino' })}
                 </span>
                 {(um || mv != null || cf != null) && (
-                  <span className="text-[12px] text-[var(--time-gray-400)] font-mono">
+                  <span className="text-xs sm:text-[13px] text-[var(--time-gray-400)] font-mono">
                     {um && <>UM: {um}</>}
                     {mv != null && <> · MV: {mv}</>}
                     {cf != null && <> · CF: {cf}</>}
@@ -450,7 +472,7 @@ const TimeProductDetail: React.FC<{
               </div>
 
               {hasDiscount && (
-                <div className="text-[16px] text-[var(--time-gray-400)] line-through mb-2 tabular-nums">
+                <div className="text-[15px] sm:text-base text-[var(--time-gray-400)] line-through mb-2 tabular-nums">
                   &euro;{Number(listPrice).toFixed(2)}
                 </div>
               )}
@@ -459,11 +481,11 @@ const TimeProductDetail: React.FC<{
               {promoLabel && (
                 <div className="flex items-center justify-between bg-[rgba(230,57,70,0.04)] border border-[rgba(230,57,70,0.15)] rounded-[10px] px-3.5 py-2.5 mb-4">
                   <div className="flex items-center gap-2">
-                    <span className="text-[12px] font-bold text-[var(--time-red)]">
+                    <span className="text-xs sm:text-[13px] font-bold text-[var(--time-red)]">
                       DISCOUNT
                     </span>
                     {discountPercent > 0 && (
-                      <span className="text-[12px] font-semibold text-[var(--time-gray-600)]">
+                      <span className="text-xs sm:text-[13px] font-semibold text-[var(--time-gray-600)]">
                         -{discountPercent}%
                       </span>
                     )}
@@ -475,17 +497,17 @@ const TimeProductDetail: React.FC<{
               <div className="flex items-center gap-3 mb-4">
                 {netPrice != null && Number(netPrice) > 0 ? (
                   <>
-                    <span className="text-[38px] font-[900] text-[var(--time-dark)] font-[family-name:var(--font-heading)] tabular-nums tracking-[-0.02em]">
+                    <span className="text-[32px] sm:text-[36px] lg:text-[38px] font-[900] text-[var(--time-dark)] font-[family-name:var(--font-heading)] tabular-nums tracking-[-0.02em]">
                       &euro;{Number(netPrice).toFixed(2)}
                     </span>
                     {savings && (
-                      <span className="bg-[#f0fdf4] text-[#059669] text-[14px] font-bold px-2.5 py-1 rounded-md">
+                      <span className="bg-[#f0fdf4] text-[#059669] text-[13px] sm:text-sm font-bold px-2.5 py-1 rounded-md">
                         Risparmi &euro;{savings}
                       </span>
                     )}
                   </>
                 ) : (
-                  <span className="text-[16px] text-[var(--time-gray-400)]">
+                  <span className="text-[15px] sm:text-base text-[var(--time-gray-400)]">
                     &mdash;
                   </span>
                 )}
@@ -512,7 +534,7 @@ const TimeProductDetail: React.FC<{
               <button
                 onClick={toggleWishlist}
                 disabled={wishlistLoading}
-                className="h-[38px] px-3.5 rounded-[9px] border-[1.5px] border-[var(--time-gray-200)] bg-white text-[12px] font-semibold flex items-center gap-[7px] cursor-pointer transition-colors hover:border-[var(--time-red)] hover:text-[var(--time-red)] disabled:opacity-50 font-[family-name:var(--font-body)]"
+                className="h-[38px] px-3.5 rounded-[9px] border-[1.5px] border-[var(--time-gray-200)] bg-white text-xs sm:text-[13px] font-semibold flex items-center gap-[7px] cursor-pointer transition-colors hover:border-[var(--time-red)] hover:text-[var(--time-red)] disabled:opacity-50 font-[family-name:var(--font-body)]"
                 style={{
                   color: favorite ? 'var(--time-red)' : 'var(--time-gray-600)',
                 }}
@@ -522,9 +544,40 @@ const TimeProductDetail: React.FC<{
                 ) : (
                   <IoIosHeartEmpty size={16} />
                 )}
-                {t('text-save', { defaultValue: 'Salva' })}
+                {favorite
+                  ? t('text-favorited', { defaultValue: 'Preferito' })
+                  : t('text-wishlist', { defaultValue: 'Preferiti' })}
               </button>
             )}
+            {isAuthorized && (isOutOfStock || hasReminder) && (
+              <button
+                onClick={toggleReminder}
+                disabled={reminderLoading}
+                className="h-[38px] px-3.5 rounded-[9px] border-[1.5px] border-[var(--time-gray-200)] bg-white text-xs sm:text-[13px] font-semibold flex items-center gap-[7px] cursor-pointer transition-colors hover:border-yellow-500 hover:text-yellow-500 disabled:opacity-50 font-[family-name:var(--font-body)]"
+                style={{
+                  color: hasReminder ? '#eab308' : 'var(--time-gray-600)',
+                }}
+              >
+                {hasReminder ? <ReminderIconFilled size={16} /> : <ReminderIcon size={16} />}
+                {hasReminder
+                  ? t('text-reminder-active', { defaultValue: 'Promemoria attivo' })
+                  : t('text-reminder-notify', { defaultValue: 'Avvisami' })}
+              </button>
+            )}
+            <button
+              onClick={handleToggleCompare}
+              disabled={!sku}
+              className="h-[38px] px-3.5 rounded-[9px] border-[1.5px] border-[var(--time-gray-200)] bg-white text-xs sm:text-[13px] font-semibold flex items-center gap-[7px] cursor-pointer transition-colors hover:border-emerald-500 hover:text-emerald-600 disabled:opacity-50 font-[family-name:var(--font-body)]"
+              style={{
+                color: isInCompare ? '#059669' : 'var(--time-gray-600)',
+                borderColor: isInCompare ? '#6ee7b7' : undefined,
+              }}
+            >
+              {isInCompare ? <HiOutlineCheckCircle size={16} /> : <HiOutlineSwitchHorizontal size={16} />}
+              {isInCompare
+                ? t('text-in-compare', { defaultValue: 'Confronto' })
+                : t('text-compare', { defaultValue: 'Confronta' })}
+            </button>
             <button
               onClick={() => {
                 if (typeof navigator.share === 'function') {
@@ -534,14 +587,14 @@ const TimeProductDetail: React.FC<{
                   });
                 }
               }}
-              className="h-[38px] px-3.5 rounded-[9px] border-[1.5px] border-[var(--time-gray-200)] bg-white text-[12px] font-semibold text-[var(--time-gray-600)] flex items-center gap-[7px] cursor-pointer transition-colors hover:border-[var(--time-gray-400)] font-[family-name:var(--font-body)]"
+              className="h-[38px] px-3.5 rounded-[9px] border-[1.5px] border-[var(--time-gray-200)] bg-white text-xs sm:text-[13px] font-semibold text-[var(--time-gray-600)] flex items-center gap-[7px] cursor-pointer transition-colors hover:border-[var(--time-gray-400)] font-[family-name:var(--font-body)]"
             >
               <IoArrowRedoOutline size={16} />
               {t('text-share', { defaultValue: 'Condividi' })}
             </button>
             <button
               onClick={handlePrint}
-              className="h-[38px] px-3.5 rounded-[9px] border-[1.5px] border-[var(--time-gray-200)] bg-white text-[12px] font-semibold text-[var(--time-gray-600)] flex items-center gap-[7px] cursor-pointer transition-colors hover:border-[var(--time-gray-400)] font-[family-name:var(--font-body)]"
+              className="h-[38px] px-3.5 rounded-[9px] border-[1.5px] border-[var(--time-gray-200)] bg-white text-xs sm:text-[13px] font-semibold text-[var(--time-gray-600)] flex items-center gap-[7px] cursor-pointer transition-colors hover:border-[var(--time-gray-400)] font-[family-name:var(--font-body)]"
             >
               <HiOutlinePrinter size={16} />
               {t('text-print', { defaultValue: 'Stampa' })}
@@ -856,7 +909,7 @@ function RecentlyBoughtByYou() {
               {item.emoji}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-[12px] font-bold text-[var(--time-dark)] whitespace-nowrap overflow-hidden text-ellipsis font-[family-name:var(--font-body)]">
+              <div className="text-xs sm:text-[13px] font-bold text-[var(--time-dark)] whitespace-nowrap overflow-hidden text-ellipsis font-[family-name:var(--font-body)]">
                 {item.name}
               </div>
               <div className="text-[11px] text-[var(--time-gray-400)]">

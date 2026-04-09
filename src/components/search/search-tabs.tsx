@@ -3,7 +3,6 @@
 import * as React from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import cn from 'classnames';
-import { toast } from 'react-toastify';
 import { HiOutlineHeart, HiOutlineTrendingUp } from 'react-icons/hi';
 import { useUI } from '@contexts/ui.context';
 import { useTranslation } from 'src/app/i18n/client';
@@ -86,15 +85,15 @@ function keyFromQuery(qs: string): string {
   return qs || 'empty';
 }
 
-function labelFromQuery(qs: URLSearchParams): string {
-  // prefer text, sku, category; else query string or "Search"
+function labelFromQuery(qs: URLSearchParams, fallback = 'Search'): string {
+  // prefer text, sku, category; else query string or translated fallback
   const text = qs.get('text');
   if (text) return text;
   const sku = qs.get('sku');
   if (sku) return `SKU:${sku.split(';')[0]}${sku.includes(';') ? '…' : ''}`;
   const cat = qs.get('category') || qs.get('filters-category');
   if (cat) return `Cat:${cat}`;
-  return 'Search';
+  return fallback;
 }
 
 function loadTabs(): Tab[] {
@@ -130,6 +129,8 @@ export default function SearchTabs({ lang }: { lang: string }) {
     setMounted(true);
   }, []);
 
+  const searchLabel = t('text-search-tab');
+
   // bootstrap from LS and current URL
   React.useEffect(() => {
     const currentQS = parseQuery(searchParams);
@@ -151,7 +152,7 @@ export default function SearchTabs({ lang }: { lang: string }) {
         const next: Tab = {
           id: randomId(),
           key: currentKey,
-          label: labelFromQuery(searchParams),
+          label: labelFromQuery(searchParams, searchLabel),
           query: currentQS,
         };
         // Append new searches at the end
@@ -169,7 +170,7 @@ export default function SearchTabs({ lang }: { lang: string }) {
   React.useEffect(() => {
     const qs = parseQuery(searchParams);
     const key = keyFromQuery(qs);
-    const lbl = labelFromQuery(searchParams);
+    const lbl = labelFromQuery(searchParams, searchLabel);
 
     // If no tabs exist, create the first one
     if (!tabs.length) {
@@ -224,7 +225,7 @@ export default function SearchTabs({ lang }: { lang: string }) {
     const hasEmpty = tabs.some((t) => t.key === 'empty');
     if (hasEmpty) return goto(tabs.findIndex((t) => t.key === 'empty'));
     if (tabs.length >= MAX_TABS) return;
-    const t: Tab = { id: randomId(), key: 'empty', label: 'Search', query: '' };
+    const t: Tab = { id: randomId(), key: 'empty', label: searchLabel, query: '' };
     const next = [...tabs, t];
     setTabs(next);
     setActive(next.length - 1);
@@ -235,10 +236,6 @@ export default function SearchTabs({ lang }: { lang: string }) {
 
   function closeTab(idx: number) {
     if (!tabs[idx]) return;
-    const removed = tabs[idx];
-    const prev = [...tabs];
-    const prevActive = active;
-
     const next = tabs.filter((_, i) => i !== idx);
     const nextActive =
       idx === active
@@ -257,30 +254,6 @@ export default function SearchTabs({ lang }: { lang: string }) {
       router.replace(`${pathname}`, { scroll: false });
     }
 
-    // Show undo toast for non-empty tabs
-    if (removed.key !== 'empty' && removed.query) {
-      toast.info(
-        <span>
-          Tab &quot;{removed.label}&quot; closed.{' '}
-          <button
-            type="button"
-            className="underline font-semibold ml-1"
-            onClick={() => {
-              setTabs(prev);
-              setActive(prevActive);
-              saveTabs(prev);
-              router.replace(`${pathname}?${removed.query}`, {
-                scroll: false,
-              });
-              toast.dismiss();
-            }}
-          >
-            Undo
-          </button>
-        </span>,
-        { autoClose: 5000 },
-      );
-    }
   }
 
   // DnD reorder
@@ -372,7 +345,7 @@ export default function SearchTabs({ lang }: { lang: string }) {
             onDrop={() => onDrop(i)}
             onClick={() => goto(i)}
             onDoubleClick={() => startEdit(t.id)}
-            title={decodeURIComponent(t.query || 'Search')}
+            title={decodeURIComponent(t.query || searchLabel)}
           >
             {editing === t.id ? (
               <input

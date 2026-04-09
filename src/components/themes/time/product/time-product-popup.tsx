@@ -13,10 +13,13 @@ import {
 } from 'react-icons/io';
 import {
   IoClose,
+  IoChevronBack,
   IoArrowRedoOutline,
   IoArrowForwardOutline,
 } from 'react-icons/io5';
-import { HiOutlinePrinter } from 'react-icons/hi';
+import { HiOutlinePrinter, HiOutlineSwitchHorizontal, HiOutlineCheckCircle } from 'react-icons/hi';
+import { ReminderIcon, ReminderIconFilled } from '@components/icons/app-icons';
+import { useCompareList } from '@/contexts/compare/compare.context';
 import {
   useModalAction,
   useModalState,
@@ -30,6 +33,7 @@ import { useLikes } from '@contexts/likes/likes.context';
 import { useReminders } from '@contexts/reminders/reminders.context';
 import { useUI } from '@contexts/ui.context';
 import { productPlaceholder } from '@assets/placeholders';
+import { isModalFullWidth } from '@/lib/theme/resolver';
 import AddToCart from '@components/product/add-to-cart';
 import { printProductDetail } from '@utils/print-product';
 import TimeVariantsGrid from './time-variants-grid';
@@ -43,16 +47,26 @@ type GalleryImage = {
 
 export default function TimeProductPopup({ lang }: { lang: string }) {
   const { t } = useTranslation(lang, 'common');
-  const { data: product } = useModalState() as { data: any };
-  const { closeModal, closeAll } = useModalAction();
+  const { data: product, stack } = useModalState() as { data: any; stack: any[] };
+  const { closeModal, goBack, closeAll } = useModalAction();
   const router = useRouter();
 
   const likes = useLikes();
   const reminders = useReminders();
-  const { isAuthorized } = useUI();
+  const { isAuthorized, hidePrices } = useUI();
   const sku = String(product?.sku ?? '');
   const favorite = isAuthorized && sku ? likes.isLiked(sku) : false;
+  const hasReminder = isAuthorized && sku ? reminders.hasReminder(sku) : false;
+  const { addSku: addSkuToCompare, removeSku: removeSkuFromCompare, hasSku } = useCompareList();
+  const isInCompare = hasSku(sku);
   const [wishlistLoading, setWishlistLoading] = useState(false);
+  const [reminderLoading, setReminderLoading] = useState(false);
+
+  const handleToggleCompare = useCallback(() => {
+    if (!sku) return;
+    if (hasSku(sku)) removeSkuFromCompare(sku);
+    else addSkuToCompare(sku);
+  }, [sku, hasSku, addSkuToCompare, removeSkuFromCompare]);
 
   /* ── ERP prices ── */
   const entityCodes = [String(product?.id ?? '')].filter(Boolean);
@@ -75,6 +89,7 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
     listPrice != null &&
     Number(listPrice) > Number(netPrice) &&
     Number(netPrice) > 0;
+  const discountTiers = erpPrice?.discount_description || '';
   const discountPercent = hasDiscount
     ? Math.round((1 - Number(netPrice) / Number(listPrice)) * 100)
     : 0;
@@ -142,6 +157,8 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
     );
   }
 
+  const fullWidth = isModalFullWidth();
+
   if (!product) return null;
 
   /* ── Multi-variant parent: show variant grid ── */
@@ -154,15 +171,33 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
   if (isMultiVariantParent) {
     return (
       <div className="h-full overflow-y-auto bg-white relative">
-        <button
-          onClick={closeModal}
-          aria-label="Close"
-          className="absolute top-3 right-3 z-10 w-10 h-10 rounded-[var(--radius-btn)] bg-[var(--time-gray-50)] border border-[var(--time-gray-200)] flex items-center justify-center text-[var(--time-gray-500)] hover:bg-[var(--time-gray-100)] hover:text-[var(--time-dark)] transition-colors cursor-pointer"
-        >
-          <IoClose size={20} />
-        </button>
+        {/* Accent bar */}
+        <div className="sticky top-0 z-20 bg-brand text-white">
+          <div className={cn("flex items-center justify-between px-5 md:px-8 lg:px-10 py-3", !fullWidth && "max-w-[1200px] mx-auto")}>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => (stack.length > 1 ? goBack() : closeModal())}
+                className="inline-flex items-center gap-1.5 bg-white/20 hover:bg-white/30 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors cursor-pointer"
+              >
+                <IoChevronBack size={16} />
+                {t('text-go-back', { defaultValue: 'Torna indietro' })}
+              </button>
+              <span className="hidden sm:inline text-white/40">|</span>
+              <span className="hidden sm:inline text-white/90 text-sm font-medium">
+                {t('text-product-variants', { defaultValue: 'Varianti prodotto' })}
+              </span>
+            </div>
+            <button
+              onClick={closeModal}
+              aria-label="Close"
+              className="w-8 h-8 rounded-full border border-white/30 flex items-center justify-center hover:bg-white/20 transition-colors cursor-pointer"
+            >
+              <IoClose size={18} />
+            </button>
+          </div>
+        </div>
 
-        <div className="max-w-[1200px] mx-auto p-5 md:p-8 lg:p-10">
+        <div className={cn("p-5 md:p-8 lg:p-10", !fullWidth && "max-w-[1200px] mx-auto")}>
           <TimeVariantsGrid
             lang={lang}
             product={product}
@@ -177,14 +212,31 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
 
   return (
     <div className="h-full overflow-y-auto bg-white relative">
-      {/* Close button */}
-      <button
-        onClick={closeModal}
-        aria-label="Close"
-        className="absolute top-3 right-3 z-10 w-10 h-10 rounded-[var(--radius-btn)] bg-[var(--time-gray-50)] border border-[var(--time-gray-200)] flex items-center justify-center text-[var(--time-gray-500)] hover:bg-[var(--time-gray-100)] hover:text-[var(--time-dark)] transition-colors cursor-pointer"
-      >
-        <IoClose size={20} />
-      </button>
+      {/* Accent bar */}
+      <div className="sticky top-0 z-20 bg-brand text-white">
+        <div className="max-w-[1200px] mx-auto flex items-center justify-between px-5 md:px-8 lg:px-10 py-3">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => (stack.length > 1 ? goBack() : closeModal())}
+              className="inline-flex items-center gap-1.5 bg-white/20 hover:bg-white/30 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors cursor-pointer"
+            >
+              <IoChevronBack size={16} />
+              {t('text-go-back', { defaultValue: 'Torna indietro' })}
+            </button>
+            <span className="hidden sm:inline text-white/40">|</span>
+            <span className="hidden sm:inline text-white/90 text-sm font-medium">
+              {t('text-product-detail', { defaultValue: 'Dettaglio prodotto' })}
+            </span>
+          </div>
+          <button
+            onClick={closeModal}
+            aria-label="Close"
+            className="w-8 h-8 rounded-full border border-white/30 flex items-center justify-center hover:bg-white/20 transition-colors cursor-pointer"
+          >
+            <IoClose size={18} />
+          </button>
+        </div>
+      </div>
 
       <div className="max-w-[1200px] mx-auto p-5 md:p-8 lg:p-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 xl:gap-10">
@@ -205,15 +257,15 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
               </div>
 
               {/* Badges */}
-              {(discountPercent > 0 || promoLabel) && (
+              {!hidePrices && (discountPercent > 0 || promoLabel) && (
                 <div className="absolute top-4 left-4 flex flex-col gap-2">
                   {discountPercent > 0 && (
                     <span className="bg-[var(--time-red)] text-white text-[13px] font-extrabold px-3.5 py-1.5 rounded-lg font-[family-name:var(--font-body)]">
-                      -{discountPercent}%
+                      {discountTiers || `-${discountPercent}%`}
                     </span>
                   )}
                   {promoLabel && discountPercent === 0 && (
-                    <span className="bg-[var(--time-dark)] text-white text-[10px] font-bold px-2.5 py-1 rounded-md font-mono uppercase">
+                    <span className="bg-[var(--time-dark)] text-white text-[11px] sm:text-xs font-bold px-2.5 py-1 rounded-md font-mono uppercase">
                       PROMO
                     </span>
                   )}
@@ -279,17 +331,17 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
             {/* Brand + SKU */}
             <div className="flex items-center gap-2.5 flex-wrap mb-3">
               {product.brand?.name && (
-                <span className="bg-[var(--time-red)] text-white text-[11px] font-extrabold px-2.5 py-[4px] rounded-[6px] font-[family-name:var(--font-body)] uppercase">
+                <span className="bg-[var(--time-red)] text-white text-xs sm:text-[13px] font-extrabold px-2.5 py-[4px] rounded-[6px] font-[family-name:var(--font-body)] uppercase">
                   {product.brand.name}
                 </span>
               )}
-              <span className="text-[11px] font-semibold text-[var(--time-gray-500)] font-mono">
+              <span className="text-xs sm:text-[13px] font-semibold text-[var(--time-gray-500)] font-mono">
                 {sku}
               </span>
             </div>
 
             {/* Title */}
-            <h2 className="text-[22px] font-[800] text-[var(--time-dark)] font-[family-name:var(--font-heading)] tracking-[-0.02em] leading-tight mb-2">
+            <h2 className="text-xl sm:text-[22px] lg:text-2xl font-[800] text-[var(--time-dark)] font-[family-name:var(--font-heading)] tracking-[-0.02em] leading-tight mb-2">
               {product.name}
             </h2>
 
@@ -297,7 +349,7 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
             <button
               type="button"
               onClick={navigateToProductPage}
-              className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-[var(--time-red)] mb-4 cursor-pointer bg-transparent border-none p-0 font-[family-name:var(--font-body)] hover:underline"
+              className="inline-flex items-center gap-1.5 text-xs sm:text-[13px] font-semibold text-[var(--time-red)] mb-4 cursor-pointer bg-transparent border-none p-0 font-[family-name:var(--font-body)] hover:underline"
             >
               {t('text-view-full-product', {
                 defaultValue: 'Vedi scheda completa',
@@ -307,13 +359,13 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
 
             {/* Description */}
             {product.description && (
-              <p className="text-[13px] text-[var(--time-gray-600)] leading-[1.6] mb-4 font-[family-name:var(--font-body)] line-clamp-3">
+              <p className="text-[13px] sm:text-sm text-[var(--time-gray-600)] leading-[1.6] mb-4 font-[family-name:var(--font-body)] line-clamp-3">
                 {product.description}
               </p>
             )}
 
             {/* Quick specs */}
-            <div className="grid grid-cols-2 gap-x-5 gap-y-1.5 p-3 rounded-xl bg-[var(--time-gray-50)] border border-[var(--time-gray-100)] mb-4 text-[12px]">
+            <div className="grid grid-cols-2 gap-x-5 gap-y-1.5 p-3 rounded-xl bg-[var(--time-gray-50)] border border-[var(--time-gray-100)] mb-4 text-xs sm:text-[13px]">
               {product.model && (
                 <>
                   <span className="text-[var(--time-gray-400)] font-medium">
@@ -337,7 +389,7 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
                       }}
                     />
                     <span
-                      className="font-bold text-[12px]"
+                      className="font-bold text-xs sm:text-[13px]"
                       style={{ color: isOutOfStock ? '#dc2626' : '#059669' }}
                     >
                       {isOutOfStock
@@ -353,14 +405,14 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
             </div>
 
             {/* ── Price section ── */}
-            {isAuthorized && (
+            {isAuthorized && !hidePrices && (
               <div className="p-4 rounded-[12px] border-2 border-[var(--time-gray-100)] bg-white mb-4">
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[11px] text-[var(--time-gray-400)] font-medium">
+                  <span className="text-xs sm:text-[13px] text-[var(--time-gray-400)] font-medium">
                     {t('text-list-price', { defaultValue: 'Listino' })}
                   </span>
                   {(um || mv != null || cf != null) && (
-                    <span className="text-[11px] text-[var(--time-gray-400)] font-mono">
+                    <span className="text-xs sm:text-[13px] text-[var(--time-gray-400)] font-mono">
                       {um && <>UM: {um}</>}
                       {mv != null && <> · MV: {mv}</>}
                       {cf != null && <> · CF: {cf}</>}
@@ -369,8 +421,20 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
                 </div>
 
                 {hasDiscount && (
-                  <div className="text-[14px] text-[var(--time-gray-400)] line-through mb-1.5 tabular-nums">
+                  <div className="text-sm sm:text-[15px] text-[var(--time-gray-400)] line-through mb-1.5 tabular-nums">
                     &euro;{Number(listPrice).toFixed(2)}
+                  </div>
+                )}
+
+                {/* Tiered discount bar */}
+                {hasDiscount && discountTiers && (
+                  <div className="flex items-center gap-2 bg-[#fef2f2] rounded-md px-3 py-1.5 mb-2">
+                    <span className="text-xs sm:text-[13px] font-bold text-[var(--time-red)] uppercase font-[family-name:var(--font-body)]">
+                      {t('text-discount', { defaultValue: 'Sconto' })}
+                    </span>
+                    <span className="text-xs sm:text-[13px] font-semibold text-[var(--time-dark)] font-[family-name:var(--font-body)]">
+                      {discountTiers}
+                    </span>
                   </div>
                 )}
 
@@ -378,17 +442,17 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
                 <div className="flex items-center gap-2.5 mb-3">
                   {netPrice != null && Number(netPrice) > 0 ? (
                     <>
-                      <span className="text-[30px] font-[900] text-[var(--time-dark)] font-[family-name:var(--font-heading)] tabular-nums tracking-[-0.02em]">
+                      <span className="text-[26px] sm:text-[30px] font-[900] text-[var(--time-dark)] font-[family-name:var(--font-heading)] tabular-nums tracking-[-0.02em]">
                         &euro;{Number(netPrice).toFixed(2)}
                       </span>
                       {hasDiscount && (
-                        <span className="bg-[#f0fdf4] text-[#059669] text-[12px] font-bold px-2 py-0.5 rounded-md">
-                          -{discountPercent}%
+                        <span className="text-xs sm:text-[13px] font-bold text-[#059669] font-[family-name:var(--font-body)]">
+                          Risparmi &euro;{(Number(listPrice) - Number(netPrice)).toFixed(2)}
                         </span>
                       )}
                     </>
                   ) : (
-                    <span className="text-[14px] text-[var(--time-gray-400)]">
+                    <span className="text-sm sm:text-[15px] text-[var(--time-gray-400)]">
                       &mdash;
                     </span>
                   )}
@@ -413,7 +477,7 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
                 <button
                   onClick={toggleWishlist}
                   disabled={wishlistLoading}
-                  className="h-[36px] px-3 rounded-[8px] border-[1.5px] border-[var(--time-gray-200)] bg-white text-[11px] font-semibold flex items-center gap-[6px] cursor-pointer transition-colors hover:border-[var(--time-red)] hover:text-[var(--time-red)] disabled:opacity-50 font-[family-name:var(--font-body)]"
+                  className="h-[36px] px-3 rounded-[8px] border-[1.5px] border-[var(--time-gray-200)] bg-white text-[11px] sm:text-xs font-semibold flex items-center gap-[6px] cursor-pointer transition-colors hover:border-[var(--time-red)] hover:text-[var(--time-red)] disabled:opacity-50 font-[family-name:var(--font-body)]"
                   style={{
                     color: favorite
                       ? 'var(--time-red)'
@@ -425,9 +489,44 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
                   ) : (
                     <IoIosHeartEmpty size={14} />
                   )}
-                  {t('text-save', { defaultValue: 'Salva' })}
+                  {favorite
+                    ? t('text-favorited', { defaultValue: 'Preferito' })
+                    : t('text-wishlist', { defaultValue: 'Preferiti' })}
                 </button>
               )}
+              {isAuthorized && (isOutOfStock || hasReminder) && (
+                <button
+                  onClick={async () => {
+                    if (!sku) return;
+                    setReminderLoading(true);
+                    try { await reminders.toggle(sku); } finally { setReminderLoading(false); }
+                  }}
+                  disabled={reminderLoading}
+                  className="h-[36px] px-3 rounded-[8px] border-[1.5px] border-[var(--time-gray-200)] bg-white text-[11px] sm:text-xs font-semibold flex items-center gap-[6px] cursor-pointer transition-colors hover:border-yellow-500 hover:text-yellow-500 disabled:opacity-50 font-[family-name:var(--font-body)]"
+                  style={{
+                    color: hasReminder ? '#eab308' : 'var(--time-gray-600)',
+                  }}
+                >
+                  {hasReminder ? <ReminderIconFilled size={14} /> : <ReminderIcon size={14} />}
+                  {hasReminder
+                    ? t('text-reminder-active', { defaultValue: 'Promemoria attivo' })
+                    : t('text-reminder-notify', { defaultValue: 'Avvisami' })}
+                </button>
+              )}
+              <button
+                onClick={handleToggleCompare}
+                disabled={!sku}
+                className="h-[36px] px-3 rounded-[8px] border-[1.5px] border-[var(--time-gray-200)] bg-white text-[11px] sm:text-xs font-semibold flex items-center gap-[6px] cursor-pointer transition-colors hover:border-emerald-500 hover:text-emerald-600 disabled:opacity-50 font-[family-name:var(--font-body)]"
+                style={{
+                  color: isInCompare ? '#059669' : 'var(--time-gray-600)',
+                  borderColor: isInCompare ? '#6ee7b7' : undefined,
+                }}
+              >
+                {isInCompare ? <HiOutlineCheckCircle size={14} /> : <HiOutlineSwitchHorizontal size={14} />}
+                {isInCompare
+                  ? t('text-in-compare', { defaultValue: 'Confronto' })
+                  : t('text-compare', { defaultValue: 'Confronta' })}
+              </button>
               <button
                 onClick={() => {
                   if (typeof navigator.share === 'function') {
@@ -437,14 +536,14 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
                     });
                   }
                 }}
-                className="h-[36px] px-3 rounded-[8px] border-[1.5px] border-[var(--time-gray-200)] bg-white text-[11px] font-semibold text-[var(--time-gray-600)] flex items-center gap-[6px] cursor-pointer transition-colors hover:border-[var(--time-gray-400)] font-[family-name:var(--font-body)]"
+                className="h-[36px] px-3 rounded-[8px] border-[1.5px] border-[var(--time-gray-200)] bg-white text-[11px] sm:text-xs font-semibold text-[var(--time-gray-600)] flex items-center gap-[6px] cursor-pointer transition-colors hover:border-[var(--time-gray-400)] font-[family-name:var(--font-body)]"
               >
                 <IoArrowRedoOutline size={14} />
                 {t('text-share', { defaultValue: 'Condividi' })}
               </button>
               <button
                 onClick={handlePrint}
-                className="h-[36px] px-3 rounded-[8px] border-[1.5px] border-[var(--time-gray-200)] bg-white text-[11px] font-semibold text-[var(--time-gray-600)] flex items-center gap-[6px] cursor-pointer transition-colors hover:border-[var(--time-gray-400)] font-[family-name:var(--font-body)]"
+                className="h-[36px] px-3 rounded-[8px] border-[1.5px] border-[var(--time-gray-200)] bg-white text-[11px] sm:text-xs font-semibold text-[var(--time-gray-600)] flex items-center gap-[6px] cursor-pointer transition-colors hover:border-[var(--time-gray-400)] font-[family-name:var(--font-body)]"
               >
                 <HiOutlinePrinter size={14} />
                 {t('text-print', { defaultValue: 'Stampa' })}

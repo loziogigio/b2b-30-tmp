@@ -1,11 +1,15 @@
 import { Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import Divider from '@components/ui/divider';
-import SearchB2BPageContent from './search-b2b-page-content';
 import { Metadata } from 'next';
 import { getServerHomeSettings } from '@/lib/home-settings/fetch-server';
 import { getThemeId } from '@/lib/theme/resolver';
 
+const DefaultSearchContent = dynamic(
+  () =>
+    import('@/components/themes/default/search/default-search-content'),
+  { ssr: true },
+);
 const TimeSearchContent = dynamic(
   () => import('@/components/themes/time/search/time-search-content'),
   { ssr: true },
@@ -112,7 +116,7 @@ export default async function Page({
 }) {
   const { lang } = await params;
   const SearchContent =
-    getThemeId() === 'time' ? TimeSearchContent : SearchB2BPageContent;
+    getThemeId() === 'time' ? TimeSearchContent : DefaultSearchContent;
 
   return (
     <>

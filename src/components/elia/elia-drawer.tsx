@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useParams } from 'next/navigation';
 import { useEliaSearch } from '@framework/elia/use-elia-search';
 import { useEliaAnalyze } from '@framework/elia/use-elia-analyze';
 import type {
@@ -28,6 +28,7 @@ import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import { useUI } from '@contexts/ui.context';
 import { useModalAction } from '@components/common/modal/modal.context';
+import { useSSOLogin } from '@/hooks/use-sso-login';
 
 interface Message {
   id: string;
@@ -183,6 +184,8 @@ function EliaAnalyzedProductCard({
 
 export function EliaDrawer() {
   const searchParams = useSearchParams();
+  const params = useParams();
+  const lang = (params?.lang as string) || 'it';
   const isPreview = searchParams.get('preview') === 'true';
 
   const [isOpen, setIsOpen] = useState(false);
@@ -195,6 +198,7 @@ export function EliaDrawer() {
   const [mounted, setMounted] = useState(false);
 
   const { isAuthorized } = useUI();
+  const { login: ssoLogin } = useSSOLogin(lang);
 
   // Prevent hydration mismatch by waiting for mount
   useEffect(() => {
@@ -346,7 +350,7 @@ export function EliaDrawer() {
       <button
         onClick={() => setIsOpen(true)}
         className={cn(
-          'fixed right-0 top-1/2 -translate-y-1/2 z-40',
+          'fixed right-0 top-1/2 -translate-y-1/2 z-[110]',
           'bg-gradient-to-r from-blue-600 to-indigo-600',
           'text-white shadow-lg',
           'rounded-l-lg',
@@ -370,7 +374,7 @@ export function EliaDrawer() {
       {/* Backdrop */}
       <div
         className={cn(
-          'fixed inset-0 bg-black/30 z-40 transition-opacity duration-300',
+          'fixed inset-0 bg-black/30 z-[110] transition-opacity duration-300',
           isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none',
         )}
         onClick={() => setIsOpen(false)}
@@ -379,7 +383,7 @@ export function EliaDrawer() {
       {/* Drawer - Slides from right */}
       <div
         className={cn(
-          'fixed top-0 right-0 h-full w-[33vw] min-w-[320px] max-w-[500px] bg-white shadow-2xl z-50',
+          'fixed top-0 right-0 h-full w-[33vw] min-w-[320px] max-w-[500px] bg-white shadow-2xl z-[120]',
           'transform transition-transform duration-300 ease-in-out',
           isOpen ? 'translate-x-0' : 'translate-x-full',
         )}
@@ -427,20 +431,11 @@ export function EliaDrawer() {
                   registrati
                 </p>
                 <button
-                  onClick={() => openModal('LOGIN_VIEW')}
+                  onClick={() => ssoLogin()}
                   className="mt-6 px-6 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
                 >
                   Accedi
                 </button>
-                <p className="text-xs text-gray-400 mt-3">
-                  Non hai un account?{' '}
-                  <button
-                    onClick={() => openModal('SIGN_UP_VIEW')}
-                    className="text-blue-600 hover:underline"
-                  >
-                    Registrati
-                  </button>
-                </p>
               </div>
             )}
 

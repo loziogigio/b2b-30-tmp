@@ -16,14 +16,10 @@ const ALIGNMENT_CLASSES: Record<HeaderBlock['alignment'], string> = {
 };
 
 export function HeaderBlockRenderer({ block, lang }: HeaderBlockRendererProps) {
-  const isCenterBlock = block.alignment === 'center';
-
   return (
     <div
       className={cn(
-        'flex items-center gap-2 lg:gap-3',
-        // Center block can shrink, others stay fixed
-        isCenterBlock ? 'flex-1 min-w-0 overflow-hidden' : 'flex-shrink-0',
+        'flex items-center gap-2 lg:gap-3 min-w-0',
         ALIGNMENT_CLASSES[block.alignment],
       )}
     >

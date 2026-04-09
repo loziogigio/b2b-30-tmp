@@ -7,6 +7,7 @@ export interface OrderExportItem {
   ordered_in_quantity: number;
   delivered_in_quantity: number;
   delivered_in_price: number;
+  note?: string;
 }
 
 export interface OrderExportSnapshot {
@@ -80,11 +81,15 @@ export function renderOrderPrintHtml(
             ? '<span class="status-dot partial"></span>'
             : '<span class="status-dot none"></span>';
 
+      const noteHtml = item.note
+        ? `<br /><em style="color:#64748b;font-size:11px;">${escapeHtml(item.note)}</em>`
+        : '';
+
       return `
         <tr>
           ${includeImages ? `<td class="image-cell">${imageCell}</td>` : ''}
           <td class="item-name">
-            <strong>${escapeHtml(item.sku)}</strong><br />${escapeHtml(item.name)}
+            <strong>${escapeHtml(item.sku)}</strong><br />${escapeHtml(item.name)}${noteHtml}
           </td>
           <td class="text-center">${escapeHtml(currency.format(item.price))}</td>
           <td class="text-center">${escapeHtml(numberFormat.format(item.ordered_in_quantity))} ${escapeHtml(item.unit)}</td>

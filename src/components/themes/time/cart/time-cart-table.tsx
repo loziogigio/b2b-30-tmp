@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
 import cn from 'classnames';
 import Image from 'next/image';
 import { useCart } from '@contexts/cart/cart.context';
@@ -9,6 +9,7 @@ import type { AddToCartInput } from '@utils/transform/cart';
 import UpdateCart from '@components/product/update-cart';
 import { TimeCard } from '@/components/themes/time/account/time-account-primitives';
 import { useTranslation } from 'src/app/i18n/client';
+import { updateLineNote } from '@framework/cart/b2b-cart';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -69,6 +70,12 @@ const AlertIcon = () => (
   </svg>
 );
 
+const NoteIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" {...s}>
+    <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+  </svg>
+);
+
 // ── cart row ─────────────────────────────────────────────────────────────────
 
 function TimeCartRow({
@@ -80,7 +87,8 @@ function TimeCartRow({
   index: number;
   lang: string;
 }) {
-  const { clearItemFromCart } = useCart();
+  const { clearItemFromCart, meta } = useCart();
+  const { t } = useTranslation(lang, 'common');
   const net = unitNet(item);
   const gross = unitGross(item);
   const qty = Number(item.quantity ?? 0);
@@ -88,6 +96,22 @@ function TimeCartRow({
   const discount =
     gross > 0 && gross > net ? Math.round((1 - net / gross) * 100) : 0;
   const isAvailable = (item as any).stock !== 0;
+
+  const [showNote, setShowNote] = useState(false);
+  const [noteDraft, setNoteDraft] = useState(item.note || '');
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => { setNoteDraft(item.note || ''); }, [item.note]);
+
+  const handleNoteChange = useCallback((value: string) => {
+    setNoteDraft(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      updateLineNote(item.rowId || item.id, value, meta as any);
+    }, 500);
+  }, [item.rowId, item.id, meta]);
+
+  const hasNote = !!(item.note || noteDraft);
 
   return (
     <>
@@ -128,6 +152,37 @@ function TimeCartRow({
             <div className="inline-flex items-center gap-1 mt-0.5 text-red-500 text-[10px] font-semibold">
               <AlertIcon /> Non disponibile
             </div>
+          )}
+
+          {/* Note inline */}
+          {showNote ? (
+            <div className="mt-1">
+              <input
+                type="text"
+                value={noteDraft}
+                onChange={(e) => handleNoteChange(e.target.value)}
+                onBlur={() => { if (!noteDraft) setShowNote(false); }}
+                autoFocus
+                placeholder={t('line-item-note-placeholder', { defaultValue: 'Aggiungi una nota...' })}
+                className="w-full max-w-[320px] h-6 rounded-md border border-[var(--time-gray-200)] px-2 text-[10px] text-[var(--time-dark)] outline-none focus:border-[var(--time-red)] focus:shadow-[0_0_0_2px_rgba(230,57,70,0.1)] transition-colors"
+              />
+            </div>
+          ) : hasNote ? (
+            <button
+              onClick={() => setShowNote(true)}
+              className="mt-1 flex items-center gap-1 text-[10px] text-[var(--time-red)] italic transition-colors"
+            >
+              <NoteIcon />
+              <span className="truncate max-w-[280px]">{noteDraft}</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => setShowNote(true)}
+              className="mt-1 flex items-center gap-1 text-[10px] text-[var(--time-gray-400)] hover:text-[var(--time-gray-600)] transition-colors"
+            >
+              <NoteIcon />
+              <span>+ {t('line-item-note', { defaultValue: 'Aggiungi nota' })}</span>
+            </button>
           )}
         </div>
 
@@ -254,6 +309,29 @@ function TimeCartRow({
         </div>
         <div className="mt-2 pl-[64px]">
           <UpdateCart item={item} lang={lang} className="justify-start" />
+        </div>
+        <div className="mt-2 pl-[64px]">
+          {showNote ? (
+            <input
+              type="text"
+              value={noteDraft}
+              onChange={(e) => handleNoteChange(e.target.value)}
+              onBlur={() => { if (!noteDraft) setShowNote(false); }}
+              autoFocus
+              placeholder={t('line-item-note-placeholder', { defaultValue: 'Aggiungi una nota...' })}
+              className="w-full h-7 rounded-md border border-[var(--time-gray-200)] px-2 text-[11px] text-[var(--time-dark)] outline-none focus:border-[var(--time-red)] transition-colors"
+            />
+          ) : hasNote ? (
+            <button onClick={() => setShowNote(true)} className="flex items-center gap-1 text-[10px] text-[var(--time-red)] italic">
+              <NoteIcon />
+              <span className="truncate max-w-[220px]">{noteDraft}</span>
+            </button>
+          ) : (
+            <button onClick={() => setShowNote(true)} className="flex items-center gap-1 text-[10px] text-[var(--time-gray-400)]">
+              <NoteIcon />
+              <span>+ {t('line-item-note', { defaultValue: 'Aggiungi nota' })}</span>
+            </button>
+          )}
         </div>
       </div>
     </>

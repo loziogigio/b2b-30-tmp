@@ -281,5 +281,8 @@
   "tenant-config-error-contact": "Si el problema persiste, contacte al soporte técnico.",
 
   "text-404-message": "¡Lo sentimos! Esta página no está disponible actualmente. Por favor, inténtelo de nuevo más tarde.",
-  "text-back-to-home": "Volver a la página principal"
+  "text-back-to-home": "Volver a la página principal",
+  "line-item-note": "Nota de línea",
+  "line-item-note-placeholder": "Agregar una nota para este artículo...",
+  "line-item-note-saved": "Nota guardada"
 }

@@ -189,6 +189,8 @@ export function LikesProvider(props: React.PropsWithChildren) {
 
     didRefreshFromServer.current = true;
     loadUserLikes(1, 100, 'replace').catch((err) => {
+      // 401 is handled by auth interceptor (clears cookies, dispatches session-expired)
+      if (err?.response?.status === 401) return;
       console.error('[LikesContext] Failed to load likes from server:', err);
     });
   }, [isAuthorized, loadUserLikes]);

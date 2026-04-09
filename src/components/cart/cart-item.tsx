@@ -89,6 +89,13 @@ const CartItem: React.FC<CartItemProps> = ({ lang, item }) => {
             </div>
           )}
 
+          {/* note indicator */}
+          {item?.note && (
+            <div className="mt-0.5 text-[10px] text-gray-400 italic truncate" title={item.note}>
+              📝 {item.note}
+            </div>
+          )}
+
           {/* compact counter */}
           <UpdateCart item={item} lang={''} />
         </div>

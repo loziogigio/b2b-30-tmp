@@ -22,6 +22,7 @@ export interface CartSummary {
   vat: number; // iva
   totalDoc: number; // totale_doc
   showDiscountPrice?: boolean;
+  cartName?: string;
   // keep room for server blobs you may use later
   packaging?: any;
 }
@@ -42,6 +43,9 @@ export interface Item {
   description?: string;
   brand?: Brand;
   image?: string;
+
+  /** Line note */
+  note?: string;
 
   /** Quantities / units */
   quantity: number; // make it required to simplify totals

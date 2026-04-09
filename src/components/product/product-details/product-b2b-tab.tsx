@@ -7,6 +7,7 @@ import { sanitizeHtml } from '@/lib/sanitize-html';
 import type { Product } from '@framework/types';
 import type { PageBlock } from '@/lib/types/blocks';
 import { BlockRenderer } from '@/components/blocks/BlockRenderer';
+import { HiOutlineDownload } from 'react-icons/hi';
 
 function classNames(...classes: any[]) {
   return classes.filter(Boolean).join(' ');
@@ -341,22 +342,28 @@ export default function ProductB2BDetailsTab({
                     <dt className="border-b border-border-base bg-gray-50 px-4 py-3 text-[12px] font-semibold text-gray-600 sm:text-sm">
                       {d.label || DOC_LABEL[type] || type}
                     </dt>
-                    {/* Right column: link */}
-                    <dd className="border-b border-border-base px-4 py-3 text-sm">
+                    {/* Right column: filename + download button */}
+                    <dd className="border-b border-border-base px-4 py-3 text-sm flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-2 min-w-0">
+                        <span className="break-words" title={d.filename}>
+                          {d.filename || d.url}
+                        </span>
+                        {d.ext && (
+                          <span className="shrink-0 inline-flex items-center rounded border px-1 text-[11px] uppercase text-gray-600">
+                            {d.ext.slice(0, 4)}
+                          </span>
+                        )}
+                      </span>
                       <a
                         href={d.url}
                         target="_blank"
                         rel="noopener noreferrer nofollow"
-                        className="text-brand hover:underline break-words"
-                        title={d.filename}
+                        download
+                        className="shrink-0 inline-flex items-center gap-1.5 rounded bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark transition-colors"
                       >
-                        {d.filename || d.url}
+                        <HiOutlineDownload className="h-4 w-4" />
+                        Scarica
                       </a>
-                      {d.ext && (
-                        <span className="ml-2 inline-flex items-center rounded border px-1 text-[11px] uppercase text-gray-600">
-                          {d.ext.slice(0, 4)}
-                        </span>
-                      )}
                     </dd>
                   </React.Fragment>
                 )),

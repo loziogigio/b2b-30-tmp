@@ -130,16 +130,33 @@ export async function addOrUpdateCartItem(
 
   // --- UPDATE if match exists ---
   if (matches.length > 0) {
-    const items = matches.map((it) => ({
-      line_number: Number(it.rowId),
-      quantity: input.quantity,
-    }));
+    const items = matches.map((it) => {
+      const patch: Record<string, any> = {
+        line_number: Number(it.rowId),
+        quantity: input.quantity,
+      };
+      if (input.note !== undefined) patch.note = input.note;
+      return patch;
+    });
     return pimPatch(CS_CART.ITEMS(orderId), { items });
   }
 
   // --- ADD if no match ---
   const addBody = buildAddItemRequest(input, sourceItem);
   return pimPost(CS_CART.ITEMS(orderId), addBody);
+}
+
+// ----- update line note -----
+
+export async function updateLineNote(
+  lineNumber: number | string,
+  note: string,
+  summary: CartSummary | null | undefined,
+) {
+  const orderId = summary?.orderId || (await getOrderId());
+  return pimPatch(CS_CART.ITEMS(orderId), {
+    items: [{ line_number: Number(lineNumber), note }],
+  });
 }
 
 // ----- hydrator -----

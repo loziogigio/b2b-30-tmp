@@ -61,12 +61,18 @@ export function transformPimMenuTree(items: PimMenuTreeItem[]): MenuTreeNode[] {
 // ===============================
 export const fetchPimMenu = async (
   location?: 'header' | 'footer' | 'mobile',
+  channel?: string,
 ): Promise<{
   menuItems: MenuTreeNode[];
   flat: PimMenuTreeItem[];
 }> => {
-  const params = location ? { location } : undefined;
-  const data = await get<PimMenuResponse>(API_ENDPOINTS_PIM.MENU, params);
+  const params: Record<string, string> = {};
+  if (location) params.location = location;
+  if (channel) params.channel = channel;
+  const data = await get<PimMenuResponse>(
+    API_ENDPOINTS_PIM.MENU,
+    Object.keys(params).length > 0 ? params : undefined,
+  );
 
   if (!data.success) {
     throw new Error('PIM menu returned unsuccessful response');
@@ -83,15 +89,19 @@ export const fetchPimMenu = async (
 // ===============================
 export const usePimMenuQuery = (options?: {
   location?: 'header' | 'footer' | 'mobile';
+  channel?: string;
   enabled?: boolean;
   staleTime?: number;
 }) => {
   const enabled = options?.enabled ?? true;
   const location = options?.location;
+  const channel = options?.channel;
 
   return useQuery({
-    queryKey: ['pim-menu', location],
-    queryFn: () => fetchPimMenu(location),
+    queryKey: channel
+      ? ['pim-menu', location, channel]
+      : ['pim-menu', location],
+    queryFn: () => fetchPimMenu(location, channel),
     enabled,
     staleTime: options?.staleTime ?? 1000 * 60 * 5, // 5 minutes default
   });

@@ -4,7 +4,7 @@
 import React from 'react';
 import NextLink from 'next/link';
 import { IoChevronForward } from 'react-icons/io5';
-import { MdCategory } from 'react-icons/md';
+import { HiOutlineViewGrid } from 'react-icons/hi';
 import { useTranslation } from 'src/app/i18n/client';
 import type { MenuTreeNode } from '@utils/transform/b2b-menu-tree';
 
@@ -44,7 +44,7 @@ const CategoryBreadcrumb: React.FC<BreadcrumbNavProps> = ({
             className="text-brand-muted hover:text-brand-dark inline-flex items-center gap-1"
             onClick={onAllCategoriesClick}
           >
-            <MdCategory className="text-lg" aria-hidden="true" />
+            <HiOutlineViewGrid className="text-lg" aria-hidden="true" />
             <span suppressHydrationWarning>{allText}</span>
           </NextLink>
         </li>

@@ -207,6 +207,8 @@ export function RemindersProvider(props: React.PropsWithChildren) {
 
     didRefreshFromServer.current = true;
     loadUserReminders(1, 100, 'replace').catch((err) => {
+      // 401 is handled by auth interceptor (clears cookies, dispatches session-expired)
+      if (err?.response?.status === 401) return;
       console.error(
         '[RemindersContext] Failed to load reminders from server:',
         err,

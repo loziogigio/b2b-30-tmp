@@ -1,5 +1,5 @@
 import { getThemeId } from '@/lib/theme/resolver';
-import DefaultLayout from '@layouts/b2b/layout';
+import DefaultLayout from '@/components/themes/default/layout/default-layout';
 import TimeLayout from '@/components/themes/time/layout/time-layout';
 
 export default async function Layout({

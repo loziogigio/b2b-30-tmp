@@ -38,7 +38,7 @@ export default function Counter({
   const { t } = useTranslation(lang, 'common');
 
   const inputClasses = cn(
-    'w-20 h-8 text-center rounded-md border text-sm focus:outline-none transition-colors',
+    'flex-1 min-w-0 h-8 text-center rounded-md border text-sm focus:outline-none transition-colors',
     'appearance-none [MozAppearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none',
     variant === 'red'
       ? 'bg-red-500 text-white border-red-500 focus:ring-2 focus:ring-red-500 placeholder-white/70'

@@ -260,6 +260,6 @@ function getPromoDescription(raw: any): string {
   const allDiscounts = [...discount, ...discount_extra].filter((v) => v !== 0);
   if (allDiscounts.length === 0) return '';
 
-  const parts = allDiscounts.map((v) => `${v}%`);
-  return `${parts.join(' ')}`;
+  const parts = allDiscounts.map((v) => `-${Math.abs(v)}%`);
+  return parts.join(' ');
 }

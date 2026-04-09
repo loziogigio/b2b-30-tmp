@@ -11,14 +11,14 @@ interface HeaderRowRendererProps {
 }
 
 // Responsive layout classes - uses lg breakpoint to match bottom navigation
-// Using explicit percentages for precise layout control
+// Using fr units so grid gap is properly accounted for
 const LAYOUT_CLASSES: Record<RowLayout, string> = {
   full: 'flex flex-wrap lg:grid lg:grid-cols-1',
-  '50-50': 'flex flex-wrap lg:grid lg:grid-cols-[50%_50%]',
-  '33-33-33': 'flex flex-wrap lg:grid lg:grid-cols-3',
-  '20-60-20': 'flex justify-between lg:grid lg:grid-cols-[20%_60%_20%]',
-  '25-50-25': 'flex justify-between lg:grid lg:grid-cols-[25%_50%_25%]',
-  '30-40-30': 'flex justify-between lg:grid lg:grid-cols-[30%_40%_30%]',
+  '50-50': 'flex flex-wrap lg:grid lg:grid-cols-[1fr_1fr]',
+  '33-33-33': 'flex flex-wrap lg:grid lg:grid-cols-[1fr_1fr_1fr]',
+  '20-60-20': 'flex justify-between lg:grid lg:grid-cols-[1fr_3fr_1fr]',
+  '25-50-25': 'flex justify-between lg:grid lg:grid-cols-[1fr_2fr_1fr]',
+  '30-40-30': 'flex justify-between lg:grid lg:grid-cols-[3fr_4fr_3fr]',
 };
 
 export function HeaderRowRenderer({

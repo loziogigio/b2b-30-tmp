@@ -1,5 +1,6 @@
 'use client';
 
+import Link from '@components/ui/link';
 import Image from '@components/ui/image';
 import { Product } from '@framework/types';
 import { useModalAction } from '@components/common/modal/modal.context';
@@ -8,6 +9,11 @@ import { ErpPriceData } from '@utils/transform/erp-prices';
 import AddToCart from '@components/product/add-to-cart';
 import { useTranslation } from 'src/app/i18n/client';
 import { useUI } from '@contexts/ui.context';
+import { useLikes } from '@contexts/likes/likes.context';
+import { useReminders } from '@contexts/reminders/reminders.context';
+import { IoIosHeart, IoIosHeartEmpty } from 'react-icons/io';
+import { ReminderIcon, ReminderIconFilled } from '@components/icons/app-icons';
+import React from 'react';
 
 interface TimeSearchCardProps {
   product: Product & { variantCount?: number };
@@ -26,7 +32,13 @@ export default function TimeSearchCard({
     product ?? {};
   const { openModal } = useModalAction();
   const { t } = useTranslation(lang, 'common');
-  const { isAuthorized } = useUI();
+  const { isAuthorized, hidePrices } = useUI();
+  const likes = useLikes();
+  const reminders = useReminders();
+  const isFavorite = sku ? likes.isLiked(sku) : false;
+  const hasReminder = sku ? reminders.hasReminder(sku) : false;
+  const [likeLoading, setLikeLoading] = React.useState(false);
+  const [reminderLoading, setReminderLoading] = React.useState(false);
 
   const variations = Array.isArray(product?.variations)
     ? product.variations
@@ -43,6 +55,7 @@ export default function TimeSearchCard({
     listPrice != null &&
     Number(listPrice) > Number(netPrice) &&
     Number(netPrice) > 0;
+  const discountTiers = priceData?.discount_description || '';
   const discountPercent = hasDiscount
     ? Math.round((1 - Number(netPrice) / Number(listPrice)) * 100)
     : 0;
@@ -75,24 +88,25 @@ export default function TimeSearchCard({
       {/* Badges */}
       <div className="absolute top-3 left-3 z-[2] flex gap-1.5 flex-wrap">
         {parent_sku && (
-          <span className="bg-[var(--time-dark)] text-white text-[10px] font-bold px-2 py-[3px] rounded-[5px] font-mono tracking-wide">
+          <span className="bg-[var(--time-dark)] text-white text-[11px] sm:text-xs font-bold px-2 py-[3px] rounded-[5px] font-mono tracking-wide">
             {parent_sku}
           </span>
         )}
-        {discountPercent > 0 && (
-          <span className="bg-[var(--time-red)] text-white text-[10px] font-bold px-2 py-[3px] rounded-[5px] font-[family-name:var(--font-body)]">
-            -{discountPercent}%
+        {!hidePrices && discountPercent > 0 && (
+          <span className="bg-[var(--time-red)] text-white text-[11px] sm:text-xs font-bold px-2 py-[3px] rounded-[5px] font-[family-name:var(--font-body)]">
+            {discountTiers || `-${discountPercent}%`}
           </span>
         )}
-        {(priceData?.is_promo || product.has_active_promo) &&
+        {!hidePrices &&
+          (priceData?.is_promo || product.has_active_promo) &&
           discountPercent === 0 && (
-            <span className="bg-[var(--time-red)] text-white text-[10px] font-bold px-2 py-[3px] rounded-[5px] font-[family-name:var(--font-body)] uppercase">
+            <span className="bg-[var(--time-red)] text-white text-[11px] sm:text-xs font-bold px-2 py-[3px] rounded-[5px] font-[family-name:var(--font-body)] uppercase">
               PROMO
             </span>
           )}
       </div>
       {hasVariants && variantCount > 1 && (
-        <span className="absolute top-3 right-3 z-[2] bg-[var(--time-dark)]/85 backdrop-blur-[4px] text-white text-[10px] font-semibold px-2 py-[3px] rounded-[5px] font-[family-name:var(--font-body)]">
+        <span className="absolute top-3 right-3 z-[2] bg-[var(--time-dark)]/85 backdrop-blur-[4px] text-white text-[11px] sm:text-xs font-semibold px-2 py-[3px] rounded-[5px] font-[family-name:var(--font-body)]">
           {variantCount} varianti
         </span>
       )}
@@ -113,10 +127,10 @@ export default function TimeSearchCard({
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
           className="object-cover"
         />
-        {/* Out of stock overlay */}
+        {/* Out of stock label */}
         {isOutOfStock && (
-          <div className="absolute inset-0 bg-white/70 backdrop-blur-[2px] flex items-center justify-center">
-            <span className="bg-[var(--time-dark)] text-white text-[10px] font-bold px-2.5 py-1 rounded-md">
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-[2]">
+            <span className="bg-[var(--time-dark)] text-white text-[11px] sm:text-xs font-bold px-2.5 py-1 rounded-md">
               {priceData?.product_label_action?.LABEL || 'Non disponibile'}
             </span>
           </div>
@@ -124,35 +138,83 @@ export default function TimeSearchCard({
       </div>
 
       {/* Content */}
-      <div className="px-4 pt-4 pb-3 flex-1 flex flex-col gap-2">
-        {/* Brand + SKU */}
+      <div className="px-4 pt-3 pb-1 flex-1 flex flex-col gap-1">
+        {/* Brand + SKU + Actions */}
         <div className="flex items-center justify-between">
-          <span className="text-[11px] font-bold text-[var(--time-red)] font-[family-name:var(--font-body)] uppercase tracking-[0.06em] truncate max-w-[60%]">
-            {brand?.name || ''}
-          </span>
-          <span className="text-[10px] text-[var(--time-gray-400)] font-mono">
-            SKU {sku || parent_sku || ''}
-          </span>
+          <div className="flex items-center gap-1.5 truncate">
+            {brand?.name && (brand as any)?.brand_id ? (
+              <Link
+                href={`/${lang}/search?filters-brand_id=${(brand as any).brand_id}`}
+                className="text-xs sm:text-[13px] font-bold text-[var(--time-red)] font-[family-name:var(--font-body)] uppercase tracking-[0.06em] truncate hover:underline"
+              >
+                {brand.name}
+              </Link>
+            ) : (
+              <span className="text-xs sm:text-[13px] font-bold text-[var(--time-red)] font-[family-name:var(--font-body)] uppercase tracking-[0.06em] truncate">
+                {brand?.name || ''}
+              </span>
+            )}
+            <span className="text-[11px] sm:text-xs text-[var(--time-gray-400)] font-mono shrink-0">
+              SKU {sku || parent_sku || ''}
+            </span>
+          </div>
+          {isAuthorized && (
+            <div className="flex items-center gap-0.5 shrink-0">
+              {(isOutOfStock || hasReminder) && (
+                <button
+                  type="button"
+                  aria-label="Toggle reminder"
+                  className={`shrink-0 p-0.5 rounded transition-colors ${hasReminder ? 'text-yellow-500' : 'text-[var(--time-gray-400)] hover:text-yellow-500'}`}
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    if (!sku) return;
+                    setReminderLoading(true);
+                    try { await reminders.toggle(sku); } finally { setReminderLoading(false); }
+                  }}
+                  disabled={reminderLoading || !sku}
+                >
+                  {hasReminder ? <ReminderIconFilled className="text-[16px]" /> : <ReminderIcon className="text-[16px]" />}
+                </button>
+              )}
+              <button
+                type="button"
+                aria-label="Toggle wishlist"
+                className={`shrink-0 p-0.5 rounded transition-colors ${isFavorite ? 'text-[var(--time-red)]' : 'text-[var(--time-gray-400)] hover:text-[var(--time-red)]'}`}
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  if (!sku) return;
+                  setLikeLoading(true);
+                  try { await likes.toggle(sku); } finally { setLikeLoading(false); }
+                }}
+                disabled={likeLoading || !sku}
+              >
+                {isFavorite ? <IoIosHeart className="text-[16px]" /> : <IoIosHeartEmpty className="text-[16px]" />}
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Product name */}
+        {/* Product name — fixed 1 line */}
         <h3
-          className="text-[14px] font-bold text-[var(--time-dark)] leading-[1.35] font-[family-name:var(--font-body)] line-clamp-2 cursor-pointer"
+          className="text-sm sm:text-[15px] font-bold text-[var(--time-dark)] leading-[1.35] font-[family-name:var(--font-body)] line-clamp-1 cursor-pointer"
           onClick={handleClick}
         >
           {name || 'Product'}
         </h3>
 
-        {/* Description */}
-        {description && (
-          <p className="text-[12px] text-[var(--time-gray-500)] leading-[1.5] font-[family-name:var(--font-body)] line-clamp-2">
-            {description}
-          </p>
-        )}
+        {/* Description — fixed 2 lines */}
+        <p className="!mb-0 text-xs sm:text-[13px] text-[var(--time-gray-500)] leading-[1.3] font-[family-name:var(--font-body)] line-clamp-2 min-h-[calc(2*12px*1.3)]">
+          {description || '\u00A0'}
+        </p>
+
+        {/* Model — fixed 1 line */}
+        <p className="!mb-0 text-xs sm:text-[13px] font-bold text-[var(--time-dark)] font-[family-name:var(--font-body)] truncate min-h-[calc(12px*1.5)]">
+          {model || '\u00A0'}
+        </p>
 
         {/* Unit info */}
-        {priceData && (um || model) && (
-          <div className="flex gap-2 text-[10px] text-[var(--time-gray-400)] font-mono mt-0.5">
+        {priceData && um && (
+          <div className="flex gap-2 text-[11px] sm:text-xs text-[var(--time-gray-400)] font-mono mt-0.5">
             {um && <span>UM: {um}</span>}
             {mv != null && (
               <>
@@ -166,42 +228,43 @@ export default function TimeSearchCard({
                 <span>CF: {cf}</span>
               </>
             )}
-            {model && (
-              <>
-                <span>·</span>
-                <span>{model}</span>
-              </>
-            )}
           </div>
         )}
 
-        <div className="flex-1" />
-
         {/* Price + Availability + CTA */}
-        <div className="border-t border-[var(--time-gray-100)] pt-3 mt-2 flex flex-col gap-2.5">
+        <div className="border-t border-[var(--time-gray-100)] pt-2 mt-auto flex flex-col gap-2">
           {/* Price */}
-          <div className="flex items-baseline gap-2">
-            {netPrice != null && Number(netPrice) > 0 ? (
-              <>
-                <span className="text-[22px] font-extrabold text-[var(--time-dark)] font-[family-name:var(--font-body)] tabular-nums">
-                  &euro;{Number(netPrice).toFixed(2)}
-                </span>
-                {hasDiscount && (
-                  <span className="text-[13px] text-[var(--time-gray-400)] line-through tabular-nums">
-                    &euro;{Number(listPrice).toFixed(2)}
+          {!hidePrices && (
+            <div className="flex items-baseline gap-2">
+              {netPrice != null && Number(netPrice) > 0 ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-xl sm:text-[22px] font-extrabold text-[var(--time-dark)] font-[family-name:var(--font-body)] tabular-nums">
+                    &euro;{Number(netPrice).toFixed(2)}
                   </span>
-                )}
-              </>
-            ) : hasVariants ? (
-              <span className="text-xs text-[var(--time-gray-400)] font-[family-name:var(--font-body)]">
-                {variantCount} varianti
-              </span>
-            ) : (
-              <span className="text-sm text-[var(--time-gray-400)]">
-                &mdash;
-              </span>
-            )}
-          </div>
+                  {hasDiscount && (
+                    <div className="flex flex-col">
+                      <span className="text-xs sm:text-[13px] text-[var(--time-gray-400)] line-through tabular-nums leading-tight">
+                        &euro;{Number(listPrice).toFixed(2)}
+                      </span>
+                      {discountTiers && (
+                        <span className="text-xs sm:text-[13px] font-semibold text-[var(--time-gray-600)] leading-tight">
+                          {discountTiers}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : hasVariants ? (
+                <span className="text-xs text-[var(--time-gray-400)] font-[family-name:var(--font-body)]">
+                  {variantCount} varianti
+                </span>
+              ) : (
+                <span className="text-sm text-[var(--time-gray-400)]">
+                  &mdash;
+                </span>
+              )}
+            </div>
+          )}
 
           {/* Availability */}
           {priceData && !hasVariants && (
@@ -213,7 +276,7 @@ export default function TimeSearchCard({
                 }}
               />
               <span
-                className="text-[11px] font-semibold font-[family-name:var(--font-body)]"
+                className="text-xs sm:text-[13px] font-semibold font-[family-name:var(--font-body)]"
                 style={{
                   color: isOutOfStock ? '#dc2626' : '#16a34a',
                 }}
@@ -232,7 +295,7 @@ export default function TimeSearchCard({
               {hasVariants ? (
                 <button
                   onClick={handleClick}
-                  className="w-full h-9 rounded-[var(--radius-btn)] border-none bg-[var(--time-dark)] text-white text-[12px] font-bold cursor-pointer font-[family-name:var(--font-body)] tracking-[0.03em] transition-colors hover:bg-[var(--time-red)]"
+                  className="w-full h-9 rounded-[var(--radius-btn)] border-none bg-[var(--time-dark)] text-white text-xs sm:text-[13px] font-bold cursor-pointer font-[family-name:var(--font-body)] tracking-[0.03em] transition-colors hover:bg-[var(--time-red)]"
                 >
                   {t('text-view-variants', {
                     defaultValue: 'Vedi varianti',
@@ -249,7 +312,7 @@ export default function TimeSearchCard({
               ) : (
                 <button
                   onClick={handleClick}
-                  className="w-full h-9 rounded-[var(--radius-btn)] border-none bg-[var(--time-dark)] text-white text-[12px] font-bold cursor-pointer font-[family-name:var(--font-body)] tracking-[0.03em] transition-colors hover:bg-[var(--time-red)]"
+                  className="w-full h-9 rounded-[var(--radius-btn)] border-none bg-[var(--time-dark)] text-white text-xs sm:text-[13px] font-bold cursor-pointer font-[family-name:var(--font-body)] tracking-[0.03em] transition-colors hover:bg-[var(--time-red)]"
                 >
                   {t('text-view-product', {
                     defaultValue: 'Visualizza prodotto',

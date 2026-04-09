@@ -13,6 +13,7 @@ import { SearchFiltersB2B } from '@components/search/filters-b2b';
 import { IoFilterOutline, IoChevronDown, IoChevronUp } from 'react-icons/io5';
 import Logo from '@components/ui/logo';
 import { useTranslation } from 'src/app/i18n/client';
+import { useModalState } from '@components/common/modal/modal.context';
 
 // Debounce delay in ms
 const SEARCH_DEBOUNCE_MS = 400;
@@ -70,6 +71,7 @@ export default function SearchOverlayB2B({
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
+  const { isOpen: modalOpen } = useModalState();
   const { items: recent, remove, clear } = useRecentSearches();
   const rootRef = React.useRef<HTMLDivElement>(null);
 
@@ -178,6 +180,13 @@ export default function SearchOverlayB2B({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
+
+  // Close overlay when a product modal opens (product cards use openModal, not Link navigation)
+  React.useEffect(() => {
+    if (open && modalOpen) {
+      onClose();
+    }
+  }, [modalOpen, open, onClose]);
 
   // Close overlay when clicking any anchor inside the overlay (captures same-page links too)
   const handleClickCapture = React.useCallback(

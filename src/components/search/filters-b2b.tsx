@@ -203,10 +203,11 @@ export const SearchFiltersB2B: React.FC<{ lang: string; text?: string }> = ({
 
   // Handle clearing product type filter
   const handleClearProductType = React.useCallback(() => {
-    const url = new URL(window.location.href);
-    url.searchParams.delete('filters-product_type_code');
-    router.push(`${pathname}${url.search}`, { scroll: false });
-  }, [pathname, router]);
+    const params = new URLSearchParams(searchParams?.toString() ?? '');
+    params.delete('filters-product_type_code');
+    const qs = params.toString();
+    router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [pathname, router, searchParams]);
 
   return (
     <div className="space-y-3">

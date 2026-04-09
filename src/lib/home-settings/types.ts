@@ -83,6 +83,9 @@ export interface WidgetConfig {
   label?: string;
   url?: string;
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
+  backgroundColor?: string;
+  textColor?: string;
+  openInNewTab?: boolean;
 
   // Search bar widget
   placeholder?: string;
@@ -90,6 +93,7 @@ export interface WidgetConfig {
 
   // Category menu widget
   menuId?: string;
+  channel?: string;
 
   // Icon widgets (cart, favorites, compare, profile)
   showLabel?: boolean;

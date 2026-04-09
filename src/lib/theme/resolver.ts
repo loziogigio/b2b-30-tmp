@@ -23,3 +23,7 @@ export function getThemeIdForTenant(tenantTheme?: string): ThemeId {
 export function isTimeTheme(): boolean {
   return getThemeId() === 'time';
 }
+
+export function isModalFullWidth(): boolean {
+  return process.env.NEXT_PUBLIC_MODAL_FULL_WIDTH === 'true';
+}

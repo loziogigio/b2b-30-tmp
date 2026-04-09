@@ -24,7 +24,7 @@ export function CompanyInfoWidget({ config, lang }: CompanyInfoWidgetProps) {
 
   // Hide when bottom navigation is visible (below lg breakpoint)
   return (
-    <div className="hidden lg:flex items-center justify-center overflow-hidden">
+    <div className="hidden lg:flex items-center min-w-0 overflow-hidden">
       <Suspense fallback={null}>
         <Delivery lang={lang} />
       </Suspense>

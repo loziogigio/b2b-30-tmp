@@ -51,8 +51,12 @@ export default function ManagedModal({ lang }: { lang: string }) {
   }
 
   if (view === 'B2B_PRODUCT_VARIANTS_QUICK_VIEW' || view === 'PRODUCT_VIEW') {
+    const modalVariant =
+      process.env.NEXT_PUBLIC_MODAL_FULL_WIDTH === 'false'
+        ? 'center'
+        : 'fullscreen';
     return (
-      <Modal open={isOpen} onClose={closeModal} variant="fullscreen">
+      <Modal open={isOpen} onClose={closeModal} variant={modalVariant}>
         {view === 'B2B_PRODUCT_VARIANTS_QUICK_VIEW' && (
           <B2BProductVariantsQuickView lang={lang} />
         )}

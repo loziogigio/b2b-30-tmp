@@ -112,7 +112,7 @@ export default function PriceAndPromo({
           <div className="flex flex-col items-center text-center gap-0.5 sm:gap-1">
             <div className="flex items-center gap-1 sm:gap-2">
               {showPrev && (
-                <div>
+                <div className="flex items-center gap-1">
                   <span
                     className={cn(
                       'line-through uppercase tracking-wide text-[10px] sm:text-xs',
@@ -121,18 +121,16 @@ export default function PriceAndPromo({
                   >
                     {gross_price} €
                   </span>
-                  {discountLines.length > 0 && showPrev ? (
-                    <div
+                  {discountLines.length > 0 && (
+                    <span
                       className={cn(
-                        'text-[10px] sm:text-xs leading-tight',
-                        invertColors ? 'text-white/70' : 'text-gray-500',
+                        'text-[10px] sm:text-xs font-semibold',
+                        invertColors ? 'text-white/70' : 'text-gray-600',
                       )}
                     >
-                      {discountLines.map((d, i) => (
-                        <div key={i}>{d}</div>
-                      ))}
-                    </div>
-                  ) : null}
+                      {discountLines.join(' ')}
+                    </span>
+                  )}
                 </div>
               )}
               <div

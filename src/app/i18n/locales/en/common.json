@@ -425,5 +425,11 @@
 
   "tenant-config-error-title": "Configuration Error",
   "tenant-config-error-message": "The system configuration is incomplete. Please contact the administrator to verify the portal settings.",
-  "tenant-config-error-contact": "If the problem persists, please contact technical support."
+  "tenant-config-error-contact": "If the problem persists, please contact technical support.",
+  "text-save-cart-as": "Save \"{{name}}\"",
+  "text-current-cart": "Current cart",
+  "text-saved-carts-tab": "Saved carts",
+  "line-item-note": "Line note",
+  "line-item-note-placeholder": "Add a note for this item...",
+  "line-item-note-saved": "Note saved"
 }

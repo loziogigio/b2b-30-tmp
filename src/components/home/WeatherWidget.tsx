@@ -247,10 +247,8 @@ export function WeatherWidget({ lang, className }: WeatherWidgetProps) {
           });
         }
       } catch (err) {
-        // Ignore abort errors (component unmounted)
         if (err instanceof Error && err.name === 'AbortError') return;
         setError('Unable to load weather');
-        console.error('Weather fetch error:', err);
       } finally {
         if (!abortController.signal.aborted) {
           setLoading(false);

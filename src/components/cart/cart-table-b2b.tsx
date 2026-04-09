@@ -50,7 +50,7 @@ const SORT_LABELS: Record<SortKey, string> = {
 
 export default function CartTableB2B({ lang = 'it' }: { lang?: string }) {
   const { t } = useTranslation(lang, 'common');
-  const { items, setItemQuantity, resetCart, meta } = useCart();
+  const { items, setItemQuantity, resetCart, meta, getCart } = useCart();
   const queryClient = useQueryClient();
 
   const [query, setQuery] = useState('');
@@ -159,8 +159,10 @@ export default function CartTableB2B({ lang = 'it' }: { lang?: string }) {
     }
   };
 
-  const handleSaveCart = useCallback(async () => {
-    const trimmed = saveLabel.trim();
+  const cartName = (meta as any)?.cartName as string | undefined;
+
+  const handleSaveCart = useCallback(async (labelOverride?: string) => {
+    const trimmed = (labelOverride ?? saveLabel).trim();
     if (!trimmed) {
       setSaveError(t('text-saved-cart-name-required'));
       return;
@@ -178,15 +180,16 @@ export default function CartTableB2B({ lang = 'it' }: { lang?: string }) {
       await saveCurrentCart({ cartId, label: trimmed });
       setSaveLabel('');
       setShowSaveForm(false);
-      // Refresh the saved carts list in the sidebar
+      // Refresh the saved carts list and load the new empty active cart
       await queryClient.invalidateQueries({ queryKey: ['saved-carts'] });
+      await getCart('replace');
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       setSaveError(message);
     } finally {
       setIsSaving(false);
     }
-  }, [saveLabel, meta, t, queryClient]);
+  }, [saveLabel, meta, t, queryClient, getCart]);
 
   const handleExportPdf = useCallback(() => {
     if (typeof window === 'undefined') return;
@@ -507,8 +510,16 @@ export default function CartTableB2B({ lang = 'it' }: { lang?: string }) {
           ) : (
             <button
               type="button"
-              onClick={() => setShowSaveForm(true)}
-              disabled={!baseRows.length}
+              onClick={() => {
+                if (cartName) {
+                  // Cart already has a name — save directly
+                  handleSaveCart(cartName);
+                } else {
+                  setSaveLabel('');
+                  setShowSaveForm(true);
+                }
+              }}
+              disabled={!baseRows.length || isSaving}
               className={cn(
                 'flex h-10 items-center gap-1.5 rounded-md px-3 text-sm font-medium border whitespace-nowrap',
                 !baseRows.length
@@ -519,10 +530,14 @@ export default function CartTableB2B({ lang = 'it' }: { lang?: string }) {
                 defaultValue: 'Salva per dopo',
               })}
             >
-              <HiOutlineSave className="h-4 w-4" />
-              {t('text-save-for-later', {
-                defaultValue: 'Salva per dopo',
-              })}
+              {isSaving ? (
+                <ImSpinner2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <HiOutlineSave className="h-4 w-4" />
+              )}
+              {cartName
+                ? t('text-save-cart-as', { name: cartName, defaultValue: `Salva "${cartName}"` })
+                : t('text-save-for-later', { defaultValue: 'Salva per dopo' })}
             </button>
           )}
 

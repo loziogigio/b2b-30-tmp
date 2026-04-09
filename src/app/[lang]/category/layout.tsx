@@ -1,4 +1,4 @@
-import DefaultLayout from '@layouts/b2b/layout';
+import DefaultLayout from '@/components/themes/default/layout/default-layout';
 
 export default async function Layout({
   children,

@@ -21,8 +21,8 @@ export function CompareWidget({ config, lang }: CompareWidgetProps) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  // Hide until hydrated to avoid server/client mismatch
-  if (!mounted || !isAuthorized) return null;
+  // Hide until hydrated, not logged in, or no items to compare
+  if (!mounted || !isAuthorized || compareSkus.length === 0) return null;
 
   return (
     <div className="flex flex-col items-center group">

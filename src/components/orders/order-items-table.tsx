@@ -152,6 +152,11 @@ export default function OrderItemsTable({
                       <div className="truncate font-medium text-gray-900">
                         {it.name}
                       </div>
+                      {it.note && (
+                        <div className="text-[11px] text-gray-400 italic truncate" title={it.note}>
+                          {it.note}
+                        </div>
+                      )}
                     </div>
                   </div>
 

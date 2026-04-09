@@ -220,6 +220,11 @@ export function ProductPreviewListener({
     // Listen for messages from parent window (builder)
     window.addEventListener('message', handleMessage);
 
+    // Signal to parent (builder) that we're ready to receive preview updates
+    if (window.parent !== window) {
+      window.parent.postMessage({ type: 'PREVIEW_READY' }, '*');
+    }
+
     return () => {
       window.removeEventListener('message', handleMessage);
       clearStoredPreview();

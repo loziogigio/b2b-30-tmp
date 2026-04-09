@@ -78,9 +78,34 @@ const XIcon = () => (
   </svg>
 );
 
+// ── collapse icon ───────────────────────────────────────────────────────────
+
+const CollapseIcon = ({ collapsed }: { collapsed: boolean }) => (
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2}
+    strokeLinecap="round"
+  >
+    {collapsed ? (
+      <polyline points="9,18 15,12 9,6" />
+    ) : (
+      <polyline points="15,18 9,12 15,6" />
+    )}
+  </svg>
+);
+
 // ── component ───────────────────────────────────────────────────────────────
 
-export default function TimeSavedCarts() {
+interface TimeSavedCartsProps {
+  collapsed?: boolean;
+  onToggle?: () => void;
+}
+
+export default function TimeSavedCarts({ collapsed, onToggle }: TimeSavedCartsProps) {
   const { meta, getCart, items: activeItems } = useCart();
   const activeCartId = meta?.orderId || ERP_STATIC.vinc_order_id;
 
@@ -194,6 +219,22 @@ export default function TimeSavedCarts() {
 
   if (!mounted || !hasContext) return null;
 
+  // Collapsed state: show only a vertical icon bar
+  if (collapsed) {
+    return (
+      <TimeCard className="overflow-hidden h-fit">
+        <button
+          onClick={onToggle}
+          className="w-full px-2 py-3 flex flex-col items-center gap-2 text-[var(--time-gray-400)] hover:text-[var(--time-dark)] transition-colors"
+          title="Mostra carrelli"
+        >
+          <CartIcon />
+          <CollapseIcon collapsed={true} />
+        </button>
+      </TimeCard>
+    );
+  }
+
   return (
     <TimeCard className="overflow-hidden h-fit">
       {/* Header */}
@@ -204,13 +245,24 @@ export default function TimeSavedCarts() {
             I miei carrelli
           </h3>
         </div>
-        <button
-          onClick={() => savedCartsQuery.refetch()}
-          disabled={savedCartsQuery.isRefetching}
-          className="p-1.5 rounded-[var(--radius-btn)] text-[var(--time-gray-400)] hover:text-[var(--time-dark)] hover:bg-[var(--time-gray-50)] transition-colors"
-        >
-          <RefreshIcon spinning={savedCartsQuery.isRefetching} />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => savedCartsQuery.refetch()}
+            disabled={savedCartsQuery.isRefetching}
+            className="p-1.5 rounded-[var(--radius-btn)] text-[var(--time-gray-400)] hover:text-[var(--time-dark)] hover:bg-[var(--time-gray-50)] transition-colors"
+          >
+            <RefreshIcon spinning={savedCartsQuery.isRefetching} />
+          </button>
+          {onToggle && (
+            <button
+              onClick={onToggle}
+              className="p-1.5 rounded-[var(--radius-btn)] text-[var(--time-gray-400)] hover:text-[var(--time-dark)] hover:bg-[var(--time-gray-50)] transition-colors"
+              title="Nascondi carrelli"
+            >
+              <CollapseIcon collapsed={false} />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Save current cart form */}

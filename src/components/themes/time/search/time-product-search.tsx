@@ -340,10 +340,11 @@ export const TimeProductSearch: FC<TimeProductSearchProps> = ({
   // Sort
   const currentSort = searchParams.get('sort_by') || 'relevance';
   const handleSortChange = (value: string) => {
-    const url = new URL(location.href);
-    if (value === 'relevance') url.searchParams.delete('sort_by');
-    else url.searchParams.set('sort_by', value);
-    router.push(`${pathname}${url.search}`, { scroll: false });
+    const params = new URLSearchParams(searchParams?.toString() ?? '');
+    if (value === 'relevance') params.delete('sort_by');
+    else params.set('sort_by', value);
+    const qs = params.toString();
+    router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   };
 
   const totalItems =

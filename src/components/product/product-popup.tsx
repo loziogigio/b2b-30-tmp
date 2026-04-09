@@ -18,7 +18,7 @@ import {
   useModalAction,
   useModalState,
 } from '@components/common/modal/modal.context';
-import { IoClose } from 'react-icons/io5';
+import { IoClose, IoChevronBack } from 'react-icons/io5';
 import { useTranslation } from 'src/app/i18n/client';
 
 // ERP prices
@@ -30,6 +30,8 @@ import { useLikes } from '@contexts/likes/likes.context';
 import { useReminders } from '@contexts/reminders/reminders.context';
 import { useUI } from '@contexts/ui.context';
 
+import { isModalFullWidth } from '@/lib/theme/resolver';
+
 // B2B bits
 import PackagingGrid from './packaging-grid';
 import PriceAndPromo from './price-and-promo';
@@ -39,8 +41,8 @@ import { useCompareList } from '@/contexts/compare/compare.context';
 
 export default function ProductPopup({ lang }: { lang: string }) {
   const { t } = useTranslation(lang, 'common');
-  const { data: product } = useModalState() as { data: any };
-  const { closeModal, closeAll } = useModalAction();
+  const { data: product, stack } = useModalState() as { data: any; stack: any[] };
+  const { closeModal, goBack, closeAll } = useModalAction();
   const router = useRouter();
 
   // Likes context
@@ -107,6 +109,8 @@ export default function ProductPopup({ lang }: { lang: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sku]);
 
+  const fullWidth = isModalFullWidth();
+
   if (!product) return null;
 
   const canAdd = erpPrice?.product_label_action?.ADD_TO_CART ?? true;
@@ -132,17 +136,28 @@ export default function ProductPopup({ lang }: { lang: string }) {
   };
 
   return (
-    <div className="h-full overflow-y-auto mx-auto p-3 sm:p-4 lg:p-6 bg-brand-light relative">
-      {/* Close button */}
-      <button
-        onClick={closeModal}
-        aria-label="Close"
-        className="absolute top-2 right-2 sm:top-3 sm:right-3 z-10 inline-flex items-center justify-center w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 hover:text-gray-900 shadow-sm transition-colors"
-      >
-        <IoClose className="text-2xl" />
-      </button>
+    <div className="h-full overflow-y-auto bg-brand-light relative">
+      {/* Accent bar */}
+      <div className="sticky top-0 z-20 bg-brand text-white">
+        <div className={cn("flex items-center justify-between px-4 md:px-6 lg:px-8 2xl:px-10 py-3", !fullWidth && "max-w-[1440px] mx-auto")}>
+          <button
+            onClick={() => (stack.length > 1 ? goBack() : closeModal())}
+            className="inline-flex items-center gap-1.5 bg-white/20 hover:bg-white/30 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors cursor-pointer"
+          >
+            <IoChevronBack size={16} />
+            {t('text-go-back', { defaultValue: 'Torna indietro' })}
+          </button>
+          <button
+            onClick={closeModal}
+            aria-label="Close"
+            className="w-8 h-8 rounded-full border border-white/30 flex items-center justify-center hover:bg-white/20 transition-colors cursor-pointer"
+          >
+            <IoClose size={18} />
+          </button>
+        </div>
+      </div>
 
-      <div className="pt-6 pb-2 md:pt-7">
+      <div className={cn("px-4 md:px-6 lg:px-8 2xl:px-10 pt-6 pb-2 md:pt-7", !fullWidth && "max-w-[1440px] mx-auto")}>
         <div className="grid-cols-10 lg:grid gap-7 2xl:gap-8">
           {/* Gallery */}
           <div className="col-span-5 mb-6 overflow-hidden xl:col-span-4 md:mb-8 lg:mb-0">

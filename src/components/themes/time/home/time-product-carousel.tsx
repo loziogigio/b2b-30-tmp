@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Product } from '@framework/types';
 import { fetchErpPrices } from '@framework/erp/prices';
 import { useQuery } from '@tanstack/react-query';
@@ -11,6 +11,10 @@ import TimeScrollArrows from '@components/themes/time/shared/time-scroll-arrows'
 import { useHorizontalScroll } from '@components/themes/time/shared/use-horizontal-scroll';
 import ProductCardLoader from '@components/ui/loaders/product-card-loader';
 import Link from '@components/ui/link';
+
+interface BreakpointConfig {
+  [key: string]: { slidesPerView: number; spaceBetween?: number };
+}
 
 interface TimeProductCarouselProps {
   title: string;
@@ -23,6 +27,30 @@ interface TimeProductCarouselProps {
   uniqueKey?: string;
   lang: string;
   categorySlug?: string;
+  breakpoints?: BreakpointConfig;
+}
+
+/** Given the breakpoints map and the current window width, return slidesPerView + gap. */
+function resolveBreakpoint(
+  breakpoints: BreakpointConfig,
+  width: number,
+): { slidesPerView: number; gap: number } {
+  const sorted = Object.keys(breakpoints)
+    .map(Number)
+    .sort((a, b) => b - a);
+  for (const bp of sorted) {
+    if (width >= bp) {
+      const cfg = breakpoints[String(bp)];
+      return {
+        slidesPerView: cfg.slidesPerView,
+        gap: cfg.spaceBetween ?? 16,
+      };
+    }
+  }
+  // fallback to smallest breakpoint
+  const smallest = sorted[sorted.length - 1];
+  const cfg = breakpoints[String(smallest)];
+  return { slidesPerView: cfg?.slidesPerView ?? 4, gap: cfg?.spaceBetween ?? 16 };
 }
 
 export default function TimeProductCarousel({
@@ -36,7 +64,23 @@ export default function TimeProductCarousel({
   uniqueKey,
   lang,
   categorySlug,
+  breakpoints,
 }: TimeProductCarouselProps) {
+  // Compute card layout from breakpoints
+  const hasBreakpoints = !!breakpoints && Object.keys(breakpoints).length > 0;
+  const [cardLayout, setCardLayout] = useState({ slidesPerView: 4, gap: 16 });
+
+  useEffect(() => {
+    if (!hasBreakpoints || !breakpoints) return;
+    const update = () => {
+      const { slidesPerView, gap } = resolveBreakpoint(breakpoints, window.innerWidth);
+      setCardLayout({ slidesPerView, gap });
+    };
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, [hasBreakpoints, breakpoints]);
+
   const {
     scrollRef,
     canScrollLeft,
@@ -126,15 +170,24 @@ export default function TimeProductCarousel({
           <div
             ref={scrollRef}
             onScroll={checkScroll}
-            className="flex gap-4 overflow-x-auto pt-2 pb-4 -mt-2 [&::-webkit-scrollbar]:hidden"
-            style={{ scrollSnapType: 'x mandatory', scrollbarWidth: 'none' }}
+            className="flex overflow-x-auto pt-2 pb-4 -mt-2 [&::-webkit-scrollbar]:hidden"
+            style={{
+              scrollSnapType: 'x mandatory',
+              scrollbarWidth: 'none',
+              gap: hasBreakpoints ? `${cardLayout.gap}px` : '16px',
+            }}
           >
             {loading && !products?.length
               ? Array.from({ length: limit }).map((_, idx) => (
                   <div
                     key={`${uniqueKey}-loader-${idx}`}
-                    className="min-w-[210px] max-w-[210px] shrink-0"
-                    style={{ scrollSnapAlign: 'start' }}
+                    className="shrink-0"
+                    style={{
+                      scrollSnapAlign: 'start',
+                      width: hasBreakpoints
+                        ? `calc((100% - ${(cardLayout.slidesPerView - 1) * cardLayout.gap}px) / ${cardLayout.slidesPerView})`
+                        : '210px',
+                    }}
                   >
                     <ProductCardLoader uniqueKey={`${uniqueKey}-${idx}`} />
                   </div>
@@ -162,18 +215,24 @@ export default function TimeProductCarousel({
                   const erpKey = String(targetProduct?.id ?? p?.id ?? '');
                   const priceData = erpPricesData?.[erpKey];
 
+                  const cardWidth = hasBreakpoints
+                    ? `calc((100% - ${(cardLayout.slidesPerView - 1) * cardLayout.gap}px) / ${cardLayout.slidesPerView})`
+                    : undefined;
+
                   return (
                     <div
                       key={`${uniqueKey}-${erpKey}`}
                       className="shrink-0"
                       style={{
                         animation: `time-fadeUp 0.4s ease ${0.05 * i}s both`,
+                        width: cardWidth,
                       }}
                     >
                       <TimeProductCard
                         product={targetProduct}
                         lang={lang}
                         priceData={priceData}
+                        className={cardWidth ? 'w-full' : undefined}
                       />
                     </div>
                   );

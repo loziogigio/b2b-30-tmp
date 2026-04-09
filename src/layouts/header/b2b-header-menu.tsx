@@ -27,6 +27,7 @@ function NodeIcon({ src, alt }: { src?: string | null; alt: string }) {
 
 interface MenuProps {
   lang: string;
+  channel?: string;
   className?: string;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -68,6 +69,7 @@ function categoryHrefFromPath(
 
 const B2BHeaderMenu: React.FC<MenuProps> = ({
   lang,
+  channel,
   className,
   open: controlledOpen,
   onOpenChange,
@@ -84,10 +86,12 @@ const B2BHeaderMenu: React.FC<MenuProps> = ({
     isError: headerError,
   } = usePimMenuQuery({
     location: 'header',
+    channel,
     staleTime: 5 * 60 * 1000,
   });
   const { data: mobileData, isLoading: mobileLoading } = usePimMenuQuery({
     location: 'mobile',
+    channel,
     staleTime: 5 * 60 * 1000,
   });
 

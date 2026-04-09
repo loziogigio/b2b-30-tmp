@@ -363,7 +363,7 @@ const ProductCardB2B: React.FC<ProductProps> = ({
 
         {/* Model */}
         {model && (
-          <span className="text-[10px] sm:text-xs text-gray-500 font-medium truncate">
+          <span className="text-[10px] sm:text-xs text-gray-700 font-bold truncate">
             {model}
           </span>
         )}

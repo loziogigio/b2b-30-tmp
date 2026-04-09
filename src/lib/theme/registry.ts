@@ -23,20 +23,27 @@ type ComponentSlot =
 
 const registry: Record<ThemeId, Record<ComponentSlot, () => Promise<any>>> = {
   default: {
-    Layout: () => import('@/layouts/b2b/layout'),
+    Layout: () =>
+      import('@/components/themes/default/layout/default-layout'),
     ProductCard: () =>
-      import('@/components/product/product-cards/product-card-b2b'),
+      import('@/components/themes/default/product/default-product-card'),
     ProductRow: () =>
-      import('@/components/product/product-rows/product-row-b2b'),
-    HomeBlockRenderer: () => import('@/components/blocks/HomeBlockRenderer'),
+      import('@/components/themes/default/product/default-product-row'),
+    HomeBlockRenderer: () =>
+      import('@/components/themes/default/home/default-block-renderer'),
     SearchPageContent: () =>
-      import('@/app/[lang]/(default)/search/search-b2b-page-content'),
-    ProductDetail: () => import('@/components/product/product-b2b-details'),
-    ProductPopup: () => import('@/components/product/product-popup'),
+      import('@/components/themes/default/search/default-search-content'),
+    ProductDetail: () =>
+      import('@/components/themes/default/product/default-product-detail'),
+    ProductPopup: () =>
+      import('@/components/themes/default/product/default-product-popup'),
     VariantsQuickView: () =>
-      import('@/components/product/b2b-product-variants-quick-view'),
-    Cart: () => import('@/components/cart/cart'),
-    SearchOverlay: () => import('@/components/search/search-overlay-b2b'),
+      import(
+        '@/components/themes/default/product/default-variants-quick-view'
+      ),
+    Cart: () => import('@/components/themes/default/cart/default-cart'),
+    SearchOverlay: () =>
+      import('@/components/themes/default/search/default-search-overlay'),
   },
   time: {
     Layout: () => import('@/components/themes/time/layout/time-layout'),
@@ -50,13 +57,14 @@ const registry: Record<ThemeId, Record<ComponentSlot, () => Promise<any>>> = {
       import('@/components/themes/time/product/time-product-detail'),
     // Fall back to default for slots not yet themed
     ProductRow: () =>
-      import('@/components/product/product-rows/product-row-b2b'),
+      import('@/components/themes/default/product/default-product-row'),
     ProductPopup: () =>
       import('@/components/themes/time/product/time-product-popup'),
     VariantsQuickView: () =>
       import('@/components/themes/time/product/time-variants-quick-view'),
     Cart: () => import('@/components/themes/time/cart/time-cart'),
-    SearchOverlay: () => import('@/components/search/search-overlay-b2b'),
+    SearchOverlay: () =>
+      import('@/components/themes/default/search/default-search-overlay'),
   },
 };
 

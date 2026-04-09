@@ -39,9 +39,9 @@ const Delivery: React.FC<DeliveryProps> = ({ lang, className }) => {
       : t('text-home-address');
 
   return (
-    <div className={cn('delivery-address', className)}>
+    <div className={cn('delivery-address min-w-0', className)}>
       <button
-        className="inline-flex items-center text-sm text-brand-dark tracking-[0.1px] max-w-[200px] xl:max-w-[320px]"
+        className="inline-flex items-center text-sm text-brand-dark tracking-[0.1px] min-w-0"
         onClick={handleDeliveryView}
         title={label}
       >

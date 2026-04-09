@@ -61,20 +61,21 @@ export function AppLauncherWidget({ config, lang }: AppLauncherWidgetProps) {
     'flex flex-col items-center gap-1.5 p-3 rounded-lg transition-colors cursor-pointer';
 
   return (
-    <div ref={containerRef} className="relative flex flex-col items-center">
+    <div ref={containerRef} className="flex flex-col items-center group relative">
       <button
         type="button"
         onClick={() => setOpen((s) => !s)}
         className={cn(
-          'inline-flex h-9 w-9 items-center justify-center rounded-full border transition-colors shrink-0',
+          'relative inline-flex h-9 w-9 items-center justify-center rounded-full border transition-colors shrink-0',
           open
             ? 'border-brand/30 bg-brand/5 text-brand'
-            : 'border-slate-200 text-slate-600 hover:border-brand hover:text-brand',
+            : 'border-slate-200 hover:border-brand hover:text-brand',
         )}
-        aria-label="Applicazioni"
+        aria-label="App"
       >
         <IoGrid className="h-5 w-5" />
       </button>
+      <span className="mt-1 text-[10px] text-slate-500">App</span>
 
       {open && (
         <div className="absolute right-0 top-full mt-2 w-52 bg-white border border-gray-200 rounded-xl shadow-lg z-50 p-3">

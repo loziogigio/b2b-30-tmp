@@ -45,26 +45,6 @@ const PrinterIcon = () => (
 
 // ── component ────────────────────────────────────────────────────────────────
 
-const SidebarIcon = ({ open }: { open: boolean }) => (
-  <svg
-    width="16"
-    height="16"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={2}
-    strokeLinecap="round"
-  >
-    <rect x="3" y="3" width="18" height="18" rx="2" />
-    <line x1="9" y1="3" x2="9" y2="21" />
-    {open ? (
-      <polyline points="15,10 12,13 15,16" />
-    ) : (
-      <polyline points="13,10 16,13 13,16" />
-    )}
-  </svg>
-);
-
 export default function TimeCheckoutPage({ lang }: { lang: string }) {
   const { t } = useTranslation(lang, 'common');
   const { totalItems } = useCart();
@@ -111,20 +91,12 @@ export default function TimeCheckoutPage({ lang }: { lang: string }) {
               : 'lg:grid-cols-[36px_1fr_380px]'
           }`}
         >
-          {/* Left: Saved Carts + toggle */}
-          <div className="hidden lg:flex lg:sticky lg:top-24 items-start gap-0">
-            {sidebarOpen ? (
-              <div className="flex-1 min-w-0">
-                <TimeSavedCarts />
-              </div>
-            ) : null}
-            <button
-              onClick={() => setSidebarOpen((v) => !v)}
-              className="shrink-0 w-7 h-7 mt-2 rounded-[var(--radius-btn)] border-[1.5px] border-[var(--time-gray-200)] bg-white flex items-center justify-center text-[var(--time-gray-400)] hover:border-[var(--time-dark)] hover:text-[var(--time-dark)] transition-colors"
-              title={sidebarOpen ? 'Nascondi carrelli' : 'Mostra carrelli'}
-            >
-              <SidebarIcon open={sidebarOpen} />
-            </button>
+          {/* Left: Saved Carts */}
+          <div className="hidden lg:block lg:sticky lg:top-24">
+            <TimeSavedCarts
+              collapsed={!sidebarOpen}
+              onToggle={() => setSidebarOpen((v) => !v)}
+            />
           </div>
 
           {/* Center: Processing Orders + Cart Table */}

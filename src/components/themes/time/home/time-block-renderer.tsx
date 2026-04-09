@@ -434,6 +434,7 @@ const TimeBlockRenderer: React.FC<TimeBlockRendererProps> = ({
           title={sectionTitle}
           blockId={block.id}
           lang={lang}
+          breakpoints={Object.keys(breakpoints).length ? breakpoints : undefined}
         />
       </BlockWrapper>
     );
@@ -532,12 +533,14 @@ function SearchProductCarousel({
   title,
   blockId,
   lang,
+  breakpoints,
 }: {
   searchQuery: string;
   limit: number;
   title: string;
   blockId: string;
   lang: string;
+  breakpoints?: Record<string, { slidesPerView: number; spaceBetween?: number }>;
 }) {
   const enabled = Boolean(searchQuery);
   const {
@@ -566,6 +569,7 @@ function SearchProductCarousel({
       categorySlug={
         searchQuery ? `shop?text=${encodeURIComponent(searchQuery)}` : undefined
       }
+      breakpoints={Object.keys(breakpoints).length ? breakpoints : undefined}
     />
   );
 }

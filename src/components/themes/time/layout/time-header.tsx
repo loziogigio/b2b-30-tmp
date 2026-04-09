@@ -23,12 +23,20 @@ export default function TimeHeader({ lang }: TimeHeaderProps) {
   const [isElevated, setIsElevated] = useState(false);
   const [activeCat, setActiveCat] = useState<string | null>(null);
 
+  // Extract channel from the category-menu widget in headerConfig
+  const categoryWidget = headerConfig.rows
+    .flatMap((r) => r.blocks)
+    .flatMap((b) => b.widgets)
+    .find((w) => w.type === 'category-menu');
+  const channel = categoryWidget?.config?.channel;
+
   // Fetch categories from PIM menu
   const { data: menuData } = usePimMenuQuery({
     location: 'header',
+    channel,
     staleTime: 5 * 60 * 1000,
   });
-  const categories: MenuTreeNode[] = menuData?.tree ?? [];
+  const categories: MenuTreeNode[] = menuData?.menuItems ?? [];
 
   useEffect(() => {
     const handleScroll = () => setIsElevated(window.scrollY > 10);

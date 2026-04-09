@@ -46,6 +46,7 @@ export function mapCSLineItemToItem(li: any): Item {
     description: undefined,
     brand: li.brand ? { id: 0, name: li.brand, slug: li.brand } : undefined,
     image: li.image_url,
+    note: li.note || '',
 
     // Quantities / units
     quantity: num(li.quantity, 0),
@@ -120,6 +121,7 @@ export function mapCSOrderToSummary(order: any): CartSummary {
     vat: num(order.total_vat, 0),
     totalDoc: num(order.order_total, 0),
     showDiscountPrice: Boolean(erpData.show_discount_price),
+    cartName: order.cart_name?.trim() || undefined,
     packaging: erpData.imballi,
   };
 }
@@ -205,6 +207,9 @@ export function buildAddItemRequest(
     // Promo
     promo_code: promoCode,
     promo_row: promoRow,
+
+    // Note
+    ...(input.note ? { note: input.note } : {}),
   };
 }
 

@@ -13,10 +13,13 @@ import cn from 'classnames';
 import CartTableB2B from '@components/cart/cart-table-b2b';
 import CheckoutSendOrder from '@components/checkout/checkout-send-order';
 import ProcessingOrdersTable from '@components/checkout/processing-orders-table';
+import { useQuery } from '@tanstack/react-query';
 import { useCart } from '@contexts/cart/cart.context';
 import CartTotals from './cart-totals';
 import CartListSidebar from './cart-list-sidebar';
 import { useTranslation } from 'src/app/i18n/client';
+import { listSavedCarts } from '@framework/cart/saved-carts';
+import { ERP_STATIC } from '@framework/utils/static';
 
 function formatEUR(n: number) {
   return new Intl.NumberFormat('it-IT', {
@@ -49,6 +52,18 @@ export default function CheckoutFlow({
   );
 
   const [stage, setStage] = useState<Stage>('cart');
+  const [activeTab, setActiveTab] = useState<'cart' | 'saved'>('cart');
+
+  const savedCartsQuery = useQuery({
+    queryKey: ['saved-carts'],
+    queryFn: async () => {
+      const res = await listSavedCarts();
+      return res.carts;
+    },
+    enabled: Boolean(ERP_STATIC.customer_code && ERP_STATIC.address_code),
+    staleTime: 0,
+  });
+  const savedCartsCount = savedCartsQuery.data?.length ?? 0;
 
   const cartRef = useRef<HTMLDivElement>(null);
   const [cartMaxH, setCartMaxH] = useState(0);
@@ -160,36 +175,71 @@ export default function CheckoutFlow({
         </div>
       </div>
 
-      {/* Split panel layout */}
-      <div className="grid gap-4 lg:grid-cols-[280px_1fr] xl:grid-cols-[320px_1fr]">
-        {/* Left sidebar - Cart list */}
-        <div className="hidden lg:block lg:sticky lg:top-20 lg:self-start lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto">
-          <CartListSidebar lang={lang} />
+      {/* Full-width layout with tabs */}
+      <div className="flex min-w-0 flex-col">
+        {/* Tabs header */}
+        <div className="flex border-b-2 border-gray-200 mb-4">
+          <button
+            onClick={() => setActiveTab('cart')}
+            className={cn(
+              'flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 -mb-[2px] transition-colors',
+              activeTab === 'cart'
+                ? 'text-gray-900 border-gray-900'
+                : 'text-gray-500 border-transparent hover:text-gray-700',
+            )}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>
+            {t('text-current-cart', { defaultValue: 'Carrello attuale' })}
+            {itemCount > 0 && (
+              <span className={cn(
+                'text-[10px] font-bold px-1.5 py-0.5 rounded-full',
+                activeTab === 'cart' ? 'bg-gray-900 text-white' : 'bg-gray-200 text-gray-600',
+              )}>
+                {itemCount}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('saved')}
+            className={cn(
+              'flex items-center gap-2 px-5 py-3 text-sm font-semibold border-b-2 -mb-[2px] transition-colors',
+              activeTab === 'saved'
+                ? 'text-gray-900 border-gray-900'
+                : 'text-gray-500 border-transparent hover:text-gray-700',
+            )}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17,21 17,13 7,13 7,21"/></svg>
+            {t('text-saved-carts-tab', { defaultValue: 'Carrelli salvati' })}
+            {savedCartsCount > 0 && (
+              <span className={cn(
+                'text-[10px] font-bold px-1.5 py-0.5 rounded-full',
+                activeTab === 'saved' ? 'bg-gray-900 text-white' : 'bg-gray-200 text-gray-600',
+              )}>
+                {savedCartsCount}
+              </span>
+            )}
+          </button>
         </div>
 
-        {/* Right content - Cart items and checkout */}
-        <div className="flex min-w-0 flex-col">
-          {/* Mobile cart list - shown only on mobile/tablet */}
-          <div className="mb-4 lg:hidden">
-            <CartListSidebar lang={lang} />
-          </div>
-
-          {/* CART (collapsible) */}
-          <div
-            id="cart-accordion"
-            ref={cartRef}
-            className={cn(
-              'overflow-hidden rounded-md border border-gray-200 bg-white',
-              'transition-[max-height] duration-500 ease-in-out',
-            )}
-            style={{ maxHeight: stage === 'cart' ? `${cartMaxH}px` : 0 }}
-            aria-hidden={stage !== 'cart'}
-          >
-            <div className="p-2">
-              {/* ⬇️ pass items + qty handler */}
-              <CartTableB2B lang={lang} />
+        {/* Tab: Cart */}
+        {activeTab === 'cart' && (
+          <>
+            {/* CART (collapsible) */}
+            <div
+              id="cart-accordion"
+              ref={cartRef}
+              className={cn(
+                'overflow-hidden rounded-md border border-gray-200 bg-white',
+                'transition-[max-height] duration-500 ease-in-out',
+              )}
+              style={{ maxHeight: stage === 'cart' ? `${cartMaxH}px` : 0 }}
+              aria-hidden={stage !== 'cart'}
+            >
+              <div className="p-2">
+                {/* ⬇️ pass items + qty handler */}
+                <CartTableB2B lang={lang} />
+              </div>
             </div>
-          </div>
 
           {/* CART compact header when closed */}
           {stage !== 'cart' && (
@@ -264,7 +314,13 @@ export default function CheckoutFlow({
           <div className="mt-6">
             <ProcessingOrdersTable />
           </div>
-        </div>
+        </>
+        )}
+
+        {/* Tab: Saved Carts */}
+        {activeTab === 'saved' && (
+          <CartListSidebar lang={lang} />
+        )}
       </div>
     </div>
   );

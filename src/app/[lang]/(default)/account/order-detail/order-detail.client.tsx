@@ -100,6 +100,7 @@ export default function OrderDetailClient({ lang, initialParams }: Props) {
         ordered_in_quantity: Number(it.ordered_in_quantity ?? 0),
         delivered_in_quantity: Number(it.delivered_in_quantity ?? 0),
         delivered_in_price: Number(it.delivered_in_price ?? 0),
+        note: it.note,
       }));
 
       const shippingAddress = (order as any).shipping_address ?? {};

@@ -1,13 +1,14 @@
 // app/[lang]/account/layout.tsx
 'use client';
 
-import { useSelectedLayoutSegments, useParams } from 'next/navigation';
-import SidebarMenu from '@components/account/sidebar-menu';
 import { isTimeTheme } from '@/lib/theme/resolver';
 import dynamic from 'next/dynamic';
 
 const TimeAccountLayout = dynamic(
   () => import('@/components/themes/time/account/time-account-layout'),
+);
+const DefaultAccountLayout = dynamic(
+  () => import('@/components/themes/default/account/default-account-layout'),
 );
 
 export default function AccountLayout({
@@ -15,36 +16,6 @@ export default function AccountLayout({
 }: {
   children: React.ReactNode;
 }) {
-  if (isTimeTheme()) {
-    return <TimeAccountLayout>{children}</TimeAccountLayout>;
-  }
-
-  // Segments inside /[lang]/account/*
-  const segments = useSelectedLayoutSegments();
-  const params = useParams<{ lang?: string }>();
-  const lang = (params?.lang as string) || 'it';
-  const hideSidebar = segments.includes('order-detail');
-
-  if (hideSidebar) {
-    // Standalone page without sidebar
-    return (
-      <main className="min-h-screen bg-gray-100 py-8">
-        <div className="mx-auto w-full max-w-5xl px-4">{children}</div>
-      </main>
-    );
-  }
-
-  // Default: account chrome with sidebar
-  return (
-    <main className="min-h-screen bg-gray-100 pb-4">
-      <div className="mx-auto max-w-[1920px] pt-6 md:px-6 lg:px-8 2xl:px-10">
-        <div className="grid items-start gap-6 xl:grid-cols-[20rem_minmax(0,1fr)] 2xl:grid-cols-[20rem_minmax(0,1fr)]">
-          <div className="space-y-6">
-            <SidebarMenu lang={lang} />
-          </div>
-          <div>{children}</div>
-        </div>
-      </div>
-    </main>
-  );
+  const Layout = isTimeTheme() ? TimeAccountLayout : DefaultAccountLayout;
+  return <Layout>{children}</Layout>;
 }

@@ -64,18 +64,19 @@ export const FiltersB2BItem = ({
   const updateUrl = React.useCallback(
     (newFormState: string[]) => {
       const newValue = newFormState.join(separator);
-      const url = new URL(location.href);
+      const params = new URLSearchParams(searchParams?.toString() ?? '');
 
       if (newValue) {
-        url.searchParams.set(queryKey, newValue);
+        params.set(queryKey, newValue);
       } else {
-        url.searchParams.delete(queryKey);
+        params.delete(queryKey);
       }
 
       isUserAction.current = true;
-      router.push(`${pathname}${url.search}`, { scroll: false });
+      const qs = params.toString();
+      router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
     },
-    [queryKey, pathname, router, separator],
+    [queryKey, pathname, router, separator, searchParams],
   );
 
   function handleItemClick(e: React.FormEvent<HTMLInputElement>): void {
