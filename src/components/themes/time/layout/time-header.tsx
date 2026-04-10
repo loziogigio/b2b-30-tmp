@@ -28,7 +28,7 @@ export default function TimeHeader({ lang }: TimeHeaderProps) {
     .flatMap((r) => r.blocks)
     .flatMap((b) => b.widgets)
     .find((w) => w.type === 'category-menu');
-  const channel = categoryWidget?.config?.channel;
+  const channel = categoryWidget?.config?.channel || 'b2b';
 
   // Fetch categories from PIM menu
   const { data: menuData } = usePimMenuQuery({

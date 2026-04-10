@@ -17,6 +17,7 @@ import {
 } from '@framework/likes';
 import { getUserReminders as apiGetUserReminders } from '@framework/reminders';
 import { ProductTypeBreadcrumb } from './product-type-breadcrumb';
+import { GroupsNavigator } from './groups-navigator';
 import { TechSpecsFilters } from './tech-specs-filters';
 import { IoIosArrowUp, IoIosArrowDown } from 'react-icons/io';
 import {
@@ -241,6 +242,10 @@ export const SearchFiltersB2B: React.FC<{ lang: string; text?: string }> = ({
         ) : (
           /* Single scrollable area for ALL filters */
           <div className="max-h-[calc(100vh-320px)] overflow-y-auto">
+            {/* Groups Navigator - hierarchical menu tree */}
+            <GroupsNavigator lang={lang} />
+            <hr className="border-border-base mx-4" />
+
             {/* Product Type Section (when selected or single) */}
             {effectiveProductTypeCode && effectiveProductTypeLabel && (
               <>

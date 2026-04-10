@@ -162,7 +162,7 @@ export default function CategoryPage({
       .flatMap((r) => r.blocks)
       .flatMap((b) => b.widgets)
       .find((w) => w.type === 'category-menu');
-    return w?.config?.channel;
+    return w?.config?.channel || 'b2b';
   }, [settings]);
 
   const { data, isLoading, isError } = usePimMenuQuery({

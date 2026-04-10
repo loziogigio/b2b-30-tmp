@@ -20,7 +20,7 @@ export function CategoryMenuWidget({ config, lang }: CategoryMenuWidgetProps) {
     <div className="hidden lg:block">
       <B2BHeaderMenu
         lang={lang}
-        channel={config?.channel}
+        channel={config?.channel || 'b2b'}
         renderTrigger={({ onClick }) => (
           <button
             type="button"
