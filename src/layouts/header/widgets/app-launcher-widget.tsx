@@ -127,7 +127,7 @@ export function AppLauncherWidget({ config, lang }: AppLauncherWidgetProps) {
               Applicazioni
             </p>
           </div>
-          <div className="p-2">
+          <div className="p-2 space-y-1.5">
             {apps.map((app) => {
               const isB2B = app.app_id === 'b2b';
               const bgColor = app.color || '#6366f1';
@@ -151,12 +151,20 @@ export function AppLauncherWidget({ config, lang }: AppLauncherWidgetProps) {
                       : 'hover:bg-gray-50',
                   )}
                 >
-                  {isB2B && b2bImage ? (
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-white border border-gray-200 p-1.5 shrink-0">
+                  {app.icon ? (
+                    <div className="w-10 h-10 rounded-xl shrink-0 overflow-hidden">
+                      <img
+                        src={app.icon}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : isB2B && b2bImage ? (
+                    <div className="w-10 h-10 rounded-xl shrink-0 overflow-hidden">
                       <img
                         src={b2bImage}
                         alt=""
-                        className="max-h-full max-w-full object-contain"
+                        className="w-full h-full object-cover"
                       />
                     </div>
                   ) : (
