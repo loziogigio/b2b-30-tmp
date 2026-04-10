@@ -75,7 +75,7 @@ export function CategoryCard({
   // Button label: "vedi prodotti" for search, "visualizza categoria" for category page
   const buttonLabel = isGoingToSearch
     ? t('text-view-products', { defaultValue: 'vedi prodotti' })
-    : t('text-view-category', { defaultValue: 'visualizza categoria' });
+    : t('text-view-category', { defaultValue: 'visualizza gruppo' });
 
   return (
     <div className="group flex flex-col bg-white rounded-2xl border border-[#EAEEF2] overflow-hidden transition-all duration-300 h-full">
@@ -152,7 +152,7 @@ function ViewAllCard({ lang, parentHref }: ViewAllCardProps) {
       </h3>
       <p className="text-[10px] sm:text-xs text-white/80 mb-3 text-center">
         {t('text-discover-all-categories', {
-          defaultValue: 'Scopri tutte le categorie',
+          defaultValue: 'Scopri tutti i gruppi',
         })}
       </p>
       <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 border-white flex items-center justify-center">

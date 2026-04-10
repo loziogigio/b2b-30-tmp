@@ -114,11 +114,11 @@ export async function generateMetadata({
 
   // If no slug, show all categories page
   if (!slug.length) {
-    const title = lang === 'it' ? 'Tutte le categorie' : 'All Categories';
+    const title = lang === 'it' ? 'Tutti i gruppi' : 'All Groups';
     const description =
       lang === 'it'
-        ? 'Esplora tutte le categorie di prodotti'
-        : 'Explore all product categories';
+        ? 'Esplora tutti i gruppi di prodotti'
+        : 'Explore all product groups';
     const canonicalUrl = `${siteUrl}/${lang}/category`;
 
     return {

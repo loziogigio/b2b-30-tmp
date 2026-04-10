@@ -107,7 +107,7 @@ const B2BHeaderMenu: React.FC<MenuProps> = ({
   }, [isMobile, mobileData, headerData]);
 
   const allCategoriesLabel = t('all-categories', {
-    defaultValue: 'All Categories',
+    defaultValue: 'All Groups',
   });
 
   const [internalOpen, setInternalOpen] = useState(false);
@@ -330,12 +330,12 @@ const B2BHeaderMenu: React.FC<MenuProps> = ({
                   href={`/${lang}/category`}
                   className="block px-4 h-11 leading-[44px] text-[14px] font-medium text-brand hover:bg-brand/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 truncate border-b border-gray-100"
                   title={t('see-all-categories', {
-                    defaultValue: 'See all categories',
+                    defaultValue: 'See all groups',
                   })}
                   onClick={close}
                 >
                   {t('see-all-categories', {
-                    defaultValue: 'See all categories',
+                    defaultValue: 'See all groups',
                   })}{' '}
                   →
                 </Link>

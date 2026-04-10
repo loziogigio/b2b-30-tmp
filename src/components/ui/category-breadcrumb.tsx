@@ -28,7 +28,7 @@ const CategoryBreadcrumb: React.FC<BreadcrumbNavProps> = ({
   // Prefer receiving allLabel from server to avoid any chance of late i18n mismatch.
   // Fallback is still fine in most setups; add suppressHydrationWarning just in case.
   const allText =
-    allLabel ?? t('all-categories', { defaultValue: 'All Categories' });
+    allLabel ?? t('all-categories', { defaultValue: 'All Groups' });
   const lastIndex = categories.length - 1;
 
   const toCategoryHref = (node?: MenuTreeNode) =>

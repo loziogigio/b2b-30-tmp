@@ -242,7 +242,7 @@ export default function CategoryPage({
         <CategoryBreadcrumb
           lang={lang}
           categories={pathNodes}
-          allLabel={t('all-categories', { defaultValue: 'All Categories' })}
+          allLabel={t('all-categories', { defaultValue: 'All Groups' })}
           onAllCategoriesClick={() => {
             window.location.href = `/${lang}/category`;
           }}

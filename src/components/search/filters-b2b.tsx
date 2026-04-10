@@ -17,7 +17,7 @@ import {
 } from '@framework/likes';
 import { getUserReminders as apiGetUserReminders } from '@framework/reminders';
 import { ProductTypeBreadcrumb } from './product-type-breadcrumb';
-import { GroupsNavigator } from './groups-navigator';
+import { GroupsNavigator, GroupsBreadcrumb } from './groups-navigator';
 import { TechSpecsFilters } from './tech-specs-filters';
 import { IoIosArrowUp, IoIosArrowDown } from 'react-icons/io';
 import {
@@ -212,6 +212,9 @@ export const SearchFiltersB2B: React.FC<{ lang: string; text?: string }> = ({
 
   return (
     <div className="space-y-3">
+      {/* Groups breadcrumb path */}
+      <GroupsBreadcrumb lang={lang} />
+
       {/* Selected Filters (Clear All) */}
       <SelectedFilters
         lang={lang}

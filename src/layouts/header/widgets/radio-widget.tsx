@@ -10,7 +10,7 @@ interface RadioWidgetProps {
   lang: string;
 }
 
-export function RadioWidget({ config }: RadioWidgetProps) {
+export function RadioWidget({ config, lang }: RadioWidgetProps) {
   // Show radio by default unless explicitly disabled (enabled === false)
   if (config?.enabled === false) return null;
 
@@ -26,7 +26,7 @@ export function RadioWidget({ config }: RadioWidgetProps) {
 
   const handleOpenRadio = () => {
     window.open(
-      '/radio-player.html',
+      `/${lang}/radio-player.html`,
       'RadioPlayer',
       'width=450,height=500,resizable=yes,scrollbars=no,status=no,menubar=no,toolbar=no,location=no',
     );

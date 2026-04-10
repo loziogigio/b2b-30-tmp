@@ -28,7 +28,7 @@ function ViewAllCard({ lang, parentHref }: ViewAllCardProps) {
       </h3>
       <p className="text-sm text-white/80 mb-4">
         {t('text-discover-all-categories', {
-          defaultValue: 'Scopri tutte le categorie',
+          defaultValue: 'Scopri tutti i gruppi',
         })}
       </p>
       <div className="w-10 h-10 rounded-full border-2 border-white flex items-center justify-center">
