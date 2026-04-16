@@ -166,8 +166,10 @@ export default function AddToCart({
         gross_price: effectivePriceData?.gross_price,
         is_promo: (effectivePriceData as any)?.is_promo,
         availability: effectivePriceData?.availability,
-        packaging_default: effectivePriceData?.packaging_option_default,
-        packaging_smallest: effectivePriceData?.packaging_option_smallest,
+        packaging_option_default: effectivePriceData?.packaging_option_default,
+        packaging_option_smallest:
+          effectivePriceData?.packaging_option_smallest,
+        packaging_options_all: effectivePriceData?.packaging_options_all,
         promo_code: (effectivePriceData as any)?.promo_code,
         promo_row: (effectivePriceData as any)?.promo_row,
         listino_type: (effectivePriceData as any)?.listino_type,

@@ -139,7 +139,7 @@ export default function CompleteOrderContent({ lang }: { lang: string }) {
                 <div className="font-semibold">
                   {t('text-order-failed', {
                     defaultValue:
-                      'Si sono verificate anomalie durante l\'elaborazione.',
+                      "Si sono verificate anomalie durante l'elaborazione.",
                   })}
                 </div>
                 <div className="text-xs text-amber-700 mt-1">

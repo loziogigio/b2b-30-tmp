@@ -4,8 +4,13 @@ import type { ComparisonProduct } from '@/components/product/ProductComparisonTa
 /**
  * Export comparison data to Excel (CSV format)
  */
-export function exportToExcel(products: ComparisonProduct[]) {
+export function exportToExcel(
+  products: ComparisonProduct[],
+  options?: { hidePrices?: boolean; priceDecimals?: number },
+) {
   if (!products.length) return;
+  const hp = options?.hidePrices === true;
+  const decimals = options?.priceDecimals ?? 2;
 
   // Collect all unique feature labels
   const featureLabels = Array.from(
@@ -17,7 +22,7 @@ export function exportToExcel(products: ComparisonProduct[]) {
     'SKU',
     'Product',
     'Model',
-    'Price',
+    ...(hp ? [] : ['Price']),
     'Availability',
     ...featureLabels,
   ];
@@ -25,13 +30,13 @@ export function exportToExcel(products: ComparisonProduct[]) {
   // Build CSV rows
   const rows = products.map((product) => {
     const price = product.priceData?.price_discount || product.priceData?.price;
-    const priceDisplay = price != null ? `€ ${price.toFixed(2)}` : '—';
+    const priceDisplay = price != null ? `€ ${price.toFixed(decimals)}` : '—';
 
     const row: string[] = [
       product.sku,
       product.title,
       product.model,
-      priceDisplay,
+      ...(hp ? [] : [priceDisplay]),
       product.availabilityText || '—',
     ];
 
@@ -67,47 +72,39 @@ export function exportToExcel(products: ComparisonProduct[]) {
 }
 
 /**
- * Export comparison data to PDF
+ * Export comparison data to PDF (HTML-based, opens print dialog)
  */
-export async function exportToPDF(products: ComparisonProduct[]) {
+export function exportToPDF(
+  products: ComparisonProduct[],
+  options?: { hidePrices?: boolean; priceDecimals?: number },
+) {
   if (!products.length) return;
+  const hp = options?.hidePrices === true;
+  const decimals = options?.priceDecimals ?? 2;
 
-  // Dynamically import jsPDF to avoid SSR issues
-  const jsPDF = (await import('jspdf')).default;
-  await import('jspdf-autotable'); // Extends jsPDF prototype
-
-  const doc = new jsPDF({
-    orientation: 'landscape',
-    unit: 'mm',
-    format: 'a4',
-  });
-
-  // Add title
-  doc.setFontSize(16);
-  doc.text('Product Comparison', 14, 15);
-
-  // Add timestamp
-  doc.setFontSize(10);
-  doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 22);
+  const esc = (s: string) =>
+    s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
   // Collect all unique feature labels
   const featureLabels = Array.from(
     new Set(products.flatMap((p) => p.features.map((f) => f.label))),
   );
 
-  // Build table data
-  const headers = [['Specification', ...products.map((p) => p.title)]];
-
-  const rows = [
+  // Build specification rows: [label, ...values]
+  const specRows = [
     ['SKU', ...products.map((p) => p.sku)],
     ['Model', ...products.map((p) => p.model)],
-    [
-      'Price',
-      ...products.map((p) => {
-        const price = p.priceData?.price_discount || p.priceData?.price;
-        return price != null ? `€ ${price.toFixed(2)}` : '—';
-      }),
-    ],
+    ...(hp
+      ? []
+      : [
+          [
+            'Price',
+            ...products.map((p) => {
+              const price = p.priceData?.price_discount || p.priceData?.price;
+              return price != null ? `€ ${price.toFixed(decimals)}` : '—';
+            }),
+          ],
+        ]),
     ['Availability', ...products.map((p) => p.availabilityText || '—')],
     ...featureLabels.map((label) => [
       label,
@@ -118,26 +115,46 @@ export async function exportToPDF(products: ComparisonProduct[]) {
     ]),
   ];
 
-  // Generate table using autoTable (extended on jsPDF prototype)
-  (doc as any).autoTable({
-    startY: 28,
-    head: headers,
-    body: rows,
-    theme: 'grid',
-    styles: {
-      fontSize: 8,
-      cellPadding: 3,
-      overflow: 'linebreak',
-    },
-    headStyles: {
-      fillColor: [71, 85, 105], // slate-600
-      fontStyle: 'bold',
-    },
-    columnStyles: {
-      0: { fontStyle: 'bold', fillColor: [248, 250, 252] }, // First column
-    },
-  });
+  const headerCells = products.map((p) => `<th>${esc(p.title)}</th>`).join('');
+  const bodyRows = specRows
+    .map(
+      ([label, ...values]) =>
+        `<tr><td class="label">${esc(label)}</td>${values.map((v) => `<td>${esc(v)}</td>`).join('')}</tr>`,
+    )
+    .join('');
 
-  // Download
-  doc.save(`product-comparison-${Date.now()}.pdf`);
+  const html = `<!DOCTYPE html>
+<html><head>
+<meta charset="UTF-8">
+<title>Product Comparison</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: system-ui, -apple-system, sans-serif; padding:20px; color:#1e293b; }
+  h1 { font-size:18px; margin-bottom:4px; }
+  .timestamp { font-size:11px; color:#64748b; margin-bottom:16px; }
+  table { width:100%; border-collapse:collapse; font-size:11px; }
+  th, td { border:1px solid #cbd5e1; padding:6px 8px; text-align:left; }
+  th { background:#475569; color:#fff; font-weight:600; }
+  td.label { font-weight:600; background:#f8fafc; white-space:nowrap; }
+  tr:nth-child(even) td:not(.label) { background:#f8fafc; }
+  @media print { body { padding:0; } }
+</style>
+</head><body>
+<h1>Product Comparison</h1>
+<p class="timestamp">Generated: ${new Date().toLocaleString()}</p>
+<table>
+  <thead><tr><th>Specification</th>${headerCells}</tr></thead>
+  <tbody>${bodyRows}</tbody>
+</table>
+</body></html>`;
+
+  const blob = new Blob([html], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const popup = window.open(url, '_blank');
+  if (popup) {
+    popup.addEventListener('afterprint', () => URL.revokeObjectURL(url));
+    popup.onload = () => popup.print();
+  } else {
+    URL.revokeObjectURL(url);
+  }
 }

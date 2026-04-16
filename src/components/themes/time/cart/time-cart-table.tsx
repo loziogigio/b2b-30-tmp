@@ -1,6 +1,13 @@
 'use client';
 
-import React, { useMemo, useState, useCallback, useRef, useEffect } from 'react';
+import { prefixImageUrl } from '@utils/image-versioning';
+import React, {
+  useMemo,
+  useState,
+  useCallback,
+  useRef,
+  useEffect,
+} from 'react';
 import cn from 'classnames';
 import Image from 'next/image';
 import { useCart } from '@contexts/cart/cart.context';
@@ -101,15 +108,20 @@ function TimeCartRow({
   const [noteDraft, setNoteDraft] = useState(item.note || '');
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => { setNoteDraft(item.note || ''); }, [item.note]);
+  useEffect(() => {
+    setNoteDraft(item.note || '');
+  }, [item.note]);
 
-  const handleNoteChange = useCallback((value: string) => {
-    setNoteDraft(value);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      updateLineNote(item.rowId || item.id, value, meta as any);
-    }, 500);
-  }, [item.rowId, item.id, meta]);
+  const handleNoteChange = useCallback(
+    (value: string) => {
+      setNoteDraft(value);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => {
+        updateLineNote(item.rowId || item.id, value, meta as any);
+      }, 500);
+    },
+    [item.rowId, item.id, meta],
+  );
 
   const hasNote = !!(item.note || noteDraft);
 
@@ -125,7 +137,11 @@ function TimeCartRow({
         {/* Image */}
         <div className="w-[48px] h-[48px] rounded-[8px] bg-gradient-to-br from-[#f8f9fb] to-[#eef0f4] flex items-center justify-center overflow-hidden">
           <Image
-            src={item?.image ?? '/assets/placeholder/cart-item.svg'}
+            src={
+              prefixImageUrl(item?.image, 'gallery_') ??
+              item?.image ??
+              '/assets/placeholders/no-image.jpeg'
+            }
             width={48}
             height={48}
             alt={item?.name || ''}
@@ -136,7 +152,10 @@ function TimeCartRow({
         {/* Info: SKU + model + name stacked compactly */}
         <div className="min-w-0">
           {item.sku && (
-            <span className="text-[11px] font-semibold text-[var(--time-red)]" style={{ fontFamily: 'var(--font-mono)' }}>
+            <span
+              className="text-[11px] font-semibold text-[var(--time-red)]"
+              style={{ fontFamily: 'var(--font-mono)' }}
+            >
               {item.sku}
             </span>
           )}
@@ -145,7 +164,10 @@ function TimeCartRow({
               MODELLO: {item.model}
             </div>
           )}
-          <div className="text-[11px] text-[var(--time-gray-500)] leading-tight truncate" title={item.name || ''}>
+          <div
+            className="text-[11px] text-[var(--time-gray-500)] leading-tight truncate"
+            title={item.name || ''}
+          >
             {item.name}
           </div>
           {!isAvailable && (
@@ -161,9 +183,13 @@ function TimeCartRow({
                 type="text"
                 value={noteDraft}
                 onChange={(e) => handleNoteChange(e.target.value)}
-                onBlur={() => { if (!noteDraft) setShowNote(false); }}
+                onBlur={() => {
+                  if (!noteDraft) setShowNote(false);
+                }}
                 autoFocus
-                placeholder={t('line-item-note-placeholder', { defaultValue: 'Aggiungi una nota...' })}
+                placeholder={t('line-item-note-placeholder', {
+                  defaultValue: 'Aggiungi una nota...',
+                })}
                 className="w-full max-w-[320px] h-6 rounded-md border border-[var(--time-gray-200)] px-2 text-[10px] text-[var(--time-dark)] outline-none focus:border-[var(--time-red)] focus:shadow-[0_0_0_2px_rgba(230,57,70,0.1)] transition-colors"
               />
             </div>
@@ -181,24 +207,41 @@ function TimeCartRow({
               className="mt-1 flex items-center gap-1 text-[10px] text-[var(--time-gray-400)] hover:text-[var(--time-gray-600)] transition-colors"
             >
               <NoteIcon />
-              <span>+ {t('line-item-note', { defaultValue: 'Aggiungi nota' })}</span>
+              <span>
+                + {t('line-item-note', { defaultValue: 'Aggiungi nota' })}
+              </span>
             </button>
           )}
         </div>
 
         {/* Details: UM / MV / CF in mini grid */}
-        <div className="flex gap-px text-[10px] text-center shrink-0" style={{ fontFamily: 'var(--font-mono)' }}>
+        <div
+          className="flex gap-px text-[10px] text-center shrink-0"
+          style={{ fontFamily: 'var(--font-mono)' }}
+        >
           <div className="flex flex-col items-center w-[28px]">
-            <span className="text-[8px] font-bold text-[var(--time-gray-400)]">UM</span>
-            <span className="text-[var(--time-gray-600)]">{(item as any).uom || '—'}</span>
+            <span className="text-[8px] font-bold text-[var(--time-gray-400)]">
+              UM
+            </span>
+            <span className="text-[var(--time-gray-600)]">
+              {(item as any).uom || '—'}
+            </span>
           </div>
           <div className="flex flex-col items-center w-[28px]">
-            <span className="text-[8px] font-bold text-[var(--time-gray-400)]">MV</span>
-            <span className="text-[var(--time-gray-600)]">{(item as any).mvQty || '—'}</span>
+            <span className="text-[8px] font-bold text-[var(--time-gray-400)]">
+              MV
+            </span>
+            <span className="text-[var(--time-gray-600)]">
+              {(item as any).mvQty || '—'}
+            </span>
           </div>
           <div className="flex flex-col items-center w-[28px]">
-            <span className="text-[8px] font-bold text-[var(--time-gray-400)]">CF</span>
-            <span className="text-[var(--time-gray-600)]">{(item as any).cfQty || '—'}</span>
+            <span className="text-[8px] font-bold text-[var(--time-gray-400)]">
+              CF
+            </span>
+            <span className="text-[var(--time-gray-600)]">
+              {(item as any).cfQty || '—'}
+            </span>
           </div>
         </div>
 
@@ -261,7 +304,11 @@ function TimeCartRow({
         <div className="flex gap-3">
           <div className="w-[52px] h-[52px] shrink-0 rounded-[10px] bg-gradient-to-br from-[#f8f9fb] to-[#eef0f4] overflow-hidden">
             <Image
-              src={item?.image ?? '/assets/placeholder/cart-item.svg'}
+              src={
+                prefixImageUrl(item?.image, 'gallery_') ??
+                item?.image ??
+                '/assets/placeholders/no-image.jpeg'
+              }
               width={52}
               height={52}
               alt={item?.name || ''}
@@ -316,20 +363,32 @@ function TimeCartRow({
               type="text"
               value={noteDraft}
               onChange={(e) => handleNoteChange(e.target.value)}
-              onBlur={() => { if (!noteDraft) setShowNote(false); }}
+              onBlur={() => {
+                if (!noteDraft) setShowNote(false);
+              }}
               autoFocus
-              placeholder={t('line-item-note-placeholder', { defaultValue: 'Aggiungi una nota...' })}
+              placeholder={t('line-item-note-placeholder', {
+                defaultValue: 'Aggiungi una nota...',
+              })}
               className="w-full h-7 rounded-md border border-[var(--time-gray-200)] px-2 text-[11px] text-[var(--time-dark)] outline-none focus:border-[var(--time-red)] transition-colors"
             />
           ) : hasNote ? (
-            <button onClick={() => setShowNote(true)} className="flex items-center gap-1 text-[10px] text-[var(--time-red)] italic">
+            <button
+              onClick={() => setShowNote(true)}
+              className="flex items-center gap-1 text-[10px] text-[var(--time-red)] italic"
+            >
               <NoteIcon />
               <span className="truncate max-w-[220px]">{noteDraft}</span>
             </button>
           ) : (
-            <button onClick={() => setShowNote(true)} className="flex items-center gap-1 text-[10px] text-[var(--time-gray-400)]">
+            <button
+              onClick={() => setShowNote(true)}
+              className="flex items-center gap-1 text-[10px] text-[var(--time-gray-400)]"
+            >
               <NoteIcon />
-              <span>+ {t('line-item-note', { defaultValue: 'Aggiungi nota' })}</span>
+              <span>
+                + {t('line-item-note', { defaultValue: 'Aggiungi nota' })}
+              </span>
             </button>
           )}
         </div>

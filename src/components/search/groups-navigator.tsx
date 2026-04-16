@@ -136,7 +136,7 @@ export function GroupsBreadcrumb({ lang }: { lang: string }) {
 
   return (
     <div className="flex items-center flex-wrap gap-1">
-        {breadcrumbPath.map((node) => {
+      {breadcrumbPath.map((node) => {
         const code = extractGroupCode(node);
         return (
           <button
@@ -145,7 +145,9 @@ export function GroupsBreadcrumb({ lang }: { lang: string }) {
             onClick={() => {
               if (code) {
                 // Remove this node and all deeper selections
-                const params = new URLSearchParams(searchParams?.toString() ?? '');
+                const params = new URLSearchParams(
+                  searchParams?.toString() ?? '',
+                );
                 const remaining = selectedCodes.filter((c) => {
                   const n = findNodeByGroupCode(tree, c);
                   return n ? n.path.length < node.path.length : true;
@@ -213,9 +215,7 @@ export function GroupsNavigator({ lang }: GroupsNavigatorProps) {
   // Build code → count map
   const countMap = useMemo(() => {
     const map: Record<string, number> = {};
-    const facet = groupFacets?.find(
-      (f) => f.key === 'attribute_erp_groups_ss',
-    );
+    const facet = groupFacets?.find((f) => f.key === 'attribute_erp_groups_ss');
     if (facet) {
       for (const v of facet.values) {
         map[v.value] = v.count;
@@ -349,7 +349,10 @@ export function GroupsNavigator({ lang }: GroupsNavigatorProps) {
               <div className="px-4 pb-2">
                 {/* Items at current level */}
                 <div className="flex flex-col">
-                  {(expanded ? displayItems : displayItems.slice(0, VISIBLE_COUNT)).map((node) => {
+                  {(expanded
+                    ? displayItems
+                    : displayItems.slice(0, VISIBLE_COUNT)
+                  ).map((node) => {
                     const code = extractGroupCode(node);
                     const isSelected = code
                       ? selectedCodes.includes(code)

@@ -9,6 +9,7 @@ import {
 } from '@utils/transform/b2b-order';
 import AddressCard from './address-card';
 import { useTranslation } from 'src/app/i18n/client';
+import { useHomeSettings } from '@/hooks/use-home-settings';
 
 type Props = {
   order: TransformedOrder | null;
@@ -17,6 +18,8 @@ type Props = {
 
 export default function OrderDetails({ order, lang }: Props) {
   const { t } = useTranslation(lang, 'common');
+  const { settings } = useHomeSettings();
+  const decimals = settings?.cardStyle?.priceDecimals ?? 2;
 
   if (!order) {
     return (
@@ -71,7 +74,7 @@ export default function OrderDetails({ order, lang }: Props) {
         <div className="flex items-center justify-between text-base">
           <span className="font-medium">{t('orders-total')}</span>
           <span className="font-semibold">
-            €{money((order as any).total).toFixed(2)}
+            €{money((order as any).total).toFixed(decimals)}
           </span>
         </div>
       </div>

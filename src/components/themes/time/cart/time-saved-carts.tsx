@@ -35,7 +35,15 @@ const fmtDate = (value?: string | null) => {
 // ── icons ───────────────────────────────────────────────────────────────────
 
 const CartIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+  <svg
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+  >
     <circle cx="9" cy="21" r="1" />
     <circle cx="20" cy="21" r="1" />
     <path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6" />
@@ -59,20 +67,44 @@ const RefreshIcon = ({ spinning }: { spinning?: boolean }) => (
 );
 
 const CheckIcon = () => (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+  <svg
+    width="12"
+    height="12"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="3"
+    strokeLinecap="round"
+  >
     <polyline points="20,6 9,17 4,12" />
   </svg>
 );
 
 const PencilIcon = () => (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+  <svg
+    width="12"
+    height="12"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+  >
     <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
     <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
   </svg>
 );
 
 const XIcon = () => (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+  <svg
+    width="12"
+    height="12"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.5"
+    strokeLinecap="round"
+  >
     <line x1="18" y1="6" x2="6" y2="18" />
     <line x1="6" y1="6" x2="18" y2="18" />
   </svg>
@@ -105,7 +137,10 @@ interface TimeSavedCartsProps {
   onToggle?: () => void;
 }
 
-export default function TimeSavedCarts({ collapsed, onToggle }: TimeSavedCartsProps) {
+export default function TimeSavedCarts({
+  collapsed,
+  onToggle,
+}: TimeSavedCartsProps) {
   const { meta, getCart, items: activeItems } = useCart();
   const activeCartId = meta?.orderId || ERP_STATIC.vinc_order_id;
 
@@ -122,8 +157,7 @@ export default function TimeSavedCarts({ collapsed, onToggle }: TimeSavedCartsPr
   useEffect(() => setMounted(true), []);
 
   const hasContext =
-    mounted &&
-    Boolean(ERP_STATIC.customer_code && ERP_STATIC.address_code);
+    mounted && Boolean(ERP_STATIC.customer_code && ERP_STATIC.address_code);
 
   const savedCartsQuery = useQuery({
     queryKey: ['saved-carts'],
@@ -371,7 +405,9 @@ export default function TimeSavedCarts({ collapsed, onToggle }: TimeSavedCartsPr
                     ) : (
                       <>
                         <span className="text-[12px] font-bold text-[var(--time-dark)] font-[var(--font-body)] truncate">
-                          {cart.hasCustomLabel ? cart.label : `Carrello #${cart.cartId.slice(-6)}`}
+                          {cart.hasCustomLabel
+                            ? cart.label
+                            : `Carrello #${cart.cartId.slice(-6)}`}
                         </span>
                         {isActive && (
                           <>
@@ -381,7 +417,9 @@ export default function TimeSavedCarts({ collapsed, onToggle }: TimeSavedCartsPr
                             <button
                               onClick={() => {
                                 setEditingCartId(cart.cartId);
-                                setEditingLabel(cart.hasCustomLabel ? cart.label : '');
+                                setEditingLabel(
+                                  cart.hasCustomLabel ? cart.label : '',
+                                );
                               }}
                               className="shrink-0 h-5 w-5 flex items-center justify-center rounded text-[var(--time-gray-400)] hover:text-[var(--time-dark)]"
                             >
@@ -397,7 +435,8 @@ export default function TimeSavedCarts({ collapsed, onToggle }: TimeSavedCartsPr
                   <div className="flex items-center gap-3 text-[11px] text-[var(--time-gray-500)] font-[var(--font-body)] mb-2">
                     <span>{fmtDate(cart.updatedAt)}</span>
                     <span>
-                      <span className="font-bold">{cart.itemsCount ?? 0}</span> articoli
+                      <span className="font-bold">{cart.itemsCount ?? 0}</span>{' '}
+                      articoli
                     </span>
                     <span className="font-bold text-[var(--time-dark)]">
                       {money(cart.documentTotal)}

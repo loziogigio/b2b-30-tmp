@@ -1,5 +1,77 @@
 import { Item, CartSummary } from '@contexts/cart/cart.utils';
 
+export interface ExportLabels {
+  cartTitle: string;
+  cartDetails: string;
+  items: string;
+  totals: string;
+  image: string;
+  item: string;
+  itemCode: string;
+  um: string;
+  qty: string;
+  unitNet: string;
+  unitGross: string;
+  lineNet: string;
+  lineGross: string;
+  model: string;
+  sku: string;
+  packaging: string;
+  quantity: string;
+  netTotal: string;
+  transportCost: string;
+  vat: string;
+  documentTotal: string;
+  grossTotal: string;
+  cartId: string;
+  customerId: string;
+  addressCode: string;
+  exportedAt: string;
+  itemsExported: string;
+  uiFilters: string;
+  currentSort: string;
+  printWithImages: string;
+  printWithoutImages: string;
+  close: string;
+  generatedBy: string;
+}
+
+export const DEFAULT_EXPORT_LABELS: ExportLabels = {
+  cartTitle: 'Cart export',
+  cartDetails: 'Cart details',
+  items: 'Items',
+  totals: 'Totals',
+  image: 'Image',
+  item: 'Item',
+  itemCode: 'Item code / Item',
+  um: 'UM',
+  qty: 'QTY',
+  unitNet: 'Unit net',
+  unitGross: 'Unit gross',
+  lineNet: 'Line net',
+  lineGross: 'Line gross',
+  model: 'Model',
+  sku: 'SKU',
+  packaging: 'Packaging',
+  quantity: 'Quantity',
+  netTotal: 'Net total',
+  transportCost: 'Transport cost',
+  vat: 'VAT',
+  documentTotal: 'Document total',
+  grossTotal: 'Gross total',
+  cartId: 'Cart ID',
+  customerId: 'Customer ID',
+  addressCode: 'Address code',
+  exportedAt: 'Exported at',
+  itemsExported: 'Items (exported)',
+  uiFilters: 'UI filters',
+  currentSort: 'Current sort',
+  printWithImages: 'Print with images',
+  printWithoutImages: 'Print without images',
+  close: 'Close',
+  generatedBy: 'Generated automatically by VINC B2B',
+};
+
 export interface ExportRowData {
   sku: string;
   name: string;
@@ -43,6 +115,7 @@ export interface BuildSnapshotOptions {
   filteredDiffers: boolean;
   filtersSummary: string;
   sortLabel: string;
+  labels?: Partial<ExportLabels>;
 }
 
 export function buildCartExportSnapshot(
@@ -50,6 +123,7 @@ export function buildCartExportSnapshot(
 ): ExportSnapshot | null {
   const { items, meta, totals, filteredDiffers, filtersSummary, sortLabel } =
     options;
+  const l = { ...DEFAULT_EXPORT_LABELS, ...options.labels };
   if (!items?.length) return null;
 
   const exportDate = new Date();
@@ -122,42 +196,42 @@ export function buildCartExportSnapshot(
   });
 
   const totalsRows: Array<{ label: string; value: number }> = [
-    { label: 'Net total', value: summaryTotals.net },
+    { label: l.netTotal, value: summaryTotals.net },
   ];
   if (
     transportCost != null &&
     Number.isFinite(transportCost) &&
     transportCost !== 0
   ) {
-    totalsRows.push({ label: 'Transport cost', value: transportCost });
+    totalsRows.push({ label: l.transportCost, value: transportCost });
   }
-  totalsRows.push({ label: 'VAT', value: summaryTotals.vat });
-  totalsRows.push({ label: 'Document total', value: documentTotal });
-  totalsRows.push({ label: 'Gross total', value: summaryTotals.gross });
+  totalsRows.push({ label: l.vat, value: summaryTotals.vat });
+  totalsRows.push({ label: l.documentTotal, value: documentTotal });
+  totalsRows.push({ label: l.grossTotal, value: summaryTotals.gross });
 
   const infoRows: Array<[string, string]> = [
     [
-      'Cart ID',
+      l.cartId,
       meta?.idCart != null
         ? String(meta.idCart)
         : meta && (meta as any)?.id_cart != null
           ? String((meta as any)?.id_cart)
           : 'N/A',
     ],
-    ['Customer ID', meta?.clientId != null ? String(meta.clientId) : 'N/A'],
+    [l.customerId, meta?.clientId != null ? String(meta.clientId) : 'N/A'],
     [
-      'Address code',
+      l.addressCode,
       meta?.addressCode != null ? String(meta.addressCode) : 'N/A',
     ],
-    ['Exported at', exportDateLabel],
-    ['Items (exported)', String(items.length)],
+    [l.exportedAt, exportDateLabel],
+    [l.itemsExported, String(items.length)],
   ];
 
   if (filteredDiffers || filtersSummary !== 'None') {
-    infoRows.push(['UI filters', filtersSummary]);
+    infoRows.push([l.uiFilters, filtersSummary]);
   }
 
-  infoRows.push(['Current sort', sortLabel]);
+  infoRows.push([l.currentSort, sortLabel]);
 
   const filenameStamp = exportDate
     .toISOString()
@@ -190,12 +264,22 @@ function toAbsoluteImage(src?: string) {
 
 export function renderCartPdfHtml(
   snapshot: ExportSnapshot,
-  options: { includeImages?: boolean } = {},
+  options: {
+    includeImages?: boolean;
+    labels?: Partial<ExportLabels>;
+    hidePrices?: boolean;
+    priceDecimals?: number;
+  } = {},
 ): string {
   const includeImages = options.includeImages !== false;
+  const hp = options.hidePrices === true;
+  const decimals = options.priceDecimals ?? 2;
+  const l = { ...DEFAULT_EXPORT_LABELS, ...options.labels };
   const currency = new Intl.NumberFormat('it-IT', {
     style: 'currency',
     currency: 'EUR',
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
   });
   const rowsHtml = snapshot.rows
     .map((row) => {
@@ -219,12 +303,12 @@ export function renderCartPdfHtml(
           <tr>
             ${includeImages ? `<td class=\"image-cell\">${imageCell}</td>` : ''}
             <td class=\"item-name\">
-              <strong>${escapeHtml(row.sku)}</strong>${includeImages ? '<br />' : ' &mdash; '}${escapeHtml(row.name)}${row.model ? `<br /><span class=\"muted\">Modello: ${escapeHtml(row.model)}</span>` : ''}
+              <strong>${escapeHtml(row.sku)}</strong>${includeImages ? '<br />' : ' &mdash; '}${escapeHtml(row.name)}${row.model ? `<br /><span class=\"muted\">${escapeHtml(l.model)}: ${escapeHtml(row.model)}</span>` : ''}
             </td>
             <td>${escapeHtml(row.packaging.unit ?? '')}</td>
             <td class=\"text-right\">${escapeHtml(row.quantityFormatted)}</td>
-            <td class=\"text-right\">${escapeHtml(currency.format(row.unitNet))}</td>
-            <td class=\"text-right\">${escapeHtml(currency.format(row.lineNet))}</td>
+            ${hp ? '' : `<td class=\"text-right\">${escapeHtml(currency.format(row.unitNet))}</td>`}
+            ${hp ? '' : `<td class=\"text-right\">${escapeHtml(currency.format(row.lineNet))}</td>`}
           </tr>
         `;
     })
@@ -391,31 +475,31 @@ export function renderCartPdfHtml(
 </head>
 <body>
   <header>
-    <h1>Cart export</h1>
+    <h1>${escapeHtml(l.cartTitle)}</h1>
     <div class="subtitle">VINC B2B</div>
   </header>
   <div class="actions">
-    <button type="button" onclick="document.body.classList.remove('hide-images'); window.print();">Print with images</button>
-    <button type="button" class="secondary" onclick="document.body.classList.add('hide-images'); window.print(); window.setTimeout(() => document.body.classList.remove('hide-images'), 100);">Print without images</button>
-    <button type="button" class="secondary" onclick="window.close()">Close</button>
+    <button type="button" onclick="document.body.classList.remove('hide-images'); window.print();">${escapeHtml(l.printWithImages)}</button>
+    <button type="button" class="secondary" onclick="document.body.classList.add('hide-images'); window.print(); window.setTimeout(() => document.body.classList.remove('hide-images'), 100);">${escapeHtml(l.printWithoutImages)}</button>
+    <button type="button" class="secondary" onclick="window.close()">${escapeHtml(l.close)}</button>
   </div>
   <section class="section-card">
-    <h2>Cart details</h2>
+    <h2>${escapeHtml(l.cartDetails)}</h2>
     <table class="meta">
       <tbody>${infoHtml}</tbody>
     </table>
   </section>
   <section class="section-card">
-    <h2>Items (${snapshot.rowsCount})</h2>
+    <h2>${escapeHtml(l.items)} (${snapshot.rowsCount})</h2>
     <table class="items">
       <thead>
         <tr>
-          ${includeImages ? '<th class="image-header">Image</th>' : ''}
-          <th>${includeImages ? 'Item' : 'Item code / Item'}</th>
-          <th>UM</th>
-          <th>QTY</th>
-          <th>Unit net</th>
-          <th>Line net</th>
+          ${includeImages ? `<th class="image-header">${escapeHtml(l.image)}</th>` : ''}
+          <th>${includeImages ? escapeHtml(l.item) : escapeHtml(l.itemCode)}</th>
+          <th>${escapeHtml(l.um)}</th>
+          <th>${escapeHtml(l.qty)}</th>
+          ${hp ? '' : `<th>${escapeHtml(l.unitNet)}</th>`}
+          ${hp ? '' : `<th>${escapeHtml(l.lineNet)}</th>`}
         </tr>
       </thead>
       <tbody>
@@ -423,19 +507,33 @@ export function renderCartPdfHtml(
       </tbody>
     </table>
   </section>
-  <section class="section-card">
-    <h2>Totals</h2>
+  ${
+    hp
+      ? ''
+      : `<section class="section-card">
+    <h2>${escapeHtml(l.totals)}</h2>
     ${totalsHtml}
-  </section>
+  </section>`
+  }
   <footer>
-    Generated automatically by VINC B2B • ${escapeHtml(snapshot.exportDateLabel)}
+    ${escapeHtml(l.generatedBy)} • ${escapeHtml(snapshot.exportDateLabel)}
   </footer>
 </body>
 </html>`;
 }
 
-export function renderCartExcelHtml(snapshot: ExportSnapshot): string {
-  const formatNumber = (value: number, fractionDigits = 2) =>
+export function renderCartExcelHtml(
+  snapshot: ExportSnapshot,
+  options: {
+    labels?: Partial<ExportLabels>;
+    hidePrices?: boolean;
+    priceDecimals?: number;
+  } = {},
+): string {
+  const l = { ...DEFAULT_EXPORT_LABELS, ...options.labels };
+  const hp = options.hidePrices === true;
+  const defaultDecimals = options.priceDecimals ?? 2;
+  const formatNumber = (value: number, fractionDigits = defaultDecimals) =>
     Number.isFinite(value) ? value.toFixed(fractionDigits) : '';
 
   const rowsHtml = snapshot.rows
@@ -457,10 +555,10 @@ export function renderCartExcelHtml(snapshot: ExportSnapshot): string {
             <td>${escapeHtml(row.model)}</td>
             <td style="mso-number-format:'0.000'; text-align:right;">${formatNumber(row.quantity, 3)}</td>
             <td>${packagingCell}</td>
-            <td style="mso-number-format:'0.00'; text-align:right;">${formatNumber(row.unitNet)}</td>
-            <td style="mso-number-format:'0.00'; text-align:right;">${formatNumber(row.unitGross)}</td>
-            <td style="mso-number-format:'0.00'; text-align:right;">${formatNumber(row.lineNet)}</td>
-            <td style="mso-number-format:'0.00'; text-align:right;">${formatNumber(row.lineGross)}</td>
+            ${hp ? '' : `<td style="mso-number-format:'0.00'; text-align:right;">${formatNumber(row.unitNet)}</td>`}
+            ${hp ? '' : `<td style="mso-number-format:'0.00'; text-align:right;">${formatNumber(row.unitGross)}</td>`}
+            ${hp ? '' : `<td style="mso-number-format:'0.00'; text-align:right;">${formatNumber(row.lineNet)}</td>`}
+            ${hp ? '' : `<td style="mso-number-format:'0.00'; text-align:right;">${formatNumber(row.lineGross)}</td>`}
           </tr>
         `;
     })
@@ -484,7 +582,7 @@ export function renderCartExcelHtml(snapshot: ExportSnapshot): string {
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Cart export</title>
+  <title>${escapeHtml(l.cartTitle)}</title>
   <style>
     table { border-collapse: collapse; }
     th, td { border: 1px solid #d1d5db; padding: 6px 8px; font-family: Arial, Helvetica, sans-serif; font-size: 11px; }
@@ -502,25 +600,29 @@ export function renderCartExcelHtml(snapshot: ExportSnapshot): string {
     <thead>
       <tr>
         <th>#</th>
-        <th>SKU</th>
-        <th>Item</th>
-        <th>Model</th>
-        <th>Quantity</th>
-        <th>Packaging</th>
-        <th>Unit net</th>
-        <th>Unit gross</th>
-        <th>Line net</th>
-        <th>Line gross</th>
+        <th>${escapeHtml(l.sku)}</th>
+        <th>${escapeHtml(l.item)}</th>
+        <th>${escapeHtml(l.model)}</th>
+        <th>${escapeHtml(l.quantity)}</th>
+        <th>${escapeHtml(l.packaging)}</th>
+        ${hp ? '' : `<th>${escapeHtml(l.unitNet)}</th>`}
+        ${hp ? '' : `<th>${escapeHtml(l.unitGross)}</th>`}
+        ${hp ? '' : `<th>${escapeHtml(l.lineNet)}</th>`}
+        ${hp ? '' : `<th>${escapeHtml(l.lineGross)}</th>`}
       </tr>
     </thead>
     <tbody>
       ${rowsHtml}
     </tbody>
   </table>
-  <br />
+  ${
+    hp
+      ? ''
+      : `<br />
   <table class="totals">
     <tbody>${totalsHtml}</tbody>
-  </table>
+  </table>`
+  }
 </body>
 </html>`;
 }

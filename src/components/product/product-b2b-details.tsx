@@ -36,6 +36,7 @@ import { fetchErpPrices } from '@framework/erp/prices';
 import { useLikes } from '@contexts/likes/likes.context';
 import { useReminders } from '@contexts/reminders/reminders.context';
 import { useUI } from '@contexts/ui.context';
+import { useHomeSettings } from '@/hooks/use-home-settings';
 import PriceAndPromo from './price-and-promo';
 import PackagingGrid from './packaging-grid';
 import { da } from 'date-fns/locale';
@@ -160,6 +161,8 @@ const ProductB2BDetails: React.FC<{
   const erpPayload = { ...ERP_STATIC, entity_codes: entityCodes };
 
   const { isAuthorized: isAuthForPrices } = useUI();
+  const { settings } = useHomeSettings();
+  const decimals = settings?.cardStyle?.priceDecimals ?? 2;
   const { data: erpPricesData } = useQuery({
     queryKey: ['erp-prices', entityCodes],
     queryFn: () => fetchErpPrices(erpPayload),
@@ -174,7 +177,7 @@ const ProductB2BDetails: React.FC<{
   // Likes context
   const likes = useLikes();
   const reminders = useReminders();
-  const { isAuthorized } = useUI();
+  const { isAuthorized, hidePrices } = useUI();
   const sku = String(data?.sku ?? '');
   const {
     addSku: addSkuToCompare,
@@ -304,8 +307,8 @@ const ProductB2BDetails: React.FC<{
 
   const handlePrint = React.useCallback(() => {
     if (!data) return;
-    printProductDetail(data, erpPrice);
-  }, [data, erpPrice]);
+    printProductDetail(data, erpPrice, decimals, hidePrices);
+  }, [data, erpPrice, decimals]);
 
   // Ensure we know initial like/reminder status with a lightweight bulk check
   React.useEffect(() => {
@@ -470,9 +473,11 @@ const ProductB2BDetails: React.FC<{
               </div>
 
               {/* col 2: price/promo (centered) */}
-              <div className="flex items-center justify-center ">
-                <PriceAndPromo priceData={erpPrice} />
-              </div>
+              {!hidePrices && (
+                <div className="flex items-center justify-center ">
+                  <PriceAndPromo priceData={erpPrice} />
+                </div>
+              )}
 
               {/* col 3: add to cart (right-aligned on md+) */}
               <div className="flex items-center justify-center  md:justify-end">

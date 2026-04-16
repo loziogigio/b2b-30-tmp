@@ -3,8 +3,10 @@
 import { useState, useMemo } from 'react';
 import { TransformedOrderItem } from '@utils/transform/b2b-order';
 import cn from 'classnames';
+import { prefixImageUrl } from '@utils/image-versioning';
 import Image from 'next/image';
 import { useTranslation } from 'src/app/i18n/client';
+import { useHomeSettings } from '@/hooks/use-home-settings';
 
 type Props = {
   items?: TransformedOrderItem[];
@@ -21,6 +23,8 @@ export default function OrderItemsTable({
   lang = 'it',
 }: Props) {
   const { t } = useTranslation(lang, 'common');
+  const { settings } = useHomeSettings();
+  const decimals = settings?.cardStyle?.priceDecimals ?? 2;
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredItems = useMemo(() => {
@@ -138,7 +142,7 @@ export default function OrderItemsTable({
                     <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md ring-1 ring-gray-200 bg-gray-100">
                       {it.image ? (
                         <Image
-                          src={it.image}
+                          src={prefixImageUrl(it.image, 'gallery_') ?? it.image}
                           alt={it.name ?? ''}
                           fill
                           className="object-cover"
@@ -153,7 +157,10 @@ export default function OrderItemsTable({
                         {it.name}
                       </div>
                       {it.note && (
-                        <div className="text-[11px] text-gray-400 italic truncate" title={it.note}>
+                        <div
+                          className="text-[11px] text-gray-400 italic truncate"
+                          title={it.note}
+                        >
                           {it.note}
                         </div>
                       )}
@@ -161,7 +168,7 @@ export default function OrderItemsTable({
                   </div>
 
                   <div className="flex items-center justify-center text-sm">
-                    {it.price.toFixed(2)}
+                    {it.price.toFixed(decimals)}
                   </div>
 
                   <div className="flex items-center justify-center text-sm">

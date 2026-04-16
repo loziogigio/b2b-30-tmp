@@ -3,6 +3,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import cn from 'classnames';
+import { prefixImageUrl } from '@utils/image-versioning';
 import Link from 'next/link';
 import { Item } from '@contexts/cart/cart.utils';
 import { useCart } from '@contexts/cart/cart.context';
@@ -35,7 +36,16 @@ type Props = {
 };
 
 const NoteIcon = () => (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth={2} className="shrink-0">
+  <svg
+    width="12"
+    height="12"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeWidth={2}
+    className="shrink-0"
+  >
     <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
   </svg>
 );
@@ -54,15 +64,20 @@ function CartMobileCard({
   const [noteDraft, setNoteDraft] = useState(r.note || '');
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => { setNoteDraft(r.note || ''); }, [r.note]);
+  useEffect(() => {
+    setNoteDraft(r.note || '');
+  }, [r.note]);
 
-  const handleNoteChange = useCallback((v: string) => {
-    setNoteDraft(v);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      updateLineNote(r.rowId || r.id, v, meta as any);
-    }, 500);
-  }, [r.rowId, r.id, meta]);
+  const handleNoteChange = useCallback(
+    (v: string) => {
+      setNoteDraft(v);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => {
+        updateLineNote(r.rowId || r.id, v, meta as any);
+      }, 500);
+    },
+    [r.rowId, r.id, meta],
+  );
 
   const hasNote = !!(r.note || noteDraft);
 
@@ -83,9 +98,7 @@ function CartMobileCard({
     is_promo: isPromo,
     discount_description: r?.listing_type_discounts ?? '',
     count_promo: Number(
-      r?.count_promo ??
-        (Array.isArray(r?.promos) ? r.promos.length : 0) ??
-        0,
+      r?.count_promo ?? (Array.isArray(r?.promos) ? r.promos.length : 0) ?? 0,
     ),
   };
 
@@ -122,7 +135,12 @@ function CartMobileCard({
           title={r.name ?? r.sku ?? 'Product detail'}
         >
           {r.image ? (
-            <Image src={r.image} alt={r.name ?? ''} fill className="object-cover" />
+            <Image
+              src={prefixImageUrl(r.image, 'gallery_') ?? r.image}
+              alt={r.name ?? ''}
+              fill
+              className="object-cover"
+            />
           ) : null}
           <span className="sr-only">Visit {r.name ?? r.sku ?? 'product'}</span>
         </Link>
@@ -180,7 +198,9 @@ function CartMobileCard({
                 type="text"
                 value={noteDraft}
                 onChange={(e) => handleNoteChange(e.target.value)}
-                onBlur={() => { if (!noteDraft) setNoteOpen(false); }}
+                onBlur={() => {
+                  if (!noteDraft) setNoteOpen(false);
+                }}
                 autoFocus
                 placeholder="Aggiungi una nota..."
                 className="w-full h-7 rounded-md border border-gray-200 px-2 text-[11px] text-gray-600 outline-none focus:border-blue-500 focus:shadow-[0_0_0_2px_rgba(59,130,246,0.1)] transition-colors"

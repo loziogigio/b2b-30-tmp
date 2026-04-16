@@ -89,9 +89,6 @@ export function CartProvider(props: React.PropsWithChildren<any>) {
   const removeItemFromCart = (id: Item['id']) =>
     dispatch({ type: 'REMOVE_ITEM_OR_QUANTITY', id, quantity: 1 });
 
-  const clearItemFromCart = (id: Item['id']) =>
-    dispatch({ type: 'REMOVE_ITEM', id });
-
   const setItemQuantity = (item: Item, quantity: number) =>
     dispatch({ type: 'SET_ITEM_QUANTITY', item, quantity });
 
@@ -125,6 +122,36 @@ export function CartProvider(props: React.PropsWithChildren<any>) {
   const setCartSummary = React.useCallback((meta: CartSummary | null) => {
     dispatch({ type: 'SET_META', meta });
   }, []);
+
+  const clearItemFromCart = React.useCallback(
+    async (id: Item['id']) => {
+      // Snapshot the item before optimistic removal
+      const item = getItem(state.items, id);
+      // Optimistic local removal
+      dispatch({ type: 'REMOVE_ITEM', id });
+      // Sync to server: send quantity 0 to trigger DELETE
+      if (item) {
+        try {
+          const input: AddToCartInput = {
+            item_id: id,
+            quantity: 0,
+            promo_code: (item as any).promo_code ?? 0,
+            promo_row: (item as any).promo_row ?? 0,
+          };
+          await addOrUpdateCartItem(input, state.items, state.meta, item);
+          const fresh = await fetchCartData();
+          hydrateFromServer(fresh.items, 'replace');
+          setCartSummary(fresh.summary);
+        } catch (e) {
+          console.error('[cart] clearItemFromCart server sync failed:', e);
+          const fresh = await fetchCartData();
+          hydrateFromServer(fresh.items, 'replace');
+          setCartSummary(fresh.summary);
+        }
+      }
+    },
+    [state.items, state.meta, hydrateFromServer, setCartSummary],
+  );
 
   // ---- Public API: fetch cart from server and hydrate
   const getCart = React.useCallback(
@@ -191,6 +218,7 @@ export function CartProvider(props: React.PropsWithChildren<any>) {
       setCartSummary,
       addToCartServer,
       resetCart,
+      clearItemFromCart,
     ],
   );
 

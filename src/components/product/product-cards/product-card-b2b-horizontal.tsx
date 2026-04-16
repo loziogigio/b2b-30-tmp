@@ -187,14 +187,19 @@ const ProductCardB2BHorizontal: React.FC<ProductProps> = ({
           </div>
         )}
 
-        {/* Right badge: PROMO - show if priceData.is_promo OR product.has_active_promo */}
-        {(priceData?.is_promo || product.has_active_promo) && (
-          <div className="absolute top-0 right-0 z-10">
+        {/* Right badges: NEW + PROMO */}
+        <div className="absolute top-0 right-0 z-10 flex flex-col items-end gap-0.5">
+          {(product as any).is_new && (
+            <span className="text-[10px] md:text-xs font-bold text-white uppercase bg-emerald-600 px-2 py-2">
+              {t('badge-new', { defaultValue: 'New' })}
+            </span>
+          )}
+          {(priceData?.is_promo || product.has_active_promo) && (
             <span className="text-[10px] md:text-xs font-bold text-white uppercase bg-red-600 px-2 py-2">
               PROMO
             </span>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Content Section - Right side on desktop, bottom on mobile */}

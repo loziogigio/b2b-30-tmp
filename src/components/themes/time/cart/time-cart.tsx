@@ -3,6 +3,7 @@
 import React from 'react';
 import cn from 'classnames';
 import dynamic from 'next/dynamic';
+import { prefixImageUrl } from '@utils/image-versioning';
 import Link from 'next/link';
 import Image from '@components/ui/image';
 import Scrollbar from '@components/ui/scrollbar';
@@ -107,7 +108,11 @@ export default function TimeCart({ lang }: { lang: string }) {
                   {/* Image */}
                   <div className="relative w-[52px] h-[52px] shrink-0 rounded-[var(--radius-btn)] overflow-hidden bg-gradient-to-br from-[var(--time-gray-50)] to-[var(--time-gray-100)]">
                     <Image
-                      src={item?.image ?? '/assets/placeholder/cart-item.svg'}
+                      src={
+                        prefixImageUrl(item?.image, 'gallery_') ??
+                        item?.image ??
+                        '/assets/placeholders/no-image.jpeg'
+                      }
                       width={52}
                       height={52}
                       loading="eager"

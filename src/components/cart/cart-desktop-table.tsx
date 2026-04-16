@@ -3,6 +3,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import cn from 'classnames';
+import { prefixImageUrl } from '@utils/image-versioning';
 import { Item } from '@contexts/cart/cart.utils';
 import { useCart } from '@contexts/cart/cart.context';
 import PackagingGrid from '@components/product/packaging-grid';
@@ -36,8 +37,49 @@ type Props = {
 };
 
 const NoteIcon = ({ className }: { className?: string }) => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeWidth={2} className={className}>
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeWidth={2}
+    className={className}
+  >
     <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+  </svg>
+);
+
+const PencilIcon = ({ className }: { className?: string }) => (
+  <svg
+    width="12"
+    height="12"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2}
+    className={className}
+  >
+    <path d="M17 3a2.83 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+  </svg>
+);
+
+const CheckIcon = ({ className }: { className?: string }) => (
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    strokeWidth={2.5}
+    className={className}
+  >
+    <polyline points="20 6 9 17 4 12" />
   </svg>
 );
 
@@ -45,20 +87,23 @@ function useNoteState(item: Item) {
   const { meta } = useCart();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(item.note || '');
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  useEffect(() => { setDraft(item.note || ''); }, [item.note]);
+  useEffect(() => {
+    setDraft(item.note || '');
+  }, [item.note]);
 
-  const onChange = useCallback((v: string) => {
-    setDraft(v);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      updateLineNote(item.rowId || item.id, v, meta as any);
-    }, 500);
-  }, [item.rowId, item.id, meta]);
+  const save = useCallback(() => {
+    setSaving(true);
+    updateLineNote(item.rowId || item.id, draft, meta as any);
+    setTimeout(() => {
+      setSaving(false);
+      setOpen(false);
+    }, 300);
+  }, [item.rowId, item.id, draft, meta]);
 
   const hasNote = !!(item.note || draft);
-  return { open, setOpen, draft, onChange, hasNote };
+  return { open, setOpen, draft, setDraft, save, saving, hasNote };
 }
 
 const defaultCurrency = (n: number) =>
@@ -76,14 +121,17 @@ const unitGross = (r: Item) =>
 
 function CartDesktopRow({
   r,
+  idx,
   lang,
   formatCurrency,
 }: {
   r: Item;
+  idx: number;
   lang: string;
   formatCurrency: (n: number) => string;
 }) {
-  const { open, setOpen, draft, onChange, hasNote } = useNoteState(r);
+  const { open, setOpen, draft, setDraft, save, saving, hasNote } =
+    useNoteState(r);
 
   const qty = Number(r.quantity ?? 0);
   const line = unitNet(r) * qty;
@@ -102,9 +150,7 @@ function CartDesktopRow({
     is_promo: isPromo,
     discount_description: r?.listing_type_discounts ?? '',
     count_promo: Number(
-      r?.count_promo ??
-        (Array.isArray(r?.promos) ? r.promos.length : 0) ??
-        0,
+      r?.count_promo ?? (Array.isArray(r?.promos) ? r.promos.length : 0) ?? 0,
     ),
   };
 
@@ -134,8 +180,10 @@ function CartDesktopRow({
 
   return (
     <tr className="hover:bg-gray-50">
-      <td className="px-3 py-3 text-gray-600">
-        {(r as any).rowId ?? r.id}
+      <td className="px-3 py-3">
+        <span className="inline-flex items-center justify-center min-w-[24px] h-6 px-1.5 rounded-full bg-gray-100 text-gray-600 text-xs font-semibold tabular-nums">
+          {idx + 1}
+        </span>
       </td>
 
       <td className="px-3 py-3">
@@ -146,9 +194,16 @@ function CartDesktopRow({
             title={r.name ?? r.sku ?? 'Product detail'}
           >
             {r.image ? (
-              <Image src={r.image} alt={r.name ?? ''} fill className="object-cover" />
+              <Image
+                src={prefixImageUrl(r.image, 'gallery_') ?? r.image}
+                alt={r.name ?? ''}
+                fill
+                className="object-cover"
+              />
             ) : null}
-            <span className="sr-only">Visit {r.name ?? r.sku ?? 'product'}</span>
+            <span className="sr-only">
+              Visit {r.name ?? r.sku ?? 'product'}
+            </span>
           </Link>
           <div className="min-w-0">
             <Link
@@ -173,23 +228,36 @@ function CartDesktopRow({
             {/* Note: inline under article info */}
             {open ? (
               <div className="mt-1.5 flex items-center gap-1.5">
+                <NoteIcon className="shrink-0 text-blue-500" />
                 <input
                   type="text"
                   value={draft}
-                  onChange={(e) => onChange(e.target.value)}
-                  onBlur={() => { if (!draft) setOpen(false); }}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') save();
+                  }}
                   autoFocus
-                  placeholder="Aggiungi una nota per questo articolo..."
-                  className="w-full max-w-[360px] h-7 rounded-md border border-gray-200 px-2 text-[11px] text-gray-700 outline-none focus:border-blue-500 focus:shadow-[0_0_0_2px_rgba(59,130,246,0.1)] transition-colors"
+                  placeholder="Aggiungi una nota..."
+                  className="w-full max-w-[300px] h-7 rounded-md border border-gray-200 px-2 text-[11px] text-gray-700 outline-none focus:border-blue-500 focus:shadow-[0_0_0_2px_rgba(59,130,246,0.1)] transition-colors"
                 />
+                <button
+                  type="button"
+                  onClick={save}
+                  disabled={saving}
+                  className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 transition-colors"
+                  title="Salva nota"
+                >
+                  <CheckIcon />
+                </button>
               </div>
             ) : hasNote ? (
               <button
                 onClick={() => setOpen(true)}
-                className="mt-1 flex items-center gap-1 text-[11px] text-blue-600 hover:text-blue-700 italic transition-colors"
+                className="mt-1 flex items-center gap-1 text-[11px] text-blue-600 hover:text-blue-700 transition-colors group"
               >
                 <NoteIcon className="shrink-0" />
-                <span className="truncate max-w-[300px]">{draft}</span>
+                <span className="truncate max-w-[260px] italic">{draft}</span>
+                <PencilIcon className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
               </button>
             ) : (
               <button
@@ -288,10 +356,11 @@ export default function CartDesktopTable({
         </thead>
 
         <tbody className="divide-y divide-gray-100">
-          {rows.map((r) => (
+          {rows.map((r, idx) => (
             <CartDesktopRow
               key={String(r.id)}
               r={r}
+              idx={idx}
               lang={lang}
               formatCurrency={formatCurrency}
             />

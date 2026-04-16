@@ -15,6 +15,7 @@ import { useReminders } from '@contexts/reminders/reminders.context';
 import { IoIosHeart, IoIosHeartEmpty } from 'react-icons/io';
 import { ReminderIcon, ReminderIconFilled } from '@components/icons/app-icons';
 import cn from 'classnames';
+import { useHomeSettings } from '@/hooks/use-home-settings';
 
 interface TimeProductCardProps {
   product: Product & { variantCount?: number };
@@ -33,6 +34,8 @@ export default function TimeProductCard({
   const { name, image, sku, brand, parent_sku, model } = product ?? {};
   const { openModal } = useModalAction();
   const { isAuthorized, hidePrices } = useUI();
+  const { settings } = useHomeSettings();
+  const decimals = settings?.cardStyle?.priceDecimals ?? 2;
   const { t } = useTranslation(lang, 'common');
   const likes = useLikes();
   const reminders = useReminders();
@@ -139,14 +142,19 @@ export default function TimeProductCard({
       <div className="px-3.5 py-3 pb-3.5">
         {/* Brand + SKU + Actions row */}
         <div className="flex items-center justify-between mb-1">
-          <div className="flex items-baseline gap-1.5 truncate" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="flex items-baseline gap-1.5 truncate"
+            onClick={(e) => e.stopPropagation()}
+          >
             {sku && (
               <span className="text-[11px] sm:text-xs font-bold text-[var(--time-dark)] font-mono shrink-0">
                 {sku}
               </span>
             )}
             {sku && brand?.name && (
-              <span className="text-[11px] sm:text-xs text-[var(--time-gray-300)]">·</span>
+              <span className="text-[11px] sm:text-xs text-[var(--time-gray-300)]">
+                ·
+              </span>
             )}
             {brand?.name && (brand as any)?.brand_id ? (
               <Link
@@ -172,11 +180,17 @@ export default function TimeProductCard({
                     e.stopPropagation();
                     if (!sku) return;
                     setReminderLoading(true);
-                    reminders.toggle(sku).finally(() => setReminderLoading(false));
+                    reminders
+                      .toggle(sku)
+                      .finally(() => setReminderLoading(false));
                   }}
                   disabled={reminderLoading || !sku}
                 >
-                  {hasReminder ? <ReminderIconFilled className="text-[14px] sm:text-[16px]" /> : <ReminderIcon className="text-[14px] sm:text-[16px]" />}
+                  {hasReminder ? (
+                    <ReminderIconFilled className="text-[14px] sm:text-[16px]" />
+                  ) : (
+                    <ReminderIcon className="text-[14px] sm:text-[16px]" />
+                  )}
                 </button>
               )}
               <button
@@ -191,7 +205,11 @@ export default function TimeProductCard({
                 }}
                 disabled={likeLoading || !sku}
               >
-                {isFavorite ? <IoIosHeart className="text-[14px] sm:text-[16px]" /> : <IoIosHeartEmpty className="text-[14px] sm:text-[16px]" />}
+                {isFavorite ? (
+                  <IoIosHeart className="text-[14px] sm:text-[16px]" />
+                ) : (
+                  <IoIosHeartEmpty className="text-[14px] sm:text-[16px]" />
+                )}
               </button>
             </div>
           )}
@@ -208,12 +226,12 @@ export default function TimeProductCard({
             {netPrice != null && Number(netPrice) > 0 ? (
               <div className="flex items-center gap-1.5">
                 <span className="text-lg sm:text-xl font-extrabold text-[var(--time-dark)] font-[family-name:var(--font-body)] tabular-nums">
-                  €{Number(netPrice).toFixed(2)}
+                  €{Number(netPrice).toFixed(decimals)}
                 </span>
                 {hasDiscount && (
                   <div className="flex flex-col">
                     <span className="text-xs sm:text-[13px] text-[var(--time-gray-400)] line-through tabular-nums leading-tight">
-                      €{Number(listPrice).toFixed(2)}
+                      €{Number(listPrice).toFixed(decimals)}
                     </span>
                     {discountTiers && (
                       <span className="text-[11px] sm:text-xs font-semibold text-[var(--time-gray-600)] leading-tight">
@@ -245,7 +263,8 @@ export default function TimeProductCard({
               style={{ color: isOutOfStock ? '#dc2626' : '#16a34a' }}
             >
               {isOutOfStock
-                ? priceData?.product_label_action?.LABEL || t('text-out-stock', { defaultValue: 'Non disponibile' })
+                ? priceData?.product_label_action?.LABEL ||
+                  t('text-out-stock', { defaultValue: 'Non disponibile' })
                 : t('text-in-stock', { defaultValue: 'Disponibile' })}
             </span>
           </div>

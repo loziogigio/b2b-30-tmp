@@ -29,6 +29,8 @@ interface MediaImageConfig {
 interface MediaImageBlockProps {
   config: MediaImageConfig;
   lang?: string;
+  showTitle?: boolean;
+  titleAlignment?: 'left' | 'center' | 'right';
 }
 
 const borderRadiusMap = {
@@ -41,7 +43,12 @@ const borderRadiusMap = {
   full: '9999px',
 };
 
-export function MediaImageBlock({ config, lang = 'it' }: MediaImageBlockProps) {
+export function MediaImageBlock({
+  config,
+  lang = 'it',
+  showTitle = true,
+  titleAlignment,
+}: MediaImageBlockProps) {
   const {
     imageUrl,
     alt = 'Product image',
@@ -141,12 +148,17 @@ export function MediaImageBlock({ config, lang = 'it' }: MediaImageBlockProps) {
     </>
   );
 
-  // If there's a title, wrap with section header
-  if (title) {
+  // If there's a title and showTitle is true, wrap with section header
+  if (title && showTitle !== false) {
     return (
       <div className="mb-8 lg:mb-10 xl:mb-12">
         <div className="mb-5 md:mb-6">
-          <SectionHeader sectionHeading={title} className="mb-0" lang={lang} />
+          <SectionHeader
+            sectionHeading={title}
+            headingPosition={titleAlignment}
+            className="mb-0"
+            lang={lang}
+          />
         </div>
         {contentBlock}
       </div>

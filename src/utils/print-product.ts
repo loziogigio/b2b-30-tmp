@@ -6,7 +6,12 @@ import { getAvailabilityDisplay } from '@utils/format-availability';
 /**
  * Print product detail page
  */
-export function printProductDetail(product: Product, priceData?: ErpPriceData) {
+export function printProductDetail(
+  product: Product,
+  priceData?: ErpPriceData,
+  priceDecimals = 2,
+  hidePrices = false,
+) {
   // Create a new window for printing
   const printWindow = window.open('', '_blank');
   if (!printWindow) {
@@ -229,7 +234,7 @@ export function printProductDetail(product: Product, priceData?: ErpPriceData) {
           ${
             product.image?.original || product.image?.thumbnail
               ? `<img src="${product.image.original || product.image.thumbnail}" alt="${product.name || 'Product'}" />`
-              : '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#cbd5e1;">No Image</div>'
+              : '<img src="/assets/placeholders/no-image.jpeg" alt="No Image" style="width:100%;height:100%;object-fit:contain;" />'
           }
         </div>
 
@@ -287,7 +292,9 @@ export function printProductDetail(product: Product, priceData?: ErpPriceData) {
       </div>
 
       ${
-        priceData && (priceData.price_discount || priceData.price)
+        !hidePrices &&
+        priceData &&
+        (priceData.price_discount || priceData.price)
           ? `
         <div class="price-box">
           <div class="price-label">Price</div>
@@ -298,13 +305,13 @@ export function printProductDetail(product: Product, priceData?: ErpPriceData) {
                 Number(priceData.price_discount || priceData.price)
                 ? `
               <div style="text-decoration:line-through;color:#64748b;font-size:16px;">
-                € ${Number(priceData.gross_price).toFixed(2)}
+                € ${Number(priceData.gross_price).toFixed(priceDecimals)}
               </div>
             `
                 : ''
             }
             <div class="price-value" style="${priceData.is_promo ? 'color:#dc2626;' : ''}">
-              € ${Number(priceData.price_discount || priceData.price).toFixed(2)}
+              € ${Number(priceData.price_discount || priceData.price).toFixed(priceDecimals)}
             </div>
           </div>
           ${priceData.is_promo ? '<div style="display:inline-block;background:#dc2626;color:white;padding:4px 12px;border-radius:9999px;font-size:11px;margin-top:8px;font-weight:600;">PROMO</div>' : ''}

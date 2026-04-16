@@ -4,9 +4,10 @@ import type { ProductResult } from '@/lib/elia/types';
 
 interface ProductCardProps {
   product: ProductResult;
+  priceDecimals?: number;
 }
 
-export function ProductCard({ product }: ProductCardProps) {
+export function ProductCard({ product, priceDecimals = 2 }: ProductCardProps) {
   const relevancePercent = Math.round(product.relevance_score * 100);
 
   return (
@@ -53,7 +54,7 @@ export function ProductCard({ product }: ProductCardProps) {
         {/* Footer */}
         <div className="flex items-center justify-between">
           <span className="text-lg font-bold text-blue-600">
-            €{product.price.toFixed(2)}
+            €{product.price.toFixed(priceDecimals)}
           </span>
 
           <span

@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import cn from 'classnames';
-import { HiOutlineHeart, HiOutlineTrendingUp } from 'react-icons/hi';
+import { HiOutlineHeart } from 'react-icons/hi';
 import { useUI } from '@contexts/ui.context';
 import { useTranslation } from 'src/app/i18n/client';
 
@@ -225,7 +225,12 @@ export default function SearchTabs({ lang }: { lang: string }) {
     const hasEmpty = tabs.some((t) => t.key === 'empty');
     if (hasEmpty) return goto(tabs.findIndex((t) => t.key === 'empty'));
     if (tabs.length >= MAX_TABS) return;
-    const t: Tab = { id: randomId(), key: 'empty', label: searchLabel, query: '' };
+    const t: Tab = {
+      id: randomId(),
+      key: 'empty',
+      label: searchLabel,
+      query: '',
+    };
     const next = [...tabs, t];
     setTabs(next);
     setActive(next.length - 1);
@@ -253,7 +258,6 @@ export default function SearchTabs({ lang }: { lang: string }) {
     } else {
       router.replace(`${pathname}`, { scroll: false });
     }
-
   }
 
   // DnD reorder
@@ -291,26 +295,7 @@ export default function SearchTabs({ lang }: { lang: string }) {
   return (
     <div className="mt-3 mb-2 border-b border-gray-200 overflow-x-auto">
       <div className="flex items-end gap-1 min-w-max">
-        {/* Fixed tabs: Trending + Favorites */}
-        <button
-          className={cn(
-            'mr-1 px-3 py-2 rounded-t-md text-sm border',
-            (searchParams.get('source') || '') === 'trending'
-              ? 'bg-white border border-b-white text-indigo-700'
-              : 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100',
-          )}
-          onClick={() => {
-            const qs = new URLSearchParams();
-            qs.set('source', 'trending');
-            qs.set('period', '7d');
-            qs.set('page_size', '24');
-            router.replace(`${pathname}?${qs.toString()}`, { scroll: false });
-          }}
-          title={t('text-trending')}
-        >
-          <HiOutlineTrendingUp className="h-4 w-4 mr-1.5 inline-block" />
-          {t('text-trending')}
-        </button>
+        {/* Fixed tab: Favorites */}
         <button
           className={cn(
             'mr-2 px-3 py-2 rounded-t-md text-sm border',

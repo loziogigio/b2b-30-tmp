@@ -24,26 +24,14 @@ export default function DefaultFooter({ lang }: DefaultFooterProps) {
   const footerTextColor = branding?.footerTextColor || '#666666';
   const companyTitle = branding?.title || 'B2B Store';
 
-  const containerClassName =
-    'mx-auto max-w-[1440px] px-4 md:px-8';
+  const containerClassName = 'mx-auto max-w-[1440px] px-4 md:px-8';
 
   // Render custom footer HTML if configured
   if (footerHtml) {
     return (
-      <footer className="mt-[50px] lg:mt-14 2xl:mt-16">
-        <div
-          className="border-t-[6px] border-brand"
-          style={{ backgroundColor: footerBgColor, color: footerTextColor }}
-        >
-          <div className={`${containerClassName} py-8 lg:py-10`}>
-            <div
-              dangerouslySetInnerHTML={{ __html: sanitizeHtml(footerHtml) }}
-            />
-          </div>
-
-          <div className="bg-brand py-3 text-center text-xs font-semibold text-white md:text-sm">
-            Copyright &copy; {year} {companyTitle}. All rights reserved.
-          </div>
+      <footer>
+        <div style={{ backgroundColor: footerBgColor, color: footerTextColor }}>
+          <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(footerHtml) }} />
         </div>
       </footer>
     );
@@ -51,7 +39,7 @@ export default function DefaultFooter({ lang }: DefaultFooterProps) {
 
   // Fallback default footer
   return (
-    <footer className="mt-[50px] lg:mt-14 2xl:mt-16">
+    <footer>
       <div
         className="border-t-[6px] border-brand"
         style={{ backgroundColor: footerBgColor, color: footerTextColor }}

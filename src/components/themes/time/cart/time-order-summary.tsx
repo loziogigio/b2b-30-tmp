@@ -304,8 +304,6 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
           >
             Completa Ordine <ArrowRight />
           </button>
-
-
         </div>
       </TimeCard>
 

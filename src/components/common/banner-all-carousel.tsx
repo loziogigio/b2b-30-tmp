@@ -76,6 +76,7 @@ interface BannerProps {
   prevButtonClassName?: string;
   nextButtonClassName?: string;
   title?: string;
+  headingPosition?: 'left' | 'center' | 'right';
   style?: MediaCarouselStyle;
   cardStyle?: CardStyleOptions; // Default card style for all slides
 }
@@ -92,6 +93,7 @@ const BannerAllCarousel: React.FC<BannerProps> = ({
   prevButtonClassName,
   nextButtonClassName,
   title,
+  headingPosition,
   style,
   cardStyle,
 }) => {
@@ -162,6 +164,7 @@ const BannerAllCarousel: React.FC<BannerProps> = ({
           <div className="mb-5 md:mb-6">
             <SectionHeader
               sectionHeading={title}
+              headingPosition={headingPosition}
               className="mb-0"
               lang={lang}
             />

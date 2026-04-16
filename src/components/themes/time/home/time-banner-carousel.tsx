@@ -25,6 +25,7 @@ interface BannerItem {
 interface TimeBannerCarouselProps {
   data: BannerItem[];
   title?: string;
+  titleAlignment?: 'left' | 'center' | 'right';
   lang: string;
   itemsPerView?: number;
 }
@@ -100,6 +101,7 @@ function BannerSlide({ item }: { item: BannerItem }) {
 export default function TimeBannerCarousel({
   data,
   title,
+  titleAlignment,
   itemsPerView = 3,
 }: TimeBannerCarouselProps) {
   const {
@@ -119,7 +121,15 @@ export default function TimeBannerCarousel({
   return (
     <div>
       {title && (
-        <h2 className="text-[22px] font-extrabold text-[var(--time-dark)] font-[family-name:var(--font-display)] tracking-tight mb-4 px-1">
+        <h2
+          className={`text-[22px] font-extrabold text-[var(--time-dark)] font-[family-name:var(--font-display)] tracking-tight mb-4 px-1${
+            titleAlignment === 'center'
+              ? ' text-center'
+              : titleAlignment === 'right'
+                ? ' text-right'
+                : ''
+          }`}
+        >
           {title}
         </h2>
       )}

@@ -141,6 +141,7 @@ export const DEFAULT_HOME_SETTINGS: HomeSettings = {
     borderRadius: 'md',
     hoverEffect: 'none',
     backgroundColor: '#ffffff',
+    priceDecimals: 2,
   },
   headerConfig: DEFAULT_HEADER_CONFIG,
   // Default SEO meta tags - will be overridden by tenant settings

@@ -14,6 +14,7 @@ import { HiOutlineExclamationCircle } from 'react-icons/hi';
 import { fetchErpPrices } from '@framework/erp/prices';
 import { ERP_STATIC } from '@framework/utils/static';
 import { useUI } from '@contexts/ui.context';
+import { useHomeSettings } from '@/hooks/use-home-settings';
 import type { ErpPriceData } from '@utils/transform/erp-prices';
 import { usePimProductListQuery } from '@framework/product/get-pim-product';
 import { useQuery } from '@tanstack/react-query';
@@ -144,7 +145,9 @@ export default function ProductCompareClient({
   const { t } = useTranslation(lang, 'common');
   const urlSearchParams = useSearchParams();
   const { skus, addSku, removeSku, clear } = useCompareList();
-  const { isAuthorized } = useUI();
+  const { isAuthorized, hidePrices } = useUI();
+  const { settings } = useHomeSettings();
+  const priceDecimals = settings?.cardStyle?.priceDecimals ?? 2;
   const [erpPricesMap, setErpPricesMap] = useState<
     Record<string, ErpPriceData>
   >({});
@@ -283,12 +286,12 @@ export default function ProductCompareClient({
 
   const handleExportExcel = () => {
     if (!hasProducts) return;
-    exportToExcel(products);
+    exportToExcel(products, { hidePrices, priceDecimals });
   };
 
-  const handleExportPDF = async () => {
+  const handleExportPDF = () => {
     if (!hasProducts) return;
-    await exportToPDF(products);
+    exportToPDF(products, { hidePrices, priceDecimals });
   };
 
   return (

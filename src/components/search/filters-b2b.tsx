@@ -46,6 +46,13 @@ export const SearchFiltersB2B: React.FC<{ lang: string; text?: string }> = ({
   const isSpecialSource =
     source === 'likes' || source === 'trending' || source === 'reminders';
 
+  // Blank search: no text, no filters, no special source — new empty tab
+  const hasFilters = Object.keys(urlParams).some((k) =>
+    k.startsWith('filters-'),
+  );
+  const isBlankSearch =
+    !isSpecialSource && !text && !urlParams.text && !urlParams.q && !hasFilters;
+
   // Fetch SKUs for likes/trending/reminders pages
   const { data: specialSkus, isLoading: isLoadingSkus } = useQuery({
     queryKey: ['facet-skus', source, period],
@@ -83,12 +90,7 @@ export const SearchFiltersB2B: React.FC<{ lang: string; text?: string }> = ({
       if (source === 'trending') {
         // Fetch multiple pages of trending
         for (let page = 1; page <= MAX_PAGES; page++) {
-          const res = await apiGetTrendingPage(
-            period,
-            page,
-            MAX_PAGE_SIZE,
-            false,
-          );
+          const res = await apiGetTrendingPage(period, page, MAX_PAGE_SIZE);
           const skus = (res?.items || [])
             .map((x: any) => x.sku)
             .filter(Boolean);
@@ -129,8 +131,10 @@ export const SearchFiltersB2B: React.FC<{ lang: string; text?: string }> = ({
     queryKey: ['pim-filters', mergedParams],
     queryFn: () => fetchPimFilters(mergedParams),
     staleTime: 1000 * 60 * 5, // 5 minutes
-    // Don't run facet query until SKUs are loaded (when on trending/likes pages)
-    enabled: !isSpecialSource || (isSpecialSource && !isLoadingSkus),
+    // Don't run facet query when blank search or until SKUs are loaded for special sources
+    enabled:
+      !isBlankSearch &&
+      (!isSpecialSource || (isSpecialSource && !isLoadingSkus)),
   });
 
   // Build label map for selected chips: { 'filters-<key>': { value: label } }
@@ -245,9 +249,13 @@ export const SearchFiltersB2B: React.FC<{ lang: string; text?: string }> = ({
         ) : (
           /* Single scrollable area for ALL filters */
           <div className="max-h-[calc(100vh-320px)] overflow-y-auto">
-            {/* Groups Navigator - hierarchical menu tree */}
-            <GroupsNavigator lang={lang} />
-            <hr className="border-border-base mx-4" />
+            {/* Groups Navigator - hierarchical menu tree (hidden on blank search) */}
+            {!isBlankSearch && (
+              <>
+                <GroupsNavigator lang={lang} />
+                <hr className="border-border-base mx-4" />
+              </>
+            )}
 
             {/* Product Type Section (when selected or single) */}
             {effectiveProductTypeCode && effectiveProductTypeLabel && (

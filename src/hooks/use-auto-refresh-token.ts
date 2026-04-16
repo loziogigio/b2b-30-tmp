@@ -18,6 +18,7 @@ import {
 export function useAutoRefreshToken() {
   const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastRefreshAttemptRef = useRef<number>(0);
+  const consecutiveFailuresRef = useRef<number>(0);
   const isMountedRef = useRef(true);
 
   const doRefresh = useCallback(async (): Promise<boolean> => {
@@ -35,6 +36,7 @@ export function useAutoRefreshToken() {
       const result = await refreshAccessToken();
 
       if (result.success) {
+        consecutiveFailuresRef.current = 0;
         if (process.env.NODE_ENV === 'development') {
           console.log('[AutoRefresh] Token refreshed successfully');
         }
@@ -53,13 +55,21 @@ export function useAutoRefreshToken() {
         return false; // Stop rescheduling
       }
 
+      consecutiveFailuresRef.current += 1;
       if (process.env.NODE_ENV === 'development') {
-        console.log('[AutoRefresh] Token refresh failed:', result.error);
+        console.log(
+          `[AutoRefresh] Token refresh failed (attempt ${consecutiveFailuresRef.current}):`,
+          result.error,
+        );
       }
-      return true; // Non-401 failure — allow retry later
+      return true; // Non-401 failure — allow retry later with backoff
     } catch (error) {
-      console.error('[AutoRefresh] Failed to refresh token:', error);
-      return true; // Network error — allow retry later
+      consecutiveFailuresRef.current += 1;
+      console.error(
+        `[AutoRefresh] Failed to refresh token (attempt ${consecutiveFailuresRef.current}):`,
+        error,
+      );
+      return true; // Network error — allow retry later with backoff
     }
   }, []);
 
@@ -79,11 +89,35 @@ export function useAutoRefreshToken() {
     const timeUntilExpiry = expiresAt - now;
     const timeUntilRefresh = timeUntilExpiry - REFRESH_BUFFER_MS;
 
+    // Exponential backoff on consecutive failures: 30s, 60s, 120s, max 5min
+    const failures = consecutiveFailuresRef.current;
+    const backoffMs =
+      failures > 0
+        ? Math.min(
+            MIN_REFRESH_INTERVAL_MS * Math.pow(2, failures - 1),
+            5 * 60 * 1000,
+          )
+        : 0;
+
     if (timeUntilRefresh <= 0) {
-      // Token is about to expire or already expired - refresh immediately
-      doRefresh().then((shouldContinue) => {
-        if (shouldContinue && isMountedRef.current) scheduleNextRefresh();
-      });
+      // Token is about to expire or already expired
+      const delay = Math.max(backoffMs, 0);
+      if (delay > 0) {
+        if (process.env.NODE_ENV === 'development') {
+          console.log(
+            `[AutoRefresh] Backing off ${Math.round(delay / 1000)}s after ${failures} failures`,
+          );
+        }
+        refreshTimeoutRef.current = setTimeout(() => {
+          doRefresh().then((shouldContinue) => {
+            if (shouldContinue && isMountedRef.current) scheduleNextRefresh();
+          });
+        }, delay);
+      } else {
+        doRefresh().then((shouldContinue) => {
+          if (shouldContinue && isMountedRef.current) scheduleNextRefresh();
+        });
+      }
     } else {
       // Schedule refresh for later
       if (process.env.NODE_ENV === 'development') {
@@ -109,7 +143,7 @@ export function useAutoRefreshToken() {
     // Schedule the first refresh
     scheduleNextRefresh();
 
-    // Also reschedule when the page becomes visible again
+    // Reschedule when the page becomes visible again
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         scheduleNextRefresh();
@@ -117,12 +151,22 @@ export function useAutoRefreshToken() {
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
+    // When coming back online after network loss, retry immediately
+    const handleOnline = () => {
+      if (isMountedRef.current) {
+        consecutiveFailuresRef.current = 0;
+        scheduleNextRefresh();
+      }
+    };
+    window.addEventListener('online', handleOnline);
+
     return () => {
       isMountedRef.current = false;
       if (refreshTimeoutRef.current) {
         clearTimeout(refreshTimeoutRef.current);
       }
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('online', handleOnline);
     };
   }, [scheduleNextRefresh]);
 }

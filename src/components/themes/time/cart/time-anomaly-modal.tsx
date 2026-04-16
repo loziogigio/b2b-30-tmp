@@ -1,6 +1,10 @@
 'use client';
 
-import type { AnomalyResult, ErpAnomaly, ErpItem } from '@/hooks/use-order-submit';
+import type {
+  AnomalyResult,
+  ErpAnomaly,
+  ErpItem,
+} from '@/hooks/use-order-submit';
 import { formatAnomalyFlags } from '@/hooks/use-order-submit';
 import cn from 'classnames';
 
@@ -65,6 +69,16 @@ export default function TimeAnomalyModal({
           </div>
         </div>
 
+        {/* Explanation */}
+        <div className="px-6 pt-4 text-[13px] text-[var(--time-gray-600)] leading-relaxed font-[var(--font-body)]">
+          Gentile cliente, nel carrello sono presenti articoli con listino
+          variato o promozioni non valide, cliccando su{' '}
+          <strong className="text-[var(--time-dark)]">
+            "AGGIORNA CARRELLO CON LISTINO VARIATO O PROMOZIONI NON VALIDE"
+          </strong>{' '}
+          verranno mostrati i valori aggiornati.
+        </div>
+
         {/* Anomalies table */}
         {count > 0 && (
           <div className="px-6 py-4 max-h-[300px] overflow-y-auto">
@@ -100,25 +114,27 @@ export default function TimeAnomalyModal({
         )}
 
         {/* Actions */}
-        <div className="px-6 py-5 border-t border-[var(--time-gray-100)] flex gap-3">
+        <div className="px-6 py-5 border-t border-[var(--time-gray-100)] grid grid-cols-1 sm:grid-cols-2 gap-3">
           <button
             onClick={onEdit}
             disabled={isSubmitting}
-            className="flex-1 h-12 rounded-xl border-[1.5px] border-[var(--time-gray-200)] bg-white text-[14px] font-bold text-[var(--time-gray-600)] font-[var(--font-body)] hover:bg-[var(--time-gray-50)] transition-colors disabled:opacity-50"
+            className="min-h-[80px] px-4 py-3 rounded-xl border-[1.5px] border-[var(--time-gray-200)] bg-white text-[13px] font-bold text-[var(--time-gray-600)] font-[var(--font-body)] hover:bg-[var(--time-gray-50)] transition-colors disabled:opacity-50 uppercase leading-snug text-center"
           >
-            Modifica ordine
+            Torna al carrello e aggiorna manualmente
           </button>
           <button
             onClick={onAutofix}
             disabled={isSubmitting}
             className={cn(
-              'flex-1 h-12 rounded-xl border-none text-[14px] font-bold text-white font-[var(--font-body)] transition-all shadow-[0_4px_16px_rgba(230,57,70,0.25)]',
+              'min-h-[80px] px-4 py-3 rounded-xl border-none text-[13px] font-bold text-white font-[var(--font-body)] transition-all shadow-[0_4px_16px_rgba(230,57,70,0.25)] uppercase leading-snug text-center',
               isSubmitting
                 ? 'bg-[var(--time-gray-400)] cursor-not-allowed'
                 : 'bg-[var(--time-red)] hover:bg-[var(--time-dark)] cursor-pointer',
             )}
           >
-            {isSubmitting ? 'Invio in corso...' : 'Risolvi e reinvia'}
+            {isSubmitting
+              ? 'Aggiornamento in corso...'
+              : 'Aggiorna carrello con listino variato o promozioni non valide'}
           </button>
         </div>
       </div>

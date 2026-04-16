@@ -142,8 +142,7 @@ export function useOrderSubmit(lang: string) {
         }
 
         // Other errors
-        const msg =
-          data?.error || error?.message || 'Errore durante l\'invio';
+        const msg = data?.error || error?.message || "Errore durante l'invio";
         setSubmitError(msg);
         return { type: 'error', message: msg };
       } finally {

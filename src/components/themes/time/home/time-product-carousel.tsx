@@ -50,7 +50,10 @@ function resolveBreakpoint(
   // fallback to smallest breakpoint
   const smallest = sorted[sorted.length - 1];
   const cfg = breakpoints[String(smallest)];
-  return { slidesPerView: cfg?.slidesPerView ?? 4, gap: cfg?.spaceBetween ?? 16 };
+  return {
+    slidesPerView: cfg?.slidesPerView ?? 4,
+    gap: cfg?.spaceBetween ?? 16,
+  };
 }
 
 export default function TimeProductCarousel({
@@ -73,7 +76,10 @@ export default function TimeProductCarousel({
   useEffect(() => {
     if (!hasBreakpoints || !breakpoints) return;
     const update = () => {
-      const { slidesPerView, gap } = resolveBreakpoint(breakpoints, window.innerWidth);
+      const { slidesPerView, gap } = resolveBreakpoint(
+        breakpoints,
+        window.innerWidth,
+      );
       setCardLayout({ slidesPerView, gap });
     };
     update();

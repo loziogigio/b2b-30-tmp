@@ -34,20 +34,9 @@ const Footer: React.FC<FooterProps> = ({ variant = 'default', lang }) => {
   // Render custom footer HTML if configured
   if (footerHtml) {
     return (
-      <footer className="mt-[50px] lg:mt-14 2xl:mt-16">
-        <div
-          className="border-t-[6px] border-brand"
-          style={{ backgroundColor: footerBgColor, color: footerTextColor }}
-        >
-          <div className={`${containerClassName} py-8 lg:py-10`}>
-            <div
-              dangerouslySetInnerHTML={{ __html: sanitizeHtml(footerHtml) }}
-            />
-          </div>
-
-          <div className="bg-brand py-3 text-center text-xs font-semibold text-white md:text-sm">
-            Copyright &copy; {year} {companyTitle}. All rights reserved.
-          </div>
+      <footer>
+        <div style={{ backgroundColor: footerBgColor, color: footerTextColor }}>
+          <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(footerHtml) }} />
         </div>
       </footer>
     );
@@ -55,7 +44,7 @@ const Footer: React.FC<FooterProps> = ({ variant = 'default', lang }) => {
 
   // Fallback to default footer (for tenants without custom footerHtml)
   return (
-    <footer className="mt-[50px] lg:mt-14 2xl:mt-16">
+    <footer>
       <div
         className="border-t-[6px] border-brand"
         style={{ backgroundColor: footerBgColor, color: footerTextColor }}

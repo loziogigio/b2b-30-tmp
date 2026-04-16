@@ -2,6 +2,7 @@
 
 import { OrderSummary } from '@framework/order/types-b2b-orders-list';
 import { useTranslation } from 'src/app/i18n/client';
+import { useHomeSettings } from '@/hooks/use-home-settings';
 
 type Props = {
   orders: OrderSummary[];
@@ -17,6 +18,8 @@ export default function OrdersList({
   lang = 'it',
 }: Props) {
   const { t } = useTranslation(lang, 'common');
+  const { settings } = useHomeSettings();
+  const decimals = settings?.cardStyle?.priceDecimals ?? 2;
 
   if (!orders.length) {
     return (
@@ -56,7 +59,9 @@ export default function OrdersList({
               </div>
               <div className="text-right">
                 <p className="text-sm text-gray-500">{t('orders-total')}</p>
-                <p className="font-semibold">{o.ordered_total.toFixed(2)}</p>
+                <p className="font-semibold">
+                  {o.ordered_total.toFixed(decimals)}
+                </p>
               </div>
             </li>
           ))}

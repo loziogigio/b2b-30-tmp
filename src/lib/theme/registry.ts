@@ -23,8 +23,7 @@ type ComponentSlot =
 
 const registry: Record<ThemeId, Record<ComponentSlot, () => Promise<any>>> = {
   default: {
-    Layout: () =>
-      import('@/components/themes/default/layout/default-layout'),
+    Layout: () => import('@/components/themes/default/layout/default-layout'),
     ProductCard: () =>
       import('@/components/themes/default/product/default-product-card'),
     ProductRow: () =>
@@ -38,9 +37,7 @@ const registry: Record<ThemeId, Record<ComponentSlot, () => Promise<any>>> = {
     ProductPopup: () =>
       import('@/components/themes/default/product/default-product-popup'),
     VariantsQuickView: () =>
-      import(
-        '@/components/themes/default/product/default-variants-quick-view'
-      ),
+      import('@/components/themes/default/product/default-variants-quick-view'),
     Cart: () => import('@/components/themes/default/cart/default-cart'),
     SearchOverlay: () =>
       import('@/components/themes/default/search/default-search-overlay'),

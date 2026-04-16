@@ -18,6 +18,16 @@ import {
 import type { CartSummary, Item } from '@contexts/cart/cart.utils';
 import { AddToCartInput } from '@utils/transform/cart';
 import { useUI } from '@contexts/ui.context';
+import { getAuthToken } from '@/lib/auth';
+
+function cartFetch(url: string, body: Record<string, any>) {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  const token = getAuthToken();
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  return fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
+}
 
 // ----- ensure active cart -----
 
@@ -77,7 +87,9 @@ export const useCartQuery = () => {
 
 export async function deleteCart(idCart: number | string) {
   const orderId = String(idCart) || (await getOrderId());
-  return pimDel(CS_CART.ORDER(orderId));
+  const res = await cartFetch('/api/b2b/cart/delete', { order_id: orderId });
+  if (!res.ok) throw new Error(`Delete cart failed: ${res.status}`);
+  return res.json();
 }
 
 // ----- add / update / remove cart item -----
@@ -123,9 +135,19 @@ export async function addOrUpdateCartItem(
     const lineNumbers = matches
       .map((it) => Number(it.rowId))
       .filter((n) => !isNaN(n));
-    return pimDel(CS_CART.ITEMS(orderId), {
-      data: { line_numbers: lineNumbers },
-    });
+
+    // Build remove payload: prefer line_numbers, fall back to external_refs (entity_codes)
+    const removeBody: Record<string, any> = { order_id: orderId };
+    if (lineNumbers.length > 0) {
+      removeBody.line_numbers = lineNumbers;
+    } else {
+      removeBody.external_refs = matches.map((it) => String(it.id));
+    }
+
+    // Use dedicated cart API route (DELETE with body via generic proxy is unreliable)
+    const res = await cartFetch('/api/b2b/cart/remove-items', removeBody);
+    if (!res.ok) throw new Error(`Remove items failed: ${res.status}`);
+    return res.json();
   }
 
   // --- UPDATE if match exists ---

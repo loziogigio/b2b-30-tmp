@@ -31,9 +31,25 @@ function StatusBadge({ status }: { status?: string }) {
   if (status === 'processing') {
     return (
       <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
-        <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
-          <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.3" />
-          <path d="M12 2a10 10 0 019.95 9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
+        <svg
+          className="h-3.5 w-3.5 animate-spin"
+          viewBox="0 0 24 24"
+          fill="none"
+        >
+          <circle
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            strokeWidth="3"
+            opacity="0.3"
+          />
+          <path
+            d="M12 2a10 10 0 019.95 9"
+            stroke="currentColor"
+            strokeWidth="3"
+            strokeLinecap="round"
+          />
         </svg>
         In elaborazione...
       </span>
@@ -42,7 +58,14 @@ function StatusBadge({ status }: { status?: string }) {
   if (status === 'failed') {
     return (
       <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
           <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
           <line x1="12" y1="9" x2="12" y2="13" />
           <line x1="12" y1="17" x2="12.01" y2="17" />
@@ -54,7 +77,15 @@ function StatusBadge({ status }: { status?: string }) {
   if (status === 'completed') {
     return (
       <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+        >
           <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
           <polyline points="22,4 12,14.01 9,11.01" />
         </svg>
@@ -88,7 +119,8 @@ function OrderRow({
         <div className="flex items-center gap-4 min-w-0">
           <div className="min-w-0">
             <div className="text-sm font-semibold text-gray-900 truncate">
-              Ordine #{order.order_number || order.cart_number || order.order_id}
+              Ordine #
+              {order.order_number || order.cart_number || order.order_id}
             </div>
             <div className="text-xs text-gray-500 mt-0.5">
               {fmtDate(order.submitted_at || order.created_at)}

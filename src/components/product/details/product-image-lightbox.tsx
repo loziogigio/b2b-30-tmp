@@ -182,7 +182,7 @@ export default function ProductImageLightbox({
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex h-full w-full items-stretch justify-center bg-black/90 text-white"
+      className="fixed inset-0 z-[200] flex h-full w-full items-stretch justify-center bg-black/90 text-white"
       role="dialog"
       aria-modal="true"
       aria-label="Product gallery lightbox"

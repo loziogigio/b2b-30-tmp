@@ -6,8 +6,7 @@ import { getServerHomeSettings } from '@/lib/home-settings/fetch-server';
 import { getThemeId } from '@/lib/theme/resolver';
 
 const DefaultSearchContent = dynamic(
-  () =>
-    import('@/components/themes/default/search/default-search-content'),
+  () => import('@/components/themes/default/search/default-search-content'),
   { ssr: true },
 );
 const TimeSearchContent = dynamic(

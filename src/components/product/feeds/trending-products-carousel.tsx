@@ -15,6 +15,7 @@ interface Props {
   className?: string;
   /** Optional URL filters to apply (e.g., { 'filters-brand_id': 'MOB' }) */
   urlFilters?: Record<string, string>;
+  headingPosition?: 'left' | 'center' | 'right';
 }
 
 export default function TrendingProductsCarousel({
@@ -25,6 +26,7 @@ export default function TrendingProductsCarousel({
   sectionTitle,
   className,
   urlFilters = {},
+  headingPosition,
 }: Props) {
   const [skuList, setSkuList] = React.useState<string[]>([]);
   const { t } = useTranslation(lang, 'common');
@@ -88,6 +90,7 @@ export default function TrendingProductsCarousel({
       lang={lang}
       carouselBreakpoint={carouselBreakpoint}
       className={className}
+      headingPosition={headingPosition}
     />
   );
 }

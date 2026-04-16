@@ -41,10 +41,14 @@ export const useLogoutMutation = (lang: string) => {
       // 4. Clear cookies client-side
       clearAllCookies();
 
-      // 5. Redirect to home page
-      // Note: SSO federated logout is not implemented yet on the SSO server
-      // For now, just clear local session and redirect to home
-      window.location.href = `/${lang}`;
+      // 5. Federated logout: redirect to SSO to clear sso_sid cookie, then back to home
+      const ssoUrl = process.env.NEXT_PUBLIC_SSO_URL || '';
+      if (ssoUrl) {
+        const returnUrl = `${window.location.origin}/${lang}`;
+        window.location.href = `${ssoUrl}/api/auth/logout?post_logout_redirect_uri=${encodeURIComponent(returnUrl)}`;
+      } else {
+        window.location.href = `/${lang}`;
+      }
     },
     onError: (error) => {
       console.log(error, 'logout error response');

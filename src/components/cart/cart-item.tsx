@@ -8,6 +8,7 @@ import usePrice from '@framework/product/use-price';
 import { ROUTES } from '@utils/routes';
 import AddToCart from '@components/product/add-to-cart';
 import UpdateCart from '@components/product/update-cart';
+import { prefixImageUrl } from '@utils/image-versioning';
 
 type CartItemProps = {
   item: any;
@@ -55,7 +56,11 @@ const CartItem: React.FC<CartItemProps> = ({ lang, item }) => {
       {/* image + quick remove */}
       <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-md ring-1 ring-gray-200">
         <Image
-          src={item?.image ?? '/assets/placeholder/cart-item.svg'}
+          src={
+            prefixImageUrl(item?.image, 'gallery_') ??
+            item?.image ??
+            '/assets/placeholders/no-image.jpeg'
+          }
           width={64}
           height={64}
           loading="eager"
@@ -82,16 +87,27 @@ const CartItem: React.FC<CartItemProps> = ({ lang, item }) => {
           >
             {item?.name}
           </Link>
-          {/* qty × unit */}
-          {!hidePrices && (
-            <div className="mt-0.5 text-[11px] text-gray-600">
-              {qty} × {unitPrice}
-            </div>
-          )}
+          {/* qty × unit + packaging */}
+          <div className="mt-0.5 text-[11px] text-gray-600">
+            {!hidePrices ? `${qty} × ${unitPrice}` : `${qty}`}
+            {item?.uom && (
+              <span className="ml-1 text-gray-400">{item.uom}</span>
+            )}
+            {(item?.mvQty || item?.cfQty) && (
+              <span className="ml-1 text-gray-400">
+                {item.mvQty ? `MV ${item.mvQty}` : ''}
+                {item.mvQty && item.cfQty ? '/' : ''}
+                {item.cfQty ? `CF ${item.cfQty}` : ''}
+              </span>
+            )}
+          </div>
 
           {/* note indicator */}
           {item?.note && (
-            <div className="mt-0.5 text-[10px] text-gray-400 italic truncate" title={item.note}>
+            <div
+              className="mt-0.5 text-[10px] text-gray-400 italic truncate"
+              title={item.note}
+            >
               📝 {item.note}
             </div>
           )}

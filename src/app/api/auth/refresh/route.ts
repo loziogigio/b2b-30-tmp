@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
         error: errorData,
       });
 
-      return NextResponse.json(
+      const errorResponse = NextResponse.json(
         {
           success: false,
           message:
@@ -116,6 +116,19 @@ export async function POST(request: NextRequest) {
         },
         { status: tokenResponse.status },
       );
+
+      // On 401, clear the httpOnly refresh token cookie so the client stops retrying
+      if (tokenResponse.status === 401) {
+        errorResponse.cookies.set(AUTH_COOKIES.REFRESH_TOKEN, '', {
+          path: '/',
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          maxAge: 0,
+        });
+      }
+
+      return errorResponse;
     }
 
     const refreshResponse = await tokenResponse.json();

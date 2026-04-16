@@ -18,6 +18,7 @@ import CorrelatedProductsCarousel from '@components/product/feeds/correlated-pro
 import TimeVariantsGrid from './time-variants-grid';
 import ProductJsonLd from '@components/seo/product-json-ld';
 import { printProductDetail } from '@utils/print-product';
+import { useHomeSettings } from '@/hooks/use-home-settings';
 import { ROUTES } from '@utils/routes';
 import {
   IoIosHeart,
@@ -26,7 +27,11 @@ import {
   IoIosArrowForward,
 } from 'react-icons/io';
 import { IoArrowRedoOutline } from 'react-icons/io5';
-import { HiOutlinePrinter, HiOutlineSwitchHorizontal, HiOutlineCheckCircle } from 'react-icons/hi';
+import {
+  HiOutlinePrinter,
+  HiOutlineSwitchHorizontal,
+  HiOutlineCheckCircle,
+} from 'react-icons/hi';
 import { ReminderIcon, ReminderIconFilled } from '@components/icons/app-icons';
 import { useCompareList } from '@/contexts/compare/compare.context';
 import cn from 'classnames';
@@ -93,6 +98,8 @@ const TimeProductDetail: React.FC<{
     ? []
     : [String(data?.id ?? '')].filter(Boolean);
   const { isAuthorized } = useUI();
+  const { settings } = useHomeSettings();
+  const decimals = settings?.cardStyle?.priceDecimals ?? 2;
   const { data: erpPricesData } = useQuery({
     queryKey: ['erp-prices', entityCodes],
     queryFn: () => fetchErpPrices({ ...ERP_STATIC, entity_codes: entityCodes }),
@@ -113,7 +120,7 @@ const TimeProductDetail: React.FC<{
     Number(listPrice) > Number(netPrice) &&
     Number(netPrice) > 0;
   const savings = hasDiscount
-    ? (Number(listPrice) - Number(netPrice)).toFixed(2)
+    ? (Number(listPrice) - Number(netPrice)).toFixed(decimals)
     : null;
   const hasValidPrice = erpPrice && netPrice != null && Number(netPrice) > 0;
   const isOutOfStock = erpPrice ? Number(erpPrice.availability) <= 0 : false;
@@ -131,7 +138,11 @@ const TimeProductDetail: React.FC<{
   const sku = String(data?.sku ?? '');
   const favorite = isAuthorized && sku ? likes.isLiked(sku) : false;
   const hasReminder = isAuthorized && sku ? reminders.hasReminder(sku) : false;
-  const { addSku: addSkuToCompare, removeSku: removeSkuFromCompare, hasSku } = useCompareList();
+  const {
+    addSku: addSkuToCompare,
+    removeSku: removeSkuFromCompare,
+    hasSku,
+  } = useCompareList();
   const isInCompare = hasSku(sku);
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const [reminderLoading, setReminderLoading] = useState(false);
@@ -171,8 +182,8 @@ const TimeProductDetail: React.FC<{
 
   const handlePrint = useCallback(() => {
     if (!data) return;
-    printProductDetail(data, erpPrice);
-  }, [data, erpPrice]);
+    printProductDetail(data, erpPrice, decimals);
+  }, [data, erpPrice, decimals]);
 
   /* ── Gallery ── */
   const [activeImage, setActiveImage] = useState(0);
@@ -473,7 +484,7 @@ const TimeProductDetail: React.FC<{
 
               {hasDiscount && (
                 <div className="text-[15px] sm:text-base text-[var(--time-gray-400)] line-through mb-2 tabular-nums">
-                  &euro;{Number(listPrice).toFixed(2)}
+                  &euro;{Number(listPrice).toFixed(decimals)}
                 </div>
               )}
 
@@ -498,7 +509,7 @@ const TimeProductDetail: React.FC<{
                 {netPrice != null && Number(netPrice) > 0 ? (
                   <>
                     <span className="text-[32px] sm:text-[36px] lg:text-[38px] font-[900] text-[var(--time-dark)] font-[family-name:var(--font-heading)] tabular-nums tracking-[-0.02em]">
-                      &euro;{Number(netPrice).toFixed(2)}
+                      &euro;{Number(netPrice).toFixed(decimals)}
                     </span>
                     {savings && (
                       <span className="bg-[#f0fdf4] text-[#059669] text-[13px] sm:text-sm font-bold px-2.5 py-1 rounded-md">
@@ -558,9 +569,15 @@ const TimeProductDetail: React.FC<{
                   color: hasReminder ? '#eab308' : 'var(--time-gray-600)',
                 }}
               >
-                {hasReminder ? <ReminderIconFilled size={16} /> : <ReminderIcon size={16} />}
+                {hasReminder ? (
+                  <ReminderIconFilled size={16} />
+                ) : (
+                  <ReminderIcon size={16} />
+                )}
                 {hasReminder
-                  ? t('text-reminder-active', { defaultValue: 'Promemoria attivo' })
+                  ? t('text-reminder-active', {
+                      defaultValue: 'Promemoria attivo',
+                    })
                   : t('text-reminder-notify', { defaultValue: 'Avvisami' })}
               </button>
             )}
@@ -573,7 +590,11 @@ const TimeProductDetail: React.FC<{
                 borderColor: isInCompare ? '#6ee7b7' : undefined,
               }}
             >
-              {isInCompare ? <HiOutlineCheckCircle size={16} /> : <HiOutlineSwitchHorizontal size={16} />}
+              {isInCompare ? (
+                <HiOutlineCheckCircle size={16} />
+              ) : (
+                <HiOutlineSwitchHorizontal size={16} />
+              )}
               {isInCompare
                 ? t('text-in-compare', { defaultValue: 'Confronto' })
                 : t('text-compare', { defaultValue: 'Confronta' })}
@@ -679,12 +700,12 @@ const TimeProductDetail: React.FC<{
             {/* Price */}
             <div className="flex items-baseline gap-2 shrink-0">
               <span className="text-[22px] font-[900] text-[var(--time-dark)] font-[family-name:var(--font-heading)] tabular-nums">
-                &euro;{Number(netPrice).toFixed(2)}
+                &euro;{Number(netPrice).toFixed(decimals)}
               </span>
               {hasDiscount && (
                 <>
                   <span className="text-[13px] text-[var(--time-gray-400)] line-through tabular-nums">
-                    &euro;{Number(listPrice).toFixed(2)}
+                    &euro;{Number(listPrice).toFixed(decimals)}
                   </span>
                   <span className="text-[12px] font-bold text-[var(--time-red)]">
                     -{discountPercent}%
@@ -789,7 +810,7 @@ function FrequentlyBoughtTogether({
             {(currentProduct?.name || '').slice(0, 25)}...
           </div>
           <div className="text-[15px] font-[800] text-[var(--time-dark)] tabular-nums">
-            {mainPrice > 0 ? `€${mainPrice.toFixed(2)}` : '—'}
+            {mainPrice > 0 ? `€${mainPrice.toFixed(decimals)}` : '—'}
           </div>
           <div className="text-[9px] text-[var(--time-gray-400)] font-semibold mt-0.5 font-[family-name:var(--font-body)]">
             QUESTO PRODOTTO
@@ -809,11 +830,11 @@ function FrequentlyBoughtTogether({
               </div>
               <div className="flex items-baseline justify-center gap-1">
                 <span className="text-[14px] font-[800] text-[var(--time-dark)] tabular-nums">
-                  &euro;{item.price.toFixed(2)}
+                  &euro;{item.price.toFixed(decimals)}
                 </span>
                 {item.oldPrice && (
                   <span className="text-[10px] text-[var(--time-gray-400)] line-through tabular-nums">
-                    &euro;{item.oldPrice.toFixed(2)}
+                    &euro;{item.oldPrice.toFixed(decimals)}
                   </span>
                 )}
               </div>
@@ -831,11 +852,11 @@ function FrequentlyBoughtTogether({
               {selectedCount} prodotti selezionati
             </div>
             <div className="text-[24px] font-[900] font-[family-name:var(--font-heading)] tabular-nums">
-              &euro;{bundleTotal.toFixed(2)}
+              &euro;{bundleTotal.toFixed(decimals)}
             </div>
             {bundleSavings > 0 && (
               <div className="text-[11px] text-[#86efac] font-semibold mt-1">
-                Risparmi &euro;{bundleSavings.toFixed(2)}
+                Risparmi &euro;{bundleSavings.toFixed(decimals)}
               </div>
             )}
             <button className="mt-2.5 w-full h-9 rounded-lg border-none bg-[var(--time-red)] text-white text-[12px] font-bold cursor-pointer font-[family-name:var(--font-body)] transition-colors hover:brightness-110">
@@ -918,7 +939,7 @@ function RecentlyBoughtByYou() {
             </div>
             <div className="text-right shrink-0">
               <div className="text-[14px] font-[800] text-[var(--time-dark)] tabular-nums">
-                &euro;{item.price.toFixed(2)}
+                &euro;{item.price.toFixed(decimals)}
               </div>
               <button className="mt-1 text-[10px] font-bold text-[var(--time-red)] bg-transparent border-none cursor-pointer p-0 font-[family-name:var(--font-body)]">
                 Riordina

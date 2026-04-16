@@ -145,6 +145,13 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
   const isSpecialSource =
     source === 'likes' || source === 'trending' || source === 'reminders';
 
+  // Blank search: no text, no filters, no special source — new empty tab
+  const isBlankSearch =
+    !isSpecialSource &&
+    !pimParams.text &&
+    !pimParams.filters &&
+    !collectionSlug;
+
   // Extract URL filters for likes/trending queries
   const urlFiltersForSpecialQuery = useMemo(() => {
     const filters: Record<string, any> = {};
@@ -207,7 +214,6 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
         period,
         pageParam,
         pageSizeParam,
-        false,
       );
       const skus = (trendingPage?.items || [])
         .map((x: any) => x.sku)
@@ -229,9 +235,14 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
 
   const baseQuery = usePimProductListInfiniteQuery(pimParams, {
     groupByParent: true,
+    enabled: !isBlankSearch,
   });
 
-  const data = isSpecialSource ? specialSourceQuery.data : baseQuery.data;
+  const data = isBlankSearch
+    ? undefined
+    : isSpecialSource
+      ? specialSourceQuery.data
+      : baseQuery.data;
   const error = isSpecialSource
     ? (specialSourceQuery.error as any)
     : baseQuery.error;
@@ -383,76 +394,88 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
         </button>
       </div>
 
-      <div
-        className={cn(
-          isList
-            ? 'grid grid-cols-1 gap-3'
-            : (gridClassName ?? DEFAULT_GRID_CLASSES),
-          className,
-        )}
-      >
-        {error ? (
-          <div className="col-span-full">
-            <Alert message={error?.message} />
-          </div>
-        ) : isLoading && !data?.pages?.length ? (
-          Array.from({ length: 30 }).map((_, idx) => (
-            <ProductCardLoader
-              key={`product--key-${idx}`}
-              uniqueKey={`product--key-${idx}`}
-            />
-          ))
-        ) : (
-          data?.pages?.map((page: any) =>
-            page?.items?.map((p: any) => {
-              // With grouped search: p has variantCount attached
-              // Without grouped search: p may have variations array
-              // For single-variant products (variantCount === 1 OR variations.length === 1), use variant's data
-              const vars = Array.isArray(p.variations) ? p.variations : [];
-              const isSingleVariant =
-                vars.length === 1 && (p.variantCount === 1 || !p.variantCount);
-              const target = isSingleVariant
-                ? { ...vars[0], variantCount: 1 }
-                : p;
-              // Skip ERP price for grouped products with multiple variants
-              const hasMultipleVariants =
-                target.variantCount && target.variantCount > 1;
-              // For single-variant products, use the variant's ID for price lookup (ERP prices are fetched by variant ID)
-              const priceId = hasMultipleVariants
-                ? null
-                : vars.length === 1
-                  ? vars[0]?.id
-                  : target.id;
-              const priceData = priceId ? getPrice(priceId) : undefined;
+      {isBlankSearch ? (
+        <div className="col-span-full flex flex-col items-center justify-center py-16 text-gray-400">
+          <IoGridOutline className="w-12 h-12 mb-4 text-gray-300" />
+          <p className="text-lg font-medium">
+            {t('text-search-empty-tab', {
+              defaultValue: 'Cerca prodotti per iniziare',
+            })}
+          </p>
+        </div>
+      ) : (
+        <div
+          className={cn(
+            isList
+              ? 'grid grid-cols-1 gap-3'
+              : (gridClassName ?? DEFAULT_GRID_CLASSES),
+            className,
+          )}
+        >
+          {error ? (
+            <div className="col-span-full">
+              <Alert message={error?.message} />
+            </div>
+          ) : isLoading && !data?.pages?.length ? (
+            Array.from({ length: 30 }).map((_, idx) => (
+              <ProductCardLoader
+                key={`product--key-${idx}`}
+                uniqueKey={`product--key-${idx}`}
+              />
+            ))
+          ) : (
+            data?.pages?.map((page: any) =>
+              page?.items?.map((p: any) => {
+                // With grouped search: p has variantCount attached
+                // Without grouped search: p may have variations array
+                // For single-variant products (variantCount === 1 OR variations.length === 1), use variant's data
+                const vars = Array.isArray(p.variations) ? p.variations : [];
+                const isSingleVariant =
+                  vars.length === 1 &&
+                  (p.variantCount === 1 || !p.variantCount);
+                const target = isSingleVariant
+                  ? { ...vars[0], variantCount: 1 }
+                  : p;
+                // Skip ERP price for grouped products with multiple variants
+                const hasMultipleVariants =
+                  target.variantCount && target.variantCount > 1;
+                // For single-variant products, use the variant's ID for price lookup (ERP prices are fetched by variant ID)
+                const priceId = hasMultipleVariants
+                  ? null
+                  : vars.length === 1
+                    ? vars[0]?.id
+                    : target.id;
+                const priceData = priceId ? getPrice(priceId) : undefined;
 
-              if (isList) {
-                // list: always render parent row; variants appear in the row itself
+                if (isList) {
+                  // list: always render parent row; variants appear in the row itself
+                  return (
+                    <ProductRowB2B
+                      key={`row-${target.id}`}
+                      lang={lang}
+                      product={target}
+                      getPrice={getPrice}
+                      priceData={priceData}
+                      forceShowReminderToggle={source === 'reminders'}
+                    />
+                  );
+                }
+
                 return (
-                  <ProductRowB2B
-                    key={`row-${target.id}`}
-                    lang={lang}
+                  <CardComponent
+                    key={`card-${target.id}`}
                     product={target}
-                    getPrice={getPrice}
+                    lang={lang}
                     priceData={priceData}
                     forceShowReminderToggle={source === 'reminders'}
+                    className={cardClassName}
                   />
                 );
-              }
-
-              return (
-                <CardComponent
-                  key={`card-${target.id}`}
-                  product={target}
-                  lang={lang}
-                  priceData={priceData}
-                  forceShowReminderToggle={source === 'reminders'}
-                  className={cardClassName}
-                />
-              );
-            }),
-          )
-        )}
-      </div>
+              }),
+            )
+          )}
+        </div>
+      )}
 
       {/* Sentinel for infinite scroll */}
       <div ref={loadMoreRef} className="h-1" />

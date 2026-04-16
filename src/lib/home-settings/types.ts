@@ -41,6 +41,7 @@ export interface ProductCardStyle {
   hoverShadowSize?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
   backgroundColor: string;
   hoverBackgroundColor?: string;
+  priceDecimals?: number;
 }
 
 // ============================================================================

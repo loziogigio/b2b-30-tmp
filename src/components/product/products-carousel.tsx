@@ -20,7 +20,7 @@ import { useUI } from '@contexts/ui.context';
 const ThemedProductCard = getThemedComponent('ProductCard');
 
 interface ProductsCarouselProps {
-  sectionHeading: string;
+  sectionHeading?: string;
   categorySlug?: string;
   className?: string;
   products?: Product[];
@@ -33,6 +33,7 @@ interface ProductsCarouselProps {
   headerImageSrc?: string;
   headerImageAlt?: string;
   showSeeAll?: boolean;
+  headingPosition?: 'left' | 'center' | 'right';
 }
 
 const breakpoints = {
@@ -76,6 +77,7 @@ const ProductsCarousel: React.FC<ProductsCarouselProps> = ({
   headerImageSrc,
   headerImageAlt,
   showSeeAll = true,
+  headingPosition = 'left',
 }) => {
   const { width } = useWindowSize();
   const dir = getDirection(lang);
@@ -117,32 +119,44 @@ const ProductsCarousel: React.FC<ProductsCarouselProps> = ({
         className,
       )}
     >
-      <Link
-        href={normalizedSlug}
-        aria-label={`See all ${sectionHeading}`}
-        className="block"
-      >
-        <div className="mb-5 flex cursor-pointer flex-wrap items-center justify-between md:mb-6 group">
-          {/* ⬇️ Title row with optional image before the title */}
-          <div className="flex items-center gap-3">
-            {headerImageSrc ? (
-              <img
-                src={headerImageSrc}
-                alt={headerImageAlt || sectionHeading}
-                className="h-20 w-20 rounded object-cover sm:h-30 sm:w-30"
-                loading="lazy"
-                decoding="async"
-              />
-            ) : null}
+      {sectionHeading ? (
+        <Link
+          href={normalizedSlug}
+          aria-label={`See all ${sectionHeading}`}
+          className="block"
+        >
+          <div
+            className={cn(
+              'mb-5 flex cursor-pointer flex-wrap items-center md:mb-6 group',
+              headingPosition === 'center'
+                ? 'justify-center'
+                : headingPosition === 'right'
+                  ? 'justify-end'
+                  : 'justify-between',
+            )}
+          >
+            {/* ⬇️ Title row with optional image before the title */}
+            <div className="flex items-center gap-3">
+              {headerImageSrc ? (
+                <img
+                  src={headerImageSrc}
+                  alt={headerImageAlt || sectionHeading}
+                  className="h-20 w-20 rounded object-cover sm:h-30 sm:w-30"
+                  loading="lazy"
+                  decoding="async"
+                />
+              ) : null}
 
-            <SectionHeader
-              sectionHeading={sectionHeading}
-              className="mb-0 group-hover:underline"
-              lang={lang}
-            />
+              <SectionHeader
+                sectionHeading={sectionHeading}
+                headingPosition={headingPosition}
+                className="mb-0 group-hover:underline"
+                lang={lang}
+              />
+            </div>
           </div>
-        </div>
-      </Link>
+        </Link>
+      ) : null}
 
       {error ? (
         <div className="2xl:ltr:pr-10 2xl:rtl:pl-10">

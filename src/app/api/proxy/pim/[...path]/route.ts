@@ -109,10 +109,13 @@ async function proxyRequest(
     headers,
   };
 
-  // Forward body for POST/PUT/PATCH
-  if (['POST', 'PUT', 'PATCH'].includes(method)) {
+  // Forward body for POST/PUT/PATCH/DELETE
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
     try {
-      fetchOptions.body = await req.text();
+      const bodyText = await req.text();
+      if (bodyText) {
+        fetchOptions.body = bodyText;
+      }
     } catch {
       // No body
     }

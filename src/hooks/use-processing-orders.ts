@@ -1,10 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  get as pimGet,
-  post as pimPost,
-} from '@framework/utils/httpPIM';
+import { get as pimGet, post as pimPost } from '@framework/utils/httpPIM';
 import { CS_CART } from '@framework/utils/api-endpoints-cs';
 import { ERP_STATIC } from '@framework/utils/static';
 import { useCart } from '@contexts/cart/cart.context';
@@ -57,30 +54,27 @@ export function useProcessingOrders() {
     }
   }, []);
 
-  const checkStatus = useCallback(
-    async (orderId: string) => {
-      try {
-        const res = await pimGet<any>(CS_CART.PROCESSING_STATUS(orderId));
-        setOrders((prev) =>
-          prev.map((o) =>
-            o.order_id === orderId
-              ? {
-                  ...o,
-                  processing_status: res.processing_status,
-                  processing_phase: res.processing_phase,
-                  processing_errors: res.processing_errors,
-                  status: res.status || o.status,
-                  order_number: res.order_number || o.order_number,
-                }
-              : o,
-          ),
-        );
-      } catch (err) {
-        console.error('[processing-orders] checkStatus error:', err);
-      }
-    },
-    [],
-  );
+  const checkStatus = useCallback(async (orderId: string) => {
+    try {
+      const res = await pimGet<any>(CS_CART.PROCESSING_STATUS(orderId));
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.order_id === orderId
+            ? {
+                ...o,
+                processing_status: res.processing_status,
+                processing_phase: res.processing_phase,
+                processing_errors: res.processing_errors,
+                status: res.status || o.status,
+                order_number: res.order_number || o.order_number,
+              }
+            : o,
+        ),
+      );
+    } catch (err) {
+      console.error('[processing-orders] checkStatus error:', err);
+    }
+  }, []);
 
   const revertToCart = useCallback(
     async (orderId: string) => {

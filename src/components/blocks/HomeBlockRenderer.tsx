@@ -89,15 +89,21 @@ const getBreakpoints = (config: any) => {
   return parseBreakpointsJSON(config.breakpoints) || {};
 };
 
-const formatCurrency = (value: number | undefined | null, lang: string) => {
+const formatCurrency = (
+  value: number | undefined | null,
+  lang: string,
+  priceDecimals = 2,
+) => {
   if (value == null) return undefined;
   try {
     return new Intl.NumberFormat(lang, {
       style: 'currency',
       currency: 'EUR',
+      minimumFractionDigits: priceDecimals,
+      maximumFractionDigits: priceDecimals,
     }).format(value);
   } catch {
-    return `€${value.toFixed(2)}`;
+    return `€${value.toFixed(priceDecimals)}`;
   }
 };
 

@@ -10,6 +10,64 @@ import type {
 } from 'vinc-pim';
 
 // ===============================
+// Image versioning: PIM pre-generates S3 variants with filename prefixes
+// ===============================
+
+/** Insert a prefix before the filename in a URL: .../sku/photo.jpg → .../sku/main_photo.jpg */
+function prefixedUrl(url: string, prefix: string): string {
+  const lastSlash = url.lastIndexOf('/');
+  if (lastSlash === -1) return url;
+  return `${url.slice(0, lastSlash + 1)}${prefix}${url.slice(lastSlash + 1)}`;
+}
+
+interface PictureUrl {
+  url: string;
+}
+
+/** Build sized picture arrays from PIM images */
+function buildPictures(raw: PimProduct): {
+  original: PictureUrl[];
+  gallery: PictureUrl[];
+  main: PictureUrl[];
+} {
+  const originals: PictureUrl[] = [];
+
+  if (raw.cover_image_url) {
+    originals.push({ url: raw.cover_image_url });
+  }
+
+  if (raw.images?.length) {
+    for (const img of raw.images) {
+      const url =
+        (img as any).original ||
+        (img as any).large ||
+        (img as any).medium ||
+        img.url;
+      if (url && !originals.some((p) => p.url === url)) {
+        originals.push({ url });
+      }
+    }
+  }
+
+  if (raw.image) {
+    const url =
+      raw.image.original ||
+      (raw.image as any).large ||
+      (raw.image as any).medium ||
+      raw.image.thumbnail;
+    if (url && !originals.some((p) => p.url === url)) {
+      originals.push({ url });
+    }
+  }
+
+  return {
+    original: originals,
+    gallery: originals.map((p) => ({ url: prefixedUrl(p.url, 'gallery_') })),
+    main: originals.map((p) => ({ url: prefixedUrl(p.url, 'main_') })),
+  };
+}
+
+// ===============================
 // Transform PIM product to internal Product type
 // ===============================
 export function transformPimProduct(raw: PimProduct): Product {
@@ -28,6 +86,11 @@ export function transformPimProduct(raw: PimProduct): Product {
   }
   const model = raw.product_model || modelAttr?.value || '';
 
+  // Build sized image variants (gallery_, main_, original)
+  const pics = buildPictures(raw);
+  const originalUrl =
+    raw.image?.original || raw.cover_image_url || raw.images?.[0]?.url || '';
+
   return {
     id: raw.entity_code || raw.id || '', // Prefer entity_code for ERP compatibility
     sku: raw.sku || '',
@@ -38,23 +101,20 @@ export function transformPimProduct(raw: PimProduct): Product {
     html_description: raw.description || '', // HTML content for product detail tab
     image: {
       id: raw.image?.id || '',
-      thumbnail:
-        raw.image?.thumbnail ||
-        raw.cover_image_url ||
-        raw.images?.[0]?.url ||
-        '',
-      original:
-        raw.image?.original ||
-        raw.cover_image_url ||
-        raw.images?.[0]?.url ||
-        '',
+      // Use main_ variant for cards/thumbnails (medium size)
+      thumbnail: pics.main[0]?.url || originalUrl,
+      original: originalUrl,
     },
     gallery:
       raw.images?.map((img) => ({
         id: img.url,
-        thumbnail: img.url,
+        thumbnail: prefixedUrl(img.url, 'gallery_'),
         original: img.url,
       })) || [],
+    // Sized picture arrays for context-specific usage
+    gallery_pictures: pics.gallery,
+    main_pictures: pics.main,
+    large_pictures: pics.original,
     quantity: raw.quantity || 0,
     unit: raw.unit || 'pcs',
     price: 0, // Price comes from ERP
@@ -100,6 +160,10 @@ export function transformPimProduct(raw: PimProduct): Product {
     // Pass through marketing and technical specs
     marketing_features: raw.marketing_features || {},
     technical_specifications: raw.technical_specifications || {},
+    // "New" flag from PIM (attribute_is_new_b boolean field)
+    is_new:
+      (raw as any).attribute_is_new_b === true ||
+      (raw as any).attribute_is_new_b === 'true',
   } as Product;
 }
 
@@ -277,10 +341,11 @@ export const usePimProductListQuery = (
 // ===============================
 export const usePimProductListInfiniteQuery = (
   params: Record<string, any>,
-  options?: { groupByParent?: boolean },
+  options?: { groupByParent?: boolean; enabled?: boolean },
 ) => {
   const perPage = params.per_page || params.rows || 24;
   const groupByParent = options?.groupByParent ?? false;
+  const enabled = options?.enabled ?? true;
 
   // Build stable params without pagination
   const baseParams = useMemo(() => {
@@ -321,6 +386,7 @@ export const usePimProductListInfiniteQuery = (
     getNextPageParam: (lastPage) => lastPage.nextPage ?? undefined,
     initialPageParam: 0,
     staleTime: 1000 * 60 * 5, // 5 minutes
+    enabled,
   });
 };
 

@@ -6,6 +6,7 @@ import { useOrderDetailsQuery } from '@framework/order/fetch-order';
 import AddressCard from '@components/orders/address-card';
 import OrderItemsTable from '@components/orders/order-items-table';
 import { useTranslation } from 'src/app/i18n/client';
+import { useHomeSettings } from '@/hooks/use-home-settings';
 import {
   renderOrderPrintHtml,
   OrderExportSnapshot,
@@ -70,6 +71,8 @@ type Props = {
 
 export default function OrderDetailClient({ lang, initialParams }: Props) {
   const { t } = useTranslation(lang, 'common');
+  const { settings } = useHomeSettings();
+  const decimals = settings?.cardStyle?.priceDecimals ?? 2;
   const [isPrinting, setIsPrinting] = useState(false);
 
   const params = useMemo(() => {
@@ -268,7 +271,7 @@ export default function OrderDetailClient({ lang, initialParams }: Props) {
         />
         <StatCard
           label={t('orders-total')}
-          value={`€${money((order as any).total).toFixed(2)}`}
+          value={`€${money((order as any).total).toFixed(decimals)}`}
         />
       </div>
 

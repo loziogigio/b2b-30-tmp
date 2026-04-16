@@ -8,6 +8,7 @@ import {
   type ErpPriceData,
 } from '@utils/transform/erp-prices';
 import { useUI } from '@contexts/ui.context';
+import { useHomeSettings } from '@/hooks/use-home-settings';
 
 export type PriceSlice = Pick<
   ErpPriceData,
@@ -51,6 +52,8 @@ export default function PriceAndPromo({
   invertColors = false,
 }: Props) {
   const { hidePrices } = useUI();
+  const { settings } = useHomeSettings();
+  const decimals = settings?.cardStyle?.priceDecimals ?? 2;
 
   // Hide prices when toggle is active (like when not logged in)
   if (hidePrices) return null;
@@ -73,6 +76,14 @@ export default function PriceAndPromo({
     (price_discount == null || Number(price_discount) <= 0) &&
     (gross_price == null || Number(gross_price) <= 0);
   if (hasNoValidPrice) return null;
+
+  // Format prices to consistent decimal places
+  const fmtPrice = (v: unknown): string => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n.toFixed(decimals) : String(v);
+  };
+  const priceDiscountFmt = fmtPrice(price_discount);
+  const grossPriceFmt = fmtPrice(gross_price);
 
   const showPrev =
     gross_price != null && Number(gross_price) !== Number(price_discount);
@@ -119,7 +130,7 @@ export default function PriceAndPromo({
                       invertColors ? 'text-white/70' : 'text-gray-500',
                     )}
                   >
-                    {gross_price} €
+                    {grossPriceFmt} €
                   </span>
                   {discountLines.length > 0 && (
                     <span
@@ -144,7 +155,7 @@ export default function PriceAndPromo({
                 )}
               >
                 <span {...(withSchemaOrg ? { itemProp: 'price' } : {})}>
-                  {price_discount}
+                  {priceDiscountFmt}
                 </span>
                 <span className="text-sm sm:text-base font-normal">€</span>
               </div>

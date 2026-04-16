@@ -10,7 +10,7 @@ interface Props {
   sectionHeading?: string;
   sectionSubHeading?: string;
   className?: string;
-  headingPosition?: 'left' | 'center';
+  headingPosition?: 'left' | 'center' | 'right';
 }
 
 const SectionHeader: React.FC<Props> = ({
@@ -26,21 +26,24 @@ const SectionHeader: React.FC<Props> = ({
       className={cn(`-mt-1.5 ${className}`, {
         'text-center pb-2 lg:pb-3 xl:pb-4 3xl:pb-7':
           headingPosition === 'center',
+        'text-right pb-2 lg:pb-3 xl:pb-4 3xl:pb-7': headingPosition === 'right',
       })}
     >
       <Heading
         variant="heading"
         className={cn({
-          '3xl:text-[25px] 3xl:leading-9': headingPosition === 'center',
+          '3xl:text-[25px] 3xl:leading-9':
+            headingPosition === 'center' || headingPosition === 'right',
         })}
       >
         {t(sectionHeading)}
       </Heading>
-      {sectionSubHeading && headingPosition === 'center' && (
-        <Text variant="medium" className="pb-0.5 mt-1.5 lg:mt-2.5 xl:mt-3">
-          {t(sectionSubHeading)}
-        </Text>
-      )}
+      {sectionSubHeading &&
+        (headingPosition === 'center' || headingPosition === 'right') && (
+          <Text variant="medium" className="pb-0.5 mt-1.5 lg:mt-2.5 xl:mt-3">
+            {t(sectionSubHeading)}
+          </Text>
+        )}
     </div>
   );
 };

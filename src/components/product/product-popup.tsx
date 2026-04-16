@@ -41,14 +41,17 @@ import { useCompareList } from '@/contexts/compare/compare.context';
 
 export default function ProductPopup({ lang }: { lang: string }) {
   const { t } = useTranslation(lang, 'common');
-  const { data: product, stack } = useModalState() as { data: any; stack: any[] };
+  const { data: product, stack } = useModalState() as {
+    data: any;
+    stack: any[];
+  };
   const { closeModal, goBack, closeAll } = useModalAction();
   const router = useRouter();
 
   // Likes context
   const likes = useLikes();
   const reminders = useReminders();
-  const { isAuthorized } = useUI();
+  const { isAuthorized, hidePrices } = useUI();
   const sku = String(product?.sku ?? '');
   const {
     addSku: addSkuToCompare,
@@ -139,7 +142,12 @@ export default function ProductPopup({ lang }: { lang: string }) {
     <div className="h-full overflow-y-auto bg-brand-light relative">
       {/* Accent bar */}
       <div className="sticky top-0 z-20 bg-brand text-white">
-        <div className={cn("flex items-center justify-between px-4 md:px-6 lg:px-8 2xl:px-10 py-3", !fullWidth && "max-w-[1440px] mx-auto")}>
+        <div
+          className={cn(
+            'flex items-center justify-between px-4 md:px-6 lg:px-8 2xl:px-10 py-3',
+            !fullWidth && 'max-w-[1440px] mx-auto',
+          )}
+        >
           <button
             onClick={() => (stack.length > 1 ? goBack() : closeModal())}
             className="inline-flex items-center gap-1.5 bg-white/20 hover:bg-white/30 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors cursor-pointer"
@@ -157,7 +165,12 @@ export default function ProductPopup({ lang }: { lang: string }) {
         </div>
       </div>
 
-      <div className={cn("px-4 md:px-6 lg:px-8 2xl:px-10 pt-6 pb-2 md:pt-7", !fullWidth && "max-w-[1440px] mx-auto")}>
+      <div
+        className={cn(
+          'px-4 md:px-6 lg:px-8 2xl:px-10 pt-6 pb-2 md:pt-7',
+          !fullWidth && 'max-w-[1440px] mx-auto',
+        )}
+      >
         <div className="grid-cols-10 lg:grid gap-7 2xl:gap-8">
           {/* Gallery */}
           <div className="col-span-5 mb-6 overflow-hidden xl:col-span-4 md:mb-8 lg:mb-0">
@@ -171,7 +184,10 @@ export default function ProductPopup({ lang }: { lang: string }) {
             ) : (
               <div className="flex items-center justify-center w-auto">
                 <Image
-                  src={product?.image?.original || '/product-placeholder.svg'}
+                  src={
+                    product?.image?.original ||
+                    '/assets/placeholders/no-image.jpeg'
+                  }
                   alt={product?.name ?? 'Product'}
                   width={900}
                   height={680}
@@ -232,9 +248,11 @@ export default function ProductPopup({ lang }: { lang: string }) {
                   <PackagingGrid pd={erpPrice} />
                 </div>
 
-                <div className="flex items-center justify-center">
-                  <PriceAndPromo priceData={erpPrice} />
-                </div>
+                {!hidePrices && (
+                  <div className="flex items-center justify-center">
+                    <PriceAndPromo priceData={erpPrice} />
+                  </div>
+                )}
 
                 <div className="flex items-center justify-center md:justify-end">
                   <AddToCart

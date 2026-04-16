@@ -135,6 +135,13 @@ export const TimeProductSearch: FC<TimeProductSearchProps> = ({
   const isSpecialSource =
     source === 'likes' || source === 'trending' || source === 'reminders';
 
+  // Blank search: no text, no filters, no special source — new empty tab
+  const isBlankSearch =
+    !isSpecialSource &&
+    !pimParams.text &&
+    !pimParams.filters &&
+    !collectionSlug;
+
   const urlFiltersForSpecialQuery = useMemo(() => {
     const filters: Record<string, any> = {};
     for (const [key, value] of Object.entries(urlParams)) {
@@ -197,7 +204,6 @@ export const TimeProductSearch: FC<TimeProductSearchProps> = ({
         period,
         pageParam,
         pageSizeParam,
-        false,
       );
       const skus = (trendingPage?.items || [])
         .map((x: any) => x.sku)
@@ -226,6 +232,7 @@ export const TimeProductSearch: FC<TimeProductSearchProps> = ({
 
   const baseQuery = usePimProductListInfiniteQuery(pimParams, {
     groupByParent: true,
+    enabled: !isBlankSearch,
   });
 
   const data = isSpecialSource ? specialSourceQuery.data : baseQuery.data;
@@ -450,98 +457,113 @@ export const TimeProductSearch: FC<TimeProductSearchProps> = ({
       </div>
 
       {/* Product grid / list */}
-      <div
-        className={
-          isList
-            ? 'flex flex-col gap-3'
-            : sidebarOpen
-              ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4'
-              : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
-        }
-      >
-        {error ? (
-          <div className="col-span-full text-center py-10">
-            <p className="text-[var(--time-gray-500)]">{error?.message}</p>
-          </div>
-        ) : isLoading && !data?.pages?.length ? (
-          // Loading skeletons
-          Array.from({ length: 12 }).map((_, idx) => (
-            <div
-              key={`skeleton-${idx}`}
-              className={
-                isList
-                  ? 'bg-white rounded-[var(--radius-card)] border border-[var(--time-gray-100)] h-[160px] animate-pulse'
-                  : 'bg-white rounded-[var(--radius-card)] border border-[var(--time-gray-100)] animate-pulse'
-              }
-            >
+      {isBlankSearch ? (
+        <div className="flex flex-col items-center justify-center py-16 text-[var(--time-gray-400)]">
+          <IoGridOutline
+            className="w-12 h-12 mb-4"
+            style={{ color: 'var(--time-gray-200)' }}
+          />
+          <p className="text-lg font-medium font-[family-name:var(--font-body)]">
+            {t('text-search-empty-tab', {
+              defaultValue: 'Cerca prodotti per iniziare',
+            })}
+          </p>
+        </div>
+      ) : (
+        <div
+          className={
+            isList
+              ? 'flex flex-col gap-3'
+              : sidebarOpen
+                ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4'
+                : 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
+          }
+        >
+          {error ? (
+            <div className="col-span-full text-center py-10">
+              <p className="text-[var(--time-gray-500)]">{error?.message}</p>
+            </div>
+          ) : isLoading && !data?.pages?.length ? (
+            // Loading skeletons
+            Array.from({ length: 12 }).map((_, idx) => (
               <div
+                key={`skeleton-${idx}`}
                 className={
-                  isList ? 'flex items-stretch h-full' : 'flex flex-col'
+                  isList
+                    ? 'bg-white rounded-[var(--radius-card)] border border-[var(--time-gray-100)] h-[160px] animate-pulse'
+                    : 'bg-white rounded-[var(--radius-card)] border border-[var(--time-gray-100)] animate-pulse'
                 }
               >
                 <div
                   className={
-                    isList
-                      ? 'w-[140px] bg-[var(--time-gray-100)] shrink-0'
-                      : 'h-[180px] bg-[var(--time-gray-100)]'
+                    isList ? 'flex items-stretch h-full' : 'flex flex-col'
                   }
-                />
-                <div className="flex-1 p-4 space-y-3">
-                  <div className="h-3 bg-[var(--time-gray-100)] rounded w-1/3" />
-                  <div className="h-4 bg-[var(--time-gray-100)] rounded w-3/4" />
-                  <div className="h-3 bg-[var(--time-gray-100)] rounded w-full" />
-                  <div className="h-6 bg-[var(--time-gray-100)] rounded w-1/4 mt-4" />
+                >
+                  <div
+                    className={
+                      isList
+                        ? 'w-[140px] bg-[var(--time-gray-100)] shrink-0'
+                        : 'h-[180px] bg-[var(--time-gray-100)]'
+                    }
+                  />
+                  <div className="flex-1 p-4 space-y-3">
+                    <div className="h-3 bg-[var(--time-gray-100)] rounded w-1/3" />
+                    <div className="h-4 bg-[var(--time-gray-100)] rounded w-3/4" />
+                    <div className="h-3 bg-[var(--time-gray-100)] rounded w-full" />
+                    <div className="h-6 bg-[var(--time-gray-100)] rounded w-1/4 mt-4" />
+                  </div>
                 </div>
               </div>
-            </div>
-          ))
-        ) : (
-          data?.pages?.map((page: any, pageIdx: number) => {
-            let pageItemIndex = 0;
-            return page?.items?.map((p: any) => {
-              const vars = Array.isArray(p.variations) ? p.variations : [];
-              const isSingleVariant =
-                vars.length === 1 && (p.variantCount === 1 || !p.variantCount);
-              const target = isSingleVariant
-                ? { ...vars[0], variantCount: 1 }
-                : p;
-              const hasMultipleVariants =
-                target.variantCount && target.variantCount > 1;
-              const priceId = hasMultipleVariants
-                ? null
-                : vars.length === 1
-                  ? vars[0]?.id
-                  : target.id;
-              const priceData = priceId ? getPrice(priceId) : undefined;
-              // Only stagger animation on first page; subsequent pages appear instantly
-              const animIndex = pageIdx === 0 ? pageItemIndex : 0;
-              pageItemIndex++;
+            ))
+          ) : (
+            data?.pages?.map((page: any, pageIdx: number) => {
+              let pageItemIndex = 0;
+              return page?.items?.map((p: any) => {
+                const vars = Array.isArray(p.variations) ? p.variations : [];
+                const isSingleVariant =
+                  vars.length === 1 &&
+                  (p.variantCount === 1 || !p.variantCount);
+                const target = isSingleVariant
+                  ? { ...vars[0], variantCount: 1 }
+                  : p;
+                const hasMultipleVariants =
+                  target.variantCount && target.variantCount > 1;
+                const priceId = hasMultipleVariants
+                  ? null
+                  : vars.length === 1
+                    ? vars[0]?.id
+                    : target.id;
+                const priceData = priceId ? getPrice(priceId) : undefined;
+                // Only stagger animation on first page; subsequent pages appear instantly
+                const animIndex = pageIdx === 0 ? pageItemIndex : 0;
+                pageItemIndex++;
 
-              if (isList) {
+                if (isList) {
+                  return (
+                    <TimeSearchRow
+                      key={`row-${target.id}`}
+                      product={target}
+                      lang={lang}
+                      priceData={priceData}
+                      index={animIndex}
+                    />
+                  );
+                }
+
                 return (
-                  <TimeSearchRow
-                    key={`row-${target.id}`}
+                  <TimeSearchCard
+                    key={`card-${target.id}`}
                     product={target}
                     lang={lang}
                     priceData={priceData}
                     index={animIndex}
                   />
                 );
-              }
-
-              return (
-                <TimeSearchCard
-                  key={`card-${target.id}`}
-                  product={target}
-                  lang={lang}
-                  priceData={priceData}
-                  index={animIndex}
-                />
-              );
-            });
-          })
-        )}
-      </div>
+              });
+            })
+          )}
+        </div>
+      )}
 
       {/* Sentinel for infinite scroll */}
       <div ref={loadMoreRef} className="h-1" />

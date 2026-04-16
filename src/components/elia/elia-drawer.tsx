@@ -15,6 +15,7 @@ import { SORT_LABELS, STOCK_FILTER_LABELS } from '@framework/elia/types';
 import { EliaReasoningSteps } from '@components/elia/elia-reasoning-steps';
 import { EliaInput } from '@components/elia/input';
 import { AiOutlineClose, AiOutlineSearch, AiOutlineUser } from 'react-icons/ai';
+import { useHomeSettings } from '@/hooks/use-home-settings';
 import {
   BsStars,
   BsChevronDown,
@@ -44,9 +45,11 @@ interface Message {
 function EliaProductCard({
   product,
   onOpenPopup,
+  priceDecimals = 2,
 }: {
   product: EliaProduct;
   onOpenPopup: (product: EliaProduct) => void;
+  priceDecimals?: number;
 }) {
   const imageUrl =
     product.cover_image_url ||
@@ -80,7 +83,7 @@ function EliaProductCard({
         )}
         {price && (
           <p className="text-sm font-semibold text-blue-600 mt-0.5">
-            €{Number(price).toFixed(2)}
+            €{Number(price).toFixed(priceDecimals)}
           </p>
         )}
       </div>
@@ -93,10 +96,12 @@ function EliaAnalyzedProductCard({
   analyzed,
   product,
   onOpenPopup,
+  priceDecimals = 2,
 }: {
   analyzed: AnalyzedProduct;
   product?: EliaProduct;
   onOpenPopup: (product: EliaProduct) => void;
+  priceDecimals?: number;
 }) {
   // Product info comes from search results (passed as product prop)
   const name = product?.name || analyzed.entity_code;
@@ -153,7 +158,7 @@ function EliaAnalyzedProductCard({
           )}
           {price && (
             <p className="text-sm font-semibold text-blue-600 mt-0.5">
-              €{Number(price).toFixed(2)}
+              €{Number(price).toFixed(priceDecimals)}
             </p>
           )}
         </div>
@@ -187,6 +192,8 @@ export function EliaDrawer() {
   const params = useParams();
   const lang = (params?.lang as string) || 'it';
   const isPreview = searchParams.get('preview') === 'true';
+  const { settings } = useHomeSettings();
+  const decimals = settings?.cardStyle?.priceDecimals ?? 2;
 
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -237,11 +244,11 @@ export function EliaDrawer() {
           product.image?.original ||
           product.image?.large ||
           product.image?.thumbnail ||
-          '/product-placeholder.svg',
+          '/assets/placeholders/no-image.jpeg',
         thumbnail:
           product.image?.thumbnail ||
           product.cover_image_url ||
-          '/product-placeholder.svg',
+          '/assets/placeholders/no-image.jpeg',
       },
       description: product.short_description || product.description || '',
     };
@@ -729,6 +736,7 @@ export function EliaDrawer() {
                                                 onOpenPopup={
                                                   handleOpenProductPopup
                                                 }
+                                                priceDecimals={decimals}
                                               />
                                             );
                                           })}
@@ -754,6 +762,7 @@ export function EliaDrawer() {
                                               onOpenPopup={
                                                 handleOpenProductPopup
                                               }
+                                              priceDecimals={decimals}
                                             />
                                           ))}
                                         {message.searchResult.products.length >

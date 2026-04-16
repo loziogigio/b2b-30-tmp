@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { IoGrid } from 'react-icons/io5';
+import { IoGrid, IoLogOutOutline } from 'react-icons/io5';
 import cn from 'classnames';
 import type { WidgetConfig } from '@/lib/home-settings/types';
 import { useTenantOptional } from '@/contexts/tenant.context';
+import { useLogoutMutation } from '@/framework/basic-rest/auth/use-logout';
 
 interface PlatformApp {
   app_id: string;
@@ -36,12 +37,40 @@ interface TenantBranding {
   favicon: string;
 }
 
+/**
+ * Pick the best redirect_uri from the app's registered URIs.
+ * Matches current hostname (localhost vs production), prefers /api/auth/callback.
+ * Falls back to app.url + /api/auth/callback.
+ */
+function pickRedirectUri(app: PlatformApp): string {
+  const uris = app.redirect_uris;
+  if (!uris || uris.length === 0) {
+    return `${app.url}/api/auth/callback`;
+  }
+
+  const currentHost =
+    typeof window !== 'undefined' ? window.location.hostname : '';
+  const isLocal = currentHost === 'localhost' || currentHost === '127.0.0.1';
+
+  // Filter to /api/auth/callback URIs
+  const callbackUris = uris.filter((u) => u.includes('/api/auth/callback'));
+  const pool = callbackUris.length > 0 ? callbackUris : uris;
+
+  // Prefer URI matching current environment (localhost vs production)
+  const match = pool.find((u) =>
+    isLocal ? u.includes('localhost') : !u.includes('localhost'),
+  );
+
+  return match || pool[0];
+}
+
 export function AppLauncherWidget({ config, lang }: AppLauncherWidgetProps) {
   const [open, setOpen] = useState(false);
   const [externalApps, setExternalApps] = useState<PlatformApp[]>([]);
   const [branding, setBranding] = useState<TenantBranding | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const tenantContext = useTenantOptional();
+  const logout = useLogoutMutation(lang);
 
   useEffect(() => {
     fetch('/api/proxy/pim/api/b2b/tenant/enabled-apps')
@@ -86,9 +115,9 @@ export function AppLauncherWidget({ config, lang }: AppLauncherWidgetProps) {
         tenantContext?.tenant?.builderUrl ||
         process.env.NEXT_PUBLIC_SSO_URL ||
         '';
-      const callbackUrl = `${app.url}/api/auth/callback`;
+      const redirectUri = pickRedirectUri(app);
       const params = new URLSearchParams({
-        redirect_uri: callbackUrl,
+        redirect_uri: redirectUri,
         client_id: app.app_id,
       });
       const tenantId = tenantContext?.tenant?.id;
@@ -192,6 +221,21 @@ export function AppLauncherWidget({ config, lang }: AppLauncherWidgetProps) {
                 </a>
               );
             })}
+          </div>
+          <div className="border-t border-gray-100 p-2">
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                logout.mutate();
+              }}
+              className="flex w-full items-center gap-3 px-3 py-2.5 rounded-xl text-red-600 hover:bg-red-50 transition-colors"
+            >
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-red-50 shrink-0">
+                <IoLogOutOutline className="h-5 w-5" />
+              </div>
+              <span className="text-sm font-medium">Esci</span>
+            </button>
           </div>
         </div>
       )}

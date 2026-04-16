@@ -128,7 +128,9 @@ const ProductSingleDetails: React.FC<{ lang: string }> = ({ lang }) => {
           ) : (
             <div className="flex items-center justify-center w-auto">
               <Image
-                src={data?.image?.original ?? '/product-placeholder.svg'}
+                src={
+                  data?.image?.original ?? '/assets/placeholders/no-image.jpeg'
+                }
                 alt={data?.name!}
                 width={900}
                 height={680}

@@ -13,6 +13,7 @@ interface Props {
   limitSkus?: number;
   sectionTitle?: string;
   className?: string;
+  headingPosition?: 'left' | 'center' | 'right';
 }
 
 export default function LikedProductsProductsCarousel({
@@ -21,6 +22,7 @@ export default function LikedProductsProductsCarousel({
   limitSkus = 24,
   sectionTitle,
   className,
+  headingPosition,
 }: Props) {
   const { t } = useTranslation(lang, 'common');
   const likes = useLikes();
@@ -62,6 +64,7 @@ export default function LikedProductsProductsCarousel({
       lang={lang}
       carouselBreakpoint={carouselBreakpoint}
       className={className}
+      headingPosition={headingPosition}
     />
   );
 }

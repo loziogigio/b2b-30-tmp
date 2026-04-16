@@ -4,7 +4,6 @@ import type {
   AnomalyResult,
   ErpAnomaly,
   ErpItem,
-  SubmitOpts,
 } from '@/hooks/use-order-submit';
 import { formatAnomalyFlags } from '@/hooks/use-order-submit';
 
@@ -69,6 +68,16 @@ export default function AnomalyModal({
           </div>
         </div>
 
+        {/* Explanation */}
+        <div className="px-6 pt-4 text-sm text-gray-700 leading-relaxed">
+          Gentile cliente, nel carrello sono presenti articoli con listino
+          variato o promozioni non valide, cliccando su{' '}
+          <strong>
+            "AGGIORNA CARRELLO CON LISTINO VARIATO O PROMOZIONI NON VALIDE"
+          </strong>{' '}
+          verranno mostrati i valori aggiornati.
+        </div>
+
         {/* Anomalies table */}
         {count > 0 && (
           <div className="px-6 py-4 max-h-[300px] overflow-y-auto">
@@ -102,20 +111,22 @@ export default function AnomalyModal({
         )}
 
         {/* Actions */}
-        <div className="px-6 py-4 border-t border-gray-200 flex gap-3">
+        <div className="px-6 py-4 border-t border-gray-200 grid grid-cols-1 sm:grid-cols-2 gap-3">
           <button
             onClick={onEdit}
             disabled={isSubmitting}
-            className="flex-1 h-11 rounded-lg border border-gray-300 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            className="min-h-[72px] px-4 py-3 rounded-lg border border-gray-300 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 uppercase leading-snug text-center"
           >
-            Modifica ordine
+            Torna al carrello e aggiorna manualmente
           </button>
           <button
             onClick={onAutofix}
             disabled={isSubmitting}
-            className="flex-1 h-11 rounded-lg bg-violet-600 text-sm font-semibold text-white hover:bg-violet-700 transition-colors disabled:opacity-50"
+            className="min-h-[72px] px-4 py-3 rounded-lg bg-violet-600 text-sm font-semibold text-white hover:bg-violet-700 transition-colors disabled:opacity-50 uppercase leading-snug text-center"
           >
-            {isSubmitting ? 'Invio in corso...' : 'Risolvi e reinvia'}
+            {isSubmitting
+              ? 'Aggiornamento in corso...'
+              : 'Aggiorna carrello con listino variato o promozioni non valide'}
           </button>
         </div>
       </div>

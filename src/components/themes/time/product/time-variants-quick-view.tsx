@@ -23,7 +23,12 @@ export default function TimeVariantsQuickView({ lang }: { lang: string }) {
     <div className="h-full overflow-y-auto bg-white relative">
       {/* Accent bar */}
       <div className="sticky top-0 z-20 bg-brand text-white">
-        <div className={cn("flex items-center justify-between px-5 md:px-8 lg:px-10 py-3", !fullWidth && "max-w-[1200px] mx-auto")}>
+        <div
+          className={cn(
+            'flex items-center justify-between px-5 md:px-8 lg:px-10 py-3',
+            !fullWidth && 'max-w-[1200px] mx-auto',
+          )}
+        >
           <div className="flex items-center gap-3">
             <button
               onClick={() => (stack.length > 1 ? goBack() : closeModal())}
@@ -34,7 +39,9 @@ export default function TimeVariantsQuickView({ lang }: { lang: string }) {
             </button>
             <span className="hidden sm:inline text-white/40">|</span>
             <span className="hidden sm:inline text-white/90 text-sm font-medium">
-              {t('text-product-variants', { defaultValue: 'Varianti prodotto' })}
+              {t('text-product-variants', {
+                defaultValue: 'Varianti prodotto',
+              })}
             </span>
           </div>
           <button
@@ -47,7 +54,12 @@ export default function TimeVariantsQuickView({ lang }: { lang: string }) {
         </div>
       </div>
 
-      <div className={cn("p-5 md:p-8 lg:p-10", !fullWidth && "max-w-[1200px] mx-auto")}>
+      <div
+        className={cn(
+          'p-5 md:p-8 lg:p-10',
+          !fullWidth && 'max-w-[1200px] mx-auto',
+        )}
+      >
         <TimeVariantsGrid
           lang={lang}
           product={product}

@@ -334,6 +334,9 @@ const TimeBlockRenderer: React.FC<TimeBlockRendererProps> = ({
     const slides = block.config?.slides || [];
     if (slides.length === 0) return null;
 
+    const showTitle = block.showTitle !== false;
+    const titleAlignment = block.titleAlignment || 'left';
+    const heroTitle = showTitle ? block.config?.title?.trim() : undefined;
     const cardStyle = block.config?.cardStyle;
     const transformedData = slides.map((slide: any) =>
       transformSlide(slide, cardStyle),
@@ -348,7 +351,8 @@ const TimeBlockRenderer: React.FC<TimeBlockRendererProps> = ({
       >
         <TimeBannerCarousel
           data={transformedData}
-          title={block.config?.title}
+          title={heroTitle}
+          titleAlignment={titleAlignment}
           lang={lang}
           itemsPerView={heroItemsPerView}
         />
@@ -393,7 +397,11 @@ const TimeBlockRenderer: React.FC<TimeBlockRendererProps> = ({
     const searchQuery = extractSearchText(rawSearch);
     const limit = toNumber(block.config?.limit, 12);
     const breakpoints = getBreakpoints(block.config);
-    const sectionTitle = block.config?.title?.trim() || 'Prodotti';
+    const showTitle = block.showTitle !== false;
+    const titleAlignment = block.titleAlignment || 'left';
+    const sectionTitle = showTitle
+      ? block.config?.title?.trim() || undefined
+      : undefined;
     const className = block.config?.className || BLOCK_SPACING;
 
     if (dataSource === 'liked') {
@@ -406,6 +414,7 @@ const TimeBlockRenderer: React.FC<TimeBlockRendererProps> = ({
             }
             limitSkus={limit}
             sectionTitle={sectionTitle}
+            headingPosition={titleAlignment}
           />
         </BlockWrapper>
       );
@@ -421,6 +430,7 @@ const TimeBlockRenderer: React.FC<TimeBlockRendererProps> = ({
             }
             limitSkus={limit}
             sectionTitle={sectionTitle}
+            headingPosition={titleAlignment}
           />
         </BlockWrapper>
       );
@@ -434,7 +444,9 @@ const TimeBlockRenderer: React.FC<TimeBlockRendererProps> = ({
           title={sectionTitle}
           blockId={block.id}
           lang={lang}
-          breakpoints={Object.keys(breakpoints).length ? breakpoints : undefined}
+          breakpoints={
+            Object.keys(breakpoints).length ? breakpoints : undefined
+          }
         />
       </BlockWrapper>
     );
@@ -457,7 +469,9 @@ const TimeBlockRenderer: React.FC<TimeBlockRendererProps> = ({
     );
 
     const products = fetchedProducts ?? [];
-    const sectionTitle = block.config?.title?.trim();
+    const showTitle = block.showTitle !== false;
+    const titleAlignment = block.titleAlignment || 'left';
+    const sectionTitle = showTitle ? block.config?.title?.trim() : undefined;
 
     if (!loading && products.length === 0 && !error) return null;
 
@@ -467,7 +481,15 @@ const TimeBlockRenderer: React.FC<TimeBlockRendererProps> = ({
         className={block.config?.className || BLOCK_SPACING}
       >
         {sectionTitle && (
-          <h2 className="mb-4 text-[22px] font-extrabold text-[var(--time-dark)] font-[family-name:var(--font-display)] tracking-tight">
+          <h2
+            className={`mb-4 text-[22px] font-extrabold text-[var(--time-dark)] font-[family-name:var(--font-display)] tracking-tight ${
+              titleAlignment === 'center'
+                ? 'text-center'
+                : titleAlignment === 'right'
+                  ? 'text-right'
+                  : ''
+            }`}
+          >
             {sectionTitle}
           </h2>
         )}
@@ -515,7 +537,11 @@ const TimeBlockRenderer: React.FC<TimeBlockRendererProps> = ({
         fullWidth={isFullWidth}
         className={block.config?.className || BLOCK_SPACING}
       >
-        <MediaImageBlock config={block.config} />
+        <MediaImageBlock
+          config={block.config}
+          showTitle={block.showTitle !== false}
+          titleAlignment={block.titleAlignment || 'left'}
+        />
       </BlockWrapper>
     );
   }
@@ -540,7 +566,10 @@ function SearchProductCarousel({
   title: string;
   blockId: string;
   lang: string;
-  breakpoints?: Record<string, { slidesPerView: number; spaceBetween?: number }>;
+  breakpoints?: Record<
+    string,
+    { slidesPerView: number; spaceBetween?: number }
+  >;
 }) {
   const enabled = Boolean(searchQuery);
   const {

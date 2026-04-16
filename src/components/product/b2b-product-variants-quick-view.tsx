@@ -27,7 +27,12 @@ export default function B2BProductVariantsQuickView({
     <div className="flex flex-col h-full overflow-hidden relative">
       {/* Accent bar */}
       <div className="sticky top-0 z-20 bg-brand text-white shrink-0">
-        <div className={cn("flex items-center justify-between px-4 md:px-6 lg:px-8 2xl:px-10 py-3", !fullWidth && "max-w-[1440px] mx-auto")}>
+        <div
+          className={cn(
+            'flex items-center justify-between px-4 md:px-6 lg:px-8 2xl:px-10 py-3',
+            !fullWidth && 'max-w-[1440px] mx-auto',
+          )}
+        >
           <button
             onClick={() => (stack.length > 1 ? goBack() : closeModal())}
             className="inline-flex items-center gap-1.5 bg-white/20 hover:bg-white/30 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors cursor-pointer"
@@ -45,7 +50,12 @@ export default function B2BProductVariantsQuickView({
         </div>
       </div>
 
-      <div className={cn("w-full flex-1 overflow-hidden flex flex-col", !fullWidth && "max-w-[1440px] mx-auto")}>
+      <div
+        className={cn(
+          'w-full flex-1 overflow-hidden flex flex-col',
+          !fullWidth && 'max-w-[1440px] mx-auto',
+        )}
+      >
         <B2BVariantsGridContent
           lang={lang}
           product={product}

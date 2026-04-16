@@ -12,7 +12,10 @@ import {
   buildCartExportSnapshot,
   renderCartExcelHtml,
   renderCartPdfHtml,
+  type ExportLabels,
 } from './export/cart-export';
+import { useUI } from '@contexts/ui.context';
+import { useHomeSettings } from '@/hooks/use-home-settings';
 import { BsFiletypePdf, BsFiletypeXlsx } from 'react-icons/bs';
 import { ImSpinner2 } from 'react-icons/im';
 import { HiOutlineSave, HiOutlineCheck, HiOutlineX } from 'react-icons/hi';
@@ -51,6 +54,9 @@ const SORT_LABELS: Record<SortKey, string> = {
 export default function CartTableB2B({ lang = 'it' }: { lang?: string }) {
   const { t } = useTranslation(lang, 'common');
   const { items, setItemQuantity, resetCart, meta, getCart } = useCart();
+  const { hidePrices } = useUI();
+  const { settings } = useHomeSettings();
+  const priceDecimals = settings?.cardStyle?.priceDecimals ?? 2;
   const queryClient = useQueryClient();
 
   const [query, setQuery] = useState('');
@@ -64,6 +70,57 @@ export default function CartTableB2B({ lang = 'it' }: { lang?: string }) {
   const [saveLabel, setSaveLabel] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  const exportLabels = useMemo<Partial<ExportLabels>>(
+    () => ({
+      cartTitle: t('export-cart-title', { defaultValue: 'Cart export' }),
+      cartDetails: t('export-cart-details', { defaultValue: 'Cart details' }),
+      items: t('export-items', { defaultValue: 'Items' }),
+      totals: t('export-totals', { defaultValue: 'Totals' }),
+      image: t('export-image', { defaultValue: 'Image' }),
+      item: t('export-item', { defaultValue: 'Item' }),
+      itemCode: t('export-item-code', { defaultValue: 'Item code / Item' }),
+      um: t('export-um', { defaultValue: 'UM' }),
+      qty: t('export-qty', { defaultValue: 'QTY' }),
+      unitNet: t('export-unit-net', { defaultValue: 'Unit net' }),
+      unitGross: t('export-unit-gross', { defaultValue: 'Unit gross' }),
+      lineNet: t('export-line-net', { defaultValue: 'Line net' }),
+      lineGross: t('export-line-gross', { defaultValue: 'Line gross' }),
+      model: t('export-model', { defaultValue: 'Model' }),
+      sku: t('export-sku', { defaultValue: 'SKU' }),
+      packaging: t('export-packaging', { defaultValue: 'Packaging' }),
+      quantity: t('export-quantity', { defaultValue: 'Quantity' }),
+      netTotal: t('export-net-total', { defaultValue: 'Net total' }),
+      transportCost: t('export-transport-cost', {
+        defaultValue: 'Transport cost',
+      }),
+      vat: t('export-vat', { defaultValue: 'VAT' }),
+      documentTotal: t('export-document-total', {
+        defaultValue: 'Document total',
+      }),
+      grossTotal: t('export-gross-total', { defaultValue: 'Gross total' }),
+      cartId: t('export-cart-id', { defaultValue: 'Cart ID' }),
+      customerId: t('export-customer-id', { defaultValue: 'Customer ID' }),
+      addressCode: t('export-address-code', { defaultValue: 'Address code' }),
+      exportedAt: t('export-exported-at', { defaultValue: 'Exported at' }),
+      itemsExported: t('export-items-exported', {
+        defaultValue: 'Items (exported)',
+      }),
+      uiFilters: t('export-ui-filters', { defaultValue: 'UI filters' }),
+      currentSort: t('export-current-sort', { defaultValue: 'Current sort' }),
+      printWithImages: t('export-print-with-images', {
+        defaultValue: 'Print with images',
+      }),
+      printWithoutImages: t('export-print-without-images', {
+        defaultValue: 'Print without images',
+      }),
+      close: t('export-close', { defaultValue: 'Close' }),
+      generatedBy: t('export-generated-by', {
+        defaultValue: 'Generated automatically by VINC B2B',
+      }),
+    }),
+    [t],
+  );
 
   const baseRows = useMemo<Item[]>(() => items ?? [], [items]);
 
@@ -161,35 +218,38 @@ export default function CartTableB2B({ lang = 'it' }: { lang?: string }) {
 
   const cartName = (meta as any)?.cartName as string | undefined;
 
-  const handleSaveCart = useCallback(async (labelOverride?: string) => {
-    const trimmed = (labelOverride ?? saveLabel).trim();
-    if (!trimmed) {
-      setSaveError(t('text-saved-cart-name-required'));
-      return;
-    }
+  const handleSaveCart = useCallback(
+    async (labelOverride?: string) => {
+      const trimmed = (labelOverride ?? saveLabel).trim();
+      if (!trimmed) {
+        setSaveError(t('text-saved-cart-name-required'));
+        return;
+      }
 
-    const cartId = (meta as any)?.idCart ?? (meta as any)?.id_cart;
-    if (!cartId) {
-      setSaveError(t('text-saved-cart-no-active'));
-      return;
-    }
+      const cartId = (meta as any)?.idCart ?? (meta as any)?.id_cart;
+      if (!cartId) {
+        setSaveError(t('text-saved-cart-no-active'));
+        return;
+      }
 
-    setIsSaving(true);
-    setSaveError(null);
-    try {
-      await saveCurrentCart({ cartId, label: trimmed });
-      setSaveLabel('');
-      setShowSaveForm(false);
-      // Refresh the saved carts list and load the new empty active cart
-      await queryClient.invalidateQueries({ queryKey: ['saved-carts'] });
-      await getCart('replace');
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      setSaveError(message);
-    } finally {
-      setIsSaving(false);
-    }
-  }, [saveLabel, meta, t, queryClient, getCart]);
+      setIsSaving(true);
+      setSaveError(null);
+      try {
+        await saveCurrentCart({ cartId, label: trimmed });
+        setSaveLabel('');
+        setShowSaveForm(false);
+        // Refresh the saved carts list and load the new empty active cart
+        await queryClient.invalidateQueries({ queryKey: ['saved-carts'] });
+        await getCart('replace');
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        setSaveError(message);
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [saveLabel, meta, t, queryClient, getCart],
+  );
 
   const handleExportPdf = useCallback(() => {
     if (typeof window === 'undefined') return;
@@ -200,6 +260,7 @@ export default function CartTableB2B({ lang = 'it' }: { lang?: string }) {
       filteredDiffers: filtersDiffer,
       filtersSummary,
       sortLabel,
+      labels: exportLabels,
     });
 
     if (!snapshot) {
@@ -210,7 +271,12 @@ export default function CartTableB2B({ lang = 'it' }: { lang?: string }) {
     setIsExportingPdf(true);
 
     try {
-      const html = renderCartPdfHtml(snapshot, { includeImages: true });
+      const html = renderCartPdfHtml(snapshot, {
+        includeImages: true,
+        labels: exportLabels,
+        hidePrices,
+        priceDecimals,
+      });
       const blob = new Blob([html], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
       const popup = window.open(url, '_blank');
@@ -320,6 +386,7 @@ export default function CartTableB2B({ lang = 'it' }: { lang?: string }) {
       filteredDiffers: filtersDiffer,
       filtersSummary,
       sortLabel,
+      labels: exportLabels,
     });
 
     if (!snapshot) {
@@ -332,7 +399,11 @@ export default function CartTableB2B({ lang = 'it' }: { lang?: string }) {
     let url: string | null = null;
 
     try {
-      const html = renderCartExcelHtml(snapshot);
+      const html = renderCartExcelHtml(snapshot, {
+        labels: exportLabels,
+        hidePrices,
+        priceDecimals,
+      });
       const blob = new Blob([html], {
         type: 'application/vnd.ms-excel;charset=utf-8;',
       });
@@ -536,7 +607,10 @@ export default function CartTableB2B({ lang = 'it' }: { lang?: string }) {
                 <HiOutlineSave className="h-4 w-4" />
               )}
               {cartName
-                ? t('text-save-cart-as', { name: cartName, defaultValue: `Salva "${cartName}"` })
+                ? t('text-save-cart-as', {
+                    name: cartName,
+                    defaultValue: `Salva "${cartName}"`,
+                  })
                 : t('text-save-for-later', { defaultValue: 'Salva per dopo' })}
             </button>
           )}

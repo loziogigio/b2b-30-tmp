@@ -9,6 +9,7 @@ import { ErpPriceData } from '@utils/transform/erp-prices';
 import AddToCart from '@components/product/add-to-cart';
 import { useTranslation } from 'src/app/i18n/client';
 import { useUI } from '@contexts/ui.context';
+import { useHomeSettings } from '@/hooks/use-home-settings';
 import { useLikes } from '@contexts/likes/likes.context';
 import { useReminders } from '@contexts/reminders/reminders.context';
 import { IoIosHeart, IoIosHeartEmpty } from 'react-icons/io';
@@ -33,6 +34,8 @@ export default function TimeSearchRow({
   const { openModal } = useModalAction();
   const { t } = useTranslation(lang, 'common');
   const { isAuthorized, hidePrices } = useUI();
+  const { settings } = useHomeSettings();
+  const decimals = settings?.cardStyle?.priceDecimals ?? 2;
   const likes = useLikes();
   const reminders = useReminders();
   const isFavorite = sku ? likes.isLiked(sku) : false;
@@ -157,11 +160,19 @@ export default function TimeSearchRow({
                     e.stopPropagation();
                     if (!sku) return;
                     setReminderLoading(true);
-                    try { await reminders.toggle(sku); } finally { setReminderLoading(false); }
+                    try {
+                      await reminders.toggle(sku);
+                    } finally {
+                      setReminderLoading(false);
+                    }
                   }}
                   disabled={reminderLoading || !sku}
                 >
-                  {hasReminder ? <ReminderIconFilled className="text-[16px]" /> : <ReminderIcon className="text-[16px]" />}
+                  {hasReminder ? (
+                    <ReminderIconFilled className="text-[16px]" />
+                  ) : (
+                    <ReminderIcon className="text-[16px]" />
+                  )}
                 </button>
               )}
               <button
@@ -172,11 +183,19 @@ export default function TimeSearchRow({
                   e.stopPropagation();
                   if (!sku) return;
                   setLikeLoading(true);
-                  try { await likes.toggle(sku); } finally { setLikeLoading(false); }
+                  try {
+                    await likes.toggle(sku);
+                  } finally {
+                    setLikeLoading(false);
+                  }
                 }}
                 disabled={likeLoading || !sku}
               >
-                {isFavorite ? <IoIosHeart className="text-[16px]" /> : <IoIosHeartEmpty className="text-[16px]" />}
+                {isFavorite ? (
+                  <IoIosHeart className="text-[16px]" />
+                ) : (
+                  <IoIosHeartEmpty className="text-[16px]" />
+                )}
               </button>
             </div>
           )}
@@ -218,12 +237,12 @@ export default function TimeSearchRow({
             {netPrice != null && Number(netPrice) > 0 ? (
               <div className="flex items-center gap-2">
                 <span className="text-xl sm:text-[22px] font-extrabold text-[var(--time-dark)] font-[family-name:var(--font-body)] tabular-nums">
-                  &euro;{Number(netPrice).toFixed(2)}
+                  &euro;{Number(netPrice).toFixed(decimals)}
                 </span>
                 {hasDiscount && (
                   <div className="flex flex-col">
                     <span className="text-xs sm:text-[13px] text-[var(--time-gray-400)] line-through tabular-nums leading-tight">
-                      &euro;{Number(listPrice).toFixed(2)}
+                      &euro;{Number(listPrice).toFixed(decimals)}
                     </span>
                     {discountTiers && (
                       <span className="text-xs sm:text-[13px] font-semibold text-[var(--time-gray-600)] leading-tight">
@@ -238,7 +257,9 @@ export default function TimeSearchRow({
                 {variantCount} varianti
               </span>
             ) : (
-              <span className="text-sm text-[var(--time-gray-400)]">&mdash;</span>
+              <span className="text-sm text-[var(--time-gray-400)]">
+                &mdash;
+              </span>
             )}
           </div>
         )}

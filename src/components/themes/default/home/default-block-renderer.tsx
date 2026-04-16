@@ -140,6 +140,9 @@ const DefaultBlockRenderer: React.FC<DefaultBlockRendererProps> = ({
     const slides = block.config?.slides || [];
     if (slides.length === 0) return null;
 
+    const showTitle = block.showTitle !== false;
+    const titleAlignment = block.titleAlignment || 'left';
+    const heroTitle = showTitle ? block.config?.title?.trim() : undefined;
     const cardStyle = block.config?.cardStyle;
     const transformedData = slides.map((slide: any) => {
       const overlayConfig = slide.overlay
@@ -177,7 +180,8 @@ const DefaultBlockRenderer: React.FC<DefaultBlockRendererProps> = ({
           className="mb-0"
           lang={lang}
           breakpoints={getBreakpoints(block.config)}
-          title={block.config?.title}
+          title={heroTitle}
+          headingPosition={titleAlignment}
           itemKeyPrefix={`carousel-hero-${block.id}`}
           prevButtonClassName={MEDIA_ARROW_PREV}
           nextButtonClassName={MEDIA_ARROW_NEXT}
@@ -285,7 +289,11 @@ const DefaultBlockRenderer: React.FC<DefaultBlockRendererProps> = ({
         fullWidth={isFullWidth}
         className={block.config?.className || 'mb-6 xl:mb-8 pt-1'}
       >
-        <MediaImageBlock config={block.config} />
+        <MediaImageBlock
+          config={block.config}
+          showTitle={block.showTitle !== false}
+          titleAlignment={block.titleAlignment || 'left'}
+        />
       </Container>
     );
   }
@@ -310,7 +318,9 @@ function DefaultProductCarouselBlock({
   const searchQuery = extractSearchText(rawSearch);
   const limit = toNumber(block.config?.limit, 12);
   const breakpoints = getBreakpoints(block.config);
-  const sectionTitle = block.config?.title?.trim();
+  const showTitle = block.showTitle !== false;
+  const titleAlignment = block.titleAlignment || 'left';
+  const sectionTitle = showTitle ? block.config?.title?.trim() : undefined;
   const className = block.config?.className || 'mb-6 xl:mb-8 pt-1';
 
   if (dataSource === 'liked') {
@@ -323,6 +333,7 @@ function DefaultProductCarouselBlock({
           }
           limitSkus={limit}
           sectionTitle={sectionTitle}
+          headingPosition={titleAlignment}
         />
       </Container>
     );
@@ -338,6 +349,7 @@ function DefaultProductCarouselBlock({
           }
           limitSkus={limit}
           sectionTitle={sectionTitle}
+          headingPosition={titleAlignment}
         />
       </Container>
     );
@@ -366,7 +378,8 @@ function DefaultProductCarouselBlock({
         </div>
       ) : (
         <ProductsCarousel
-          sectionHeading={sectionTitle || 'Featured Products'}
+          sectionHeading={sectionTitle}
+          headingPosition={titleAlignment}
           categorySlug={
             searchQuery
               ? `shop?text=${encodeURIComponent(searchQuery)}`
@@ -411,7 +424,9 @@ function DefaultProductGalleryBlock({
   );
 
   const products = fetchedProducts ?? [];
-  const sectionTitle = block.config?.title?.trim();
+  const showTitle = block.showTitle !== false;
+  const titleAlignment = block.titleAlignment || 'left';
+  const sectionTitle = showTitle ? block.config?.title?.trim() : undefined;
 
   if (!isLoading && products.length === 0 && !error) return null;
 
@@ -421,7 +436,15 @@ function DefaultProductGalleryBlock({
       className={block.config?.className || 'mb-6 xl:mb-8 pt-1'}
     >
       {sectionTitle ? (
-        <h2 className="mb-4 text-2xl font-bold tracking-tight text-brand">
+        <h2
+          className={`mb-4 text-2xl font-bold tracking-tight text-brand ${
+            titleAlignment === 'center'
+              ? 'text-center'
+              : titleAlignment === 'right'
+                ? 'text-right'
+                : ''
+          }`}
+        >
           {sectionTitle}
         </h2>
       ) : null}

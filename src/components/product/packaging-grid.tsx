@@ -22,65 +22,50 @@ const PackagingGrid: React.FC<Props> = ({
   uom,
   className,
   umLabel = 'UM',
-  minColWidthPx = 44,
 }) => {
   // Works with either `pd` or `options` (+ optional `uom`)
-  const { options: rawOptions, uom: resolvedUom } = getPackagingGridData(
+  const { options, uom: resolvedUom } = getPackagingGridData(
     pd ?? optsProp,
     uom,
   );
-  // Filter out "imballo" / "IMB" packaging options
-  const options = rawOptions.filter(
-    (o) => !['imb', 'imballo'].includes((o.packaging_code || '').toLowerCase()),
-  );
-  const cols = options.length + 1;
   if (!options.length) return null;
+
+  const cellClass =
+    'flex-1 min-w-0 px-2 py-1 text-center border-r border-gray-200 last:border-r-0';
 
   return (
     <div
-      className={cn('rounded-md border border-gray-200 bg-white/60', className)}
+      className={cn(
+        'inline-flex rounded-md border border-gray-200 bg-white/60 text-[11px] sm:text-xs',
+        className,
+      )}
+      role="table"
+      aria-label="Packaging options"
     >
-      <div className="overflow-x-auto">
-        <div
-          className="grid gap-x-2 gap-y-1 px-2 py-1 text-[10px] sm:text-xs min-w-full"
-          style={{
-            gridTemplateColumns: `repeat(${cols}, minmax(${minColWidthPx}px,1fr))`,
-          }}
-          role="table"
-          aria-label="Packaging options"
-        >
-          {/* header row */}
-          <div
-            className="text-center text-gray-500 font-medium"
-            role="columnheader"
-          >
-            {umLabel}
-          </div>
-          {options.map((o) => (
-            <div
-              key={`hdr-${o.packaging_code}`}
-              className="text-center uppercase text-gray-500 font-medium"
-              role="columnheader"
-            >
-              {o.packaging_code}
-            </div>
-          ))}
-
-          {/* values row */}
-          <div className="text-center font-semibold" role="cell">
-            {resolvedUom}
-          </div>
-          {options.map((o) => (
-            <div
-              key={`val-${o.packaging_code}`}
-              className="text-center font-semibold"
-              role="cell"
-            >
-              {o.qty_x_packaging ?? '1'}
-            </div>
-          ))}
+      {/* UM column */}
+      <div className={cellClass}>
+        <div className="text-gray-500 font-medium" role="columnheader">
+          {umLabel}
+        </div>
+        <div className="font-semibold" role="cell">
+          {resolvedUom}
         </div>
       </div>
+
+      {/* One column per packaging option */}
+      {options.map((o) => (
+        <div key={o.packaging_code} className={cellClass}>
+          <div
+            className="uppercase text-gray-500 font-medium"
+            role="columnheader"
+          >
+            {o.packaging_code}
+          </div>
+          <div className="font-semibold" role="cell">
+            {o.qty_x_packaging ?? '1'}
+          </div>
+        </div>
+      ))}
     </div>
   );
 };

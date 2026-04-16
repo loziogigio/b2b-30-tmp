@@ -14,6 +14,17 @@ const num = (v: any, d = 0) => {
   return Number.isFinite(n) ? n : d;
 };
 
+// Strip any `gallery_` / `main_` size prefix from the filename so the stored
+// URL is the original. See src/utils/image-versioning.ts for the flip side.
+const stripSizePrefix = (url: string): string => {
+  if (!url) return url;
+  const lastSlash = url.lastIndexOf('/');
+  if (lastSlash === -1) return url;
+  const filename = url.slice(lastSlash + 1);
+  const stripped = filename.replace(/^(gallery_|main_)/, '');
+  return `${url.slice(0, lastSlash + 1)}${stripped}`;
+};
+
 // =====================================================================
 // Commerce-Suite (CS) mappers — maps VINC order/items → Item/CartSummary
 // =====================================================================
@@ -24,11 +35,25 @@ export function mapCSLineItemToItem(li: any): Item {
   const listPrice = num(li.list_price, 0);
   const price = unitPrice || listPrice || 0;
 
-  // Build packaging_options_all from erp_data if available
+  // Packaging info source priority:
+  //   1. li.raw_data.packaging_options_all  ← set by buildAddItemRequest;
+  //      commerce-suite persists the full add-item body into raw_data, so the
+  //      complete packaging array survives round-trip without re-fetching ERP.
+  //   2. li.erp_data.imballi.packaging_options  ← if an ERP merge ran server-side.
+  //   3. empty → PackagingGrid hides itself.
+  const rawPackagingAll: PackagingOption[] | undefined =
+    li.raw_data?.packaging_options_all;
   const erpImballi = li.erp_data?.imballi?.packaging_options;
-  const packagingAll: PackagingOption[] = erpImballi
-    ? toPackagingOptions(erpImballi)
-    : [];
+  const packagingAll: PackagingOption[] = Array.isArray(rawPackagingAll)
+    ? rawPackagingAll
+    : erpImballi
+      ? toPackagingOptions(erpImballi)
+      : [];
+
+  const rawPkgDefault: PackagingOption | undefined =
+    li.raw_data?.packaging_option_default;
+  const rawPkgSmallest: PackagingOption | undefined =
+    li.raw_data?.packaging_option_smallest;
 
   return {
     // Identifiers
@@ -80,12 +105,11 @@ export function mapCSLineItemToItem(li: any): Item {
       vat_rate: num(li.vat_rate, 0),
       is_promo: li.is_gift_line || Boolean(li.promo_code),
       imballi: li.erp_data?.imballi,
-      packaging_option_default: packagingAll.find(
-        (p) => p.packaging_is_default,
-      ),
-      packaging_option_smallest: packagingAll.find(
-        (p) => p.packaging_is_smallest,
-      ),
+      packaging_option_default:
+        rawPkgDefault ?? packagingAll.find((p) => p.packaging_is_default),
+      packaging_option_smallest:
+        rawPkgSmallest ?? packagingAll.find((p) => p.packaging_is_smallest),
+      packaging_options_all: packagingAll,
       availability: li.erp_data?.availability,
       line_number: li.line_number,
       row_raw: li,
@@ -167,7 +191,23 @@ export function buildAddItemRequest(
       ? Number(input.promo_row)
       : undefined;
 
-  const pkgDefault = sourceItem?.__cartMeta?.packaging_option_default;
+  const meta = sourceItem?.__cartMeta as any;
+  const pkgDefault: PackagingOption | undefined =
+    meta?.packaging_option_default;
+  const pkgSmallest: PackagingOption | undefined =
+    meta?.packaging_option_smallest;
+  const pkgAll: PackagingOption[] | undefined = meta?.packaging_options_all;
+
+  // Extract image URL. sourceItem.image is usually already a string (via
+  // generateCartItem) but can also be an Attachment object. Prefer the
+  // unprefixed `original` URL so cart-side image versioning can re-prefix
+  // without double-prefixing (e.g. `gallery_main_photo.jpg`).
+  const rawImg: any = (sourceItem as any)?.image;
+  const rawImgStr =
+    typeof rawImg === 'string'
+      ? rawImg
+      : rawImg?.original || rawImg?.thumbnail || '';
+  const imageUrl = stripSizePrefix(rawImgStr);
 
   return {
     // Required
@@ -187,19 +227,27 @@ export function buildAddItemRequest(
     added_via: 'web',
 
     // Product snapshot
-    image_url: sourceItem?.image || '',
+    image_url: imageUrl,
     brand:
       typeof sourceItem?.brand === 'object'
         ? sourceItem?.brand?.name
         : sourceItem?.brand || '',
     category: '',
 
-    // Packaging
+    // Packaging (default column — what commerce-suite stores on the LineItem)
     packaging_code: pkgDefault?.packaging_code || sourceItem?.uom || '',
     packaging_label:
       pkgDefault?.packaging_uom || pkgDefault?.packaging_uom_description || '',
     pack_size: pkgDefault?.qty_x_packaging || 1,
     min_order_quantity: Number(input.qty_min_packing) || 1,
+
+    // Full packaging context — passed as extra fields. Commerce-suite persists
+    // the whole body into `raw_data`, so these come back verbatim on GET and
+    // let the cart render the complete UM | code columns grid without having
+    // to re-fetch ERP prices.
+    packaging_options_all: pkgAll,
+    packaging_option_default: pkgDefault,
+    packaging_option_smallest: pkgSmallest,
 
     // Discounts
     discounts,

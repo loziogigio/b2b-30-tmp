@@ -17,7 +17,11 @@ import {
   IoArrowRedoOutline,
   IoArrowForwardOutline,
 } from 'react-icons/io5';
-import { HiOutlinePrinter, HiOutlineSwitchHorizontal, HiOutlineCheckCircle } from 'react-icons/hi';
+import {
+  HiOutlinePrinter,
+  HiOutlineSwitchHorizontal,
+  HiOutlineCheckCircle,
+} from 'react-icons/hi';
 import { ReminderIcon, ReminderIconFilled } from '@components/icons/app-icons';
 import { useCompareList } from '@/contexts/compare/compare.context';
 import {
@@ -32,6 +36,7 @@ import { fetchErpPrices } from '@framework/erp/prices';
 import { useLikes } from '@contexts/likes/likes.context';
 import { useReminders } from '@contexts/reminders/reminders.context';
 import { useUI } from '@contexts/ui.context';
+import { useHomeSettings } from '@/hooks/use-home-settings';
 import { productPlaceholder } from '@assets/placeholders';
 import { isModalFullWidth } from '@/lib/theme/resolver';
 import AddToCart from '@components/product/add-to-cart';
@@ -47,17 +52,26 @@ type GalleryImage = {
 
 export default function TimeProductPopup({ lang }: { lang: string }) {
   const { t } = useTranslation(lang, 'common');
-  const { data: product, stack } = useModalState() as { data: any; stack: any[] };
+  const { data: product, stack } = useModalState() as {
+    data: any;
+    stack: any[];
+  };
   const { closeModal, goBack, closeAll } = useModalAction();
   const router = useRouter();
 
   const likes = useLikes();
   const reminders = useReminders();
   const { isAuthorized, hidePrices } = useUI();
+  const { settings } = useHomeSettings();
+  const decimals = settings?.cardStyle?.priceDecimals ?? 2;
   const sku = String(product?.sku ?? '');
   const favorite = isAuthorized && sku ? likes.isLiked(sku) : false;
   const hasReminder = isAuthorized && sku ? reminders.hasReminder(sku) : false;
-  const { addSku: addSkuToCompare, removeSku: removeSkuFromCompare, hasSku } = useCompareList();
+  const {
+    addSku: addSkuToCompare,
+    removeSku: removeSkuFromCompare,
+    hasSku,
+  } = useCompareList();
   const isInCompare = hasSku(sku);
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const [reminderLoading, setReminderLoading] = useState(false);
@@ -123,8 +137,8 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
 
   const handlePrint = useCallback(() => {
     if (!product) return;
-    printProductDetail(product, erpPrice);
-  }, [product, erpPrice]);
+    printProductDetail(product, erpPrice, decimals);
+  }, [product, erpPrice, decimals]);
 
   /* ── Gallery ── */
   const [activeImage, setActiveImage] = useState(0);
@@ -173,7 +187,12 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
       <div className="h-full overflow-y-auto bg-white relative">
         {/* Accent bar */}
         <div className="sticky top-0 z-20 bg-brand text-white">
-          <div className={cn("flex items-center justify-between px-5 md:px-8 lg:px-10 py-3", !fullWidth && "max-w-[1200px] mx-auto")}>
+          <div
+            className={cn(
+              'flex items-center justify-between px-5 md:px-8 lg:px-10 py-3',
+              !fullWidth && 'max-w-[1200px] mx-auto',
+            )}
+          >
             <div className="flex items-center gap-3">
               <button
                 onClick={() => (stack.length > 1 ? goBack() : closeModal())}
@@ -184,7 +203,9 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
               </button>
               <span className="hidden sm:inline text-white/40">|</span>
               <span className="hidden sm:inline text-white/90 text-sm font-medium">
-                {t('text-product-variants', { defaultValue: 'Varianti prodotto' })}
+                {t('text-product-variants', {
+                  defaultValue: 'Varianti prodotto',
+                })}
               </span>
             </div>
             <button
@@ -197,7 +218,12 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
           </div>
         </div>
 
-        <div className={cn("p-5 md:p-8 lg:p-10", !fullWidth && "max-w-[1200px] mx-auto")}>
+        <div
+          className={cn(
+            'p-5 md:p-8 lg:p-10',
+            !fullWidth && 'max-w-[1200px] mx-auto',
+          )}
+        >
           <TimeVariantsGrid
             lang={lang}
             product={product}
@@ -422,7 +448,7 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
 
                 {hasDiscount && (
                   <div className="text-sm sm:text-[15px] text-[var(--time-gray-400)] line-through mb-1.5 tabular-nums">
-                    &euro;{Number(listPrice).toFixed(2)}
+                    &euro;{Number(listPrice).toFixed(decimals)}
                   </div>
                 )}
 
@@ -443,11 +469,14 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
                   {netPrice != null && Number(netPrice) > 0 ? (
                     <>
                       <span className="text-[26px] sm:text-[30px] font-[900] text-[var(--time-dark)] font-[family-name:var(--font-heading)] tabular-nums tracking-[-0.02em]">
-                        &euro;{Number(netPrice).toFixed(2)}
+                        &euro;{Number(netPrice).toFixed(decimals)}
                       </span>
                       {hasDiscount && (
                         <span className="text-xs sm:text-[13px] font-bold text-[#059669] font-[family-name:var(--font-body)]">
-                          Risparmi &euro;{(Number(listPrice) - Number(netPrice)).toFixed(2)}
+                          Risparmi &euro;
+                          {(Number(listPrice) - Number(netPrice)).toFixed(
+                            decimals,
+                          )}
                         </span>
                       )}
                     </>
@@ -499,7 +528,11 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
                   onClick={async () => {
                     if (!sku) return;
                     setReminderLoading(true);
-                    try { await reminders.toggle(sku); } finally { setReminderLoading(false); }
+                    try {
+                      await reminders.toggle(sku);
+                    } finally {
+                      setReminderLoading(false);
+                    }
                   }}
                   disabled={reminderLoading}
                   className="h-[36px] px-3 rounded-[8px] border-[1.5px] border-[var(--time-gray-200)] bg-white text-[11px] sm:text-xs font-semibold flex items-center gap-[6px] cursor-pointer transition-colors hover:border-yellow-500 hover:text-yellow-500 disabled:opacity-50 font-[family-name:var(--font-body)]"
@@ -507,9 +540,15 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
                     color: hasReminder ? '#eab308' : 'var(--time-gray-600)',
                   }}
                 >
-                  {hasReminder ? <ReminderIconFilled size={14} /> : <ReminderIcon size={14} />}
+                  {hasReminder ? (
+                    <ReminderIconFilled size={14} />
+                  ) : (
+                    <ReminderIcon size={14} />
+                  )}
                   {hasReminder
-                    ? t('text-reminder-active', { defaultValue: 'Promemoria attivo' })
+                    ? t('text-reminder-active', {
+                        defaultValue: 'Promemoria attivo',
+                      })
                     : t('text-reminder-notify', { defaultValue: 'Avvisami' })}
                 </button>
               )}
@@ -522,7 +561,11 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
                   borderColor: isInCompare ? '#6ee7b7' : undefined,
                 }}
               >
-                {isInCompare ? <HiOutlineCheckCircle size={14} /> : <HiOutlineSwitchHorizontal size={14} />}
+                {isInCompare ? (
+                  <HiOutlineCheckCircle size={14} />
+                ) : (
+                  <HiOutlineSwitchHorizontal size={14} />
+                )}
                 {isInCompare
                   ? t('text-in-compare', { defaultValue: 'Confronto' })
                   : t('text-compare', { defaultValue: 'Confronta' })}

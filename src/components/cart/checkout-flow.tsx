@@ -188,13 +188,29 @@ export default function CheckoutFlow({
                 : 'text-gray-500 border-transparent hover:text-gray-700',
             )}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+            >
+              <circle cx="9" cy="21" r="1" />
+              <circle cx="20" cy="21" r="1" />
+              <path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6" />
+            </svg>
             {t('text-current-cart', { defaultValue: 'Carrello attuale' })}
             {itemCount > 0 && (
-              <span className={cn(
-                'text-[10px] font-bold px-1.5 py-0.5 rounded-full',
-                activeTab === 'cart' ? 'bg-gray-900 text-white' : 'bg-gray-200 text-gray-600',
-              )}>
+              <span
+                className={cn(
+                  'text-[10px] font-bold px-1.5 py-0.5 rounded-full',
+                  activeTab === 'cart'
+                    ? 'bg-gray-900 text-white'
+                    : 'bg-gray-200 text-gray-600',
+                )}
+              >
                 {itemCount}
               </span>
             )}
@@ -208,13 +224,28 @@ export default function CheckoutFlow({
                 : 'text-gray-500 border-transparent hover:text-gray-700',
             )}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17,21 17,13 7,13 7,21"/></svg>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+            >
+              <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
+              <polyline points="17,21 17,13 7,13 7,21" />
+            </svg>
             {t('text-saved-carts-tab', { defaultValue: 'Carrelli salvati' })}
             {savedCartsCount > 0 && (
-              <span className={cn(
-                'text-[10px] font-bold px-1.5 py-0.5 rounded-full',
-                activeTab === 'saved' ? 'bg-gray-900 text-white' : 'bg-gray-200 text-gray-600',
-              )}>
+              <span
+                className={cn(
+                  'text-[10px] font-bold px-1.5 py-0.5 rounded-full',
+                  activeTab === 'saved'
+                    ? 'bg-gray-900 text-white'
+                    : 'bg-gray-200 text-gray-600',
+                )}
+              >
                 {savedCartsCount}
               </span>
             )}
@@ -241,86 +272,84 @@ export default function CheckoutFlow({
               </div>
             </div>
 
-          {/* CART compact header when closed */}
-          {stage !== 'cart' && (
-            <div className="mt-4 rounded-md border border-gray-200 bg-white">
-              <div className="flex items-center justify-between px-4 py-3 sm:px-6">
-                <div>
-                  {meta && (
-                    <CartTotals
-                      totals={{
-                        gross: meta.totalGross,
-                        net: meta.totalNet,
-                        vat: meta.vat,
-                        doc: meta.totalDoc,
-                        vatRate:
-                          meta.totalNet > 0
-                            ? Math.round((meta.vat / meta.totalNet) * 100)
-                            : undefined,
-                      }}
-                    />
-                  )}
+            {/* CART compact header when closed */}
+            {stage !== 'cart' && (
+              <div className="mt-4 rounded-md border border-gray-200 bg-white">
+                <div className="flex items-center justify-between px-4 py-3 sm:px-6">
+                  <div>
+                    {meta && (
+                      <CartTotals
+                        totals={{
+                          gross: meta.totalGross,
+                          net: meta.totalNet,
+                          vat: meta.vat,
+                          doc: meta.totalDoc,
+                          vatRate:
+                            meta.totalNet > 0
+                              ? Math.round((meta.vat / meta.totalNet) * 100)
+                              : undefined,
+                        }}
+                      />
+                    )}
+                  </div>
+                  <button
+                    onClick={backToCart}
+                    className="h-9 rounded-md border border-gray-300 px-3 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                  >
+                    {t('text-edit-cart')}
+                  </button>
                 </div>
-                <button
-                  onClick={backToCart}
-                  className="h-9 rounded-md border border-gray-300 px-3 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-                >
-                  {t('text-edit-cart')}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* DETAILS (collapsible) */}
-          <div className="mt-6">
-            {/* Closed header with CTA */}
-            {stage !== 'details' && (
-              <div className="mb-3 flex flex-col gap-3 rounded-md border border-gray-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-                <div className="flex items-center gap-3">
-                  <span className="inline-flex min-h-[36px] items-center rounded-full border-2 border-indigo-600 px-3 text-sm font-semibold text-indigo-600">
-                    {t('text-complete-fields-send-order')}
-                  </span>
-                </div>
-                <button
-                  onClick={goToDetails}
-                  className="h-9 rounded-md bg-violet-600 px-3 text-sm font-semibold text-white hover:bg-violet-700"
-                  aria-controls="details-accordion"
-                  aria-expanded={true}
-                >
-                  {t('text-click-next-step')}
-                </button>
               </div>
             )}
 
-            <div
-              id="details-accordion"
-              ref={detailsRef}
-              className={cn(
-                'overflow-hidden rounded-md border border-gray-200 bg-white',
-                'transition-[max-height] duration-500 ease-in-out',
+            {/* DETAILS (collapsible) */}
+            <div className="mt-6">
+              {/* Closed header with CTA */}
+              {stage !== 'details' && (
+                <div className="mb-3 flex flex-col gap-3 rounded-md border border-gray-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                  <div className="flex items-center gap-3">
+                    <span className="inline-flex min-h-[36px] items-center rounded-full border-2 border-indigo-600 px-3 text-sm font-semibold text-indigo-600">
+                      {t('text-complete-fields-send-order')}
+                    </span>
+                  </div>
+                  <button
+                    onClick={goToDetails}
+                    className="h-9 rounded-md bg-violet-600 px-3 text-sm font-semibold text-white hover:bg-violet-700"
+                    aria-controls="details-accordion"
+                    aria-expanded={true}
+                  >
+                    {t('text-click-next-step')}
+                  </button>
+                </div>
               )}
-              style={{
-                maxHeight: stage === 'details' ? `${detailsMaxH}px` : 0,
-              }}
-              aria-hidden={stage !== 'details'}
-            >
-              <div className="p-4 sm:p-6">
-                <CheckoutSendOrder lang={lang} />
+
+              <div
+                id="details-accordion"
+                ref={detailsRef}
+                className={cn(
+                  'overflow-hidden rounded-md border border-gray-200 bg-white',
+                  'transition-[max-height] duration-500 ease-in-out',
+                )}
+                style={{
+                  maxHeight: stage === 'details' ? `${detailsMaxH}px` : 0,
+                }}
+                aria-hidden={stage !== 'details'}
+              >
+                <div className="p-4 sm:p-6">
+                  <CheckoutSendOrder lang={lang} />
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Processing Orders */}
-          <div className="mt-6">
-            <ProcessingOrdersTable />
-          </div>
-        </>
+            {/* Processing Orders */}
+            <div className="mt-6">
+              <ProcessingOrdersTable />
+            </div>
+          </>
         )}
 
         {/* Tab: Saved Carts */}
-        {activeTab === 'saved' && (
-          <CartListSidebar lang={lang} />
-        )}
+        {activeTab === 'saved' && <CartListSidebar lang={lang} />}
       </div>
     </div>
   );

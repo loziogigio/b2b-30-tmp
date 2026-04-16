@@ -95,37 +95,40 @@ export default function OrdersFilter({
 
   return (
     <section className="rounded-2xl bg-white p-4 shadow-sm">
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {/* Date range */}
-        <div>
-          <label className="block text-xs font-semibold text-gray-600 mb-1">
-            FILTRA PER DATA
+      <div className="flex flex-wrap items-end gap-3">
+        {/* Date from */}
+        <div className="min-w-[130px]">
+          <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-1">
+            Da
           </label>
-          <div className="grid grid-cols-[auto_1fr_auto_1fr] items-center gap-2">
-            <span className="text-sm text-gray-700">Da</span>
-            <input
-              type="date"
-              className="h-10 w-full rounded border px-2 text-sm"
-              value={from}
-              onChange={(e) => setFrom(e.target.value)}
-            />
-            <span className="text-center text-sm text-gray-700">A</span>
-            <input
-              type="date"
-              className="h-10 w-full rounded border px-2 text-sm"
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-            />
-          </div>
+          <input
+            type="date"
+            className="h-9 w-full rounded border px-2 text-sm"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+          />
+        </div>
+
+        {/* Date to */}
+        <div className="min-w-[130px]">
+          <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-1">
+            A
+          </label>
+          <input
+            type="date"
+            className="h-9 w-full rounded border px-2 text-sm"
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+          />
         </div>
 
         {/* Status */}
-        <div>
-          <label className="block text-xs font-semibold text-gray-600 mb-1">
-            FILTRA PER STATO
+        <div className="min-w-[120px]">
+          <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-1">
+            Stato
           </label>
           <select
-            className="h-10 w-full rounded border px-2 text-sm"
+            className="h-9 w-full rounded border px-2 text-sm"
             value={type}
             onChange={(e) => setType(e.target.value as any)}
           >
@@ -138,12 +141,12 @@ export default function OrdersFilter({
         </div>
 
         {/* Destination */}
-        <div>
-          <label className="block text-xs font-semibold text-gray-600 mb-1">
-            FILTRA PER DESTINAZIONE
+        <div className="min-w-[140px] flex-1">
+          <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-1">
+            Destinazione
           </label>
           <select
-            className="h-10 w-full rounded border px-2 text-sm"
+            className="h-9 w-full rounded border px-2 text-sm"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
           >
@@ -156,16 +159,16 @@ export default function OrdersFilter({
         </div>
 
         {/* Actions */}
-        <div className="flex items-end justify-end gap-2">
+        <div className="flex items-end gap-2">
           <button
             onClick={reset}
-            className="h-10 rounded border px-4 text-sm text-gray-700 hover:bg-gray-50"
+            className="h-9 rounded border px-3 text-sm text-gray-700 hover:bg-gray-50"
           >
             Reset
           </button>
           <button
             onClick={apply}
-            className="h-10 rounded bg-teal-600 px-4 text-sm font-semibold text-white hover:bg-teal-700"
+            className="h-9 rounded bg-teal-600 px-4 text-sm font-semibold text-white hover:bg-teal-700"
           >
             Cerca
           </button>
