@@ -52,18 +52,40 @@ export interface AnomalyResult {
   errorMessage?: string;
 }
 
+/**
+ * Windmill-side warning when the cart's `erp_cart_id` is already in
+ * MySQL `ordini` and the Mongo items have the same count as the old
+ * ordini_dettagli rows. The customer can confirm the duplicate (re-POST
+ * with `force_duplicate_submit: true`) or cancel.
+ */
+export interface DuplicateWarning {
+  erp_cart_id: number;
+  /** NULL if the cart was submitted so recently that the ERP batch hasn't
+   *  yet promoted stato 'T' → 'I' and assigned a numero_ordine. */
+  ordini_numero: number | null;
+  ordini_causale: string | null;
+  ordini_anno: string | null;
+  ordini_items_count: number;
+  mongo_items_count: number;
+  errorMessage?: string;
+}
+
 export interface SubmitOpts {
   delivery_date: string;
   delivery_type: string;
   notes?: string;
   pickup_data?: any;
   autofix?: boolean;
+  /** Re-submit of a cart whose erp_cart_id is already in ordini — customer confirmed duplicate */
+  force_duplicate_submit?: boolean;
 }
 
 export type SubmitOutcome =
   | { type: 'success' }
   | { type: 'processing'; orderId: string }
   | { type: 'anomalies'; result: AnomalyResult }
+  | { type: 'duplicate_warning'; warning: DuplicateWarning }
+  | { type: 'already_submitted'; message?: string }
   | { type: 'error'; message: string };
 
 // ── Hook ────────────────────────────────────────────────────────────────────
@@ -74,6 +96,11 @@ export function useOrderSubmit(lang: string) {
   const [anomalyResult, setAnomalyResult] = useState<AnomalyResult | null>(
     null,
   );
+  const [duplicateWarning, setDuplicateWarning] =
+    useState<DuplicateWarning | null>(null);
+  const [orderAlreadySubmitted, setOrderAlreadySubmitted] = useState<{
+    message?: string;
+  } | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const getOrderId = useCallback(() => {
@@ -88,6 +115,8 @@ export function useOrderSubmit(lang: string) {
       setIsSubmitting(true);
       setSubmitError(null);
       setAnomalyResult(null);
+      setDuplicateWarning(null);
+      setOrderAlreadySubmitted(null);
 
       try {
         const res = await pimPost<any>(CS_CART.SUBMIT(orderId), {
@@ -96,6 +125,7 @@ export function useOrderSubmit(lang: string) {
           notes: opts.notes,
           pickup_data: opts.pickup_data,
           autofix: opts.autofix || undefined,
+          force_duplicate_submit: opts.force_duplicate_submit || undefined,
         });
 
         // 200 sync success or 202 async
@@ -119,9 +149,31 @@ export function useOrderSubmit(lang: string) {
         const status = error?.response?.status;
         const data = error?.response?.data;
 
-        // 422 — ERP validation rejected with anomalies
+        // 422 — ERP validation rejected. Two possible shapes under the
+        // shared `windmill.modified_data.erp_data` envelope:
+        //   - duplicate_warning → cart already in ordini, confirm to proceed
+        //   - anomalies → promo/listino/articolo issues, retry with autofix
         if (status === 422) {
           const erpData = data?.windmill?.modified_data?.erp_data || {};
+
+          if (erpData.duplicate_warning) {
+            const dw = erpData.duplicate_warning;
+            const warning: DuplicateWarning = {
+              erp_cart_id: dw.erp_cart_id,
+              ordini_numero: dw.ordini_numero ?? null,
+              ordini_causale: dw.ordini_causale
+                ? String(dw.ordini_causale)
+                : null,
+              ordini_anno:
+                dw.ordini_anno != null ? String(dw.ordini_anno) : null,
+              ordini_items_count: Number(dw.ordini_items_count ?? 0),
+              mongo_items_count: Number(dw.mongo_items_count ?? 0),
+              errorMessage: data?.error,
+            };
+            setDuplicateWarning(warning);
+            return { type: 'duplicate_warning', warning };
+          }
+
           const anomalies: ErpAnomaly[] = erpData.anomalies || [];
           const erpItems: ErpItem[] =
             data?.windmill?.modified_data?.erp_items || [];
@@ -159,17 +211,44 @@ export function useOrderSubmit(lang: string) {
     [submitOrder],
   );
 
+  /**
+   * Customer confirmed they want to send a duplicate of an already-submitted
+   * cart. Re-POST with `force_duplicate_submit: true` so Windmill mints a
+   * fresh ERP cart instead of returning the warning again.
+   */
+  const confirmDuplicateSubmit = useCallback(
+    async (opts: SubmitOpts): Promise<SubmitOutcome> => {
+      return submitOrder({ ...opts, force_duplicate_submit: true });
+    },
+    [submitOrder],
+  );
+
   const clearAnomalies = useCallback(() => {
     setAnomalyResult(null);
+    setSubmitError(null);
+  }, []);
+
+  const clearDuplicateWarning = useCallback(() => {
+    setDuplicateWarning(null);
+    setSubmitError(null);
+  }, []);
+
+  const clearOrderAlreadySubmitted = useCallback(() => {
+    setOrderAlreadySubmitted(null);
     setSubmitError(null);
   }, []);
 
   return {
     submitOrder,
     resubmitWithAutofix,
+    confirmDuplicateSubmit,
     isSubmitting,
     anomalyResult,
+    duplicateWarning,
+    orderAlreadySubmitted,
     submitError,
     clearAnomalies,
+    clearDuplicateWarning,
+    clearOrderAlreadySubmitted,
   };
 }
