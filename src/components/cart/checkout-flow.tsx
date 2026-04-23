@@ -20,6 +20,10 @@ import CartListSidebar from './cart-list-sidebar';
 import { useTranslation } from 'src/app/i18n/client';
 import { listSavedCarts } from '@framework/cart/saved-carts';
 import { ERP_STATIC } from '@framework/utils/static';
+import {
+  CartAnomaliesProvider,
+  useCartAnomalies,
+} from '@/contexts/cart-anomalies.context';
 
 function formatEUR(n: number) {
   return new Intl.NumberFormat('it-IT', {
@@ -30,7 +34,118 @@ function formatEUR(n: number) {
 
 type Stage = 'cart' | 'details';
 
-export default function CheckoutFlow({
+export default function CheckoutFlow(props: {
+  lang: string;
+  detailsId?: string;
+  continueHref?: string;
+  totalOverride?: number;
+}) {
+  return (
+    <CartAnomaliesProvider>
+      <AnomaliesAutoClearOnItemsChange />
+      <CheckoutFlowInner {...props} />
+    </CartAnomaliesProvider>
+  );
+}
+
+/**
+ * Watches cart items and clears the shared anomaly banner once the item list
+ * changes after anomalies were surfaced. Captures a signature (id + quantity)
+ * at the moment anomalies appear; when that signature differs the user has
+ * actually edited items, so the banner is dismissed automatically.
+ */
+function AnomaliesAutoClearOnItemsChange() {
+  const { items } = useCart();
+  const { result, clear } = useCartAnomalies();
+  const anomalyItemsSigRef = useRef<string | null>(null);
+
+  const currentSig = useMemo(
+    () =>
+      (items ?? [])
+        .map((i: any) => `${i.id}:${i.quantity ?? ''}`)
+        .join(','),
+    [items],
+  );
+
+  useEffect(() => {
+    if (result && anomalyItemsSigRef.current === null) {
+      anomalyItemsSigRef.current = currentSig;
+      return;
+    }
+    if (!result) {
+      anomalyItemsSigRef.current = null;
+      return;
+    }
+    if (
+      anomalyItemsSigRef.current !== null &&
+      anomalyItemsSigRef.current !== currentSig
+    ) {
+      clear();
+      anomalyItemsSigRef.current = null;
+    }
+  }, [result, currentSig, clear]);
+
+  return null;
+}
+
+function AnomaliesBanner({ lang }: { lang: string }) {
+  const { t } = useTranslation(lang, 'common');
+  const { result, clear } = useCartAnomalies();
+  if (!result || result.anomalies.length === 0) return null;
+
+  return (
+    <div className="mb-3 rounded-md border border-red-300 bg-red-50 px-4 py-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-2">
+          <svg
+            className="mt-0.5 h-5 w-5 shrink-0 text-red-600"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+            <line x1="12" y1="9" x2="12" y2="13" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+          <div>
+            <div className="text-sm font-semibold text-red-800">
+              {t('cart-anomalies-title', {
+                defaultValue: 'Anomalie riscontrate nel carrello',
+              })}
+            </div>
+            <ul className="mt-1 list-disc pl-5 text-xs text-red-700 space-y-0.5">
+              {result.anomalies.map((a, i) => {
+                const erpItem = result.erpItems.find(
+                  (it) => it.erp_line_number === a.IdRiga,
+                );
+                const code = erpItem?.erp_data?.oarti || `Riga ${a.IdRiga}`;
+                return (
+                  <li key={i}>
+                    <span className="font-semibold">{code}:</span>{' '}
+                    {a.Messaggio ||
+                      Object.keys(a)
+                        .filter((k) => (a as any)[k] === true)
+                        .join(', ')}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={clear}
+          className="shrink-0 text-xs font-semibold text-red-700 hover:text-red-900 underline"
+        >
+          {t('text-dismiss', { defaultValue: 'Chiudi' })}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function CheckoutFlowInner({
   lang,
   detailsId = 'checkout-details',
   continueHref,
@@ -255,6 +370,9 @@ export default function CheckoutFlow({
         {/* Tab: Cart */}
         {activeTab === 'cart' && (
           <>
+            {/* Inline anomalies banner (shown after user opted to fix manually) */}
+            <AnomaliesBanner lang={lang} />
+
             {/* CART (collapsible) */}
             <div
               id="cart-accordion"

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import cn from 'classnames';
 import Button from '@components/ui/button';
 import Heading from '@components/ui/heading';
@@ -12,6 +12,7 @@ import { useOrderSubmit } from '@/hooks/use-order-submit';
 import AnomalyModal from './anomaly-modal';
 import DuplicateSubmitModal from './duplicate-submit-modal';
 import OrderAlreadySubmittedModal from './order-already-submitted-modal';
+import { useCartAnomalies } from '@/contexts/cart-anomalies.context';
 
 // helpers
 const isWeekend = (d: Date) => d.getDay() === 0 || d.getDay() === 6;
@@ -70,6 +71,22 @@ export default function CheckoutSendOrder({ lang, onSubmit }: Props) {
     clearAnomalies,
     clearDuplicateWarning,
   } = useOrderSubmit(lang);
+  const { setAnomalies: setSharedAnomalies } = useCartAnomalies();
+
+  // Push new anomalies into the shared context so the banner above the cart
+  // and the per-row red highlighting pick them up. Do NOT mirror nulls — that
+  // would wipe the banner the moment the modal is dismissed via clearAnomalies.
+  // The shared context is cleared explicitly (dismiss button) or automatically
+  // when cart items change (see CheckoutFlowInner).
+  useEffect(() => {
+    if (anomalyResult) setSharedAnomalies(anomalyResult);
+  }, [anomalyResult, setSharedAnomalies]);
+
+  // Closing the Anomaly modal only drops the local modal state; the shared
+  // context keeps the banner + red rows visible until the user edits items.
+  const handleEditManually = () => {
+    clearAnomalies();
+  };
 
   const selected: Address | undefined = useMemo(() => {
     if (!selectedB2B) return undefined;
@@ -143,13 +160,16 @@ export default function CheckoutSendOrder({ lang, onSubmit }: Props) {
         )}
       </div>
 
-      {submitError && !anomalyResult && !duplicateWarning && !orderAlreadySubmitted && (
-        <div className="px-2">
-          <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-            {submitError}
+      {submitError &&
+        !anomalyResult &&
+        !duplicateWarning &&
+        !orderAlreadySubmitted && (
+          <div className="px-2">
+            <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+              {submitError}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
       <div className="px-2">
         <label className="mb-1 block text-sm text-gray-700">
@@ -185,8 +205,8 @@ export default function CheckoutSendOrder({ lang, onSubmit }: Props) {
           result={anomalyResult}
           isSubmitting={isSubmitting}
           onAutofix={() => resubmitWithAutofix(submitOpts)}
-          onEdit={clearAnomalies}
-          onClose={clearAnomalies}
+          onEdit={handleEditManually}
+          onClose={handleEditManually}
         />
       )}
 
