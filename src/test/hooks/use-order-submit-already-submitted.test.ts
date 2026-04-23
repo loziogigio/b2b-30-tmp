@@ -76,3 +76,52 @@ describe('useOrderSubmit — already-submitted detection (200 body)', () => {
     expect(outcome.type).toBe('already_submitted');
   });
 });
+
+describe('useOrderSubmit — already-submitted detection (4xx body)', () => {
+  it('returns already_submitted when backend replies 409 with code ORDER_NOT_DRAFT', async () => {
+    const err: any = new Error('request failed');
+    err.response = {
+      status: 409,
+      data: { code: 'ORDER_NOT_DRAFT', error: 'Ordine non più modificabile' },
+    };
+    mockPost.mockRejectedValueOnce(err);
+
+    const { result } = renderHook(() => useOrderSubmit('it'));
+
+    let outcome: any;
+    await act(async () => {
+      outcome = await result.current.submitOrder({
+        delivery_date: '2026-04-24',
+        delivery_type: 'courier',
+      });
+    });
+
+    expect(outcome).toEqual({
+      type: 'already_submitted',
+      message: 'Ordine non più modificabile',
+    });
+    expect(result.current.orderAlreadySubmitted).toEqual({
+      message: 'Ordine non più modificabile',
+    });
+  });
+
+  it('falls through to generic 409 error when code is absent', async () => {
+    const err: any = new Error('request failed');
+    err.response = { status: 409, data: {} };
+    mockPost.mockRejectedValueOnce(err);
+
+    const { result } = renderHook(() => useOrderSubmit('it'));
+
+    let outcome: any;
+    await act(async () => {
+      outcome = await result.current.submitOrder({
+        delivery_date: '2026-04-24',
+        delivery_type: 'courier',
+      });
+    });
+
+    // Existing 409-without-code behavior preserved.
+    expect(outcome).toEqual({ type: 'error', message: 'Ordine già in fase di invio' });
+    expect(result.current.orderAlreadySubmitted).toBeNull();
+  });
+});

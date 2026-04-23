@@ -158,6 +158,15 @@ export function useOrderSubmit(lang: string) {
         const status = error?.response?.status;
         const data = error?.response?.data;
 
+        // Cart no longer a draft — the ERP batch has already promoted it or the
+        // ordini row is final. Surface a dedicated outcome so the UI can resync
+        // by reloading instead of letting the user hammer the Send button.
+        if (data?.code === 'ORDER_NOT_DRAFT' || data?.code === 'ORDER_NOT_RESUBMITTABLE') {
+          const payload = { message: data?.error };
+          setOrderAlreadySubmitted(payload);
+          return { type: 'already_submitted', message: data?.error };
+        }
+
         // 422 — ERP validation rejected. Two possible shapes under the
         // shared `windmill.modified_data.erp_data` envelope:
         //   - duplicate_warning → cart already in ordini, confirm to proceed
