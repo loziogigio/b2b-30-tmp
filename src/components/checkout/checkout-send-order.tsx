@@ -10,6 +10,8 @@ import { useDeliveryAddress } from '@contexts/address/address.context';
 import type { AddressB2B } from '@framework/acccount/types-b2b-account';
 import { useOrderSubmit } from '@/hooks/use-order-submit';
 import AnomalyModal from './anomaly-modal';
+import DuplicateSubmitModal from './duplicate-submit-modal';
+import OrderAlreadySubmittedModal from './order-already-submitted-modal';
 
 // helpers
 const isWeekend = (d: Date) => d.getDay() === 0 || d.getDay() === 6;
@@ -59,10 +61,14 @@ export default function CheckoutSendOrder({ lang, onSubmit }: Props) {
   const {
     submitOrder,
     resubmitWithAutofix,
+    confirmDuplicateSubmit,
     isSubmitting,
     anomalyResult,
+    duplicateWarning,
+    orderAlreadySubmitted,
     submitError,
     clearAnomalies,
+    clearDuplicateWarning,
   } = useOrderSubmit(lang);
 
   const selected: Address | undefined = useMemo(() => {
@@ -137,7 +143,7 @@ export default function CheckoutSendOrder({ lang, onSubmit }: Props) {
         )}
       </div>
 
-      {submitError && !anomalyResult && (
+      {submitError && !anomalyResult && !duplicateWarning && !orderAlreadySubmitted && (
         <div className="px-2">
           <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
             {submitError}
@@ -181,6 +187,26 @@ export default function CheckoutSendOrder({ lang, onSubmit }: Props) {
           onAutofix={() => resubmitWithAutofix(submitOpts)}
           onEdit={clearAnomalies}
           onClose={clearAnomalies}
+        />
+      )}
+
+      {duplicateWarning && (
+        <DuplicateSubmitModal
+          warning={duplicateWarning}
+          isSubmitting={isSubmitting}
+          onConfirm={() => confirmDuplicateSubmit(submitOpts)}
+          onCancel={clearDuplicateWarning}
+        />
+      )}
+
+      {orderAlreadySubmitted && (
+        <OrderAlreadySubmittedModal
+          message={orderAlreadySubmitted.message}
+          onConfirm={() => {
+            if (typeof window !== 'undefined') {
+              window.location.reload();
+            }
+          }}
         />
       )}
     </div>
