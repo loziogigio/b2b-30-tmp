@@ -131,7 +131,10 @@ export function useOrderSubmit(lang: string) {
         // Backend occasionally returns HTTP 200 with an error code body when the
         // cart is no longer a draft (e.g. after the ERP batch has finalised it).
         // Detect this before treating the response as a success.
-        if (res?.code === 'ORDER_NOT_DRAFT' || res?.code === 'ORDER_NOT_RESUBMITTABLE') {
+        if (
+          res?.code === 'ORDER_NOT_DRAFT' ||
+          res?.code === 'ORDER_NOT_RESUBMITTABLE'
+        ) {
           setOrderAlreadySubmitted({ message: res?.error });
           return { type: 'already_submitted', message: res?.error };
         }
@@ -160,7 +163,10 @@ export function useOrderSubmit(lang: string) {
         // Cart no longer a draft — the ERP batch has already promoted it or the
         // ordini row is final. Surface a dedicated outcome so the UI can resync
         // by reloading instead of letting the user hammer the Send button.
-        if (data?.code === 'ORDER_NOT_DRAFT' || data?.code === 'ORDER_NOT_RESUBMITTABLE') {
+        if (
+          data?.code === 'ORDER_NOT_DRAFT' ||
+          data?.code === 'ORDER_NOT_RESUBMITTABLE'
+        ) {
           setOrderAlreadySubmitted({ message: data?.error });
           return { type: 'already_submitted', message: data?.error };
         }

@@ -121,7 +121,10 @@ describe('useOrderSubmit — already-submitted detection (4xx body)', () => {
     });
 
     // Existing 409-without-code behavior preserved.
-    expect(outcome).toEqual({ type: 'error', message: 'Ordine già in fase di invio' });
+    expect(outcome).toEqual({
+      type: 'error',
+      message: 'Ordine già in fase di invio',
+    });
     expect(result.current.orderAlreadySubmitted).toBeNull();
   });
 });
