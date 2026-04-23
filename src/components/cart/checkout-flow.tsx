@@ -24,6 +24,7 @@ import {
   CartAnomaliesProvider,
   useCartAnomalies,
 } from '@/contexts/cart-anomalies.context';
+import { formatAnomalyFlags } from '@/hooks/use-order-submit';
 
 function formatEUR(n: number) {
   return new Intl.NumberFormat('it-IT', {
@@ -123,10 +124,7 @@ function AnomaliesBanner({ lang }: { lang: string }) {
                 return (
                   <li key={i}>
                     <span className="font-semibold">{code}:</span>{' '}
-                    {a.Messaggio ||
-                      Object.keys(a)
-                        .filter((k) => (a as any)[k] === true)
-                        .join(', ')}
+                    {formatAnomalyFlags(a)}
                   </li>
                 );
               })}
