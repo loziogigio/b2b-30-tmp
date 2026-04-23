@@ -2,20 +2,15 @@
 
 interface OrderAlreadySubmittedModalProps {
   message?: string;
-  isSubmitting: boolean;
   onConfirm: () => void;
 }
 
 export default function OrderAlreadySubmittedModal({
   message,
-  isSubmitting,
   onConfirm,
 }: OrderAlreadySubmittedModalProps) {
   return (
-    <div
-      className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4"
-      onClick={onConfirm}
-    >
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
       <div
         onClick={(e) => e.stopPropagation()}
         className="bg-white rounded-xl max-w-[520px] w-full shadow-2xl overflow-hidden"
@@ -53,9 +48,9 @@ export default function OrderAlreadySubmittedModal({
 
         <div className="px-6 py-4 border-t border-gray-200 flex justify-end">
           <button
+            type="button"
             onClick={onConfirm}
-            disabled={isSubmitting}
-            className="min-h-[48px] px-6 py-3 rounded-lg bg-violet-600 text-sm font-semibold text-white hover:bg-violet-700 transition-colors disabled:opacity-50 uppercase leading-snug"
+            className="min-h-[48px] px-6 py-3 rounded-lg bg-violet-600 text-sm font-semibold text-white hover:bg-violet-700 transition-colors uppercase leading-snug"
           >
             Ok, aggiorna la pagina
           </button>
