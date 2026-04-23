@@ -128,6 +128,15 @@ export function useOrderSubmit(lang: string) {
           force_duplicate_submit: opts.force_duplicate_submit || undefined,
         });
 
+        // Backend occasionally returns HTTP 200 with an error code body when the
+        // cart is no longer a draft (e.g. after the ERP batch has finalised it).
+        // Detect this before treating the response as a success.
+        if (res?.code === 'ORDER_NOT_DRAFT' || res?.code === 'ORDER_NOT_RESUBMITTABLE') {
+          const payload = { message: res?.error };
+          setOrderAlreadySubmitted(payload);
+          return { type: 'already_submitted', message: res?.error };
+        }
+
         // 200 sync success or 202 async
         if (res?.processing) {
           await resetCart();
