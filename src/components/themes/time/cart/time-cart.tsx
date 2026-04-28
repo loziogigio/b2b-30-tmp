@@ -120,7 +120,7 @@ export default function TimeCart({ lang }: { lang: string }) {
                       className="h-full w-full object-cover"
                     />
                     <button
-                      onClick={() => clearItemFromCart(item.id)}
+                      onClick={() => clearItemFromCart(item)}
                       className="absolute inset-0 hidden items-center justify-center bg-black/30 text-white transition md:flex md:opacity-0 md:group-hover:opacity-100"
                       aria-label="remove"
                     >

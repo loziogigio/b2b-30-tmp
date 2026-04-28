@@ -1,5 +1,6 @@
 'use client';
 
+import { useId } from 'react';
 import cn from 'classnames';
 import BannerCard from '@components/cards/banner-card';
 import Carousel from '@components/ui/carousel/carousel';
@@ -79,6 +80,11 @@ interface BannerProps {
   headingPosition?: 'left' | 'center' | 'right';
   style?: MediaCarouselStyle;
   cardStyle?: CardStyleOptions; // Default card style for all slides
+  autoplay?: boolean;
+  autoplaySpeed?: number; // ms between slides
+  loop?: boolean;
+  showArrows?: boolean;
+  showDots?: boolean;
 }
 
 const BannerAllCarousel: React.FC<BannerProps> = ({
@@ -96,7 +102,22 @@ const BannerAllCarousel: React.FC<BannerProps> = ({
   headingPosition,
   style,
   cardStyle,
+  autoplay = false,
+  autoplaySpeed = 5000,
+  loop = false,
+  showArrows = true,
+  showDots = false,
 }) => {
+  // Lock arrows to hidden when there's only one slide (nothing to navigate to)
+  const slidesCount = Array.isArray(data) ? data.length : 0;
+  const effectiveShowArrows = showArrows && slidesCount > 1;
+  const effectiveShowDots = showDots && slidesCount > 1;
+  const effectiveAutoplay = autoplay && slidesCount > 1;
+
+  // Unique id for the external pagination element — keeps the dots rendered
+  // BELOW the swiper (default Swiper pagination overlays the slide).
+  const reactId = useId().replace(/:/g, '');
+  const paginationElId = `banner-pagination-${reactId}`;
   const defaultStyle: MediaCarouselStyle = {
     borderWidth: 0,
     borderColor: '#e5e7eb',
@@ -149,6 +170,21 @@ const BannerAllCarousel: React.FC<BannerProps> = ({
         .swiper:not(.swiper-initialized) {
           overflow: hidden;
         }
+        /* External pagination dots sit on a light background below the
+           slider, so override Swiper's default white bullets. */
+        .banner-carousel-external-pagination .swiper-pagination-bullet {
+          width: 8px;
+          height: 8px;
+          background: #94a3b8;
+          opacity: 0.5;
+          transition: opacity 0.2s ease, background-color 0.2s ease;
+        }
+        .banner-carousel-external-pagination .swiper-pagination-bullet-active {
+          background: var(--color-brand, #009f7f);
+          opacity: 1;
+          width: 20px;
+          border-radius: 9999px;
+        }
       `,
         }}
       />
@@ -171,7 +207,18 @@ const BannerAllCarousel: React.FC<BannerProps> = ({
           </div>
         )}
         <Carousel
-          autoplay={false}
+          autoplay={
+            effectiveAutoplay
+              ? { delay: autoplaySpeed, disableOnInteraction: false }
+              : false
+          }
+          loop={loop && slidesCount > 1}
+          navigation={effectiveShowArrows}
+          pagination={
+            effectiveShowDots
+              ? { clickable: true, el: `#${paginationElId}` }
+              : false
+          }
           breakpoints={breakpoints || defaultBreakpoints}
           buttonSize={buttonSize}
           prevActivateId="all-banner-carousel-button-prev"
@@ -207,6 +254,12 @@ const BannerAllCarousel: React.FC<BannerProps> = ({
             );
           })}
         </Carousel>
+        {effectiveShowDots && (
+          <div
+            id={paginationElId}
+            className="banner-carousel-external-pagination mt-3 flex items-center justify-center gap-2"
+          />
+        )}
       </div>
     </>
   );

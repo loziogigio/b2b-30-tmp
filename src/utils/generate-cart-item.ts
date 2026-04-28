@@ -45,10 +45,15 @@ export function generateCartItem(item: Item, variation: Variation) {
     promo_code,
     promo_row,
   } = item;
+  // Preserve human-readable SKU separately from the PIM entity_code (`id`).
+  // Without this the cart adapter falls back to entity_code as the sku.
+  const sku = (item as any).sku;
   if (!isEmpty(variation)) {
+    const variationSku = (variation as any).sku || sku;
     return {
       id: `${id}.${variation.id}`,
       productId: id,
+      sku: variationSku,
       name: `${name} - ${variation.title}`,
       slug,
       unit,
@@ -65,6 +70,7 @@ export function generateCartItem(item: Item, variation: Variation) {
   }
   return {
     id,
+    sku,
     name,
     slug,
     unit,

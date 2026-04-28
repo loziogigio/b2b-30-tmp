@@ -1,6 +1,7 @@
 import { cache } from 'react';
 import { headers } from 'next/headers';
 import { resolveTenant, isSingleTenant } from '@/lib/tenant';
+import { resolveSupportedLang } from '@/app/i18n/settings';
 
 /**
  * Server-side PIM API fetch utilities.
@@ -84,7 +85,7 @@ export const serverFetchPimProducts = cache(
     const url = `${config.pimApiUrl}/api/search/search`;
 
     const body: Record<string, any> = {
-      lang: params.lang || 'it',
+      lang: resolveSupportedLang(params.lang),
       text: params.text || '',
       start: params.start || 0,
       rows: params.rows || 12,

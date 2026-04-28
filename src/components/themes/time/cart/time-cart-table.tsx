@@ -290,7 +290,7 @@ function TimeCartRow({
         {/* Actions */}
         <div className="flex items-center justify-center">
           <button
-            onClick={() => clearItemFromCart(item.id)}
+            onClick={() => clearItemFromCart(item)}
             title="Rimuovi"
             className="w-7 h-7 rounded-md flex items-center justify-center text-[var(--time-gray-400)] hover:text-[var(--time-red)] transition-colors"
           >
@@ -348,7 +348,7 @@ function TimeCartRow({
             </div>
           </div>
           <button
-            onClick={() => clearItemFromCart(item.id)}
+            onClick={() => clearItemFromCart(item)}
             className="self-start text-[var(--time-gray-400)] hover:text-[var(--time-red)] transition-colors"
           >
             <TrashIcon />

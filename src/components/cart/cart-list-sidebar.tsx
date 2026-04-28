@@ -304,14 +304,14 @@ const CartListSidebar: React.FC<CartListSidebarProps> = ({ lang }) => {
                   className={cn(
                     'relative px-4 py-3 transition-colors',
                     isActive
-                      ? 'bg-indigo-50 border-l-4 border-l-indigo-500'
+                      ? 'bg-brand/10 border-l-4 border-l-brand'
                       : 'hover:bg-gray-50 border-l-4 border-l-transparent',
                   )}
                 >
                   {/* Active indicator - hide when editing to avoid overlap */}
                   {isActive && editingCartId !== cart.cartId && (
                     <div className="absolute right-3 top-3">
-                      <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-700">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-brand/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand">
                         <HiOutlineCheck className="h-3 w-3" />
                         {t('text-active', { defaultValue: 'Attivo' })}
                       </span>
@@ -340,7 +340,7 @@ const CartListSidebar: React.FC<CartListSidebarProps> = ({ lang }) => {
                               handleCancelEditing();
                             }
                           }}
-                          className="h-7 flex-1 rounded border border-gray-300 px-2 text-sm font-semibold text-gray-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                          className="h-7 flex-1 rounded border border-gray-300 px-2 text-sm font-semibold text-gray-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
                           autoFocus
                           disabled={savingLabel}
                         />
@@ -348,7 +348,7 @@ const CartListSidebar: React.FC<CartListSidebarProps> = ({ lang }) => {
                           type="button"
                           onClick={() => handleSaveLabel(cart.cartId)}
                           disabled={savingLabel}
-                          className="flex h-7 w-7 items-center justify-center rounded bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50"
+                          className="flex h-7 w-7 items-center justify-center rounded bg-brand text-white hover:bg-opacity-90 disabled:opacity-50"
                           title={t('text-save', { defaultValue: 'Salva' })}
                         >
                           <HiOutlineCheck className="h-4 w-4" />

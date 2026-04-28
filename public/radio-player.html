@@ -201,26 +201,43 @@
   </div>
 
   <script>
-    // Default stations (fallback)
-    const DEFAULT_STATIONS = [
-      { id: '1', name: 'RTL 102.5', streamUrl: 'https://streamingv2.shoutcast.com/rtl-102-5', logoUrl: '' },
-      { id: '2', name: 'RDS', streamUrl: 'https://icstream.rds.radio/rds', logoUrl: '' }
-    ];
+    // Wrap any external stream URL through our HTTPS proxy. localStorage-
+    // configured stations (set by RadioWidget) often contain HTTP shoutcast
+    // URLs that browsers refuse to load from an HTTPS page.
+    function toProxyUrl(streamUrl) {
+      if (!streamUrl) return '';
+      if (streamUrl.startsWith('/api/radio/')) return streamUrl;
+      try {
+        const u = new URL(streamUrl, window.location.origin);
+        if (u.origin === window.location.origin) return streamUrl;
+        const encoded = btoa(streamUrl)
+          .replace(/\+/g, '-')
+          .replace(/\//g, '_')
+          .replace(/=+$/, '');
+        return '/api/radio/' + encoded;
+      } catch (e) {
+        return streamUrl;
+      }
+    }
 
-    // Try to get stations from localStorage (set by RadioWidget)
+    // Stations come exclusively from localStorage (set by RadioWidget).
+    // If nothing is configured yet, the player shows the empty state below.
     function getStations() {
       try {
         const stored = localStorage.getItem('radioStations');
         if (stored) {
           const parsed = JSON.parse(stored);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            return parsed;
+            return parsed.map((s) => ({
+              ...s,
+              streamUrl: toProxyUrl(s.streamUrl),
+            }));
           }
         }
       } catch (e) {
         console.warn('Failed to parse radio stations from localStorage:', e);
       }
-      return DEFAULT_STATIONS;
+      return [];
     }
 
     const STATIONS = getStations();

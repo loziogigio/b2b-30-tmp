@@ -33,9 +33,7 @@ import { useUI } from '@contexts/ui.context';
 import { isModalFullWidth } from '@/lib/theme/resolver';
 
 // B2B bits
-import PackagingGrid from './packaging-grid';
-import PriceAndPromo from './price-and-promo';
-import AddToCart from './add-to-cart';
+import B2BOfferRows from './b2b-offer-rows';
 import B2BInfoBlock from './details/b2b-info-block';
 import { useCompareList } from '@/contexts/compare/compare.context';
 
@@ -241,29 +239,13 @@ export default function ProductPopup({ lang }: { lang: string }) {
             {/* Info block (status/ETA/brand) */}
             <B2BInfoBlock product={product} priceData={erpPrice} lang={lang} />
 
-            {/* 3-up row: Packaging | Price | AddToCart - only show when we have valid price */}
+            {/* LISTINO + per-PROMO addable rows */}
             {hasValidPrice && (
-              <div className="mt-2 grid grid-cols-1 gap-1 md:grid-cols-3">
-                <div>
-                  <PackagingGrid pd={erpPrice} />
-                </div>
-
-                {!hidePrices && (
-                  <div className="flex items-center justify-center">
-                    <PriceAndPromo priceData={erpPrice} />
-                  </div>
-                )}
-
-                <div className="flex items-center justify-center md:justify-end">
-                  <AddToCart
-                    lang={lang}
-                    product={product}
-                    priceData={erpPrice}
-                    className="justify-center md:justify-end"
-                    disabled={!canAdd}
-                  />
-                </div>
-              </div>
+              <B2BOfferRows
+                lang={lang}
+                product={product}
+                priceData={erpPrice}
+              />
             )}
 
             {/* Wishlist / Reminder / Compare / Share */}

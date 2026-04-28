@@ -182,7 +182,7 @@ export default function CheckoutSendOrder({ lang, onSubmit }: Props) {
           placeholder={
             t('text-notes-placeholder') ?? 'Add any notes for this order…'
           }
-          className="w-full resize-y rounded-md border border-gray-300 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className="w-full resize-y rounded-md border border-gray-300 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
         />
       </div>
 

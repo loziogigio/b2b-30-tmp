@@ -22,6 +22,11 @@ type HeroCarouselWithWidgetsProps = {
   lang: string;
   breakpoints?: Record<string, unknown>;
   className?: string;
+  autoplay?: boolean;
+  autoplaySpeed?: number;
+  loop?: boolean;
+  showArrows?: boolean;
+  showDots?: boolean;
   widgets?: {
     weather?: {
       enabled?: boolean;
@@ -134,6 +139,11 @@ export const HeroCarouselWithWidgets = ({
   lang,
   breakpoints,
   className,
+  autoplay,
+  autoplaySpeed,
+  loop,
+  showArrows,
+  showDots,
   widgets,
 }: HeroCarouselWithWidgetsProps) => {
   const [initialDate] = useState(() => new Date());
@@ -234,8 +244,13 @@ export const HeroCarouselWithWidgets = ({
           className="mb-0 h-full"
           itemKeyPrefix="hero-carousel"
           forceFullHeight
-          prevButtonClassName="!left-3 md:!left-4 lg:!left-6 top-1/2 -translate-y-1/2 z-30 !w-10 !h-10 md:!w-12 md:!h-12 !bg-white/90 hover:!bg-white !shadow-lg !text-gray-800"
-          nextButtonClassName="!right-3 md:!right-4 lg:!right-6 top-1/2 -translate-y-1/2 z-30 !w-10 !h-10 md:!w-12 md:!h-12 !bg-white/90 hover:!bg-white !shadow-lg !text-gray-800"
+          autoplay={autoplay}
+          autoplaySpeed={autoplaySpeed}
+          loop={loop}
+          showArrows={showArrows}
+          showDots={showDots}
+          prevButtonClassName="!left-3 md:!left-4 lg:!left-6 top-1/2 -translate-y-1/2 z-30 !w-10 !h-10 md:!w-12 md:!h-12 !bg-white !shadow-lg !text-gray-800"
+          nextButtonClassName="!right-3 md:!right-4 lg:!right-6 top-1/2 -translate-y-1/2 z-30 !w-10 !h-10 md:!w-12 md:!h-12 !bg-white !shadow-lg !text-gray-800"
           style={{ borderRadius: 'md' }}
           cardStyle={{ borderRadius: 'xl' }}
         />

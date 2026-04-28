@@ -59,6 +59,35 @@ export interface ImprovingPromo {
   promo: boolean;
 }
 
+/**
+ * Single promo offer in the all_promo list.
+ * Each item represents a separately-addable line that the user can buy
+ * (e.g. LISTINO uses base price, while each PROMO has its own qty/price/code).
+ */
+export interface PromoOffer {
+  promo_code: string;
+  promo_row: number;
+  promo_title: string;
+  promo_type: string;
+  /** MV - QuantitaRichiesta: smallest qty step required to trigger promo */
+  promo_qty_required: number;
+  promo_packaging_required: number;
+  promo_qty_per_packaging: number;
+  promo_min_pieces: number;
+  promo_min_value: number;
+  /** PrezzoNettoConPromo - the discounted unit price */
+  promo_net_price: number;
+  /** PrezzoNettoListinoDiRiferimento - listino price the promo discounts from */
+  promo_ref_list_price: number;
+  promo_standard_price: number;
+  promo_start_date: string;
+  promo_end_date: string;
+  promo_extra_discounts: number[];
+  promo_gift_qty: number;
+  promo_gift_sku?: string;
+  promo_gift_uom?: string;
+}
+
 export interface ErpPriceData {
   entity_code: string;
   net_price: number;
@@ -75,6 +104,9 @@ export interface ErpPriceData {
   packaging_options?: PackagingOptionLegacy[];
 
   improving_promo?: ImprovingPromo;
+
+  /** All promos available for this product (LISTINO is implicit, this lists each PROMO line). */
+  all_promo_offers?: PromoOffer[];
 
   product_label_action?: ProductLabelAction;
 
@@ -137,6 +169,35 @@ export function transformErpPricesResponse(
 
   for (const [entityCode, raw] of Object.entries<any>(response.data)) {
     const promoRaw = raw.improving_promo ?? null;
+    const allPromoRaw = Array.isArray(raw?.all_promo?.ListaPromo)
+      ? raw.all_promo.ListaPromo
+      : [];
+    const allPromoOffers: PromoOffer[] = allPromoRaw
+      .filter((p: any) => p && p.CodicePromozione)
+      .map((p: any) => ({
+        promo_code: String(p.CodicePromozione ?? ''),
+        promo_row: Number(p.RigaPromozione ?? 0),
+        promo_title: p.TitoloPromozione ?? '',
+        promo_type: p.TipoPromozione ?? '',
+        promo_qty_required: Number(p.QuantitaRichiesta ?? 0),
+        promo_packaging_required: Number(p.ImballiRichiesti ?? 0),
+        promo_qty_per_packaging: Number(p.QuantitaPerImballo ?? 0),
+        promo_min_pieces: Number(p.ArticoliRichiesti ?? 0),
+        promo_min_value: Number(p.AmmontareMinimoRichiesto ?? 0),
+        promo_net_price: Number(p.PrezzoNettoConPromo ?? 0),
+        promo_ref_list_price: Number(p.PrezzoNettoListinoDiRiferimento ?? 0),
+        promo_standard_price: Number(p.PrezzoNettoStandard ?? 0),
+        promo_start_date: formatPromoDate(p.DataInizioValitita),
+        promo_end_date: formatPromoDate(p.DataFineValidita),
+        promo_extra_discounts: [
+          Number(p.ScontoExtra1 ?? 0),
+          Number(p.ScontoExtra2 ?? 0),
+          Number(p.ScontoExtra3 ?? 0),
+        ],
+        promo_gift_qty: Number(p.QuantitaArticoloOmaggio ?? 0),
+        promo_gift_sku: p.CodiceArticoloInOmaggio ?? undefined,
+        promo_gift_uom: p.UMArticoloOmaggio ?? undefined,
+      }));
     const supplierRaw =
       raw?.product_label_action?.order_supplier_available ??
       raw?.order_suplier_available ??
@@ -184,6 +245,8 @@ export function transformErpPricesResponse(
 
       order_suplier_available: supplierArrivals,
       prod_substitution: raw.prod_substitution ?? [],
+
+      all_promo_offers: allPromoOffers,
 
       improving_promo:
         raw.is_promo && promoRaw

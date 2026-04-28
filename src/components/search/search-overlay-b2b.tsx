@@ -6,7 +6,8 @@ import Container from '@components/ui/container';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import TrendingProductsCarousel from '@components/product/feeds/trending-products-carousel';
 import ProductsCarousel from '@components/product/products-carousel';
-import { usePimProductListQuery } from '@framework/product/get-pim-product';
+import { fetchPimProductList } from '@framework/product/get-pim-product';
+import { useQuery } from '@tanstack/react-query';
 import CloseIcon from '@components/icons/close-icon';
 import SearchBoxB2B from '@components/common/search-box-b2b';
 import { SearchFiltersB2B } from '@components/search/filters-b2b';
@@ -138,33 +139,43 @@ export default function SearchOverlayB2B({
   const liveQueryParams = React.useMemo(
     () =>
       shouldQuery
-        ? { rows: 12, start: 0, ...urlFilters, text: debouncedQuery }
-        : {},
+        ? {
+            rows: 12,
+            start: 0,
+            ...urlFilters,
+            text: debouncedQuery,
+            q: debouncedQuery,
+            group_variants: true,
+          }
+        : null,
     [shouldQuery, urlFilters, debouncedQuery],
   );
 
-  const { data: rawResponse, isLoading: isLoadingAuto } =
-    usePimProductListQuery(
-      { ...liveQueryParams, q: debouncedQuery },
-      { enabled: open && shouldQuery, groupByParent: true }, // Group by parent to show one per product family
-    );
+  // Use fetch directly so we can expose `total` (usePimProductListQuery discards it)
+  const { data: rawResponse, isLoading: isLoadingAuto } = useQuery({
+    queryKey: ['pim-search-overlay', liveQueryParams],
+    queryFn: () => fetchPimProductList(liveQueryParams ?? {}),
+    enabled: open && shouldQuery && liveQueryParams !== null,
+    staleTime: 1000 * 60 * 5,
+  });
 
-  // Transform products: flatten single-variant products to use variant's data (same as product-b2b-search.tsx)
+  // Transform products: flatten single-variant products to use variant's data
   const autoProducts = React.useMemo(() => {
-    // usePimProductListQuery returns an array directly (already transformed with variations and variantCount)
-    const rawAutoProducts = Array.isArray(rawResponse) ? rawResponse : [];
+    const items = rawResponse?.items ?? [];
 
-    return rawAutoProducts.map((p: any) => {
-      // With grouped search: p has variantCount attached
-      // Without grouped search: p may have variations array
-      // For single-variant products (variantCount === 1 OR variations.length === 1), use variant's data
+    return items.map((p: any) => {
+      // For single-variant products, swap in variant's data so pricing/sku align
       const vars = Array.isArray(p.variations) ? p.variations : [];
-      const isSingleVariant =
-        vars.length === 1 && (p.variantCount === 1 || !p.variantCount);
-      const target = isSingleVariant ? { ...vars[0], variantCount: 1 } : p;
+      const variantCount = vars.length || 1;
+      const isSingleVariant = vars.length === 1;
+      const target = isSingleVariant
+        ? { ...vars[0], variantCount: 1 }
+        : { ...p, variantCount };
       return target;
     });
   }, [rawResponse]);
+
+  const totalResults = rawResponse?.total ?? 0;
 
   // Track previous pathname to detect actual navigation (not just mount)
   const prevPathnameRef = React.useRef(pathname);
@@ -223,16 +234,17 @@ export default function SearchOverlayB2B({
     return () => document.removeEventListener('click', onDocClick, true);
   }, [open, onClose]);
 
-  // Overlay-specific carousel breakpoints: 1.25 items on mobile to hint scrollable content
+  // Overlay-specific carousel breakpoints: fractional values at every size
+  // so part of the next card is always peeking in — signals "scrollable".
   const overlayBreakpoints = {
     1921: { slidesPerView: 4.5 },
     1780: { slidesPerView: 4.5 },
     1536: { slidesPerView: 4.25 },
-    1280: { slidesPerView: 4 },
-    1100: { slidesPerView: 3.75 },
-    1024: { slidesPerView: 3.5 },
+    1280: { slidesPerView: 3.75 },
+    1100: { slidesPerView: 3.5 },
+    1024: { slidesPerView: 3.25 },
     900: { slidesPerView: 3.2 },
-    768: { slidesPerView: 3 },
+    768: { slidesPerView: 2.75 },
     640: { slidesPerView: 2.25 },
     520: { slidesPerView: 1.75 },
     480: { slidesPerView: 1.5 },
@@ -423,6 +435,8 @@ export default function SearchOverlayB2B({
                     uniqueKey={`overlay-autocomplete`}
                     lang={lang}
                     carouselBreakpoint={overlayBreakpoints}
+                    totalResults={totalResults}
+                    bleedRight={false}
                   />
                 </div>
               )}

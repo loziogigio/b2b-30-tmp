@@ -9,6 +9,7 @@ import { ROUTES } from '@utils/routes';
 import AddToCart from '@components/product/add-to-cart';
 import UpdateCart from '@components/product/update-cart';
 import { prefixImageUrl } from '@utils/image-versioning';
+import { confirmAction } from '@utils/toast-confirm';
 
 type CartItemProps = {
   item: any;
@@ -68,7 +69,15 @@ const CartItem: React.FC<CartItemProps> = ({ lang, item }) => {
           className="h-full w-full object-cover bg-fill-thumbnail"
         />
         <button
-          onClick={() => clearItemFromCart(item.id)}
+          onClick={async () => {
+            const ok = await confirmAction({
+              message: `Rimuovere "${item?.name ?? 'articolo'}" dal carrello?`,
+              confirmLabel: 'Rimuovi',
+              cancelLabel: 'Annulla',
+              tone: 'danger',
+            });
+            if (ok) clearItemFromCart(item);
+          }}
           className="absolute inset-0 hidden items-center justify-center bg-black/20 text-white transition md:flex md:opacity-0 md:group-hover:opacity-100"
           aria-label="remove-item"
           title="Remove"

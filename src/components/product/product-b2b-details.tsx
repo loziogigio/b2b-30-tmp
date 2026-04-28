@@ -30,15 +30,12 @@ import { useQuery } from '@tanstack/react-query';
 import { ERP_STATIC } from '@framework/utils/static';
 import type { ErpPriceData } from '@utils/transform/erp-prices';
 
-// NEW: AddToCart (server-aware)
-import AddToCart from '@components/product/add-to-cart';
 import { fetchErpPrices } from '@framework/erp/prices';
 import { useLikes } from '@contexts/likes/likes.context';
 import { useReminders } from '@contexts/reminders/reminders.context';
 import { useUI } from '@contexts/ui.context';
 import { useHomeSettings } from '@/hooks/use-home-settings';
-import PriceAndPromo from './price-and-promo';
-import PackagingGrid from './packaging-grid';
+import B2BOfferRows from './b2b-offer-rows';
 import { da } from 'date-fns/locale';
 import { formatAvailability } from '@utils/format-availability';
 import B2BInfoBlock from './details/b2b-info-block';
@@ -464,34 +461,9 @@ const ProductB2BDetails: React.FC<{
 
           <B2BInfoBlock product={data} priceData={erpPrice} lang={lang} />
 
-          {/* === 3-up row: Packaging | Price | AddToCart - only show when we have valid price === */}
+          {/* LISTINO + per-PROMO addable rows */}
           {hasValidPrice && (
-            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-              {/* col 1: packaging */}
-              <div className="">
-                <PackagingGrid pd={erpPrice} />
-              </div>
-
-              {/* col 2: price/promo (centered) */}
-              {!hidePrices && (
-                <div className="flex items-center justify-center ">
-                  <PriceAndPromo priceData={erpPrice} />
-                </div>
-              )}
-
-              {/* col 3: add to cart (right-aligned on md+) */}
-              <div className="flex items-center justify-center  md:justify-end">
-                {isAuthForPrices && (
-                  <AddToCart
-                    lang={lang}
-                    product={data}
-                    priceData={erpPrice}
-                    className="justify-center md:justify-end"
-                    disabled={!erpPrice?.product_label_action?.ADD_TO_CART}
-                  />
-                )}
-              </div>
-            </div>
+            <B2BOfferRows lang={lang} product={data} priceData={erpPrice} />
           )}
 
           {/* Wishlist / Reminder / Compare / Share / Print */}

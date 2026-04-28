@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import cn from 'classnames';
 import Counter from '@components/ui/counter';
 import { useCart } from '@contexts/cart/cart.context';
+import type { Item } from '@contexts/cart/cart.utils';
 import { generateCartItem } from '@utils/generate-cart-item';
 import { useTranslation } from 'src/app/i18n/client';
 import type { ErpPriceData } from '@utils/transform/erp-prices';
@@ -16,6 +17,13 @@ interface AddToCartProps {
   priceData?: ErpPriceData;
   showPlaceholder?: boolean;
   className?: string;
+  /**
+   * Override the entity_code sent to the server. Useful when `variation` is a
+   * synthetic line key (e.g. one PROMO line per offer) and the local cart id
+   * must differ from the real product id sent to the ERP.
+   */
+  serverItemId?: string | number;
+  size?: 'sm' | 'md';
 }
 
 /** Skeleton to avoid layout shift while loading */
@@ -120,6 +128,8 @@ export default function AddToCart({
   disabled,
   showPlaceholder = true,
   className,
+  serverItemId,
+  size = 'md',
 }: AddToCartProps) {
   // 1) CALL HOOKS UNCONDITIONALLY AND IN THE SAME ORDER
   const { t } = useTranslation(lang, 'common');
@@ -183,10 +193,50 @@ export default function AddToCart({
     () => generateCartItem(payloadForCart, variation),
     [payloadForCart, variation],
   );
-  const cartEntry = isInCart(item?.id) ? getItemFromCart(item.id) : null;
+
+  // Promo-aware lookup: a single product can sit in the cart under multiple
+  // tiers (LISTINO with no promo + a PROMO row). Each AddToCart instance must
+  // read the line that matches its own promo identity, otherwise the wrong
+  // counter gets shown / mutated.
+  //
+  // CRITICAL: when a synthetic `variation` is passed (e.g. b2b-offer-rows.tsx
+  // builds one per promo offer), generateCartItem mangles the id to
+  // `${productId}.${variation.id}`. The actual cart line's id is the
+  // unmangled entity_code, so we must match against `productId` first and fall
+  // back to `id` for non-variation cases.
+  const { items: cartItems } = useCart() as any;
+  const cartEntry = useMemo(() => {
+    if (!Array.isArray(cartItems)) return null;
+    const lookupId = String(
+      (item as any)?.productId ?? serverItemId ?? item?.id ?? '',
+    );
+    if (!lookupId) return null;
+    const targetCode = String(
+      (item as any)?.promo_code ??
+        (item as any)?.__cartMeta?.promo_code ??
+        0,
+    );
+    const targetRow = String(
+      (item as any)?.promo_row ??
+        (item as any)?.__cartMeta?.promo_row ??
+        0,
+    );
+    return (
+      cartItems.find(
+        (i: any) =>
+          String(i.id) === lookupId &&
+          String(i.promo_code ?? 0) === targetCode &&
+          String(i.promo_row ?? 0) === targetRow,
+      ) ?? null
+    );
+  }, [cartItems, item, serverItemId]);
 
   const currentQty = Number(cartEntry?.quantity ?? 0);
   const currentU = toUnits(currentQty);
+
+  // Suppress unused warnings for legacy lookups kept for backwards compat
+  void isInCart;
+  void getItemFromCart;
 
   // Draft & debounce + syncing flag
   const [draft, setDraft] = useState<string>(() => String(currentQty || 0));
@@ -207,22 +257,38 @@ export default function AddToCart({
     return Math.max(0, Math.round(rawU / mulU) * mulU);
   };
 
+  // The server-side line uses the base entity_code as id (no variation suffix).
+  // Build a "lookup item" with the unmangled id so the reducer's promo-aware
+  // matcher can find the existing cart line during the optimistic update,
+  // instead of pushing a phantom row.
+  const lookupItem = useMemo(() => {
+    const baseId = (item as any)?.productId ?? serverItemId ?? item?.id;
+    return {
+      ...item,
+      id: baseId,
+      promo_code: (item as any)?.promo_code ?? item.__cartMeta?.promo_code,
+      promo_row: (item as any)?.promo_row ?? item.__cartMeta?.promo_row,
+    } as Item;
+  }, [item, serverItemId]);
+
   const scheduleSync = (targetU: number) => {
-    // optimistic local update
-    setItemQuantity(item, fromUnits(targetU));
+    // optimistic local update — use the unmangled-id lookupItem so the reducer
+    // updates the actual cart line for this promo identity instead of pushing
+    // a phantom item with a "id.variationId" key.
+    setItemQuantity(lookupItem, fromUnits(targetU));
 
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
       setIsSyncing(true);
       try {
         const payload = buildAddPayload({
-          itemId: item.id,
+          itemId: serverItemId ?? lookupItem.id,
           qty: fromUnits(targetU),
           priceData: effectivePriceData,
           promo_code: item.__cartMeta?.promo_code,
           promo_row: item.__cartMeta?.promo_row,
         });
-        await addToCartServer?.(payload, item);
+        await addToCartServer?.(payload, lookupItem);
       } finally {
         setIsSyncing(false);
       }
@@ -283,7 +349,11 @@ export default function AddToCart({
   return (
     <Counter
       lang={lang}
-      className={cn('w-full h-10', className ? className : 'justify-center')}
+      className={cn(
+        'w-full',
+        size === 'sm' ? 'h-8' : 'h-10',
+        className ? className : 'justify-center',
+      )}
       value={draft}
       onChangeValue={setDraft}
       onCommit={commit}
@@ -293,6 +363,7 @@ export default function AddToCart({
       disableMinus={isSyncing || currentQty <= 0}
       disablePlus={isSyncing || disabled}
       variant={variant}
+      size={size}
     />
   );
 }

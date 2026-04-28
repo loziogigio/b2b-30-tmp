@@ -119,70 +119,55 @@ export default function PriceAndPromo({
       >
         {withSchemaOrg && <meta itemProp="priceCurrency" content={currency} />}
 
-        <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-between gap-1 sm:gap-4 w-full max-w-[280px]">
-          <div className="flex flex-col items-center text-center gap-0.5 sm:gap-1">
-            <div className="flex items-center gap-1 sm:gap-2">
+        <div className="flex items-center justify-center gap-2 sm:gap-3 w-full max-w-[280px]">
+          {(showPrev || discountLines.length > 0) && (
+            <div className="flex flex-col items-end leading-tight">
               {showPrev && (
-                <div className="flex items-center gap-1">
-                  <span
-                    className={cn(
-                      'line-through uppercase tracking-wide text-[10px] sm:text-xs',
-                      invertColors ? 'text-white/70' : 'text-gray-500',
-                    )}
-                  >
-                    {grossPriceFmt} €
-                  </span>
-                  {discountLines.length > 0 && (
-                    <span
-                      className={cn(
-                        'text-[10px] sm:text-xs font-semibold',
-                        invertColors ? 'text-white/70' : 'text-gray-600',
-                      )}
-                    >
-                      {discountLines.join(' ')}
-                    </span>
+                <span
+                  className={cn(
+                    'line-through uppercase tracking-wide text-[10px] sm:text-xs',
+                    invertColors ? 'text-white/70' : 'text-gray-500',
                   )}
-                </div>
-              )}
-              <div
-                className={cn(
-                  'text-lg sm:text-[22px] font-bold flex items-baseline gap-0.5 sm:gap-1',
-                  invertColors
-                    ? 'text-white'
-                    : is_promo
-                      ? 'text-red-500'
-                      : 'text-black',
-                )}
-              >
-                <span {...(withSchemaOrg ? { itemProp: 'price' } : {})}>
-                  {priceDiscountFmt}
-                </span>
-                <span className="text-sm sm:text-base font-normal">€</span>
-              </div>
-              {count_promo > 0 && (
-                <button
-                  type="button"
-                  onClick={onPromosClick}
-                  title="View all promotions"
-                  className="bg-red-500 text-white text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0.5 rounded-full font-semibold"
                 >
-                  +{count_promo}
-                </button>
+                  {grossPriceFmt} €
+                </span>
+              )}
+              {discountLines.length > 0 && (
+                <span
+                  className={cn(
+                    'text-[10px] sm:text-xs font-bold',
+                    invertColors ? 'text-white/80' : 'text-red-600',
+                  )}
+                >
+                  {discountLines.join(' ')}
+                </span>
               )}
             </div>
+          )}
+          <div
+            className={cn(
+              'text-lg sm:text-[22px] font-bold flex items-baseline gap-0.5 sm:gap-1',
+              invertColors
+                ? 'text-white'
+                : is_promo
+                  ? 'text-red-500'
+                  : 'text-black',
+            )}
+          >
+            <span {...(withSchemaOrg ? { itemProp: 'price' } : {})}>
+              {priceDiscountFmt}
+            </span>
+            <span className="text-sm sm:text-base font-normal">€</span>
           </div>
-
-          {is_improving_promo && (
-            <div className="flex flex-row sm:flex-col items-center gap-1 sm:gap-0 text-red-500 uppercase tracking-wide text-[10px] sm:text-xs">
-              <span className="bg-red-500 text-white px-1.5 sm:px-2 py-0.5 rounded-full font-semibold text-[9px] sm:text-[10px]">
-                Offerta
-              </span>
-              {promoEndDisplay ? (
-                <span className="sm:mt-0.5 text-[9px] sm:text-[11px] normal-case font-semibold tracking-normal">
-                  {promoEndDisplay}
-                </span>
-              ) : null}
-            </div>
+          {count_promo > 0 && (
+            <button
+              type="button"
+              onClick={onPromosClick}
+              title="View all promotions"
+              className="bg-red-500 text-white text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0.5 rounded-full font-semibold"
+            >
+              +{count_promo}
+            </button>
           )}
         </div>
       </div>

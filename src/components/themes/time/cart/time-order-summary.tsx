@@ -11,6 +11,7 @@ import { TimeCard } from '@/components/themes/time/account/time-account-primitiv
 import { useTranslation } from 'src/app/i18n/client';
 import { useOrderSubmit } from '@/hooks/use-order-submit';
 import TimeAnomalyModal from './time-anomaly-modal';
+import DuplicateSubmitModal from '@/components/checkout/duplicate-submit-modal';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -106,10 +107,15 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
   const {
     submitOrder,
     resubmitWithAutofix,
+    confirmDuplicateSubmit,
     isSubmitting,
     anomalyResult,
+    duplicateWarning,
+    orderAlreadySubmitted,
     submitError,
     clearAnomalies,
+    clearDuplicateWarning,
+    clearOrderAlreadySubmitted,
   } = useOrderSubmit(lang);
 
   const [deliveryType, setDeliveryType] = useState('spedizione');
@@ -364,8 +370,40 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
         />
       )}
 
+      {/* ── Duplicate submit warning (422 Windmill ordini guard) ───────── */}
+      {duplicateWarning && (
+        <DuplicateSubmitModal
+          warning={duplicateWarning}
+          isSubmitting={isSubmitting}
+          onConfirm={() => confirmDuplicateSubmit(submitOpts)}
+          onCancel={clearDuplicateWarning}
+        />
+      )}
+
+      {/* ── Already-submitted notice ───────────────────────────────────── */}
+      {orderAlreadySubmitted && (
+        <div className="fixed bottom-6 right-6 z-50 max-w-sm bg-amber-600 text-white px-5 py-4 rounded-xl shadow-lg text-[13px] font-[var(--font-body)] animate-[slideUp_0.3s_ease_both]">
+          <div className="mb-2">
+            {t('text-order-already-submitted', {
+              defaultValue:
+                'Questo ordine è già stato inviato. Ricarica la pagina per vedere lo stato aggiornato.',
+            })}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              clearOrderAlreadySubmitted();
+              if (typeof window !== 'undefined') window.location.reload();
+            }}
+            className="text-xs font-semibold underline hover:text-amber-100"
+          >
+            {t('text-reload', { defaultValue: 'Ricarica' })}
+          </button>
+        </div>
+      )}
+
       {/* ── Submit error toast ─────────────────────────────────────────── */}
-      {submitError && !anomalyResult && (
+      {submitError && !anomalyResult && !duplicateWarning && (
         <div className="fixed bottom-6 right-6 z-50 max-w-sm bg-[var(--time-red)] text-white px-5 py-3 rounded-xl shadow-lg text-[13px] font-[var(--font-body)] animate-[slideUp_0.3s_ease_both]">
           {submitError}
         </div>

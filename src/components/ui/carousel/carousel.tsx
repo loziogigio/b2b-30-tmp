@@ -1,7 +1,7 @@
 'use client';
 
 import cn from 'classnames';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { IoIosArrowBack, IoIosArrowForward } from 'react-icons/io';
 import { getDirection } from '@utils/get-direction';
 import {
@@ -59,9 +59,34 @@ export default function Carousel({
   ...props
 }: React.PropsWithChildren<CarouselPropsType>) {
   const dir = getDirection(lang);
-  const prevRef = useRef<HTMLDivElement>(null);
-  const nextRef = useRef<HTMLDivElement>(null);
+  // Use state + callback refs so Swiper re-initializes navigation once the
+  // button DOM nodes actually mount. Using `useRef` here leaves `*.current`
+  // as null on first render and Swiper never binds the click handlers.
+  const [prevEl, setPrevEl] = useState<HTMLDivElement | null>(null);
+  const [nextEl, setNextEl] = useState<HTMLDivElement | null>(null);
   const [isLocked, setIsLocked] = useState(false);
+  const swiperInstanceRef = useRef<SwiperTypes | null>(null);
+
+  // Re-bind navigation once the button DOM nodes become available. Swiper
+  // only reads `params.navigation` at init, so updating React state alone
+  // is not enough — we must destroy+init the navigation controller.
+  useEffect(() => {
+    const swiper = swiperInstanceRef.current;
+    if (!swiper || !navigation) return;
+    if (
+      !prevEl ||
+      !nextEl ||
+      typeof swiper.params.navigation === 'boolean' ||
+      !swiper.params.navigation
+    ) {
+      return;
+    }
+    (swiper.params.navigation as any).prevEl = prevEl;
+    (swiper.params.navigation as any).nextEl = nextEl;
+    swiper.navigation?.destroy();
+    swiper.navigation?.init();
+    swiper.navigation?.update();
+  }, [prevEl, nextEl, navigation]);
   let nextButtonClasses = cn(
     'w-7 h-7 md:w-8 md:h-8 lg:w-9 lg:h-9 xl:w-10 xl:h-10 text-base lg:text-lg xl:text-xl cursor-pointer flex items-center justify-center rounded-full bg-brand-light absolute transition duration-300 hover:bg-brand hover:text-brand-light focus:outline-none transform shadow-navigation',
     { '3xl:text-2xl': buttonSize === 'default' },
@@ -88,17 +113,14 @@ export default function Carousel({
         navigation={
           navigation
             ? {
-                prevEl: prevActivateId.length
-                  ? `#${prevActivateId}`
-                  : prevRef.current!, // Assert non-null
-                nextEl: nextActivateId.length
-                  ? `#${nextActivateId}`
-                  : nextRef.current!, // Assert non-null
+                prevEl: prevActivateId.length ? `#${prevActivateId}` : prevEl,
+                nextEl: nextActivateId.length ? `#${nextActivateId}` : nextEl,
               }
             : {}
         }
         onSlideChange={onSlideChange}
         onSwiper={(swiper) => {
+          swiperInstanceRef.current = swiper;
           setIsLocked(swiper.isLocked);
           onSwiper?.(swiper);
         }}
@@ -120,7 +142,7 @@ export default function Carousel({
             </div>
           ) : (
             <div
-              ref={prevRef}
+              ref={setPrevEl}
               className={`${prevButtonClasses} pointer-events-auto`}
             >
               {dir === 'rtl' ? <IoIosArrowForward /> : <IoIosArrowBack />}
@@ -136,7 +158,7 @@ export default function Carousel({
             </div>
           ) : (
             <div
-              ref={nextRef}
+              ref={setNextEl}
               className={`${nextButtonClasses} pointer-events-auto`}
             >
               {dir === 'rtl' ? <IoIosArrowBack /> : <IoIosArrowForward />}

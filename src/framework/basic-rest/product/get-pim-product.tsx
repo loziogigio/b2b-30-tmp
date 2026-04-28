@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { Product } from '@framework/types';
 import { API_ENDPOINTS_PIM } from '@framework/utils/api-endpoints-pim';
 import { post } from '@framework/utils/httpPIM';
+import { resolveSupportedLang } from '@/app/i18n/settings';
 import type {
   PimProduct,
   PimProductAttribute,
@@ -150,20 +151,24 @@ export function transformPimProduct(raw: PimProduct): Product {
     media: raw.media || [],
     // Pass through attributes for technical specifications
     attributes: raw.attributes || {},
-    // Pass through promo data (for parent products, check if any variant has promo)
+    // Pass through promo data (parent is flagged if itself OR any variant has promo)
     has_active_promo:
-      raw.has_active_promo ??
-      raw.variants?.some((v) => v.has_active_promo) ??
-      false,
+      raw.has_active_promo === true ||
+      raw.variants?.some((v) => v.has_active_promo === true) === true,
     promotions:
       raw.promotions || raw.variants?.flatMap((v) => v.promotions || []) || [],
     // Pass through marketing and technical specs
     marketing_features: raw.marketing_features || {},
     technical_specifications: raw.technical_specifications || {},
     // "New" flag from PIM (attribute_is_new_b boolean field)
+    // Parent is flagged new if itself OR any variant is new
     is_new:
       (raw as any).attribute_is_new_b === true ||
-      (raw as any).attribute_is_new_b === 'true',
+      (raw as any).attribute_is_new_b === 'true' ||
+      raw.variants?.some(
+        (v: any) =>
+          v.attribute_is_new_b === true || v.attribute_is_new_b === 'true',
+      ) === true,
   } as Product;
 }
 
@@ -241,7 +246,7 @@ export const fetchPimProductList = async (
 
   // Build POST body matching PIM API structure
   const body: Record<string, any> = {
-    lang: params.lang || 'it',
+    lang: resolveSupportedLang(params.lang),
     text: params.q || params.text || '',
     start: params.start || 0,
     rows: params.rows || params.limit || params.per_page || 12,

@@ -8,6 +8,7 @@ import {
   RawProduct,
   transformSearchParams,
 } from '@utils/transform/b2b-product';
+import { resolveSupportedLang } from '@/app/i18n/settings';
 
 // ===============================
 // 1. Fetch function with pagination
@@ -24,7 +25,7 @@ export const fetchProductList = async (
 
   // Build POST body matching PIM API structure (same as fetchPimProductList)
   const finalParams: Record<string, any> = {
-    lang: params.lang || 'it',
+    lang: resolveSupportedLang(params.lang),
     text: params.q || params.text || '',
     start: pageParam,
     rows: perPage,

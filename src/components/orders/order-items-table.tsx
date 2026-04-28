@@ -7,6 +7,8 @@ import { prefixImageUrl } from '@utils/image-versioning';
 import Image from 'next/image';
 import { useTranslation } from 'src/app/i18n/client';
 import { useHomeSettings } from '@/hooks/use-home-settings';
+import { useModalAction } from '@components/common/modal/modal.context';
+import { fetchPimProductList } from '@framework/product/get-pim-product';
 
 type Props = {
   items?: TransformedOrderItem[];
@@ -26,6 +28,40 @@ export default function OrderItemsTable({
   const { settings } = useHomeSettings();
   const decimals = settings?.cardStyle?.priceDecimals ?? 2;
   const [searchQuery, setSearchQuery] = useState('');
+  const { openModal } = useModalAction();
+  const [loadingSku, setLoadingSku] = useState<string | null>(null);
+
+  const openProductBySku = async (sku: string) => {
+    if (!sku || loadingSku) return;
+    setLoadingSku(sku);
+    try {
+      const result = await fetchPimProductList({
+        lang,
+        filters: { sku: [sku] },
+        rows: 1,
+        group_variants: true,
+      });
+      const product = result?.items?.[0];
+      if (!product) return;
+      const variations = Array.isArray((product as any).variations)
+        ? (product as any).variations
+        : [];
+      const variantCount = (product as any).variantCount ?? variations.length;
+      const hasVariants =
+        (variantCount && variantCount > 1) || variations.length > 1;
+      if (hasVariants) {
+        openModal('B2B_PRODUCT_VARIANTS_QUICK_VIEW', product);
+      } else {
+        const target =
+          variations.length === 1
+            ? { ...variations[0], variantCount: 1 }
+            : product;
+        openModal('PRODUCT_VIEW', target);
+      }
+    } finally {
+      setLoadingSku(null);
+    }
+  };
 
   const filteredItems = useMemo(() => {
     if (!searchQuery.trim()) return items;
@@ -133,10 +169,24 @@ export default function OrderItemsTable({
                     ? 'partial'
                     : 'none';
 
+              const isLoadingRow = loadingSku === it.sku;
               return (
                 <div
                   key={it.id}
-                  className={cn(gridCols, 'gap-4 px-4 py-4 min-w-0')}
+                  className={cn(
+                    gridCols,
+                    'gap-4 px-4 py-4 min-w-0 cursor-pointer hover:bg-gray-50 transition-colors',
+                    isLoadingRow && 'opacity-60',
+                  )}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => openProductBySku(it.sku)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      openProductBySku(it.sku);
+                    }
+                  }}
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md ring-1 ring-gray-200 bg-gray-100">

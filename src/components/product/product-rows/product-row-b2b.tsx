@@ -283,7 +283,12 @@ export default function ProductRowB2B({
 
           {/* 2) Parent info (name / parentSku / description) */}
           <Cell>
-            <div className="min-w-0">
+            <button
+              type="button"
+              onClick={() => openQuick()}
+              className="block w-full min-w-0 text-left cursor-pointer hover:text-brand transition-colors"
+              title={name ?? parentSku ?? 'Product'}
+            >
               {parentSku && (
                 <div
                   className="mt-0.5 text-[11px] sm:text-xs text-gray-600 uppercase truncate flex items-center gap-2"
@@ -295,7 +300,7 @@ export default function ProductRowB2B({
                 </div>
               )}
               <h3
-                className="text-sm sm:text-[15px] font-semibold text-gray-900 truncate uppercase"
+                className="text-sm sm:text-[15px] font-semibold text-gray-900 truncate uppercase group-hover:text-brand"
                 title={name ?? parentSku ?? ''}
               >
                 {name ?? parentSku ?? <Dash />}
@@ -310,7 +315,7 @@ export default function ProductRowB2B({
                   <Dash />
                 </div>
               )}
-            </div>
+            </button>
           </Cell>
 
           {/* 3) Brand image (right) - PIM format */}
@@ -611,16 +616,42 @@ export default function ProductRowB2B({
                   {/* 6)  Add */}
                   <Cell>
                     <div className="flex flex-col justify-center items-end gap-2">
-                      {isAuthorized && hasValidPrice && (
-                        <AddToCart
-                          product={isPseudo ? (product as any) : v}
-                          priceData={vPrice}
-                          variant="venus"
-                          lang={lang}
-                          className="justify-end"
-                          showPlaceholder={false}
-                        />
-                      )}
+                      {isAuthorized && hasValidPrice && (() => {
+                        const promoCount =
+                          (vPrice as any)?.all_promo_offers?.length ?? 0;
+                        const hasPromo =
+                          promoCount > 0 ||
+                          Boolean((vPrice as any)?.promo) ||
+                          Boolean((vPrice as any)?.is_promo);
+                        const isImproving = Boolean(
+                          (vPrice as any)?.is_improving_promo,
+                        );
+                        const promoNeedsDetail =
+                          hasPromo && (promoCount > 1 || !isImproving);
+                        if (promoNeedsDetail) {
+                          return (
+                            <button
+                              type="button"
+                              onClick={() => openQuick(v)}
+                              className="inline-flex items-center justify-center px-3 h-9 rounded-md bg-red-600 text-white text-xs font-semibold hover:bg-red-700"
+                            >
+                              {t('text-view-offers', {
+                                defaultValue: 'VEDI OFFERTE',
+                              })}
+                            </button>
+                          );
+                        }
+                        return (
+                          <AddToCart
+                            product={isPseudo ? (product as any) : v}
+                            priceData={vPrice}
+                            variant="venus"
+                            lang={lang}
+                            className="justify-end"
+                            showPlaceholder={false}
+                          />
+                        );
+                      })()}
                     </div>
                   </Cell>
                 </div>

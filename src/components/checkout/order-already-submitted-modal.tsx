@@ -50,7 +50,7 @@ export default function OrderAlreadySubmittedModal({
           <button
             type="button"
             onClick={onConfirm}
-            className="min-h-[48px] px-6 py-3 rounded-lg bg-violet-600 text-sm font-semibold text-white hover:bg-violet-700 transition-colors uppercase leading-snug"
+            className="min-h-[48px] px-6 py-3 rounded-lg bg-brand text-sm font-semibold text-white hover:bg-opacity-90 transition-colors uppercase leading-snug"
           >
             Ok, aggiorna la pagina
           </button>

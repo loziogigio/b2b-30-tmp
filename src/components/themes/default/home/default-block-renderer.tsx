@@ -125,6 +125,11 @@ const DefaultBlockRenderer: React.FC<DefaultBlockRendererProps> = ({
           lang={lang}
           breakpoints={getBreakpoints(block.config)}
           widgets={block.config?.widgets}
+          autoplay={block.config?.autoplay}
+          autoplaySpeed={block.config?.autoplaySpeed}
+          loop={block.config?.loop}
+          showArrows={block.config?.showArrows}
+          showDots={block.config?.showDots}
           className={block.config?.className || 'mb-12 xl:mb-8 pt-1'}
         />
       </Container>
@@ -185,6 +190,11 @@ const DefaultBlockRenderer: React.FC<DefaultBlockRendererProps> = ({
           itemKeyPrefix={`carousel-hero-${block.id}`}
           prevButtonClassName={MEDIA_ARROW_PREV}
           nextButtonClassName={MEDIA_ARROW_NEXT}
+          autoplay={block.config?.autoplay}
+          autoplaySpeed={block.config?.autoplaySpeed}
+          loop={block.config?.loop}
+          showArrows={block.config?.showArrows}
+          showDots={block.config?.showDots}
         />
       </Container>
     );
@@ -237,6 +247,11 @@ const DefaultBlockRenderer: React.FC<DefaultBlockRendererProps> = ({
           style={block.config?.style}
           prevButtonClassName={MEDIA_ARROW_PREV}
           nextButtonClassName={MEDIA_ARROW_NEXT}
+          autoplay={block.config?.autoplay}
+          autoplaySpeed={block.config?.autoplaySpeed}
+          loop={block.config?.loop}
+          showArrows={block.config?.showArrows}
+          showDots={block.config?.showDots}
         />
       </Container>
     );

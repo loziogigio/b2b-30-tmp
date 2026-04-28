@@ -267,8 +267,8 @@ function CheckoutFlowInner({
             <button
               onClick={goToDetails}
               className={cn(
-                'h-10 rounded-md bg-violet-600 px-4 text-sm font-semibold text-white',
-                'hover:bg-violet-700 active:translate-y-px transition',
+                'h-10 rounded-md bg-brand px-4 text-sm font-semibold text-white',
+                'hover:bg-opacity-90 active:translate-y-px transition',
               )}
               aria-expanded={false}
               aria-controls="details-accordion"
@@ -424,13 +424,13 @@ function CheckoutFlowInner({
               {stage !== 'details' && (
                 <div className="mb-3 flex flex-col gap-3 rounded-md border border-gray-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6">
                   <div className="flex items-center gap-3">
-                    <span className="inline-flex min-h-[36px] items-center rounded-full border-2 border-indigo-600 px-3 text-sm font-semibold text-indigo-600">
+                    <span className="inline-flex min-h-[36px] items-center rounded-full border-2 border-brand px-3 text-sm font-semibold text-brand">
                       {t('text-complete-fields-send-order')}
                     </span>
                   </div>
                   <button
                     onClick={goToDetails}
-                    className="h-9 rounded-md bg-violet-600 px-3 text-sm font-semibold text-white hover:bg-violet-700"
+                    className="h-9 rounded-md bg-brand px-3 text-sm font-semibold text-white hover:bg-opacity-90"
                     aria-controls="details-accordion"
                     aria-expanded={true}
                   >

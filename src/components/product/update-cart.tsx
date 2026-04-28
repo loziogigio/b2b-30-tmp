@@ -35,13 +35,27 @@ const parseNum = (v: string) => {
   return Number.isFinite(n) ? n : NaN;
 };
 
+const SYNC_DEBOUNCE_MS = 500;
+
 export default function UpdateCart({ lang, item, className, disabled }: Props) {
-  const { getItemFromCart, setItemQuantity, addToCartServer } =
+  const { items: cartItems, setItemQuantity, addToCartServer } =
     useCart() as any;
 
-  // Always use the freshest version from context
-  const live = getItemFromCart(item.id) ?? item;
-  const qty = Number(live?.quantity ?? 0);
+  // Match by id + promo identity so PROMO and LISTINO lines for the same SKU
+  // stay isolated. Falling back to the prop avoids a flash of empty state
+  // before the live cart hydrates.
+  const itemPromoCode = String((item as any).promo_code ?? 0);
+  const itemPromoRow = String((item as any).promo_row ?? 0);
+  const live =
+    (Array.isArray(cartItems)
+      ? cartItems.find(
+          (i: any) =>
+            String(i.id) === String(item.id) &&
+            String(i.promo_code ?? 0) === itemPromoCode &&
+            String(i.promo_row ?? 0) === itemPromoRow,
+        )
+      : null) ?? item;
+  const serverQty = Number(live?.quantity ?? 0);
 
   // --- derive step & multiple from packaging_options_all on the cart item ---
   const options = (live as any)?.packaging_options_all as
@@ -61,7 +75,7 @@ export default function UpdateCart({ lang, item, className, disabled }: Props) {
     (live as any)?.__cartMeta?.packaging_smallest;
 
   const stepQty = Number(def?.qty_x_packaging ?? 1) || 1; // increment size
-  const multipleQty = Number(sml?.qty_x_packaging ?? stepQty) || 1; // snapping multiple
+  const multipleQty = Number(sml?.qty_x_packaging ?? stepQty) || 1; // snap multiple
 
   const { toUnits, fromUnits } = makeScaler(stepQty, multipleQty);
 
@@ -70,67 +84,119 @@ export default function UpdateCart({ lang, item, className, disabled }: Props) {
   const promo_row = (live as any)?.promo_row ?? 0;
   const isPromo = Boolean(promo_code && String(promo_code) !== '0');
 
-  // counter state (controlled string)
-  const [draft, setDraft] = React.useState<string>(String(qty || 0));
-  React.useEffect(() => setDraft(String(qty || 0)), [qty]);
-
+  // ---- Local quantity state ----
+  // `local` is what the user sees and manipulates. It diverges from server qty
+  // during the debounce window, then converges back when the server response
+  // arrives.
+  const [local, setLocal] = React.useState<number>(serverQty);
+  const [draft, setDraft] = React.useState<string>(String(serverQty || 0));
   const [isSyncing, setIsSyncing] = React.useState(false);
 
-  const send = async (newQty: number) => {
-    // optimistic local update
-    setItemQuantity(live, newQty);
+  // Keep latest sent qty so we can skip redundant calls and ignore stale syncs
+  const lastSentRef = React.useRef<number>(serverQty);
+  // Active debounce timer + AbortController-style flag for stale callbacks
+  const timerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const seqRef = React.useRef(0); // monotonic id for the latest in-flight call
 
-    const payload: AddToCartInput = {
-      item_id: (live as any).id,
-      quantity: newQty,
-      promo_code,
-      promo_row,
+  // When the SERVER quantity changes (cart re-fetched), pull the new value
+  // into the local view — but only if there's no pending debounced change.
+  React.useEffect(() => {
+    if (timerRef.current != null) return; // user is mid-edit, don't clobber
+    setLocal(serverQty);
+    setDraft(String(serverQty || 0));
+    lastSentRef.current = serverQty;
+  }, [serverQty]);
+
+  // Cleanup any pending timer on unmount
+  React.useEffect(() => {
+    return () => {
+      if (timerRef.current != null) clearTimeout(timerRef.current);
     };
+  }, []);
 
-    setIsSyncing(true);
-    try {
-      await addToCartServer?.(payload, live);
-    } finally {
-      setIsSyncing(false);
-    }
+  /**
+   * Schedule a server sync. Mirrors the legacy PvQuantityInput.vue debounce:
+   * - Coalesce rapid clicks into a single PATCH after 500ms of inactivity
+   * - Skip if the target equals the last value we sent (or the live server qty)
+   * - Tag each call with a sequence id so a late response from a superseded
+   *   call cannot overwrite the latest state
+   */
+  const scheduleSync = React.useCallback(
+    (target: number) => {
+      if (timerRef.current != null) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(async () => {
+        timerRef.current = null;
+        if (target === lastSentRef.current) return;
+
+        // Optimistic local cart update so totals/UI react immediately
+        setItemQuantity(live, target);
+        lastSentRef.current = target;
+
+        const mySeq = ++seqRef.current;
+        const payload: AddToCartInput = {
+          item_id: (live as any).id,
+          quantity: target,
+          promo_code,
+          promo_row,
+        };
+        setIsSyncing(true);
+        try {
+          await addToCartServer?.(payload, live);
+        } finally {
+          // Only the latest call clears the syncing flag — earlier ones are stale
+          if (mySeq === seqRef.current) setIsSyncing(false);
+        }
+      }, SYNC_DEBOUNCE_MS);
+    },
+    [live, promo_code, promo_row, setItemQuantity, addToCartServer],
+  );
+
+  // ---- User actions: update local state immediately, debounce server call ----
+  const localU = toUnits(local);
+
+  const applyLocal = (next: number) => {
+    setLocal(next);
+    setDraft(String(next));
+    scheduleSync(next);
   };
 
-  // Use integer "units" to be decimal-safe
-  const currentU = toUnits(qty);
-
   const increment = () => {
-    const nextU = currentU + toUnits(stepQty);
-    const next = fromUnits(nextU);
-    setDraft(String(next));
-    send(next);
+    const next = fromUnits(localU + toUnits(stepQty));
+    applyLocal(next);
   };
 
   const decrement = () => {
-    const nextU = Math.max(0, currentU - toUnits(stepQty));
-    const next = fromUnits(nextU);
-    setDraft(String(next));
-    send(next);
+    const next = fromUnits(Math.max(0, localU - toUnits(stepQty)));
+    applyLocal(next);
   };
 
   const commit = () => {
     const n = parseNum(draft);
     if (!Number.isFinite(n) || n < 0) {
-      setDraft(String(qty || 0));
+      // Reset to the last known good value
+      setDraft(String(local || 0));
       return;
     }
     let targetU = toUnits(n);
     const mulU = toUnits(multipleQty);
-    if (mulU > 0) {
-      // snap to nearest multiple of the smallest packaging
-      targetU = Math.round(targetU / mulU) * mulU;
+    if (mulU > 0 && targetU > 0) {
+      // Snap up to the nearest multiple of the smallest packaging
+      const remainder = targetU % mulU;
+      if (remainder !== 0) targetU = targetU + (mulU - remainder);
     }
     const snapped = fromUnits(targetU);
-    setDraft(String(snapped));
-    if (snapped !== qty) send(snapped);
+    if (snapped !== local) {
+      applyLocal(snapped);
+    } else {
+      setDraft(String(snapped));
+    }
   };
 
   const variant: 'neutral' | 'green' | 'red' =
-    qty > 0 ? (isPromo ? 'red' : 'green') : 'neutral';
+    local > 0 ? (isPromo ? 'red' : 'green') : 'neutral';
+
+  // Suppress unused warning — kept for potential future indicator
+  void isSyncing;
 
   return (
     <Counter
@@ -141,9 +207,9 @@ export default function UpdateCart({ lang, item, className, disabled }: Props) {
       onCommit={commit}
       onIncrement={increment}
       onDecrement={decrement}
-      disabled={isSyncing || disabled}
-      disableMinus={isSyncing || qty <= 0}
-      disablePlus={isSyncing || disabled}
+      disabled={disabled}
+      disableMinus={local <= 0 || disabled}
+      disablePlus={disabled}
       variant={variant}
     />
   );

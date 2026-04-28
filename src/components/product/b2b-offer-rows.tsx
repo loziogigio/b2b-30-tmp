@@ -1,0 +1,364 @@
+'use client';
+
+import React from 'react';
+import cn from 'classnames';
+import { HiOutlineCalendar } from 'react-icons/hi';
+import type {
+  ErpPriceData,
+  PackagingOption,
+  PromoOffer,
+} from '@utils/transform/erp-prices';
+import { useTranslation } from 'src/app/i18n/client';
+import { useUI } from '@contexts/ui.context';
+import { useHomeSettings } from '@/hooks/use-home-settings';
+import PackagingGrid from './packaging-grid';
+import AddToCart from './add-to-cart';
+
+type Props = {
+  lang: string;
+  product: any;
+  priceData?: ErpPriceData;
+};
+
+const fmtNum = (v: unknown, decimals: number) => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n.toFixed(decimals) : '';
+};
+
+const fmtDate = (iso?: string) => {
+  if (!iso) return '';
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : iso;
+};
+
+const cleanTitle = (raw?: string) => {
+  if (!raw) return '';
+  // ERP often returns a string of dashes as a placeholder title.
+  const trimmed = raw.replace(/[-_\s]/g, '');
+  return trimmed ? raw.trim() : '';
+};
+
+/**
+ * Build a synthetic ErpPriceData for a single promo line so AddToCart
+ * uses the promo's qty step, prices, and code/row.
+ */
+/**
+ * Pick the best promo offer that the LISTINO's default packaging already
+ * triggers (i.e. promo MV ≤ listino default qty step). Mirrors the legacy
+ * `is_improving_promo` flow where adding the listino qty automatically applies
+ * the promo. Returns null when no offer fits.
+ */
+export function pickImprovingOffer(
+  priceData?: ErpPriceData | null,
+): PromoOffer | null {
+  if (!priceData) return null;
+  const offers = priceData.all_promo_offers ?? [];
+  if (!offers.length) return null;
+  const listinoMv = Math.max(
+    Number(priceData.packaging_option_default?.qty_x_packaging ?? 1),
+    1,
+  );
+  const matches = offers.filter(
+    (o) => Math.max(Number(o.promo_qty_required ?? 0), 1) <= listinoMv,
+  );
+  if (!matches.length) return null;
+  // Pick the cheapest qualifying promo.
+  return matches.reduce((best, cur) =>
+    cur.promo_net_price < best.promo_net_price ? cur : best,
+  );
+}
+
+export function buildPromoPriceData(
+  base: ErpPriceData,
+  offer: PromoOffer,
+): ErpPriceData {
+  const baseDefault = base.packaging_option_default;
+  const promoStep = Math.max(offer.promo_qty_required || 0, 1);
+  const promoPackaging: PackagingOption = {
+    packaging_uom_description: baseDefault?.packaging_uom_description ?? '',
+    packaging_code: baseDefault?.packaging_code ?? 'MV',
+    packaging_is_default: true,
+    packaging_is_smallest: false,
+    qty_x_packaging: promoStep,
+    packaging_uom: baseDefault?.packaging_uom ?? '',
+  };
+
+  return {
+    ...base,
+    net_price: offer.promo_net_price,
+    price_discount: offer.promo_net_price,
+    gross_price: offer.promo_ref_list_price || base.gross_price,
+    is_promo: true,
+    promo: true,
+    promo_price: offer.promo_net_price,
+    promo_code: offer.promo_code,
+    promo_row: offer.promo_row,
+    promo_title: offer.promo_title,
+    end_promo_date: offer.promo_end_date,
+    start_promo_date: offer.promo_start_date,
+    discount_extra: offer.promo_extra_discounts,
+    packaging_option_default: promoPackaging,
+    // Show only the promo's required packaging in the grid for this row
+    packaging_options_all: [promoPackaging],
+  };
+}
+
+export default function B2BOfferRows({ lang, product, priceData }: Props) {
+  const { t } = useTranslation(lang, 'common');
+  const { hidePrices, isAuthorized } = useUI();
+  const { settings } = useHomeSettings();
+  const decimals = settings?.cardStyle?.priceDecimals ?? 2;
+
+  if (!priceData) return null;
+  const offers = priceData.all_promo_offers ?? [];
+  const canAdd = priceData.product_label_action?.ADD_TO_CART !== false;
+
+  const baseGross = Number(priceData.gross_price ?? 0);
+  const baseNet = Number(priceData.price_discount ?? priceData.net_price ?? 0);
+
+  // When the ERP flags this product as `is_improving_promo`, the buyer's
+  // default packaging already triggers the best promo — adding via the
+  // LISTINO row would create a non-promo cart line at the same price. Match
+  // the legacy behaviour and let only the PROMO rows drive the add-to-cart.
+  const isImprovingPromo = Boolean((priceData as any).is_improving_promo);
+  const showListinoCounter = !(isImprovingPromo && offers.length > 0);
+
+  return (
+    <div className="mt-4 overflow-hidden rounded-xl border border-border-base bg-white shadow-sm">
+      {/* LISTINO row */}
+      <Row
+        label={t('text-listino', { defaultValue: 'LISTINO' })}
+        labelTone="neutral"
+      >
+        <PackCol>
+          <PackagingGrid pd={priceData} />
+        </PackCol>
+
+        {!hidePrices ? (
+          <PriceCol>
+            <PriceCell
+              decimals={decimals}
+              gross={baseGross}
+              net={baseNet}
+              extraDiscounts={[]}
+            />
+          </PriceCol>
+        ) : (
+          <div className="md:flex-1" />
+        )}
+
+        <CartCol>
+          {showListinoCounter ? (
+            <CartCell
+              isAuthorized={isAuthorized}
+              lang={lang}
+              product={product}
+              priceData={priceData}
+              disabled={!canAdd}
+            />
+          ) : (
+            <span className="w-full text-center text-[11px] font-medium text-gray-500">
+              {t('text-add-via-promo', {
+                defaultValue: 'Aggiungi tramite offerta ↓',
+              })}
+            </span>
+          )}
+        </CartCol>
+      </Row>
+
+      {offers.map((offer) => {
+        const promoPriceData = buildPromoPriceData(priceData, offer);
+        const variation = {
+          id: `promo-${offer.promo_code}-${offer.promo_row}`,
+          title: offer.promo_title || `Promo ${offer.promo_code}`,
+          price: offer.promo_net_price,
+          quantity: priceData.availability ?? 0,
+        } as any;
+        const serverItemId = priceData.entity_code ?? product?.id;
+
+        return (
+          <Row
+            key={`${offer.promo_code}-${offer.promo_row}`}
+            label={t('text-promo', { defaultValue: 'PROMO' })}
+            labelTone="promo"
+            title={cleanTitle(offer.promo_title)}
+            endDate={fmtDate(offer.promo_end_date)}
+          >
+            <PackCol>
+              <PackagingGrid pd={promoPriceData} />
+            </PackCol>
+
+            {!hidePrices ? (
+              <PriceCol>
+                <PriceCell
+                  decimals={decimals}
+                  gross={offer.promo_ref_list_price || baseGross}
+                  net={offer.promo_net_price}
+                  extraDiscounts={offer.promo_extra_discounts}
+                />
+              </PriceCol>
+            ) : (
+              <div className="md:flex-1" />
+            )}
+
+            <CartCol>
+              <CartCell
+                isAuthorized={isAuthorized}
+                lang={lang}
+                product={product}
+                priceData={promoPriceData}
+                variation={variation}
+                serverItemId={serverItemId}
+                disabled={!canAdd}
+              />
+            </CartCol>
+          </Row>
+        );
+      })}
+    </div>
+  );
+}
+
+function Row({
+  label,
+  labelTone,
+  title,
+  endDate,
+  children,
+}: {
+  label: string;
+  labelTone: 'neutral' | 'promo';
+  title?: string;
+  endDate?: string;
+  children: React.ReactNode;
+}) {
+  const isPromo = labelTone === 'promo';
+  return (
+    <div
+      className={cn(
+        'flex flex-col gap-3 px-3 py-3 transition-colors md:flex-row md:items-center md:gap-3',
+        'border-t border-border-base first:border-t-0',
+        isPromo
+          ? 'bg-gradient-to-r from-red-50/70 to-transparent'
+          : 'bg-white hover:bg-gray-50/40',
+      )}
+    >
+      <div className="flex shrink-0 flex-col gap-1 md:w-[95px]">
+        <span
+          className={cn(
+            'inline-flex w-fit items-center rounded-md px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider',
+            isPromo
+              ? 'bg-red-600 text-white'
+              : 'bg-gray-100 text-gray-700 ring-1 ring-inset ring-gray-200',
+          )}
+        >
+          {label}
+        </span>
+        {title ? (
+          <span className="text-[12px] font-medium text-gray-700 line-clamp-2">
+            {title}
+          </span>
+        ) : null}
+        {endDate ? (
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-600">
+            <HiOutlineCalendar className="h-3.5 w-3.5" />
+            {endDate}
+          </span>
+        ) : null}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function PackCol({ children }: { children: React.ReactNode }) {
+  return <div className="flex shrink-0 items-center">{children}</div>;
+}
+
+function PriceCol({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex shrink-0 items-center justify-end md:ml-auto md:w-[130px]">
+      {children}
+    </div>
+  );
+}
+
+function CartCol({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex shrink-0 items-center md:w-[130px]">{children}</div>
+  );
+}
+
+function PriceCell({
+  decimals,
+  gross,
+  net,
+  extraDiscounts,
+}: {
+  decimals: number;
+  gross: number;
+  net: number;
+  extraDiscounts: number[];
+}) {
+  const showStrike = gross > 0 && Number(gross) !== Number(net);
+  const discounts = (extraDiscounts ?? []).filter((v) => v && v !== 0);
+  return (
+    <div className="flex items-center justify-end gap-2 whitespace-nowrap">
+      {showStrike && (
+        <div className="flex flex-col items-end leading-tight">
+          <span className="text-xs text-gray-400 line-through">
+            {fmtNum(gross, decimals)} €
+          </span>
+          {discounts.length > 0 && (
+            <span className="text-[10px] font-bold text-red-600">
+              {discounts.map((d) => `${d}%`).join(' ')}
+            </span>
+          )}
+        </div>
+      )}
+      <span
+        className={cn(
+          'flex items-baseline gap-0.5 font-bold leading-none tabular-nums',
+          showStrike ? 'text-red-600' : 'text-gray-900',
+        )}
+      >
+        <span className="text-xl md:text-2xl">{fmtNum(net, decimals)}</span>
+        <span className="text-sm font-semibold">€</span>
+      </span>
+    </div>
+  );
+}
+
+function CartCell({
+  isAuthorized,
+  lang,
+  product,
+  priceData,
+  variation,
+  serverItemId,
+  disabled,
+}: {
+  isAuthorized: boolean;
+  lang: string;
+  product: any;
+  priceData: ErpPriceData;
+  variation?: any;
+  serverItemId?: string | number;
+  disabled?: boolean;
+}) {
+  if (!isAuthorized) return <div />;
+  return (
+    <div className="flex w-full min-w-0 items-center">
+      <AddToCart
+        lang={lang}
+        product={product}
+        variation={variation}
+        priceData={priceData}
+        serverItemId={serverItemId}
+        disabled={disabled}
+        size="sm"
+        className="w-full"
+      />
+    </div>
+  );
+}

@@ -145,7 +145,7 @@ function OrderRow({
               </button>
               <button
                 onClick={() => onResubmit(order.order_id)}
-                className="h-8 px-3 rounded-md bg-violet-600 text-xs font-semibold text-white hover:bg-violet-700 transition-colors"
+                className="h-8 px-3 rounded-md bg-brand text-xs font-semibold text-white hover:bg-opacity-90 transition-colors"
               >
                 Riinvia
               </button>

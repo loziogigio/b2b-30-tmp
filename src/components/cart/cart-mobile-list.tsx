@@ -4,14 +4,15 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import cn from 'classnames';
 import { prefixImageUrl } from '@utils/image-versioning';
-import Link from 'next/link';
 import { Item } from '@contexts/cart/cart.utils';
 import { useCart } from '@contexts/cart/cart.context';
 import PriceAndPromo, { PriceSlice } from '@components/product/price-and-promo';
 import PackagingGrid from '@components/product/packaging-grid';
 import UpdateCart from '@components/product/update-cart';
-import { ROUTES } from '@utils/routes';
 import { updateLineNote } from '@framework/cart/b2b-cart';
+import { useCartAnomalies } from '@/contexts/cart-anomalies.context';
+import { useModalAction } from '@components/common/modal/modal.context';
+import { fetchPimProductList } from '@framework/product/get-pim-product';
 
 const defaultCurrency = (n: number) =>
   new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(
@@ -60,9 +61,53 @@ function CartMobileCard({
   formatCurrency: (n: number) => string;
 }) {
   const { meta } = useCart();
+  const { byEntityCode, byIdRiga } = useCartAnomalies();
+  const { openModal } = useModalAction();
+  const [loadingProduct, setLoadingProduct] = useState(false);
   const [noteOpen, setNoteOpen] = useState(false);
   const [noteDraft, setNoteDraft] = useState(r.note || '');
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const openProductBySku = async (sku?: string) => {
+    if (!sku || loadingProduct) return;
+    setLoadingProduct(true);
+    try {
+      const result = await fetchPimProductList({
+        lang,
+        filters: { sku: [sku] },
+        rows: 1,
+        group_variants: true,
+      });
+      const product = result?.items?.[0];
+      if (!product) return;
+      const variations = Array.isArray((product as any).variations)
+        ? (product as any).variations
+        : [];
+      const variantCount = (product as any).variantCount ?? variations.length;
+      const hasVariants =
+        (variantCount && variantCount > 1) || variations.length > 1;
+      if (hasVariants) {
+        openModal('B2B_PRODUCT_VARIANTS_QUICK_VIEW', product);
+      } else {
+        const target =
+          variations.length === 1
+            ? { ...variations[0], variantCount: 1 }
+            : product;
+        openModal('PRODUCT_VIEW', target);
+      }
+    } finally {
+      setLoadingProduct(false);
+    }
+  };
+
+  const rowAnomalies: string[] = (() => {
+    const code = String(r.id ?? '');
+    if (code && byEntityCode[code]) return byEntityCode[code];
+    const rid = Number(r.rowId);
+    if (!Number.isNaN(rid) && byIdRiga[rid]) return byIdRiga[rid];
+    return [];
+  })();
+  const hasAnomaly = rowAnomalies.length > 0;
 
   useEffect(() => {
     setNoteDraft(r.note || '');
@@ -85,53 +130,38 @@ function CartMobileCard({
   const line = unitNet(r) * qty;
   const isPromo = !!(r?.promo_code && String(r.promo_code) !== '0');
 
+  const netUnit = unitNet(r);
+  const grossUnit = unitGross(r);
   const priceData: Partial<PriceSlice> = {
-    price_discount: Number(
-      r?.price_discount ?? r?.price ?? r?.net_price ?? unitNet(r) ?? 0,
-    ),
-    gross_price:
-      r?.gross_price != null
-        ? Number(r.gross_price)
-        : r?.price_gross != null
-          ? Number(r.price_gross)
-          : undefined,
+    price_discount: netUnit,
+    gross_price: grossUnit > netUnit ? grossUnit : undefined,
     is_promo: isPromo,
-    discount_description: r?.listing_type_discounts ?? '',
+    discount_description:
+      r?.listing_type_discounts ??
+      (r as any)?.listingTypeDiscounts ??
+      '',
     count_promo: Number(
       r?.count_promo ?? (Array.isArray(r?.promos) ? r.promos.length : 0) ?? 0,
     ),
   };
 
-  const normalizedLang =
-    (lang ?? 'it').trim().replace(/^\/+|\/+$|\s+/g, '') || 'it';
-  const langPrefix = `/${normalizedLang}`;
-  const rawLink =
-    typeof (r as any)?.link === 'string' ? (r as any).link.trim() : '';
-  const skuValue =
-    typeof r.sku === 'string' && r.sku.trim() !== ''
-      ? encodeURIComponent(r.sku.trim())
-      : '';
-
-  const toLangHref = (base: string) => {
-    if (!base) return '';
-    if (base.startsWith('http://') || base.startsWith('https://')) return base;
-    if (base.startsWith(langPrefix)) return base;
-    if (base.startsWith('/')) return `${langPrefix}${base}`;
-    return `${langPrefix}/${base}`;
-  };
-
-  const productHref = rawLink
-    ? toLangHref(rawLink)
-    : skuValue
-      ? `${langPrefix}${ROUTES.PRODUCT}?sku=${skuValue}`
-      : langPrefix;
-
   return (
-    <div className="rounded-md border border-gray-200 bg-white p-3">
+    <div
+      className={cn(
+        'rounded-md border bg-white p-3',
+        hasAnomaly ? 'border-red-400 bg-red-50' : 'border-gray-200',
+      )}
+      title={hasAnomaly ? rowAnomalies.join(' • ') : undefined}
+    >
       <div className="flex items-start gap-3">
-        <Link
-          href={productHref}
-          className="relative h-14 w-14 overflow-hidden rounded-md ring-1 ring-gray-200 bg-gray-100 shrink-0 focus:outline-none focus:ring-2 focus:ring-brand"
+        <button
+          type="button"
+          onClick={() => openProductBySku(r.sku)}
+          disabled={loadingProduct}
+          className={cn(
+            'relative h-14 w-14 overflow-hidden rounded-md ring-1 ring-gray-200 bg-gray-100 shrink-0 focus:outline-none focus:ring-2 focus:ring-brand',
+            loadingProduct && 'opacity-60',
+          )}
           title={r.name ?? r.sku ?? 'Product detail'}
         >
           {r.image ? (
@@ -142,30 +172,34 @@ function CartMobileCard({
               className="object-cover"
             />
           ) : null}
-          <span className="sr-only">Visit {r.name ?? r.sku ?? 'product'}</span>
-        </Link>
+          <span className="sr-only">View {r.name ?? r.sku ?? 'product'}</span>
+        </button>
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between">
-            <Link
-              href={productHref}
-              className="text-[11px] font-semibold text-blue-600 hover:underline focus:outline-none focus:underline"
+            <button
+              type="button"
+              onClick={() => openProductBySku(r.sku)}
+              disabled={loadingProduct}
+              className="text-[11px] font-semibold text-brand hover:underline focus:outline-none focus:underline"
               title={r.sku ?? undefined}
             >
               {r.sku}
-            </Link>
+            </button>
             <span className="text-[11px] text-gray-500">
               N {r.rowId ?? r.id}
             </span>
           </div>
 
-          <Link
-            href={productHref}
+          <button
+            type="button"
+            onClick={() => openProductBySku(r.sku)}
+            disabled={loadingProduct}
             className="truncate text-[13px] font-semibold text-gray-900 hover:text-brand focus:outline-none focus:text-brand text-left w-full"
             title={r.name ?? undefined}
           >
             {r.name}
-          </Link>
+          </button>
 
           {r.model && (
             <div className="text-[12px] text-gray-700">
@@ -176,6 +210,25 @@ function CartMobileCard({
           {r.shortDescription && (
             <div className="text-[12px] text-gray-600 line-clamp-2">
               {r.shortDescription}
+            </div>
+          )}
+
+          {hasAnomaly && (
+            <div className="mt-1.5 flex items-start gap-1.5 text-[11px] font-semibold text-red-700">
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                className="mt-0.5 shrink-0"
+              >
+                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                <line x1="12" y1="9" x2="12" y2="13" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+              <span>{rowAnomalies.join(' • ')}</span>
             </div>
           )}
 
@@ -246,9 +299,9 @@ export default function CartMobileList({
 }: Props) {
   return (
     <div className={cn('md:hidden space-y-2', className)}>
-      {rows.map((r) => (
+      {rows.map((r, idx) => (
         <CartMobileCard
-          key={String(r.id)}
+          key={`${r.rowId ?? idx}-${r.id}-${(r as any).promo_code ?? 0}-${(r as any).promo_row ?? 0}`}
           r={r}
           lang={lang}
           formatCurrency={formatCurrency}

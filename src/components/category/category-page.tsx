@@ -16,6 +16,7 @@ import BannerCard from '@components/cards/banner-card';
 import CategoryChildrenCarousel from './category-children-carousel';
 import CategorySubcategoriesGrid from './category-subcategories-grid';
 import { useHomeSettings } from '@/hooks/use-home-settings';
+import { isEmptyHtml } from '@/lib/html';
 
 const NUM_ITEM = 6;
 const MAX_ROWS = 5;
@@ -95,9 +96,7 @@ function CategoryHero({
     undefined;
 
   const hasImage = Boolean(desktopSrc || mobileSrc);
-  const hasDescription = Boolean(
-    node.description && node.description.trim().length > 0,
-  );
+  const hasDescription = !isEmptyHtml(node.description);
 
   if (!hasImage && !hasDescription) return null;
 

@@ -12,6 +12,7 @@ import {
 import { useTranslation } from 'src/app/i18n/client';
 import { useCollection } from '@framework/collections/use-collections';
 import { useQueryClient } from '@tanstack/react-query';
+import { isEmptyHtml } from '@/lib/html';
 
 interface CollectionDetailContentProps {
   lang: string;
@@ -114,7 +115,7 @@ export default function CollectionDetailContent({
             <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">
               {collection.name}
             </h1>
-            {collection.description && (
+            {!isEmptyHtml(collection.description) && (
               <p className="mt-1 text-slate-600">{collection.description}</p>
             )}
             {collection.product_count !== undefined && (

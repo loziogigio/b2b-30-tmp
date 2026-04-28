@@ -5,6 +5,7 @@ import Carousel from '@components/ui/carousel/carousel';
 import { SwiperSlide } from '@components/ui/carousel/slider';
 import Alert from '@components/ui/alert';
 import SeeAll from '@components/ui/see-all';
+import ArrowIcon from '@components/icons/arrow-icon';
 import useWindowSize from '@utils/use-window-size';
 import ProductCardLoader from '@components/ui/loaders/product-card-loader';
 import cn from 'classnames';
@@ -16,6 +17,7 @@ import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 import { ERP_STATIC } from '@framework/utils/static';
 import { useUI } from '@contexts/ui.context';
+import { useTranslation } from 'src/app/i18n/client';
 
 const ThemedProductCard = getThemedComponent('ProductCard');
 
@@ -34,6 +36,19 @@ interface ProductsCarouselProps {
   headerImageAlt?: string;
   showSeeAll?: boolean;
   headingPosition?: 'left' | 'center' | 'right';
+  /**
+   * When provided, replaces the trailing "See All" slide with a richer
+   * card showing the exact total (only if `totalResults > products.length`).
+   * If `totalResults <= products.length`, no trailing slide is rendered.
+   */
+  totalResults?: number;
+  /**
+   * When false, disables the desktop "bleed to the right" negative margins.
+   * Default true keeps legacy homepage behavior; set to false inside
+   * contained layouts (e.g. the search overlay) so the next arrow and
+   * trailing card stay on-screen.
+   */
+  bleedRight?: boolean;
 }
 
 const breakpoints = {
@@ -78,11 +93,22 @@ const ProductsCarousel: React.FC<ProductsCarouselProps> = ({
   headerImageAlt,
   showSeeAll = true,
   headingPosition = 'left',
+  totalResults,
+  bleedRight = true,
 }) => {
+  const { t } = useTranslation(lang, 'common');
   const { width } = useWindowSize();
   const dir = getDirection(lang);
   const [sliderEnd, setSliderEnd] = useState(false);
   const normalizedSlug = categorySlug ? `/${lang}/${categorySlug}` : '#';
+
+  // Trailing-slide logic:
+  //   - `totalResults` undefined  → legacy behavior (simple SeeAll slide)
+  //   - `totalResults > shown`    → prominent "show more" card with count
+  //   - `totalResults <= shown`   → omit trailing slide (everything already visible)
+  const shownCount = products?.length ?? 0;
+  const hasMoreResults =
+    totalResults === undefined ? true : totalResults > shownCount;
 
   // ---- ERP: collect entity_codes from the *effective* product id ----
   const entity_codes = useMemo<string[]>(() => {
@@ -166,9 +192,10 @@ const ProductsCarousel: React.FC<ProductsCarouselProps> = ({
         <div
           className={cn(
             'heightFull relative',
-            dir === 'rtl'
-              ? 'xl:-ml-40 2xl:-ml-28 4xl:ml-0'
-              : 'xl:-mr-40 2xl:-mr-28 4xl:mr-0',
+            bleedRight &&
+              (dir === 'rtl'
+                ? 'xl:-ml-40 2xl:-ml-28 4xl:ml-0'
+                : 'xl:-mr-40 2xl:-mr-28 4xl:mr-0'),
             !sliderEnd && 'after-item-opacity',
           )}
         >
@@ -236,14 +263,36 @@ const ProductsCarousel: React.FC<ProductsCarouselProps> = ({
                   })}
 
                 {/* See all */}
-                {showSeeAll && (
-                  <SwiperSlide
-                    key="see-all"
-                    className="p-2.5 flex items-center justify-center"
-                  >
-                    <SeeAll href={categorySlug} lang={lang} />
-                  </SwiperSlide>
-                )}
+                {showSeeAll &&
+                  hasMoreResults &&
+                  (totalResults !== undefined ? (
+                    <SwiperSlide
+                      key="see-all-card"
+                      className="px-1.5 md:px-2 xl:px-2.5 py-4"
+                    >
+                      <Link
+                        href={normalizedSlug}
+                        className="group flex flex-col items-center justify-center h-full min-h-[280px] rounded-lg border-2 border-dashed border-brand/40 bg-brand/5 hover:bg-brand/10 hover:border-brand transition-colors p-6 text-center"
+                      >
+                        <ArrowIcon
+                          color="currentColor"
+                          className="w-12 text-brand mb-3 transition-transform group-hover:translate-x-1"
+                        />
+                        <span className="text-brand font-semibold text-base leading-tight">
+                          {t('text-see-all-n-results', {
+                            total: totalResults,
+                          }).replace('{{total}}', String(totalResults))}
+                        </span>
+                      </Link>
+                    </SwiperSlide>
+                  ) : (
+                    <SwiperSlide
+                      key="see-all"
+                      className="p-2.5 flex items-center justify-center"
+                    >
+                      <SeeAll href={categorySlug} lang={lang} />
+                    </SwiperSlide>
+                  ))}
 
                 {/* Optional spacer for certain desktop widths */}
                 {typeof width === 'number' && width > 1024 && width < 1921 ? (

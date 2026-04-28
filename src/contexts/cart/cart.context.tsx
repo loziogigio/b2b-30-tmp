@@ -16,7 +16,12 @@ import { AddToCartInput } from '@utils/transform/cart';
 interface CartProviderState extends State {
   addItemToCart: (item: Item, quantity: number) => void;
   removeItemFromCart: (id: Item['id']) => void;
-  clearItemFromCart: (id: Item['id']) => void;
+  /**
+   * Remove a specific cart line. Accepts either the full `Item` (preferred —
+   * carries promo identity so the right line is targeted when LISTINO + PROMO
+   * lines coexist) or just the id (legacy — removes the first matching line).
+   */
+  clearItemFromCart: (idOrItem: Item['id'] | Item) => void;
   getItemFromCart: (id: Item['id']) => any | undefined;
   isInCart: (id: Item['id']) => boolean;
   isInStock: (id: Item['id']) => boolean;
@@ -124,21 +129,48 @@ export function CartProvider(props: React.PropsWithChildren<any>) {
   }, []);
 
   const clearItemFromCart = React.useCallback(
-    async (id: Item['id']) => {
-      // Snapshot the item before optimistic removal
-      const item = getItem(state.items, id);
-      // Optimistic local removal
-      dispatch({ type: 'REMOVE_ITEM', id });
-      // Sync to server: send quantity 0 to trigger DELETE
-      if (item) {
+    async (idOrItem: Item['id'] | Item) => {
+      const isItemObj =
+        idOrItem != null &&
+        typeof idOrItem === 'object' &&
+        'id' in (idOrItem as any);
+      const id = isItemObj ? (idOrItem as Item).id : (idOrItem as Item['id']);
+
+      // Resolve the exact line: prefer the caller-supplied item (carries promo
+      // identity), otherwise fall back to the first matching id.
+      let line: Item | undefined;
+      if (isItemObj) {
+        const target = idOrItem as Item;
+        line = state.items.find(
+          (i) =>
+            String(i.id) === String(target.id) &&
+            String((i as any).promo_code ?? 0) ===
+              String((target as any).promo_code ?? 0) &&
+            String((i as any).promo_row ?? 0) ===
+              String((target as any).promo_row ?? 0),
+        );
+      }
+      if (!line) line = getItem(state.items, id);
+
+      // Optimistic local removal — dispatch SET_ITEM_QUANTITY with 0 + the
+      // full line so the reducer's promo-aware matcher only drops THAT row,
+      // not every line sharing the id.
+      if (line) {
+        dispatch({ type: 'SET_ITEM_QUANTITY', item: line, quantity: 0 });
+      } else {
+        dispatch({ type: 'REMOVE_ITEM', id });
+      }
+
+      // Sync to server: send quantity 0 to trigger DELETE for this exact line
+      if (line) {
         try {
           const input: AddToCartInput = {
             item_id: id,
             quantity: 0,
-            promo_code: (item as any).promo_code ?? 0,
-            promo_row: (item as any).promo_row ?? 0,
+            promo_code: (line as any).promo_code ?? 0,
+            promo_row: (line as any).promo_row ?? 0,
           };
-          await addOrUpdateCartItem(input, state.items, state.meta, item);
+          await addOrUpdateCartItem(input, state.items, state.meta, line);
           const fresh = await fetchCartData();
           hydrateFromServer(fresh.items, 'replace');
           setCartSummary(fresh.summary);

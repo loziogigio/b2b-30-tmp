@@ -252,7 +252,7 @@ export const SearchFiltersB2B: React.FC<{ lang: string; text?: string }> = ({
             {/* Groups Navigator - hierarchical menu tree (hidden on blank search) */}
             {!isBlankSearch && (
               <>
-                <GroupsNavigator lang={lang} />
+                <GroupsNavigator lang={lang} text={text} />
                 <hr className="border-border-base mx-4" />
               </>
             )}

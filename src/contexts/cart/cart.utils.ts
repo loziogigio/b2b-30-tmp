@@ -129,6 +129,47 @@ export function getItem(items: Item[], id: Item['id']) {
   return items.find((item) => item.id === id);
 }
 
+/**
+ * A cart "line" is uniquely identified by id + promo_code + promo_row, because
+ * the same product can sit in the cart multiple times under different price
+ * tiers (e.g. LISTINO line and a PROMO line for the same SKU).
+ */
+export function lineKey(
+  id: Item['id'],
+  promoCode?: string | number | null,
+  promoRow?: string | number | null,
+): string {
+  return `${id}|${String(promoCode ?? 0)}|${String(promoRow ?? 0)}`;
+}
+
+/**
+ * Match an existing cart item against a (id, promo_code, promo_row) tuple.
+ * Use this when you have a target tuple. For a payload-vs-item match, use
+ * `sameLine(item, payload)` defined below.
+ */
+export function matchesLine(
+  it: Pick<Item, 'id' | 'promo_code' | 'promo_row'>,
+  id: Item['id'],
+  promoCode?: string | number | null,
+  promoRow?: string | number | null,
+): boolean {
+  return (
+    String(it.id) === String(id) &&
+    String(it.promo_code ?? 0) === String(promoCode ?? 0) &&
+    String(it.promo_row ?? 0) === String(promoRow ?? 0)
+  );
+}
+
+/** Promo-aware lookup: matches by id + promo_code + promo_row. */
+export function getItemByLine(
+  items: Item[],
+  id: Item['id'],
+  promoCode?: string | number | null,
+  promoRow?: string | number | null,
+) {
+  return items.find((item) => matchesLine(item, id, promoCode, promoRow));
+}
+
 export function updateItem(
   items: Item[],
   id: Item['id'],

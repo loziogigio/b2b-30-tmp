@@ -359,7 +359,7 @@ const SavedCartsManager: React.FC<SavedCartsManagerProps> = ({ lang }) => {
             {t('text-saved-carts-refresh-hint')}
           </span>
         </div>
-        <span className="flex items-center gap-2 text-sm font-semibold text-indigo-600">
+        <span className="flex items-center gap-2 text-sm font-semibold text-brand">
           {isListOpen ? t('text-hide-saved-carts') : t('text-show-saved-carts')}
           {isListOpen ? (
             <IoChevronUp className="h-5 w-5" />
@@ -435,7 +435,7 @@ const SavedCartsManager: React.FC<SavedCartsManagerProps> = ({ lang }) => {
                       <Fragment key={cart.cartId}>
                         <tr
                           className={cn('transition-colors', {
-                            'bg-indigo-50': isActive,
+                            'bg-brand/10': isActive,
                           })}
                         >
                           <td className="px-4 py-3">
@@ -566,7 +566,7 @@ const SavedCartsManager: React.FC<SavedCartsManagerProps> = ({ lang }) => {
             <span>{t('text-saved-carts-refresh-hint')}</span>
             <button
               type="button"
-              className="font-semibold text-indigo-600 hover:underline"
+              className="font-semibold text-brand hover:underline"
               onClick={() => savedCartsQuery.refetch()}
               disabled={savedCartsQuery.isRefetching}
             >

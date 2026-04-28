@@ -14,9 +14,9 @@ const Container: React.FC<Props> = ({
   clean,
   fullWidth,
 }) => {
+  // Aligned to Deghi-style 20px horizontal padding, slightly wider cap (1600px).
   const rootClassName = cn(className, {
-    'mx-auto max-w-[1440px] px-4 md:px-6 lg:px-8 2xl:px-10':
-      !clean && !fullWidth,
+    'mx-auto max-w-[1600px] px-5': !clean && !fullWidth,
   });
 
   let Component: React.ComponentType<React.HTMLAttributes<HTMLDivElement>> =

@@ -93,7 +93,7 @@ export default function DuplicateSubmitModal({
           <button
             onClick={onConfirm}
             disabled={isSubmitting}
-            className="min-h-[72px] px-4 py-3 rounded-lg bg-violet-600 text-sm font-semibold text-white hover:bg-violet-700 transition-colors disabled:opacity-50 uppercase leading-snug text-center"
+            className="min-h-[72px] px-4 py-3 rounded-lg bg-brand text-sm font-semibold text-white hover:bg-opacity-90 transition-colors disabled:opacity-50 uppercase leading-snug text-center"
           >
             {isSubmitting ? 'Invio in corso...' : 'Conferma invio duplicato'}
           </button>

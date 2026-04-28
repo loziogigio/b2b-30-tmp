@@ -13,6 +13,7 @@ import { useTranslation } from 'src/app/i18n/client';
 import Heading from '@components/ui/heading';
 import Text from '@components/ui/text';
 import DeleteIcon from '@components/icons/delete-icon';
+import { confirmAction } from '@utils/toast-confirm';
 
 export default function CartSidebar({ lang }: { lang: string }) {
   const { t } = useTranslation(lang, 'common');
@@ -31,7 +32,17 @@ export default function CartSidebar({ lang }: { lang: string }) {
             <button
               className="flex items-center flex-shrink transition duration-150 ease-in opacity-50 text-15px focus:outline-none text-brand-dark hover:opacity-100 "
               aria-label={t('text-clear-all') as string}
-              onClick={resetCart}
+              onClick={async () => {
+                const ok = await confirmAction({
+                  message: t('text-confirm-delete-cart'),
+                  confirmLabel: t('text-clear-all', {
+                    defaultValue: 'Svuota carrello',
+                  }),
+                  cancelLabel: t('cancel', { defaultValue: 'Annulla' }),
+                  tone: 'danger',
+                });
+                if (ok) resetCart();
+              }}
             >
               <DeleteIcon />
               <span className="px-1 lg:rtl:pr-1">{t('text-clear-all')}</span>
@@ -43,8 +54,12 @@ export default function CartSidebar({ lang }: { lang: string }) {
       {!isEmpty ? (
         <Scrollbar className="flex-grow w-full cart-scrollbar ">
           <div className="w-full px-5 md:px-7  h-[calc(100vh_-_420px)]">
-            {items?.map((item) => (
-              <CartItem item={item} key={item.id} lang={lang} />
+            {items?.map((item, i) => (
+              <CartItem
+                item={item}
+                key={`${(item as any).rowId ?? i}-${item.id}-${(item as any).promo_code ?? 0}-${(item as any).promo_row ?? 0}`}
+                lang={lang}
+              />
             ))}
           </div>
         </Scrollbar>

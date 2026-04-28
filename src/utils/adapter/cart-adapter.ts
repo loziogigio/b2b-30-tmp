@@ -29,11 +29,57 @@ const stripSizePrefix = (url: string): string => {
 // Commerce-Suite (CS) mappers — maps VINC order/items → Item/CartSummary
 // =====================================================================
 
+/** Read all non-zero tier-discount values for a line, regardless of where the
+ *  data sits (li.discounts, li.raw_data.discounts, or flat discount1..6). */
+function collectTierDiscounts(li: any): number[] {
+  const arr: any[] | undefined = Array.isArray(li.discounts)
+    ? li.discounts
+    : Array.isArray(li.raw_data?.discounts)
+      ? li.raw_data.discounts
+      : undefined;
+  if (arr && arr.length) {
+    return arr.map((d: any) => Number(d?.value ?? 0)).filter((v) => v && v !== 0);
+  }
+  const out: number[] = [];
+  for (let i = 1; i <= 6; i++) {
+    const v = Number(li[`discount${i}`] ?? li.raw_data?.[`discount${i}`] ?? 0);
+    if (v && v !== 0) out.push(v);
+  }
+  return out;
+}
+
+/** Build a percent-style discount description like "-5% -3%". */
+function discountsToDescription(values: number[]): string {
+  if (!values.length) return '';
+  return values.map((v) => `${v}%`).join(' ');
+}
+
+/** Compose discount factors (negative = reduction, positive = surcharge) onto
+ *  a base price: each tier multiplies by `(1 + value / 100)` (value is signed). */
+function applyDiscountChain(base: number, values: number[]): number {
+  return values.reduce((acc, v) => acc * (1 + Number(v) / 100), base);
+}
+
 /** Map a commerce-suite LineItem to the existing Item interface */
 export function mapCSLineItemToItem(li: any): Item {
   const unitPrice = num(li.unit_price, 0);
-  const listPrice = num(li.list_price, 0);
+  let listPrice = num(li.list_price, 0);
+  const tierDiscounts = collectTierDiscounts(li);
+  // The ERP sometimes stores list_price already-discounted (== unit_price). When
+  // we have an explicit tier-discount chain, recover the implied gross so the
+  // strike-through old price renders correctly.
+  if (
+    tierDiscounts.length > 0 &&
+    unitPrice > 0 &&
+    Math.abs(listPrice - unitPrice) < 0.0001
+  ) {
+    const factor = applyDiscountChain(1, tierDiscounts);
+    if (factor > 0 && factor < 1) {
+      listPrice = unitPrice / factor;
+    }
+  }
   const price = unitPrice || listPrice || 0;
+  const discountDescription = discountsToDescription(tierDiscounts);
 
   // Packaging info source priority:
   //   1. li.raw_data.packaging_options_all  ← set by buildAddItemRequest;
@@ -96,7 +142,7 @@ export function mapCSLineItemToItem(li: any): Item {
     promo_code: li.promo_code ?? 0,
     promo_row: li.promo_row ?? 0,
     packaging_options_all: packagingAll,
-    listing_type_discounts: '',
+    listing_type_discounts: discountDescription,
 
     // Meta / raw passthrough
     __cartMeta: {
@@ -209,10 +255,17 @@ export function buildAddItemRequest(
       : rawImg?.original || rawImg?.thumbnail || '';
   const imageUrl = stripSizePrefix(rawImgStr);
 
+  // Resolve human-readable SKU. `input.item_id` is the PIM entity_code (e.g.
+  // "003114") which we MUST NOT use as the SKU — the SKU is the catalog code
+  // (e.g. "SPORG"). Fall back to entity_code only if no real sku is available.
+  const resolvedSku = sourceItem?.sku
+    ? String(sourceItem.sku)
+    : String(input.item_id);
+
   return {
     // Required
     entity_code: String(input.item_id),
-    sku: sourceItem?.sku || String(input.item_id),
+    sku: resolvedSku,
     name: sourceItem?.name || '',
     quantity: Number(input.quantity) || 0,
     list_price: Number(input.price) || 0,
@@ -220,9 +273,10 @@ export function buildAddItemRequest(
     vat_rate: Number(input.vat_perc) || 0,
     vat_included: false,
 
-    // Product source
-    product_source: 'external' as const,
-    external_ref: String(input.item_id),
+    // Product source — products in this B2B project come from the internal
+    // PIM catalog (commerce-suite enum: "pim" | "external" | "manual").
+    product_source: 'pim' as const,
+    external_ref: resolvedSku,
     added_from: 'b2b_erp',
     added_via: 'web',
 

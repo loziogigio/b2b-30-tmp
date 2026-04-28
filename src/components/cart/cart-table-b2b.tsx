@@ -21,6 +21,7 @@ import { ImSpinner2 } from 'react-icons/im';
 import { HiOutlineSave, HiOutlineCheck, HiOutlineX } from 'react-icons/hi';
 import { useTranslation } from 'src/app/i18n/client';
 import { saveCart as saveCurrentCart } from '@framework/cart/saved-carts';
+import { confirmAction } from '@utils/toast-confirm';
 
 type SortKey =
   | 'rowId'
@@ -206,7 +207,13 @@ export default function CartTableB2B({ lang = 'it' }: { lang?: string }) {
 
   const handleDeleteCart = async () => {
     if (!resetCart) return;
-    if (!confirm(t('text-confirm-delete-cart'))) return;
+    const ok = await confirmAction({
+      message: t('text-confirm-delete-cart'),
+      confirmLabel: t('text-delete-cart', { defaultValue: 'Elimina carrello' }),
+      cancelLabel: t('cancel', { defaultValue: 'Annulla' }),
+      tone: 'danger',
+    });
+    if (!ok) return;
     setIsDeleting(true);
     try {
       const idCart = (meta as any)?.idCart ?? (meta as any)?.id_cart;
@@ -547,7 +554,7 @@ export default function CartTableB2B({ lang = 'it' }: { lang?: string }) {
                 placeholder={t('text-saved-cart-name-placeholder', {
                   defaultValue: 'Nome carrello...',
                 })}
-                className="h-10 w-36 rounded-md border border-gray-300 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="h-10 w-36 rounded-md border border-gray-300 px-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand"
                 autoFocus
                 disabled={isSaving}
               />
@@ -555,7 +562,7 @@ export default function CartTableB2B({ lang = 'it' }: { lang?: string }) {
                 type="button"
                 onClick={handleSaveCart}
                 disabled={isSaving}
-                className="flex h-10 w-10 items-center justify-center rounded-md bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50"
+                className="flex h-10 w-10 items-center justify-center rounded-md bg-brand text-white hover:bg-opacity-90 disabled:opacity-50"
                 title={t('text-save', { defaultValue: 'Salva' })}
               >
                 {isSaving ? (
@@ -595,7 +602,7 @@ export default function CartTableB2B({ lang = 'it' }: { lang?: string }) {
                 'flex h-10 items-center gap-1.5 rounded-md px-3 text-sm font-medium border whitespace-nowrap',
                 !baseRows.length
                   ? 'opacity-60 cursor-not-allowed border-gray-300 text-gray-400'
-                  : 'border-indigo-600 text-indigo-600 hover:bg-indigo-50',
+                  : 'border-brand text-brand hover:bg-brand/10',
               )}
               title={t('text-save-for-later', {
                 defaultValue: 'Salva per dopo',

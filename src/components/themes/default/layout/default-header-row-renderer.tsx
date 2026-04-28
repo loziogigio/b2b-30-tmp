@@ -44,7 +44,7 @@ export function DefaultHeaderRowRenderer({
     >
       <div
         className={cn(
-          'mx-auto max-w-[1440px] items-center px-4 md:px-6 lg:px-8 2xl:px-10 py-2 gap-2 lg:gap-4',
+          'mx-auto max-w-[1600px] items-center px-5 py-2 gap-2 lg:gap-4',
           layoutClass,
         )}
       >

@@ -268,7 +268,7 @@ export default async function RootLayout({
             {children}
             <ManagedModal lang={lang} />
             <ManagedDrawer lang={lang} />
-            <EliaDrawer />
+            {/* <EliaDrawer /> */}
             <ToasterProvider />
           </ManagedUIContext>
         </Providers>

@@ -22,6 +22,10 @@ import {
 import AddToCart from '../add-to-cart';
 import { Eye } from '@components/icons/eye-icon';
 import useWindowSize from '@utils/use-window-size';
+import {
+  buildPromoPriceData,
+  pickImprovingOffer,
+} from '../b2b-offer-rows';
 
 interface RenderPopupOrAddToCartProps {
   props: { data: Product & { variantCount?: number } };
@@ -48,6 +52,17 @@ function RenderPopupOrAddToCart({
   // Check availability from ERP data
   const isOutOfStock = priceData ? Number(priceData.availability) <= 0 : false;
   const canAddToCart = priceData?.product_label_action?.ADD_TO_CART ?? true;
+
+  // Promo gate: if there are promos but the buyer can't trigger them with the
+  // default MV (or there are multiple promos to choose from), surface the
+  // detail modal instead of an ambiguous counter.
+  const promoCount = (priceData as any)?.all_promo_offers?.length ?? 0;
+  const hasPromo =
+    promoCount > 0 ||
+    Boolean((priceData as any)?.promo) ||
+    Boolean((priceData as any)?.is_promo);
+  const isImprovingPromo = Boolean((priceData as any)?.is_improving_promo);
+  const promoNeedsDetail = hasPromo && (promoCount > 1 || !isImprovingPromo);
 
   function handlePopupView() {
     if (hasVariants) {
@@ -90,6 +105,43 @@ function RenderPopupOrAddToCart({
   // No valid price - don't show add to cart, just return null (visualizza prodotto button will show below)
   if (!hasValidPrice) {
     return null;
+  }
+
+  // Promo with mismatched MV (or multiple promos) — open detail to let user pick a line.
+  if (promoNeedsDetail) {
+    return (
+      <button
+        onClick={handlePopupView}
+        className="inline-flex items-center justify-center px-3 sm:px-6 h-8 sm:h-10 rounded-md bg-red-600 text-white text-xs sm:text-sm font-medium transition-all hover:bg-red-700 w-full sm:w-auto"
+      >
+        {t('text-view-offers', { defaultValue: 'VEDI OFFERTE' })}
+      </button>
+    );
+  }
+
+  // When the listino MV already triggers a promo, swap the priceData for the
+  // matching offer so the cart line is added with the promo price + tier
+  // discounts + promo_code/row, rather than as a flat listino line.
+  const matchingOffer = priceData ? pickImprovingOffer(priceData) : null;
+  if (matchingOffer && priceData) {
+    const promoPriceData = buildPromoPriceData(priceData, matchingOffer);
+    const variation = {
+      id: `promo-${matchingOffer.promo_code}-${matchingOffer.promo_row}`,
+      title:
+        matchingOffer.promo_title || `Promo ${matchingOffer.promo_code}`,
+      price: matchingOffer.promo_net_price,
+      quantity: priceData.availability ?? 0,
+    } as any;
+    return (
+      <AddToCart
+        lang={lang}
+        product={data}
+        priceData={promoPriceData}
+        variation={variation}
+        serverItemId={priceData.entity_code ?? data?.id}
+        showPlaceholder={false}
+      />
+    );
   }
 
   // Simple product with valid price - show add to cart
@@ -358,38 +410,23 @@ const ProductCardB2B: React.FC<ProductProps> = ({
           )}
         </div>
 
-        {/* Product Name - 2 lines */}
+        {/* Product Name - 1 line */}
         <h3
-          className="text-brand-dark text-[11px] sm:text-sm lg:text-[13px] leading-[0.8rem] sm:leading-4 font-normal line-clamp-2 min-h-[1.6rem] sm:min-h-[2rem]"
+          className="text-brand-dark text-[11px] sm:text-sm lg:text-[13px] leading-[0.8rem] sm:leading-4 font-normal line-clamp-1 min-h-[0.8rem] sm:min-h-[1rem]"
           onClick={handlePopupView}
         >
           {name || 'Product name missing'}
         </h3>
 
-        {/* Model */}
-        {model && (
-          <span className="text-[10px] sm:text-xs text-gray-700 font-bold truncate">
-            {model}
-          </span>
-        )}
+        {/* Model - always reserve 1 line of space */}
+        <span className="block text-[10px] sm:text-xs text-gray-700 font-bold truncate min-h-[0.875rem] sm:min-h-[1rem]">
+          {model || ' '}
+        </span>
 
-        {/* Product Description - show for variants to maintain consistent height */}
-        {(() => {
-          const variations = Array.isArray(product.variations)
-            ? product.variations
-            : [];
-          const hasVariants =
-            (product.variantCount && product.variantCount > 1) ||
-            variations.length > 1;
-          if (hasVariants && description) {
-            return (
-              <p className="text-xs text-gray-600 line-clamp-4 min-h-[4rem]">
-                {description}
-              </p>
-            );
-          }
-          return null;
-        })()}
+        {/* Product Description - always reserve 2 lines of space for consistent alignment */}
+        <p className="text-xs text-gray-600 line-clamp-2 min-h-[2rem]">
+          {description || ' '}
+        </p>
       </div>
 
       {/* Price and CTA Section */}

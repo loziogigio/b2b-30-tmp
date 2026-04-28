@@ -7,6 +7,7 @@ import {
   STOCK_STATUS_LABELS,
   BOOLEAN_LABELS,
 } from '@framework/utils/filters';
+import { resolveSupportedLang } from '@/app/i18n/settings';
 import type {
   PimFacetEntity,
   PimFacetValue,
@@ -111,7 +112,7 @@ export const fetchPimFilters = async (
 
   // Build POST body - use search endpoint with include_faceting
   const body: Record<string, any> = {
-    lang: params.lang || 'it',
+    lang: resolveSupportedLang(params.lang),
     rows: 0, // Don't need results, just facets
     include_faceting: true,
     facet_fields: params.facet_fields || PIM_FACET_FIELDS,

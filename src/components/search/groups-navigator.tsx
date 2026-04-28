@@ -68,6 +68,11 @@ function buildPathNodes(
 
 interface GroupsNavigatorProps {
   lang: string;
+  /**
+   * Search text used by the overlay before it is committed to the URL.
+   * Falls back to the `text` URL param when omitted.
+   */
+  text?: string;
 }
 
 /**
@@ -177,7 +182,7 @@ export function GroupsBreadcrumb({ lang }: { lang: string }) {
   );
 }
 
-export function GroupsNavigator({ lang }: GroupsNavigatorProps) {
+export function GroupsNavigator({ lang, text }: GroupsNavigatorProps) {
   const { t } = useTranslation(lang, 'common');
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -191,18 +196,22 @@ export function GroupsNavigator({ lang }: GroupsNavigatorProps) {
 
   const tree = useMemo(() => menuData?.menuItems ?? [], [menuData]);
 
+  // Overlay passes `text` before it is in the URL; search page carries it in the URL.
+  const effectiveText = (text ?? searchParams?.get('text') ?? '').trim();
+
   // Build search params for facet count query (exclude group filter itself)
   const facetQueryParams = useMemo(() => {
     const params: Record<string, any> = { lang };
     searchParams?.forEach((value, key) => {
       if (key === GROUP_PARAM) return; // exclude own filter to get full counts
-      if (key.startsWith('filters-') || key === 'text') {
+      if (key.startsWith('filters-')) {
         params[key] = value;
       }
     });
+    if (effectiveText) params.text = effectiveText;
     params.facet_fields = ['attribute_erp_groups_ss'];
     return params;
-  }, [searchParams, lang]);
+  }, [searchParams, lang, effectiveText]);
 
   // Fetch facet counts for groups
   const { data: groupFacets } = useQuery({
@@ -255,7 +264,7 @@ export function GroupsNavigator({ lang }: GroupsNavigatorProps) {
   }, [tree, drilledNode]);
 
   // Children to display: drilled node's children if it has any, otherwise its siblings
-  const displayItems = useMemo(() => {
+  const baseDisplayItems = useMemo(() => {
     if (!drilledNode) return tree;
     if (drilledNode.children.length > 0) return drilledNode.children;
     // Leaf node — show siblings (parent's children)
@@ -263,6 +272,70 @@ export function GroupsNavigator({ lang }: GroupsNavigatorProps) {
     if (path.length > 1) return path[path.length - 2].children;
     return tree;
   }, [tree, drilledNode]);
+
+  // Total count for a node, including all descendants (so container nodes
+  // without a direct group code reflect the sum of their children).
+  const getTotalCount = useCallback(
+    (node: MenuTreeNode): number => {
+      const code = extractGroupCode(node);
+      const own = code ? (countMap[code] ?? 0) : 0;
+      const childrenSum = node.children.reduce(
+        (sum, child) => sum + getTotalCount(child),
+        0,
+      );
+      return own + childrenSum;
+    },
+    [countMap],
+  );
+
+  // Check if any descendant group is currently selected
+  const hasSelectedDescendant = useCallback(
+    (node: MenuTreeNode): boolean => {
+      const code = extractGroupCode(node);
+      if (code && selectedCodes.includes(code)) return true;
+      return node.children.some(hasSelectedDescendant);
+    },
+    [selectedCodes],
+  );
+
+  // Filter rules:
+  //   - Drop nodes without an ERP group code (like "BAGNO" whose URL points to
+  //     a marketing PDF). They can't be used as a filter (no code), the drill
+  //     chevron does nothing, and their children are already reachable via the
+  //     ERP facet. Keeping them just shows a grayed-out dead entry.
+  //   - Once facet counts are loaded, also hide coded groups with own count
+  //     of 0 (unless selected or containing a selected descendant) — clicking
+  //     them would filter by a code that yields no products.
+  // Sort: selected first, then by count descending, then by label.
+  const displayItems = useMemo(() => {
+    let items = baseDisplayItems.filter((node) => !!extractGroupCode(node));
+    if (groupFacets) {
+      items = items.filter((node) => {
+        if (hasSelectedDescendant(node)) return true;
+        const code = extractGroupCode(node)!;
+        return (countMap[code] ?? 0) > 0;
+      });
+    }
+    return [...items].sort((a, b) => {
+      const aCode = extractGroupCode(a);
+      const bCode = extractGroupCode(b);
+      const aSelected = aCode ? selectedCodes.includes(aCode) : false;
+      const bSelected = bCode ? selectedCodes.includes(bCode) : false;
+      if (aSelected && !bSelected) return -1;
+      if (!aSelected && bSelected) return 1;
+      const aCount = getTotalCount(a);
+      const bCount = getTotalCount(b);
+      if (bCount !== aCount) return bCount - aCount;
+      return a.label.localeCompare(b.label, undefined, { numeric: true });
+    });
+  }, [
+    baseDisplayItems,
+    groupFacets,
+    countMap,
+    selectedCodes,
+    getTotalCount,
+    hasSelectedDescendant,
+  ]);
 
   // Toggle a group code in the URL filter
   const toggleGroup = useCallback(

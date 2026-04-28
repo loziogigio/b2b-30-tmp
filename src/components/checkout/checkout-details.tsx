@@ -67,7 +67,7 @@ const CheckoutDetails: React.FC<{ lang: string }> = ({ lang }) => {
                 aria-expanded={isOpen}
                 aria-controls={`sec_${index}`}
               >
-                <span className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-indigo-600 text-indigo-600 font-semibold">
+                <span className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-brand text-brand font-semibold">
                   {index + 1}
                 </span>
                 <Heading className="text-[15px] sm:text-base">

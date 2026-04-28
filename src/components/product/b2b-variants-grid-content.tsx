@@ -157,22 +157,32 @@ export default function B2BVariantsGridContent({
 
   const sorted = useMemo(() => {
     const copy = filtered.slice();
-    if (selectedModels.length > 0) {
-      copy.sort((a, b) =>
-        String(a.model ?? '').localeCompare(String(b.model ?? ''), undefined, {
-          numeric: true,
-          sensitivity: 'base',
-        }),
+    const localeOpts = { numeric: true, sensitivity: 'base' } as const;
+    // Primary: model (alphabetical/numeric-aware); secondary: sku — matches
+    // the ordering used for the model-filter chips so products line up with them.
+    const byModelThenSku = (a: any, b: any) => {
+      const cm = String(a.model ?? '').localeCompare(
+        String(b.model ?? ''),
+        undefined,
+        localeOpts,
       );
-    } else if (!isAuthorized || sortKey === 'sku-asc') {
-      copy.sort((a, b) =>
-        String(a.sku ?? a.id).localeCompare(String(b.sku ?? b.id)),
+      if (cm !== 0) return cm;
+      return String(a.sku ?? a.id).localeCompare(
+        String(b.sku ?? b.id),
+        undefined,
+        localeOpts,
       );
+    };
+
+    if (!isAuthorized || sortKey === 'sku-asc' || selectedModels.length > 0) {
+      copy.sort(byModelThenSku);
     } else {
       copy.sort((a, b) => {
         const pa = getSortPrice(a);
         const pb = getSortPrice(b);
-        return sortKey === 'price-asc' ? pa - pb : pb - pa;
+        const dir = sortKey === 'price-asc' ? pa - pb : pb - pa;
+        if (dir !== 0) return dir;
+        return byModelThenSku(a, b);
       });
     }
     return copy;
@@ -351,7 +361,7 @@ export default function B2BVariantsGridContent({
           {isAuthorized && (
             <div className="shrink-0 ml-auto">
               <select
-                aria-label="Sort variants"
+                aria-label={t('sort-variants-aria')}
                 value={sortKey}
                 onChange={(e) =>
                   setSortKey(
@@ -360,9 +370,9 @@ export default function B2BVariantsGridContent({
                 }
                 className="h-10 sm:h-11 rounded-md border px-2 text-sm bg-white border-gray-300"
               >
-                <option value="sku-asc">Sort: SKU (A&rarr;Z)</option>
-                <option value="price-asc">Sort: Price (Low&rarr;High)</option>
-                <option value="price-desc">Sort: Price (High&rarr;Low)</option>
+                <option value="sku-asc">{t('sort-sku-asc')}</option>
+                <option value="price-asc">{t('sort-price-asc')}</option>
+                <option value="price-desc">{t('sort-price-desc')}</option>
               </select>
             </div>
           )}

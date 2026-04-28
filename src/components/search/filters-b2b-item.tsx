@@ -15,6 +15,8 @@ type FilterValue = {
   value: string;
   label: string;
   count: number;
+  logo_url?: string;
+  entity?: { logo_url?: string } | null;
 };
 
 type FiltersB2BItemProps = {
@@ -90,17 +92,21 @@ export const FiltersB2BItem = ({
 
   const visibleCount = 5;
 
-  // Sort values: selected first, then by value (label) alphabetically
+  // Filter out zero-count values (unless currently selected), then sort:
+  // selected first, then by count descending, then by label as tiebreaker
   const sortedValues = React.useMemo(() => {
-    return [...values].sort((a, b) => {
-      const aSelected = formState.includes(a.value);
-      const bSelected = formState.includes(b.value);
-      // Selected items first
-      if (aSelected && !bSelected) return -1;
-      if (!aSelected && bSelected) return 1;
-      // Then by label alphabetically/numerically
-      return a.label.localeCompare(b.label, undefined, { numeric: true });
-    });
+    return values
+      .filter((v) => v.count > 0 || formState.includes(v.value))
+      .sort((a, b) => {
+        const aSelected = formState.includes(a.value);
+        const bSelected = formState.includes(b.value);
+        if (aSelected && !bSelected) return -1;
+        if (!aSelected && bSelected) return 1;
+        // Higher count first
+        if (b.count !== a.count) return b.count - a.count;
+        // Tiebreaker: label alphabetically/numerically
+        return a.label.localeCompare(b.label, undefined, { numeric: true });
+      });
   }, [values, formState]);
 
   const shownValues = expanded
@@ -146,6 +152,7 @@ export const FiltersB2BItem = ({
                   const isSelected = formState.includes(item.value);
                   // Show muted style for count=0 but don't disable - allow multi-select OR
                   const isZeroCount = item.count === 0 && !isSelected;
+                  const logoUrl = item.logo_url || item.entity?.logo_url;
 
                   return (
                     <label
@@ -155,7 +162,7 @@ export const FiltersB2BItem = ({
                         isZeroCount ? 'text-gray-400' : 'text-brand-dark',
                       )}
                     >
-                      <span className="flex items-center gap-2">
+                      <span className="flex items-center gap-2 min-w-0">
                         <input
                           type="checkbox"
                           className="appearance-none w-4 h-4 border border-gray-300 rounded bg-white checked:bg-brand checked:border-brand cursor-pointer shrink-0"
@@ -172,7 +179,15 @@ export const FiltersB2BItem = ({
                             backgroundRepeat: 'no-repeat',
                           }}
                         />
-                        <span className="text-sm">
+                        {logoUrl && (
+                          <img
+                            src={logoUrl}
+                            alt=""
+                            className="h-5 w-5 shrink-0 rounded object-contain bg-white"
+                            loading="lazy"
+                          />
+                        )}
+                        <span className="text-sm truncate">
                           {item.label}
                           {uom && (
                             <span className="text-brand-muted ml-1">{uom}</span>
@@ -190,7 +205,7 @@ export const FiltersB2BItem = ({
                   );
                 })}
 
-                {values.length > visibleCount && (
+                {sortedValues.length > visibleCount && (
                   <button
                     type="button"
                     onClick={() => setExpanded((s) => !s)}

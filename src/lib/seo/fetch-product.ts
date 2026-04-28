@@ -1,6 +1,7 @@
 import { cache } from 'react';
 import { headers } from 'next/headers';
 import { resolveTenant, isSingleTenant } from '@/lib/tenant';
+import { resolveSupportedLang } from '@/app/i18n/settings';
 
 /**
  * Server-side product fetch for SEO metadata generation.
@@ -100,7 +101,7 @@ export async function fetchProductForSeo(sku: string, lang: string) {
       headersList.get('host') ||
       'localhost';
 
-    return cachedFetch(sku, lang, hostname);
+    return cachedFetch(sku, resolveSupportedLang(lang), hostname);
   } catch {
     return null;
   }

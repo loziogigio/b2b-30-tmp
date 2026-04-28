@@ -86,8 +86,25 @@ export default function B2BInfoBlock({ product, priceData, lang }: Props) {
   const brandImg = product?.brand?.image?.original || product?.brand?.logo_url;
   const brandName = product?.brand?.name || product?.brand?.label || 'Brand';
 
+  const isNew = Boolean((product as any)?.is_new);
+  const isPromo = Boolean(priceData?.is_promo || product?.has_active_promo);
+
   return (
     <div className="mt-2 bg-white">
+      {(isNew || isPromo) && (
+        <div className="mb-2 flex flex-wrap items-center gap-2">
+          {isNew && (
+            <span className="inline-block rounded-md bg-emerald-600 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-white">
+              {t('badge-new', { defaultValue: 'New' })}
+            </span>
+          )}
+          {isPromo && (
+            <span className="inline-block rounded-md bg-red-600 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-white">
+              PROMO
+            </span>
+          )}
+        </div>
+      )}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr,auto] items-start">
         {/* Info Grid - borders only on the text content */}
         <dl className="grid grid-cols-1 sm:grid-cols-[180px,1fr] border border-border-base rounded-l lg:rounded-r-none rounded-r">

@@ -11,6 +11,7 @@ import {
   calculateItemTotals,
   calculateTotalItems,
   calculateTotal,
+  matchesLine,
 } from './cart.utils';
 
 interface Metadata {
@@ -61,11 +62,15 @@ export function cartReducer(state: State, action: Action): State {
       return { ...state, meta: action.meta };
     case 'SET_ITEM_QUANTITY': {
       const { item, quantity } = action;
+      // Match by id + promo identity so PROMO and LISTINO lines for the same
+      // product are treated as separate cart rows.
+      const matchKey = (i: Item) =>
+        matchesLine(i, item.id, item.promo_code, item.promo_row);
       let items: Item[];
       if (!Number.isFinite(quantity) || quantity <= 0) {
-        items = state.items.filter((i) => i.id !== item.id);
+        items = state.items.filter((i) => !matchKey(i));
       } else {
-        const idx = state.items.findIndex((i) => i.id === item.id);
+        const idx = state.items.findIndex(matchKey);
         if (idx >= 0) {
           const next = [...state.items];
           next[idx] = { ...next[idx], quantity };
