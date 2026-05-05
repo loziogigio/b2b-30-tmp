@@ -2,8 +2,8 @@
 
 import dynamic from 'next/dynamic';
 import type { ThemeId } from './types';
-import { getThemeId } from './resolver';
-import type { ComponentType } from 'react';
+import { useThemeId } from '@/contexts/tenant.context';
+import { useMemo, type ComponentType } from 'react';
 
 /**
  * Component slots that can be themed.
@@ -65,13 +65,48 @@ const registry: Record<ThemeId, Record<ComponentSlot, () => Promise<any>>> = {
   },
 };
 
+const VALID_THEMES: ThemeId[] = ['default', 'time'];
+
+function asThemeId(value: string | undefined): ThemeId {
+  return value && VALID_THEMES.includes(value as ThemeId)
+    ? (value as ThemeId)
+    : 'default';
+}
+
+// Pre-create a dynamic component per (slot, theme). Each entry is created on
+// first access and cached, so callers using the same theme reuse the same
+// next/dynamic instance and code-splitting still works.
+type DynamicCache = Partial<Record<ComponentSlot, ComponentType<any>>>;
+const dynamicCache: Record<ThemeId, DynamicCache> = {
+  default: {},
+  time: {},
+};
+
+function getDynamic<P>(
+  slot: ComponentSlot,
+  themeId: ThemeId,
+): ComponentType<P> {
+  const cached = dynamicCache[themeId][slot];
+  if (cached) return cached as ComponentType<P>;
+  const Comp = dynamic<P>(registry[themeId][slot], { ssr: true });
+  dynamicCache[themeId][slot] = Comp;
+  return Comp;
+}
+
 /**
- * Returns a dynamically imported component for the current theme.
- * Uses next/dynamic for code-splitting — only the active theme's code is loaded.
+ * Returns a wrapper component that picks the right themed implementation at
+ * render time based on the tenant's `b2bTheme`. Reading the theme from
+ * tenant context (instead of `process.env.NEXT_PUBLIC_THEME` at module load)
+ * is what makes per-tenant theming work in multi-tenant mode.
  */
 export function getThemedComponent<P = any>(
   slot: ComponentSlot,
 ): ComponentType<P> {
-  const themeId = getThemeId();
-  return dynamic<P>(registry[themeId][slot], { ssr: true });
+  const ThemedSlot: ComponentType<P> = (props) => {
+    const themeId = asThemeId(useThemeId());
+    const Component = useMemo(() => getDynamic<P>(slot, themeId), [themeId]);
+    return <Component {...(props as any)} />;
+  };
+  ThemedSlot.displayName = `Themed(${slot})`;
+  return ThemedSlot;
 }

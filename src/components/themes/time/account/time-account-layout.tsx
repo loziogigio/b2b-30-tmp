@@ -32,7 +32,7 @@ export default function TimeAccountLayout({
           animation: timeAccountFadeUp 0.35s ease both;
         }
       `}</style>
-      <div className="flex gap-6 max-w-[1400px] mx-auto min-h-[calc(100vh-64px)]">
+      <div className="flex gap-6 max-w-[1600px] mx-auto px-5 min-h-[calc(100vh-64px)]">
         <div className="hidden lg:block">
           <TimeAccountSidebar lang={lang} />
         </div>

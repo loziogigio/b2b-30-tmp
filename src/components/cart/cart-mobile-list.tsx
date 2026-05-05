@@ -137,9 +137,7 @@ function CartMobileCard({
     gross_price: grossUnit > netUnit ? grossUnit : undefined,
     is_promo: isPromo,
     discount_description:
-      r?.listing_type_discounts ??
-      (r as any)?.listingTypeDiscounts ??
-      '',
+      r?.listing_type_discounts ?? (r as any)?.listingTypeDiscounts ?? '',
     count_promo: Number(
       r?.count_promo ?? (Array.isArray(r?.promos) ? r.promos.length : 0) ?? 0,
     ),

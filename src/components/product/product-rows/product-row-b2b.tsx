@@ -616,42 +616,44 @@ export default function ProductRowB2B({
                   {/* 6)  Add */}
                   <Cell>
                     <div className="flex flex-col justify-center items-end gap-2">
-                      {isAuthorized && hasValidPrice && (() => {
-                        const promoCount =
-                          (vPrice as any)?.all_promo_offers?.length ?? 0;
-                        const hasPromo =
-                          promoCount > 0 ||
-                          Boolean((vPrice as any)?.promo) ||
-                          Boolean((vPrice as any)?.is_promo);
-                        const isImproving = Boolean(
-                          (vPrice as any)?.is_improving_promo,
-                        );
-                        const promoNeedsDetail =
-                          hasPromo && (promoCount > 1 || !isImproving);
-                        if (promoNeedsDetail) {
-                          return (
-                            <button
-                              type="button"
-                              onClick={() => openQuick(v)}
-                              className="inline-flex items-center justify-center px-3 h-9 rounded-md bg-red-600 text-white text-xs font-semibold hover:bg-red-700"
-                            >
-                              {t('text-view-offers', {
-                                defaultValue: 'VEDI OFFERTE',
-                              })}
-                            </button>
+                      {isAuthorized &&
+                        hasValidPrice &&
+                        (() => {
+                          const promoCount =
+                            (vPrice as any)?.all_promo_offers?.length ?? 0;
+                          const hasPromo =
+                            promoCount > 0 ||
+                            Boolean((vPrice as any)?.promo) ||
+                            Boolean((vPrice as any)?.is_promo);
+                          const isImproving = Boolean(
+                            (vPrice as any)?.is_improving_promo,
                           );
-                        }
-                        return (
-                          <AddToCart
-                            product={isPseudo ? (product as any) : v}
-                            priceData={vPrice}
-                            variant="venus"
-                            lang={lang}
-                            className="justify-end"
-                            showPlaceholder={false}
-                          />
-                        );
-                      })()}
+                          const promoNeedsDetail =
+                            hasPromo && (promoCount > 1 || !isImproving);
+                          if (promoNeedsDetail) {
+                            return (
+                              <button
+                                type="button"
+                                onClick={() => openQuick(v)}
+                                className="inline-flex items-center justify-center px-3 h-9 rounded-md bg-red-600 text-white text-xs font-semibold hover:bg-red-700"
+                              >
+                                {t('text-view-offers', {
+                                  defaultValue: 'VEDI OFFERTE',
+                                })}
+                              </button>
+                            );
+                          }
+                          return (
+                            <AddToCart
+                              product={isPseudo ? (product as any) : v}
+                              priceData={vPrice}
+                              variant="venus"
+                              lang={lang}
+                              className="justify-end"
+                              showPlaceholder={false}
+                            />
+                          );
+                        })()}
                     </div>
                   </Cell>
                 </div>

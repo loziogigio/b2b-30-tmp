@@ -161,7 +161,12 @@ export function buildTenantFromEnv(): TenantConfig {
     homeSettingsCustomerId:
       process.env.NEXT_PUBLIC_HOME_SETTINGS_CUSTOMER_ID || 'default',
     builderUrl: process.env.NEXT_PUBLIC_B2B_BUILDER_URL || '',
-    b2bTheme: process.env.NEXT_PUBLIC_THEME || 'default',
+    // Theme is part of the tenant config. In multi-tenant mode it comes
+    // from the MongoDB tenant doc (b2b_theme). In single-tenant mode the
+    // server-only B2B_THEME env var seeds it — we deliberately do NOT use
+    // NEXT_PUBLIC_THEME so the value isn't bundled to the client and the
+    // tenant context stays the single source of truth.
+    b2bTheme: process.env.B2B_THEME || 'default',
     isActive: true,
   };
 }

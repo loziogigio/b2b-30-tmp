@@ -19,9 +19,7 @@ const Footer: React.FC<FooterProps> = ({ variant = 'default', lang }) => {
   const year = new Date().getFullYear();
 
   const containerClassName =
-    variant === 'default'
-      ? 'mx-auto max-w-[1920px] px-4 md:px-6 lg:px-8 2xl:px-10'
-      : '';
+    variant === 'default' ? 'mx-auto max-w-[1600px] px-5' : '';
 
   const branding = settings?.branding;
   const footerHtml = settings?.footerHtml;

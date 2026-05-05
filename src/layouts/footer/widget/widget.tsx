@@ -22,10 +22,7 @@ const Widgets: React.FC<WidgetsProps> = ({
   const { social } = footer;
   return (
     <div
-      className={`${
-        variant === 'default' &&
-        'mx-auto max-w-[1920px] px-4 md:px-6 lg:px-8 2xl:px-10'
-      }`}
+      className={`${variant === 'default' && 'mx-auto max-w-[1600px] px-5'}`}
     >
       <div className="grid grid-cols-2 md:grid-cols-7 xl:grid-cols-12 gap-5 sm:gap-9 lg:gap-11 xl:gap-7 pb-[50px]">
         <WidgetAbout

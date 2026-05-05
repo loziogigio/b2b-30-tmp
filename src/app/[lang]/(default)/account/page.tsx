@@ -1,13 +1,13 @@
 // app/[lang]/account/page.tsx
 import { redirect } from 'next/navigation';
-import { isTimeTheme } from '@/lib/theme/resolver';
+import { isTimeThemeFromRequest } from '@/lib/theme/server';
 
 export default async function AccountPage({
   params,
 }: {
   params: Promise<{ lang: string }>;
 }) {
-  if (!isTimeTheme()) {
+  if (!(await isTimeThemeFromRequest())) {
     redirect('account/profile');
   }
 

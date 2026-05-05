@@ -156,7 +156,7 @@ const BLOCK_SPACING = 'mb-10';
 
 /**
  * Block layout wrapper — respects `fullWidth` from block config.
- * - fullWidth=false (default): max-w-[1440px] centered with horizontal padding
+ * - fullWidth=false (default): max-w-[1600px] centered with 20px horizontal padding
  * - fullWidth=true: no max-width constraint, only vertical spacing
  */
 const BlockWrapper: React.FC<{
@@ -167,9 +167,7 @@ const BlockWrapper: React.FC<{
   fullWidth ? (
     <div className={className}>{children}</div>
   ) : (
-    <div className={`max-w-[1440px] mx-auto px-4 md:px-8 ${className}`}>
-      {children}
-    </div>
+    <div className={`max-w-[1600px] mx-auto px-5 ${className}`}>{children}</div>
   );
 
 function SideBanner({

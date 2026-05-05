@@ -257,70 +257,106 @@ export const SearchFiltersB2B: React.FC<{ lang: string; text?: string }> = ({
               </>
             )}
 
-            {/* Product Type Section (when selected or single) */}
-            {effectiveProductTypeCode && effectiveProductTypeLabel && (
-              <>
-                <ProductTypeBreadcrumb
-                  lang={lang}
-                  productType={effectiveProductTypeCode}
-                  label={effectiveProductTypeLabel}
-                  onClear={handleClearProductType}
-                />
-                <hr className="border-border-base mx-4" />
-              </>
-            )}
+            {/*
+              Sidebar render order:
+                1. Header facets (BRAND etc.)
+                2. CATEGORIA cascade (category_ancestors)
+                3. TIPO PRODOTTO breadcrumb (when narrowed)
+                4. SPECIFICHE TECNICHE accordion (when narrowed)
+                5. Tail / boolean facets (stock_status, has_active_promo, attribute_is_new_b, promo_type)
+            */}
+            {(() => {
+              const TAIL_KEYS = new Set([
+                'attribute_is_new_b',
+                'has_active_promo',
+                'promo_type',
+                'stock_status',
+              ]);
+              const filters = mainFilters || [];
+              const headerFilters = filters.filter(
+                (f) => f.key !== 'category_ancestors' && !TAIL_KEYS.has(f.key),
+              );
+              const categoryFilter = filters.find(
+                (f) => f.key === 'category_ancestors',
+              );
+              const tailFilters = filters.filter((f) => TAIL_KEYS.has(f.key));
 
-            {/* Tech Specs Section (when product type is active) */}
-            {effectiveProductTypeCode && (
-              <>
-                <div className="block">
-                  <Disclosure defaultOpen>
-                    {({ open }) => (
-                      <div>
-                        <DisclosureButton className="w-full flex items-center justify-between px-4 py-2">
-                          <span className="text-brand-dark font-semibold text-sm uppercase">
-                            {t('text-technical-specs')}
-                          </span>
-                          {open ? (
-                            <IoIosArrowUp className="text-brand-dark text-opacity-80 text-sm" />
-                          ) : (
-                            <IoIosArrowDown className="text-brand-dark text-opacity-80 text-sm" />
+              const renderFilter = (filter: any, withDivider = true) => (
+                <React.Fragment key={filter.key}>
+                  <FiltersB2BItem
+                    lang={lang}
+                    filterKey={filter.key}
+                    label={filter.label}
+                    values={filter.values}
+                    variant="flat"
+                    isLoading={isFetchingFilters}
+                  />
+                  {withDivider && <hr className="border-border-base mx-4" />}
+                </React.Fragment>
+              );
+
+              return (
+                <>
+                  {/* 1. Header facets (BRAND, …) */}
+                  {headerFilters.map((f) => renderFilter(f))}
+
+                  {/* 2. CATEGORIA */}
+                  {categoryFilter && renderFilter(categoryFilter)}
+
+                  {/* 3. TIPO PRODOTTO breadcrumb */}
+                  {effectiveProductTypeCode && effectiveProductTypeLabel && (
+                    <>
+                      <ProductTypeBreadcrumb
+                        lang={lang}
+                        productType={effectiveProductTypeCode}
+                        label={effectiveProductTypeLabel}
+                        onClear={handleClearProductType}
+                      />
+                      <hr className="border-border-base mx-4" />
+                    </>
+                  )}
+
+                  {/* 4. SPECIFICHE TECNICHE accordion */}
+                  {effectiveProductTypeCode && (
+                    <>
+                      <div className="block">
+                        <Disclosure defaultOpen>
+                          {({ open }) => (
+                            <div>
+                              <DisclosureButton className="w-full flex items-center justify-between px-4 py-2">
+                                <span className="text-brand-dark font-semibold text-sm uppercase">
+                                  {t('text-technical-specs')}
+                                </span>
+                                {open ? (
+                                  <IoIosArrowUp className="text-brand-dark text-opacity-80 text-sm" />
+                                ) : (
+                                  <IoIosArrowDown className="text-brand-dark text-opacity-80 text-sm" />
+                                )}
+                              </DisclosureButton>
+                              <DisclosurePanel>
+                                <TechSpecsFilters
+                                  lang={lang}
+                                  productType={effectiveProductTypeCode}
+                                  currentFilters={currentFilters}
+                                />
+                              </DisclosurePanel>
+                            </div>
                           )}
-                        </DisclosureButton>
-                        <DisclosurePanel>
-                          <TechSpecsFilters
-                            lang={lang}
-                            productType={effectiveProductTypeCode}
-                            currentFilters={currentFilters}
-                          />
-                        </DisclosurePanel>
+                        </Disclosure>
                       </div>
-                    )}
-                  </Disclosure>
-                </div>
-                {/* Thicker separator between sections */}
-                {mainFilters && mainFilters.length > 0 && (
-                  <hr className="border-t-2 border-border-base" />
-                )}
-              </>
-            )}
+                      {tailFilters.length > 0 && (
+                        <hr className="border-t-2 border-border-base" />
+                      )}
+                    </>
+                  )}
 
-            {/* Regular Filters Section */}
-            {mainFilters?.map((filter, index) => (
-              <React.Fragment key={filter.key}>
-                <FiltersB2BItem
-                  lang={lang}
-                  filterKey={filter.key}
-                  label={filter.label}
-                  values={filter.values}
-                  variant="flat"
-                  isLoading={isFetchingFilters}
-                />
-                {index < mainFilters.length - 1 && (
-                  <hr className="border-border-base mx-4" />
-                )}
-              </React.Fragment>
-            ))}
+                  {/* 5. Tail / boolean facets */}
+                  {tailFilters.map((f, i) =>
+                    renderFilter(f, i < tailFilters.length - 1),
+                  )}
+                </>
+              );
+            })()}
           </div>
         )}
       </div>

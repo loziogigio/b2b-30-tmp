@@ -7,6 +7,7 @@ import {
   useModalState,
 } from '@components/common/modal/modal.context';
 import { getThemedComponent } from '@/lib/theme/registry';
+import { useThemeId } from '@/contexts/tenant.context';
 const LoginForm = dynamic(() => import('@components/auth/login-form'));
 const SignUpForm = dynamic(() => import('@components/auth/sign-up-form'));
 const ForgetPasswordForm = dynamic(
@@ -36,6 +37,7 @@ const RadioPlayerModal = dynamic(
 export default function ManagedModal({ lang }: { lang: string }) {
   const { isOpen, view } = useModalState();
   const { closeModal } = useModalAction();
+  const themeId = useThemeId();
 
   // Radio player renders as floating window WITHOUT modal overlay
   if (view === 'RADIO_PLAYER') {
@@ -51,10 +53,13 @@ export default function ManagedModal({ lang }: { lang: string }) {
   }
 
   if (view === 'B2B_PRODUCT_VARIANTS_QUICK_VIEW' || view === 'PRODUCT_VIEW') {
-    const modalVariant =
-      process.env.NEXT_PUBLIC_MODAL_FULL_WIDTH === 'false'
-        ? 'center'
-        : 'fullscreen';
+    // Time theme always uses the fullscreen panel; other themes honor the env flag.
+    const modalVariant: 'center' | 'fullscreen' =
+      themeId === 'time'
+        ? 'fullscreen'
+        : process.env.NEXT_PUBLIC_MODAL_FULL_WIDTH === 'false'
+          ? 'center'
+          : 'fullscreen';
     return (
       <Modal open={isOpen} onClose={closeModal} variant={modalVariant}>
         {view === 'B2B_PRODUCT_VARIANTS_QUICK_VIEW' && (

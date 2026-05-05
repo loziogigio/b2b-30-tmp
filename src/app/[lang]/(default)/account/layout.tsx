@@ -1,7 +1,7 @@
 // app/[lang]/account/layout.tsx
 'use client';
 
-import { isTimeTheme } from '@/lib/theme/resolver';
+import { useThemeId } from '@/contexts/tenant.context';
 import dynamic from 'next/dynamic';
 
 const TimeAccountLayout = dynamic(
@@ -16,6 +16,7 @@ export default function AccountLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const Layout = isTimeTheme() ? TimeAccountLayout : DefaultAccountLayout;
+  const Layout =
+    useThemeId() === 'time' ? TimeAccountLayout : DefaultAccountLayout;
   return <Layout>{children}</Layout>;
 }

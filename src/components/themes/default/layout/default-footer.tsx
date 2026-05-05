@@ -24,7 +24,7 @@ export default function DefaultFooter({ lang }: DefaultFooterProps) {
   const footerTextColor = branding?.footerTextColor || '#666666';
   const companyTitle = branding?.title || 'B2B Store';
 
-  const containerClassName = 'mx-auto max-w-[1440px] px-4 md:px-8';
+  const containerClassName = 'mx-auto max-w-[1600px] px-5';
 
   // Render custom footer HTML if configured
   if (footerHtml) {

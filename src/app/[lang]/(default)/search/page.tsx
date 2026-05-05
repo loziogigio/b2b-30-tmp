@@ -3,7 +3,7 @@ import dynamic from 'next/dynamic';
 import Divider from '@components/ui/divider';
 import { Metadata } from 'next';
 import { getServerHomeSettings } from '@/lib/home-settings/fetch-server';
-import { getThemeId } from '@/lib/theme/resolver';
+import { getThemeIdFromRequest } from '@/lib/theme/server';
 
 const DefaultSearchContent = dynamic(
   () => import('@/components/themes/default/search/default-search-content'),
@@ -114,8 +114,9 @@ export default async function Page({
   params: Promise<{ lang: string }>;
 }) {
   const { lang } = await params;
+  const themeId = await getThemeIdFromRequest();
   const SearchContent =
-    getThemeId() === 'time' ? TimeSearchContent : DefaultSearchContent;
+    themeId === 'time' ? TimeSearchContent : DefaultSearchContent;
 
   return (
     <>

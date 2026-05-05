@@ -212,14 +212,10 @@ export default function AddToCart({
     );
     if (!lookupId) return null;
     const targetCode = String(
-      (item as any)?.promo_code ??
-        (item as any)?.__cartMeta?.promo_code ??
-        0,
+      (item as any)?.promo_code ?? (item as any)?.__cartMeta?.promo_code ?? 0,
     );
     const targetRow = String(
-      (item as any)?.promo_row ??
-        (item as any)?.__cartMeta?.promo_row ??
-        0,
+      (item as any)?.promo_row ?? (item as any)?.__cartMeta?.promo_row ?? 0,
     );
     return (
       cartItems.find(
@@ -232,15 +228,22 @@ export default function AddToCart({
   }, [cartItems, item, serverItemId]);
 
   const currentQty = Number(cartEntry?.quantity ?? 0);
-  const currentU = toUnits(currentQty);
 
   // Suppress unused warnings for legacy lookups kept for backwards compat
   void isInCart;
   void getItemFromCart;
 
+  // Tracks the most recent target quantity across rapid clicks so the next
+  // click always increments from the latest intent — not from a render
+  // closure that may not have committed yet.
+  const pendingTargetRef = useRef<number>(currentQty);
+
   // Draft & debounce + syncing flag
   const [draft, setDraft] = useState<string>(() => String(currentQty || 0));
-  useEffect(() => setDraft(String(currentQty || 0)), [currentQty]);
+  useEffect(() => {
+    setDraft(String(currentQty || 0));
+    pendingTargetRef.current = currentQty;
+  }, [currentQty]);
 
   const [isSyncing, setIsSyncing] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -297,19 +300,23 @@ export default function AddToCart({
 
   const increment = () => {
     const capU = Number.isFinite(availabilityU) ? availabilityU : Infinity;
-    const nextU = Math.min(currentU + toUnits(step), capU);
-    if (nextU !== currentU) {
-      setDraft(String(fromUnits(nextU)));
-      scheduleSync(nextU);
-    }
+    const baseU = toUnits(pendingTargetRef.current);
+    const nextU = Math.min(baseU + toUnits(step), capU);
+    if (nextU === baseU) return;
+    const next = fromUnits(nextU);
+    pendingTargetRef.current = next;
+    setDraft(String(next));
+    scheduleSync(nextU);
   };
 
   const decrement = () => {
-    const nextU = Math.max(0, currentU - toUnits(step));
-    if (nextU !== currentU) {
-      setDraft(String(fromUnits(nextU)));
-      scheduleSync(nextU);
-    }
+    const baseU = toUnits(pendingTargetRef.current);
+    const nextU = Math.max(0, baseU - toUnits(step));
+    if (nextU === baseU) return;
+    const next = fromUnits(nextU);
+    pendingTargetRef.current = next;
+    setDraft(String(next));
+    scheduleSync(nextU);
   };
 
   const commit = () => {
@@ -322,7 +329,9 @@ export default function AddToCart({
     targetU = snapToMultipleU(targetU);
     if (Number.isFinite(availabilityU))
       targetU = Math.min(targetU, availabilityU);
-    setDraft(String(fromUnits(targetU)));
+    const next = fromUnits(targetU);
+    pendingTargetRef.current = next;
+    setDraft(String(next));
     scheduleSync(targetU);
   };
 

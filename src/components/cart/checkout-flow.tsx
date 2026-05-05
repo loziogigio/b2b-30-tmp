@@ -62,9 +62,7 @@ function AnomaliesAutoClearOnItemsChange() {
 
   const currentSig = useMemo(
     () =>
-      (items ?? [])
-        .map((i: any) => `${i.id}:${i.quantity ?? ''}`)
-        .join(','),
+      (items ?? []).map((i: any) => `${i.id}:${i.quantity ?? ''}`).join(','),
     [items],
   );
 

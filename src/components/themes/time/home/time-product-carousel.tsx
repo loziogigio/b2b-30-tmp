@@ -228,7 +228,7 @@ export default function TimeProductCarousel({
                   return (
                     <div
                       key={`${uniqueKey}-${erpKey}`}
-                      className="shrink-0"
+                      className="shrink-0 flex"
                       style={{
                         animation: `time-fadeUp 0.4s ease ${0.05 * i}s both`,
                         width: cardWidth,
@@ -238,7 +238,11 @@ export default function TimeProductCarousel({
                         product={targetProduct}
                         lang={lang}
                         priceData={priceData}
-                        className={cardWidth ? 'w-full' : undefined}
+                        className={
+                          cardWidth
+                            ? 'w-full h-full flex flex-col'
+                            : 'h-full flex flex-col'
+                        }
                       />
                     </div>
                   );

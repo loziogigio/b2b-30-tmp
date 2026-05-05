@@ -139,7 +139,7 @@ export default function TimeProductCard({
       </div>
 
       {/* Info section */}
-      <div className="px-3.5 py-3 pb-3.5">
+      <div className="px-3.5 py-3 pb-3.5 flex-1 flex flex-col">
         {/* Brand + SKU + Actions row */}
         <div className="flex items-center justify-between mb-1">
           <div
@@ -256,11 +256,19 @@ export default function TimeProductCard({
           <div className="flex items-center gap-1.5 mt-1.5">
             <span
               className="w-[6px] h-[6px] rounded-full inline-block"
-              style={{ background: isOutOfStock ? '#ef4444' : '#22c55e' }}
+              style={{
+                background: isOutOfStock
+                  ? 'var(--time-red, #dc2626)'
+                  : 'var(--time-success, #16a34a)',
+              }}
             />
             <span
               className="text-[11px] sm:text-xs font-semibold font-[family-name:var(--font-body)]"
-              style={{ color: isOutOfStock ? '#dc2626' : '#16a34a' }}
+              style={{
+                color: isOutOfStock
+                  ? 'var(--time-red, #dc2626)'
+                  : 'var(--time-success, #16a34a)',
+              }}
             >
               {isOutOfStock
                 ? priceData?.product_label_action?.LABEL ||
@@ -270,9 +278,10 @@ export default function TimeProductCard({
           </div>
         )}
 
-        {/* Add to cart */}
+        {/* Add to cart — pinned to the bottom of the card via mt-auto so
+            the primary CTA aligns across cards regardless of content. */}
         {isAuthorized && (
-          <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+          <div className="mt-auto pt-2" onClick={(e) => e.stopPropagation()}>
             {hasVariants ? (
               <button
                 onClick={handleClick}

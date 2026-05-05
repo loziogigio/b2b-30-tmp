@@ -24,10 +24,7 @@ const Copyright: React.FC<CopyrightProps> = ({
   return (
     <div className="pb-20 lg:pb-7">
       <div
-        className={`${
-          variant === 'default' &&
-          'mx-auto max-w-[1920px] px-4 md:px-6 lg:px-8 2xl:px-10'
-        }`}
+        className={`${variant === 'default' && 'mx-auto max-w-[1600px] px-5'}`}
       >
         <div className="flex flex-col pt-6 text-center border-t md:flex-row md:justify-between border-border-three lg:pt-7">
           <p className="text-brand-dark text-sm leading-7 lg:leading-[27px] lg:text-15px">

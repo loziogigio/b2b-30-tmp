@@ -127,14 +127,21 @@ export async function addOrUpdateCartItem(
     );
   });
 
+  // Optimistically-added cart lines have no rowId yet (the server assigns it
+  // on first ADD). Only real, server-known lines are eligible for an UPDATE
+  // PATCH — patching `line_number: NaN` makes the server reject the call and
+  // the next fetch comes back with the item missing, snapping the UI to 0.
+  const updatable = matches.filter((it) => {
+    const n = Number(it.rowId);
+    return Number.isFinite(n) && n > 0;
+  });
+
   // --- REMOVE when quantity === 0 ---
   if (input.quantity === 0) {
     if (matches.length === 0) {
       return { status: 'not-found', msg: 'no-matching-row' };
     }
-    const lineNumbers = matches
-      .map((it) => Number(it.rowId))
-      .filter((n) => !isNaN(n));
+    const lineNumbers = updatable.map((it) => Number(it.rowId));
 
     // Build remove payload: prefer line_numbers, fall back to external_refs (entity_codes)
     const removeBody: Record<string, any> = { order_id: orderId };
@@ -150,9 +157,9 @@ export async function addOrUpdateCartItem(
     return res.json();
   }
 
-  // --- UPDATE if match exists ---
-  if (matches.length > 0) {
-    const items = matches.map((it) => {
+  // --- UPDATE if a real (server-assigned) line exists ---
+  if (updatable.length > 0) {
+    const items = updatable.map((it) => {
       const patch: Record<string, any> = {
         line_number: Number(it.rowId),
         quantity: input.quantity,
@@ -163,7 +170,7 @@ export async function addOrUpdateCartItem(
     return pimPatch(CS_CART.ITEMS(orderId), { items });
   }
 
-  // --- ADD if no match ---
+  // --- ADD when no server-known line exists yet ---
   const addBody = buildAddItemRequest(input, sourceItem);
   return pimPost(CS_CART.ITEMS(orderId), addBody);
 }

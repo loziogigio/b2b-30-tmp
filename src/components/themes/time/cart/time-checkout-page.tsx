@@ -58,7 +58,7 @@ export default function TimeCheckoutPage({ lang }: { lang: string }) {
 
   return (
     <div className="font-[var(--font-body)] bg-[var(--time-gray-50)] min-h-[calc(100vh-200px)]">
-      <div className="max-w-[1400px] mx-auto px-4 md:px-8">
+      <div className="max-w-[1600px] mx-auto px-5">
         {/* ── Breadcrumb + actions ───────────────────────────────────── */}
         <div className="flex items-center justify-between py-4 border-b border-[var(--time-gray-100)]">
           <div className="flex items-center gap-3">

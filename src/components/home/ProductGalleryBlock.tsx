@@ -3,7 +3,10 @@
 import cn from 'classnames';
 import { useMemo } from 'react';
 import { Product } from '@framework/types';
-import ProductCardB2B from '@components/product/product-cards/product-card-b2b';
+import { getThemedComponent } from '@/lib/theme/registry';
+
+// Default theme uses ProductCardB2B; time theme swaps in TimeProductCard.
+const ThemedProductCard = getThemedComponent('ProductCard');
 import ProductCardLoader from '@components/ui/loaders/product-card-loader';
 import { fetchErpPrices } from '@framework/erp/prices';
 import { useQuery } from '@tanstack/react-query';
@@ -167,11 +170,12 @@ export const ProductGalleryBlock = ({
         const priceData = erpPricesData?.[erpKey];
 
         return (
-          <ProductCardB2B
+          <ThemedProductCard
             key={`gallery-${erpKey}`}
             product={targetProduct}
             lang={lang}
             priceData={priceData}
+            className="h-full flex flex-col"
           />
         );
       })}

@@ -43,8 +43,7 @@ export async function GET(
   const upstream = await fetch(upstreamUrl, {
     redirect: 'follow',
     headers: {
-      'user-agent':
-        'Mozilla/5.0 (compatible; vinc-b2b-radio-proxy/1.0)',
+      'user-agent': 'Mozilla/5.0 (compatible; vinc-b2b-radio-proxy/1.0)',
       icy: 'metadata=0', // avoid ICY metadata frames in the stream
     },
   });
@@ -58,8 +57,7 @@ export async function GET(
   return new NextResponse(upstream.body, {
     status: 200,
     headers: {
-      'content-type':
-        upstream.headers.get('content-type') ?? 'audio/mpeg',
+      'content-type': upstream.headers.get('content-type') ?? 'audio/mpeg',
       'cache-control': 'no-store, no-cache, must-revalidate',
       'accept-ranges': 'none',
     },

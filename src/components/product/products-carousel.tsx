@@ -94,7 +94,9 @@ const ProductsCarousel: React.FC<ProductsCarouselProps> = ({
   showSeeAll = true,
   headingPosition = 'left',
   totalResults,
-  bleedRight = true,
+  // Default to contained — the carousel respects the Container's 1600px cap.
+  // Pass `bleedRight` if a specific layout still needs the legacy edge bleed.
+  bleedRight = false,
 }) => {
   const { t } = useTranslation(lang, 'common');
   const { width } = useWindowSize();
@@ -141,7 +143,7 @@ const ProductsCarousel: React.FC<ProductsCarouselProps> = ({
   return (
     <div
       className={cn(
-        'max-w-[1920px] overflow-hidden 4xl:overflow-visible mx-auto relative',
+        'max-w-[1600px] overflow-hidden 4xl:overflow-visible mx-auto relative',
         className,
       )}
     >
@@ -251,13 +253,16 @@ const ProductsCarousel: React.FC<ProductsCarouselProps> = ({
                     return (
                       <SwiperSlide
                         key={`slide-${erpKey}`}
-                        className="px-1.5 md:px-2 xl:px-2.5 py-4"
+                        className="!h-auto px-1.5 md:px-2 xl:px-2.5 py-4"
                       >
-                        <ThemedProductCard
-                          product={targetProduct}
-                          lang={lang}
-                          priceData={priceData}
-                        />
+                        <div className="h-full">
+                          <ThemedProductCard
+                            product={targetProduct}
+                            lang={lang}
+                            priceData={priceData}
+                            className="h-full flex flex-col"
+                          />
+                        </div>
                       </SwiperSlide>
                     );
                   })}

@@ -1,12 +1,12 @@
 import DeadlinesClient from './deadlines.client';
-import { isTimeTheme } from '@/lib/theme/resolver';
+import { isTimeThemeFromRequest } from '@/lib/theme/server';
 
 type Props = { params: Promise<{ lang: string }> };
 
 export default async function Page({ params }: Props) {
   const { lang } = await params;
 
-  if (isTimeTheme()) {
+  if (await isTimeThemeFromRequest()) {
     const { default: TimeDeadlines } = await import(
       '@/components/themes/time/account/time-account-deadlines'
     );

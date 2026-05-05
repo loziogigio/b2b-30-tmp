@@ -38,7 +38,6 @@ import { useReminders } from '@contexts/reminders/reminders.context';
 import { useUI } from '@contexts/ui.context';
 import { useHomeSettings } from '@/hooks/use-home-settings';
 import { productPlaceholder } from '@assets/placeholders';
-import { isModalFullWidth } from '@/lib/theme/resolver';
 import AddToCart from '@components/product/add-to-cart';
 import { printProductDetail } from '@utils/print-product';
 import TimeVariantsGrid from './time-variants-grid';
@@ -171,7 +170,7 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
     );
   }
 
-  const fullWidth = isModalFullWidth();
+  const fullWidth = true;
 
   if (!product) return null;
 

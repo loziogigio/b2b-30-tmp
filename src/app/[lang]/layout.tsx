@@ -247,10 +247,13 @@ export default async function RootLayout({
         style={
           themeId === 'time'
             ? {
-                ['--color-brand' as string]: '#e63946',
-                ['--color-brand-secondary' as string]: '#c1121f',
+                ['--color-brand' as string]: branding.primaryColor || '#e63946',
+                ['--color-brand-secondary' as string]:
+                  branding.secondaryColor || '#c1121f',
+                ['--time-red' as string]: branding.primaryColor || '#e63946',
+                ['--time-dark' as string]: branding.textColor || '#1a1d23',
                 fontFamily: 'var(--font-body), sans-serif',
-                background: '#ffffff',
+                background: branding.backgroundColor || '#ffffff',
               }
             : {
                 ['--color-brand' as string]: branding.primaryColor,

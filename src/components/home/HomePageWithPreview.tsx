@@ -4,13 +4,10 @@ import { useMemo } from 'react';
 import { ProductPreviewListener } from '@components/product/ProductPreviewListener';
 import DefaultBlockRenderer from '@/components/themes/default/home/default-block-renderer';
 import TimeBlockRenderer from '@/components/themes/time/home/time-block-renderer';
-import { getThemeId } from '@/lib/theme/resolver';
+import { useThemeId } from '@/contexts/tenant.context';
 import type { PageBlock, PageVersionTags } from '@/lib/types/blocks';
 import { serializeTagsKey } from '@/lib/page-context';
 import Container from '@components/ui/container';
-
-const HomeBlockRenderer =
-  getThemeId() === 'time' ? TimeBlockRenderer : DefaultBlockRenderer;
 
 interface HomePageWithPreviewProps {
   lang: string;
@@ -113,6 +110,8 @@ export function HomePageWithPreview({
 }: HomePageWithPreviewProps) {
   const tagKey = templateTags ? serializeTagsKey(templateTags) : 'default';
   const previewTargetId = !isPreview ? `home:${tagKey}` : undefined;
+  const HomeBlockRenderer =
+    useThemeId() === 'time' ? TimeBlockRenderer : DefaultBlockRenderer;
 
   // All hooks must be called before any conditional returns
   const contextDescription = useMemo(() => {

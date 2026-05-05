@@ -2,26 +2,16 @@ import type { ThemeId } from './types';
 
 const VALID_THEMES: ThemeId[] = ['default', 'time'];
 
-export function getThemeId(): ThemeId {
-  const env = process.env.NEXT_PUBLIC_THEME;
-  if (env && VALID_THEMES.includes(env as ThemeId)) {
-    return env as ThemeId;
-  }
-  return 'default';
-}
-
 /**
- * Resolve theme from tenant config, falling back to env var then "default".
+ * Resolve a theme id from the tenant's `b2bTheme` field. Returns "default"
+ * when the value is missing or unknown — never reads process.env so the
+ * tenant config remains the single source of truth.
  */
 export function getThemeIdForTenant(tenantTheme?: string): ThemeId {
   if (tenantTheme && VALID_THEMES.includes(tenantTheme as ThemeId)) {
     return tenantTheme as ThemeId;
   }
-  return getThemeId();
-}
-
-export function isTimeTheme(): boolean {
-  return getThemeId() === 'time';
+  return 'default';
 }
 
 export function isModalFullWidth(): boolean {

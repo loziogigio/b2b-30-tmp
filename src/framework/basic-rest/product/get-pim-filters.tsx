@@ -47,19 +47,55 @@ function resolveLabel(field: string, value: string, apiLabel?: string): string {
 }
 
 // ===============================
+// Harvest spec UoMs from per-product technical_specifications.
+// PIM available-specs may ship uom:null while individual products carry
+// the unit on each spec entry — this scan covers that fallback so spec
+// facet values still render with "30 cm" instead of bare "30".
+// ===============================
+function harvestSpecUoms(docs: any[] | undefined): Record<string, string> {
+  const map: Record<string, string> = {};
+  if (!Array.isArray(docs)) return map;
+  for (const doc of docs) {
+    const list = Array.isArray(doc?.technical_specifications)
+      ? doc.technical_specifications
+      : [];
+    for (const s of list) {
+      const key = s?.key;
+      const uom =
+        typeof s?.uom === 'string'
+          ? s.uom
+          : (s?.uom && (s.uom as any).symbol) || '';
+      if (!key || !uom) continue;
+      const field = `spec_${key}_s`;
+      if (!map[field]) map[field] = String(uom).trim();
+    }
+  }
+  return map;
+}
+
+// ===============================
 // Transform PIM facets to UI format
 // ===============================
 function transformPimFacets(
   facetResults: Record<string, PimFacetValue[]>,
   lang: string = 'it',
+  specUomMap: Record<string, string> = {},
 ): PimTransformedFilter[] {
   if (!facetResults || typeof facetResults !== 'object') return [];
 
   const transformed: PimTransformedFilter[] = [];
 
   for (const field of Object.keys(facetResults)) {
-    const facetGroup = facetResults[field];
+    let facetGroup = facetResults[field];
     if (!Array.isArray(facetGroup) || facetGroup.length === 0) continue;
+
+    // Drop level-0 "Categoria Root" entries from category_ancestors — roots
+    // are channel-bound containers in the PIM, not navigable categories,
+    // so they shouldn't appear in the storefront cascade.
+    if (field === 'category_ancestors') {
+      facetGroup = facetGroup.filter((f: any) => f?.entity?.level !== 0);
+      if (facetGroup.length === 0) continue;
+    }
 
     transformed.push({
       key: field,
@@ -75,9 +111,16 @@ function transformPimFacets(
           }
         }
 
+        const resolved = resolveLabel(field, f.value, label);
+        // Append harvested UoM for spec_* fields (idempotent — won't double-suffix).
+        const uom = field.startsWith('spec_') ? specUomMap[field] : '';
+        const finalLabel =
+          uom && !String(resolved).endsWith(` ${uom}`)
+            ? `${resolved} ${uom}`
+            : resolved;
         return {
           value: f.value,
-          label: resolveLabel(field, f.value, label),
+          label: finalLabel,
           count: f.count,
           logo_url: f.entity?.logo_url,
           entity: f.entity,
@@ -110,10 +153,13 @@ export const fetchPimFilters = async (
     }
   }
 
-  // Build POST body - use search endpoint with include_faceting
+  // Build POST body - use search endpoint with include_faceting.
+  // We pull a tiny page of products (rows: 5) so we can harvest UoM symbols
+  // from their technical_specifications[].uom — the /available-specs endpoint
+  // may ship uom:null on some tenants and the products are the only fallback.
   const body: Record<string, any> = {
     lang: resolveSupportedLang(params.lang),
-    rows: 0, // Don't need results, just facets
+    rows: 5,
     include_faceting: true,
     facet_fields: params.facet_fields || PIM_FACET_FIELDS,
   };
@@ -133,9 +179,11 @@ export const fetchPimFilters = async (
 
   // Handle response formats: { success, data: { facet_results } } or { facet_results }
   const facetResults = data.data?.facet_results || data.facet_results || {};
+  const docs = (data as any).data?.results || (data as any).results || [];
+  const specUomMap = harvestSpecUoms(docs);
   const lang = body.lang || 'it';
 
-  return transformPimFacets(facetResults, lang);
+  return transformPimFacets(facetResults, lang, specUomMap);
 };
 
 // ===============================

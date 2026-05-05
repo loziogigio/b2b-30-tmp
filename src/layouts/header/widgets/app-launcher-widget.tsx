@@ -6,6 +6,7 @@ import cn from 'classnames';
 import type { WidgetConfig } from '@/lib/home-settings/types';
 import { useTenantOptional } from '@/contexts/tenant.context';
 import { useLogoutMutation } from '@/framework/basic-rest/auth/use-logout';
+import { useUI } from '@contexts/ui.context';
 
 interface PlatformApp {
   app_id: string;
@@ -71,6 +72,7 @@ export function AppLauncherWidget({ config, lang }: AppLauncherWidgetProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const tenantContext = useTenantOptional();
   const logout = useLogoutMutation(lang);
+  const { isAuthorized } = useUI();
 
   useEffect(() => {
     fetch('/api/proxy/pim/api/b2b/tenant/enabled-apps')
@@ -147,7 +149,9 @@ export function AppLauncherWidget({ config, lang }: AppLauncherWidgetProps) {
       >
         <IoGrid className="h-5 w-5" />
       </button>
-      <span className="mt-1 text-[10px] text-slate-500">App</span>
+      {isAuthorized && (
+        <span className="mt-1 text-[10px] text-slate-500">App</span>
+      )}
 
       {open && (
         <div className="absolute right-0 top-full mt-3 w-60 bg-white border border-gray-200 rounded-2xl shadow-xl z-50 overflow-hidden">

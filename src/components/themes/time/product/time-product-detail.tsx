@@ -636,13 +636,14 @@ const TimeProductDetail: React.FC<{
         currentProduct={data}
         currentPrice={netPrice}
         galleryItems={galleryItems}
+        decimals={decimals}
       />
 
       {/* ═══ TABS ═══ */}
       <TimeProductTabs lang={lang} product={data} zone3Blocks={zone3Blocks} />
 
       {/* ═══ RECENTLY BOUGHT (static) ═══ */}
-      <RecentlyBoughtByYou />
+      <RecentlyBoughtByYou decimals={decimals} />
 
       {/* ═══ ZONE 4 BLOCKS ═══ */}
       {zone4Blocks.length > 0 && (
@@ -770,10 +771,12 @@ function FrequentlyBoughtTogether({
   currentProduct,
   currentPrice,
   galleryItems,
+  decimals,
 }: {
   currentProduct: any;
   currentPrice: any;
   galleryItems: GalleryImage[];
+  decimals: number;
 }) {
   const mainPrice =
     currentPrice != null && Number(currentPrice) > 0 ? Number(currentPrice) : 0;
@@ -898,7 +901,7 @@ const RECENTLY_BOUGHT = [
   },
 ];
 
-function RecentlyBoughtByYou() {
+function RecentlyBoughtByYou({ decimals }: { decimals: number }) {
   return (
     <div className="bg-white rounded-2xl border border-[var(--time-gray-100)] p-5 md:p-6 mb-12">
       <div className="flex items-center gap-2 mb-4">

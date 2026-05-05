@@ -191,9 +191,7 @@ function CartDesktopRow({
     gross_price: grossUnit > netUnit ? grossUnit : undefined,
     is_promo: isPromo,
     discount_description:
-      r?.listing_type_discounts ??
-      (r as any)?.listingTypeDiscounts ??
-      '',
+      r?.listing_type_discounts ?? (r as any)?.listingTypeDiscounts ?? '',
     count_promo: Number(
       r?.count_promo ?? (Array.isArray(r?.promos) ? r.promos.length : 0) ?? 0,
     ),
@@ -241,9 +239,7 @@ function CartDesktopRow({
                 className="object-cover"
               />
             ) : null}
-            <span className="sr-only">
-              View {r.name ?? r.sku ?? 'product'}
-            </span>
+            <span className="sr-only">View {r.name ?? r.sku ?? 'product'}</span>
           </button>
           <div className="min-w-0">
             <button
@@ -424,11 +420,7 @@ export default function CartDesktopTable({
             <th className="w-[260px]">Articoli</th>
             <th className="w-32 lg:w-36 !text-center">Imballi</th>
             <th className="w-12 !text-center">Prom.</th>
-            {sortBtn(
-              'priceDiscount',
-              'Prezzo Unitario',
-              'w-44 !text-center',
-            )}
+            {sortBtn('priceDiscount', 'Prezzo Unitario', 'w-44 !text-center')}
             {sortBtn('quantity', 'Quantità', 'w-28 !text-center')}
             {sortBtn('lineTotal', 'Prezzo', 'w-24 !text-right')}
           </tr>

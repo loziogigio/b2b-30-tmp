@@ -89,3 +89,13 @@ export function useProjectCode(): string {
       : process.env.NEXT_PUBLIC_PROJECT_CODE || 'vinc-default')
   );
 }
+
+/**
+ * Get the active theme id from tenant context. The tenant config is the
+ * single source of truth — it falls back to "default" only when no tenant
+ * context is mounted (e.g. during very early render before TenantProvider).
+ */
+export function useThemeId(): string {
+  const context = useContext(TenantContext);
+  return context?.tenant.b2bTheme || 'default';
+}

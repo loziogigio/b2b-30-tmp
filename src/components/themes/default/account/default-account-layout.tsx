@@ -23,7 +23,7 @@ export default function DefaultAccountLayout({
 
   return (
     <main className="min-h-screen bg-gray-100 pb-4">
-      <div className="mx-auto max-w-[1440px] pt-6 px-4 md:px-8">
+      <div className="mx-auto max-w-[1600px] pt-6 px-5">
         <div className="grid items-start gap-6 xl:grid-cols-[20rem_minmax(0,1fr)] 2xl:grid-cols-[20rem_minmax(0,1fr)]">
           <div className="space-y-6">
             <SidebarMenu lang={lang} />

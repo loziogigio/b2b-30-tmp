@@ -8,7 +8,6 @@ import {
   useModalState,
 } from '@components/common/modal/modal.context';
 import { useTranslation } from 'src/app/i18n/client';
-import { isModalFullWidth } from '@/lib/theme/resolver';
 import TimeVariantsGrid from './time-variants-grid';
 
 export default function TimeVariantsQuickView({ lang }: { lang: string }) {
@@ -17,7 +16,7 @@ export default function TimeVariantsQuickView({ lang }: { lang: string }) {
   const { closeModal, goBack } = useModalAction();
 
   const product = (data as any)?.product ?? data;
-  const fullWidth = isModalFullWidth();
+  const fullWidth = true;
 
   return (
     <div className="h-full overflow-y-auto bg-white relative">

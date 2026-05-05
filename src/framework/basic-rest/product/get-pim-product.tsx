@@ -87,6 +87,30 @@ export function transformPimProduct(raw: PimProduct): Product {
   }
   const model = raw.product_model || modelAttr?.value || '';
 
+  // Physical-measurement passthroughs. PIM ships them as typed top-level
+  // fields (weight / volume / dimension_*); time-product-detail reads
+  // data.weight and data.volume directly, so wire them through. Treat 0 as
+  // a placeholder (BMS' default for unmeasured items) and skip it so the
+  // detail strip doesn't render "0 kg".
+  const rawAny = raw as any;
+  const weight =
+    typeof rawAny.weight === 'number' && rawAny.weight > 0
+      ? rawAny.weight
+      : undefined;
+  const weightUom = weight != null ? rawAny.weight_uom || 'kg' : undefined;
+  const volume =
+    typeof rawAny.volume === 'number' && rawAny.volume > 0
+      ? rawAny.volume
+      : undefined;
+  const volumeUom = volume != null ? rawAny.volume_uom || 'cm3' : undefined;
+  const hasAllDims =
+    typeof rawAny.dimension_length === 'number' &&
+    typeof rawAny.dimension_width === 'number' &&
+    typeof rawAny.dimension_height === 'number';
+  const dimensione = hasAllDims
+    ? `${(rawAny.dimension_uom || 'cm').toLowerCase()} ${rawAny.dimension_length} x ${rawAny.dimension_width} x ${rawAny.dimension_height}`
+    : undefined;
+
   // Build sized image variants (gallery_, main_, original)
   const pics = buildPictures(raw);
   const originalUrl =
@@ -139,6 +163,11 @@ export function transformPimProduct(raw: PimProduct): Product {
         }
       : undefined,
     model: model,
+    weight,
+    weight_uom: weightUom,
+    volume,
+    volume_uom: volumeUom,
+    dimensione,
     parent_sku: raw.parent_sku || raw.parent_entity_code || '',
     // Map API variants to frontend variations
     variations: Array.isArray(raw.variants)

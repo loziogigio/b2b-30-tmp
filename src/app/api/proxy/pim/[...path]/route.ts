@@ -1,6 +1,139 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resolveTenant, isSingleTenant } from '@/lib/tenant';
 
+// ---------------------------------------------------------------------------
+// Category-tree cache (per upstream PIM URL).
+// Used by category-search interception to expand non-leaf category_ancestors
+// filters to their L3 leaf descendants — PIM products only carry their
+// leaf in category_ancestors, so filtering by an L1/L2 id directly returns
+// nothing. The tree comes from /api/b2b/pim/categories (admin endpoint that
+// the same API key has access to).
+// ---------------------------------------------------------------------------
+type CatNode = {
+  id: string;
+  name?: string;
+  level?: number;
+  parent_id?: string;
+  path?: string[];
+};
+type CatMap = Record<string, CatNode>;
+const catCache = new Map<
+  string,
+  { map: CatMap; loadedAt: number; promise?: Promise<CatMap | null> }
+>();
+const CAT_CACHE_TTL_MS = 10 * 60 * 1000;
+
+async function getCategoryMap(
+  baseUrl: string,
+  headers: Record<string, string>,
+): Promise<CatMap | null> {
+  const key = baseUrl;
+  const entry = catCache.get(key);
+  if (entry && Date.now() - entry.loadedAt < CAT_CACHE_TTL_MS) return entry.map;
+  if (entry?.promise) return entry.promise;
+
+  const promise = (async () => {
+    try {
+      const u = new URL('api/b2b/pim/categories', baseUrl);
+      u.searchParams.set('limit', '2000');
+      const resp = await fetch(u.toString(), { method: 'GET', headers });
+      if (!resp.ok) return null;
+      const data = await resp.json();
+      const items: any[] = Array.isArray(data)
+        ? data
+        : data?.categories || data?.items || data?.data || [];
+      const map: CatMap = {};
+      for (const c of items) {
+        const id = c?.category_id || c?.id;
+        if (!id) continue;
+        map[id] = {
+          id,
+          name: c.name,
+          level: c.level,
+          parent_id: c.parent_id,
+          path: Array.isArray(c.path) ? c.path : [],
+        };
+      }
+      catCache.set(key, { map, loadedAt: Date.now() });
+      return map;
+    } catch (err) {
+      console.warn('[PIM Proxy] categories cache load failed:', err);
+      return null;
+    }
+  })();
+  catCache.set(key, { map: {}, loadedAt: 0, promise });
+  return promise;
+}
+
+// Drill-down dedup: drop ancestors when a descendant is also selected,
+// then expand each remaining id to its L3 leaf descendants.
+function expandCategoryFilterToLeaves(
+  ids: string[] | string,
+  catMap: CatMap,
+): string[] {
+  const list = (Array.isArray(ids) ? ids : [ids]).map(String);
+
+  const ancestorsOf = (id: string) => catMap[id]?.path || [];
+  const kept = list.filter((id) => {
+    const others = list.filter((o) => o !== id);
+    return !others.some((o) => ancestorsOf(o).includes(id));
+  });
+
+  let childrenIndex: Map<string, CatNode[]> | null = null;
+  const buildIndex = () => {
+    childrenIndex = new Map();
+    for (const c of Object.values(catMap)) {
+      if (!c?.parent_id) continue;
+      const arr = childrenIndex!.get(c.parent_id) || [];
+      arr.push(c);
+      childrenIndex!.set(c.parent_id, arr);
+    }
+  };
+  const out = new Set<string>();
+  const collect = (id: string) => {
+    const meta = catMap[id];
+    if (!meta) {
+      out.add(id);
+      return;
+    }
+    if (meta.level === 3) {
+      out.add(id);
+      return;
+    }
+    if (!childrenIndex) buildIndex();
+    const kids = childrenIndex!.get(id) || [];
+    if (!kids.length) {
+      out.add(id);
+      return;
+    }
+    for (const k of kids) collect(k.id);
+  };
+  for (const id of kept) collect(id);
+  return Array.from(out);
+}
+
+// Rewrite a /api/search/search request body so non-leaf category_ancestors
+// filters get expanded to their leaves. Returns the (possibly rewritten)
+// JSON string, or the original text when no expansion is needed.
+async function maybeExpandSearchBody(
+  bodyText: string,
+  baseUrl: string,
+  headers: Record<string, string>,
+): Promise<string> {
+  let body: any;
+  try {
+    body = JSON.parse(bodyText);
+  } catch {
+    return bodyText;
+  }
+  const ca = body?.filters?.category_ancestors;
+  if (!ca) return bodyText;
+  const catMap = await getCategoryMap(baseUrl, headers);
+  if (!catMap) return bodyText;
+  body.filters.category_ancestors = expandCategoryFilterToLeaves(ca, catMap);
+  return JSON.stringify(body);
+}
+
 // Default values from .env (used in single-tenant mode)
 const DEFAULT_PIM_API_URL =
   process.env.PIM_API_URL || process.env.NEXT_PUBLIC_PIM_API_URL || '';
@@ -112,8 +245,29 @@ async function proxyRequest(
   // Forward body for POST/PUT/PATCH/DELETE
   if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
     try {
-      const bodyText = await req.text();
+      let bodyText = await req.text();
       if (bodyText) {
+        // For category-aware search calls, rewrite filters.category_ancestors
+        // so non-leaf ids (L1/L2) get expanded to their L3 leaf descendants.
+        // Products only carry leaves on category_ancestors, so without this
+        // expansion clicking a parent category narrows to nothing.
+        if (
+          method === 'POST' &&
+          (pathString === 'api/search/search' ||
+            pathString.endsWith('/search/search'))
+        ) {
+          const proxyHeaders: Record<string, string> = {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          };
+          if (config.apiKeyId) proxyHeaders['X-API-Key'] = config.apiKeyId;
+          if (config.apiSecret) proxyHeaders['X-API-Secret'] = config.apiSecret;
+          bodyText = await maybeExpandSearchBody(
+            bodyText,
+            baseUrl,
+            proxyHeaders,
+          );
+        }
         fetchOptions.body = bodyText;
       }
     } catch {

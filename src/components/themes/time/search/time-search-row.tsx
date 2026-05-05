@@ -88,7 +88,7 @@ export default function TimeSearchRow({
     >
       {/* Image */}
       <div
-        className="w-[140px] aspect-square bg-gradient-to-br from-[var(--time-gray-50)] to-[var(--time-gray-100)] shrink-0 relative cursor-pointer"
+        className="w-[150px] aspect-square self-center bg-gradient-to-br from-[var(--time-gray-50)] to-[var(--time-gray-100)] shrink-0 relative cursor-pointer"
         onClick={handleClick}
       >
         <Image
@@ -98,9 +98,10 @@ export default function TimeSearchRow({
               : productPlaceholder
           }
           alt={name || 'Product'}
+          quality={100}
           fill
-          sizes="140px"
-          className="object-cover"
+          sizes="150px"
+          className="object-contain pointer-events-none"
         />
         {/* Badges */}
         <div className="absolute top-2 left-2 flex flex-col gap-1">

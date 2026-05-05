@@ -1,6 +1,12 @@
 'use client';
 
-import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+} from 'react';
 import type { AnomalyResult } from '@/hooks/use-order-submit';
 import { formatAnomalyFlags } from '@/hooks/use-order-submit';
 
@@ -21,11 +27,15 @@ interface CartAnomaliesContextValue {
   clear: () => void;
 }
 
-const CartAnomaliesContext = createContext<CartAnomaliesContextValue | undefined>(
-  undefined,
-);
+const CartAnomaliesContext = createContext<
+  CartAnomaliesContextValue | undefined
+>(undefined);
 
-export function CartAnomaliesProvider({ children }: { children: React.ReactNode }) {
+export function CartAnomaliesProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const [result, setResult] = useState<AnomalyResult | null>(null);
 
   const { byEntityCode, byIdRiga } = useMemo(() => {
@@ -34,7 +44,9 @@ export function CartAnomaliesProvider({ children }: { children: React.ReactNode 
     if (!result) return { byEntityCode: byCode, byIdRiga: byRow };
     for (const a of result.anomalies) {
       const msg = formatAnomalyFlags(a);
-      const erpItem = result.erpItems.find((i) => i.erp_line_number === a.IdRiga);
+      const erpItem = result.erpItems.find(
+        (i) => i.erp_line_number === a.IdRiga,
+      );
       const code = erpItem?.erp_data?.oarti
         ? String(erpItem.erp_data.oarti)
         : undefined;

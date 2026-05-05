@@ -14,7 +14,6 @@ import HeroCarouselWithWidgets from '@components/home/HeroCarouselWithWidgets';
 import ProductGalleryBlock from '@components/home/ProductGalleryBlock';
 import Carousel from '@components/ui/carousel/carousel';
 import { SwiperSlide } from '@components/ui/carousel/slider';
-import ProductCardB2B from '@components/product/product-cards/product-card-b2b';
 import ProductCardLoader from '@components/ui/loaders/product-card-loader';
 
 import type { Product } from '@framework/types';

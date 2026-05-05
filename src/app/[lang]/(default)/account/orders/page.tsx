@@ -1,7 +1,7 @@
 // app/[lang]/account/orders/page.tsx
 import { Suspense } from 'react';
 import OrderPageClient from './order-client';
-import { isTimeTheme } from '@/lib/theme/resolver';
+import { isTimeThemeFromRequest } from '@/lib/theme/server';
 
 export default async function Page({
   params,
@@ -10,7 +10,7 @@ export default async function Page({
 }) {
   const { lang } = await params;
 
-  if (isTimeTheme()) {
+  if (await isTimeThemeFromRequest()) {
     const { default: TimeOrders } = await import(
       '@/components/themes/time/account/time-account-orders'
     );

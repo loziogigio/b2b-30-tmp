@@ -38,8 +38,11 @@ const parseNum = (v: string) => {
 const SYNC_DEBOUNCE_MS = 500;
 
 export default function UpdateCart({ lang, item, className, disabled }: Props) {
-  const { items: cartItems, setItemQuantity, addToCartServer } =
-    useCart() as any;
+  const {
+    items: cartItems,
+    setItemQuantity,
+    addToCartServer,
+  } = useCart() as any;
 
   // Match by id + promo identity so PROMO and LISTINO lines for the same SKU
   // stay isolated. Falling back to the prop avoids a flash of empty state
@@ -92,6 +95,11 @@ export default function UpdateCart({ lang, item, className, disabled }: Props) {
   const [draft, setDraft] = React.useState<string>(String(serverQty || 0));
   const [isSyncing, setIsSyncing] = React.useState(false);
 
+  // Tracks the most recent target qty across rapid clicks so increment/
+  // decrement always start from the latest intent — not from a render
+  // closure that may not have committed yet.
+  const pendingTargetRef = React.useRef<number>(serverQty);
+
   // Keep latest sent qty so we can skip redundant calls and ignore stale syncs
   const lastSentRef = React.useRef<number>(serverQty);
   // Active debounce timer + AbortController-style flag for stale callbacks
@@ -105,6 +113,7 @@ export default function UpdateCart({ lang, item, className, disabled }: Props) {
     setLocal(serverQty);
     setDraft(String(serverQty || 0));
     lastSentRef.current = serverQty;
+    pendingTargetRef.current = serverQty;
   }, [serverQty]);
 
   // Cleanup any pending timer on unmount
@@ -152,21 +161,22 @@ export default function UpdateCart({ lang, item, className, disabled }: Props) {
   );
 
   // ---- User actions: update local state immediately, debounce server call ----
-  const localU = toUnits(local);
-
   const applyLocal = (next: number) => {
+    pendingTargetRef.current = next;
     setLocal(next);
     setDraft(String(next));
     scheduleSync(next);
   };
 
   const increment = () => {
-    const next = fromUnits(localU + toUnits(stepQty));
+    const baseU = toUnits(pendingTargetRef.current);
+    const next = fromUnits(baseU + toUnits(stepQty));
     applyLocal(next);
   };
 
   const decrement = () => {
-    const next = fromUnits(Math.max(0, localU - toUnits(stepQty)));
+    const baseU = toUnits(pendingTargetRef.current);
+    const next = fromUnits(Math.max(0, baseU - toUnits(stepQty)));
     applyLocal(next);
   };
 

@@ -1,7 +1,7 @@
 // app/[lang]/account/profile/page.tsx
 
 import ProfileClient from './profile.client';
-import { isTimeTheme } from '@/lib/theme/resolver';
+import { isTimeThemeFromRequest } from '@/lib/theme/server';
 
 export default async function ProfilePage({
   params,
@@ -10,7 +10,7 @@ export default async function ProfilePage({
 }) {
   const { lang } = await params;
 
-  if (isTimeTheme()) {
+  if (await isTimeThemeFromRequest()) {
     const { default: TimeProfile } = await import(
       '@/components/themes/time/account/time-account-profile'
     );

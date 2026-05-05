@@ -1,6 +1,6 @@
 // app/[lang]/account/change-password/page.tsx
 import ChangePasswordClient from './change-password.client';
-import { isTimeTheme } from '@/lib/theme/resolver';
+import { isTimeThemeFromRequest } from '@/lib/theme/server';
 
 export default async function Page({
   params,
@@ -9,7 +9,7 @@ export default async function Page({
 }) {
   const { lang } = await params;
 
-  if (isTimeTheme()) {
+  if (await isTimeThemeFromRequest()) {
     const { default: TimePassword } = await import(
       '@/components/themes/time/account/time-account-password'
     );

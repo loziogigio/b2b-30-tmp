@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import DocumentsClient from './documents-client';
-import { isTimeTheme } from '@/lib/theme/resolver';
+import { isTimeThemeFromRequest } from '@/lib/theme/server';
 
 export default async function Page({
   params,
@@ -9,7 +9,7 @@ export default async function Page({
 }) {
   const { lang } = await params;
 
-  if (isTimeTheme()) {
+  if (await isTimeThemeFromRequest()) {
     const { default: TimeDocs } = await import(
       '@/components/themes/time/account/time-account-documents'
     );

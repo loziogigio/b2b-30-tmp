@@ -1,20 +1,16 @@
 /* Time Theme - CSS Variable Overrides & Custom Styles */
 
 [data-theme='time'] {
-  /* Brand colors */
-  --color-brand: #e63946;
-  --color-brand-secondary: #c1121f;
-  --color-accent: #e63946;
-  --color-text: #1a1d23;
+  /* Brand colors come from inline styles set in app/[lang]/layout.tsx
+     (driven by tenant branding). Only non-brand defaults live here. */
+  --color-accent: var(--color-brand);
   --color-muted: #6b7280;
   --color-background: #ffffff;
   --color-header-bg: #ffffff;
-  --color-footer-bg: #1a1d23;
+  --color-footer-bg: var(--time-dark);
   --color-footer-text: rgba(255, 255, 255, 0.5);
 
-  /* Time theme palette */
-  --time-red: #e63946;
-  --time-dark: #1a1d23;
+  /* Neutral grays (non-brand) */
   --time-gray-50: #f5f6f8;
   --time-gray-100: #eef0f3;
   --time-gray-200: #e2e5ea;

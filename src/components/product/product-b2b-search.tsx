@@ -3,6 +3,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import Alert from '@components/ui/alert';
 import Button from '@components/ui/button';
 import ProductCardLoader from '@components/ui/loaders/product-card-loader';
+import { getThemedComponent } from '@/lib/theme/registry';
 import cn from 'classnames';
 import { LIMITS } from '@framework/utils/limits';
 import { Product } from '@framework/types';
@@ -12,7 +13,9 @@ import {
   usePimProductListInfiniteQuery,
   fetchPimProductList,
 } from '@framework/product/get-pim-product';
-import ProductCardB2B from './product-cards/product-card-b2b';
+// ProductCardB2B is the default; the themed registry swaps in the time
+// variant (TimeProductCard) when tenant.b2bTheme === 'time'.
+const ThemedProductCard = getThemedComponent('ProductCard');
 import ProductRowB2B from './product-rows/product-row-b2b';
 import { fetchErpPrices } from '@framework/erp/prices';
 import { useMemo, useEffect, useRef, useState } from 'react';
@@ -58,7 +61,7 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
   className = '',
   lang,
   collectionSlug,
-  CardComponent = ProductCardB2B,
+  CardComponent = ThemedProductCard,
   gridClassName,
   cardClassName,
 }) => {

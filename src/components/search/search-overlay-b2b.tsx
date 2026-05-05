@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import cn from 'classnames';
 import Container from '@components/ui/container';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
@@ -255,12 +256,19 @@ export default function SearchOverlayB2B({
   // Mobile filter toggle state (hidden by default on mobile)
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  return (
+  // Portal mount: render at document.body so the overlay escapes any
+  // ancestor stacking context (e.g. the sticky `z-[100]` header it lives in).
+  const [portalNode, setPortalNode] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    setPortalNode(typeof document !== 'undefined' ? document.body : null);
+  }, []);
+
+  const overlay = (
     <div
       ref={rootRef}
       onClickCapture={handleClickCapture}
       className={cn(
-        'fixed inset-0 z-[100] transition-all duration-200',
+        'fixed inset-0 z-[110] transition-all duration-200',
         open ? 'opacity-100 visible' : 'opacity-0 invisible',
       )}
       aria-hidden={!open}
@@ -454,4 +462,7 @@ export default function SearchOverlayB2B({
       </div>
     </div>
   );
+
+  if (!portalNode) return null;
+  return createPortal(overlay, portalNode);
 }

@@ -38,7 +38,9 @@ function collectTierDiscounts(li: any): number[] {
       ? li.raw_data.discounts
       : undefined;
   if (arr && arr.length) {
-    return arr.map((d: any) => Number(d?.value ?? 0)).filter((v) => v && v !== 0);
+    return arr
+      .map((d: any) => Number(d?.value ?? 0))
+      .filter((v) => v && v !== 0);
   }
   const out: number[] = [];
   for (let i = 1; i <= 6; i++) {

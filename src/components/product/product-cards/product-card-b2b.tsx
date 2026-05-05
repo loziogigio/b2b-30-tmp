@@ -22,10 +22,7 @@ import {
 import AddToCart from '../add-to-cart';
 import { Eye } from '@components/icons/eye-icon';
 import useWindowSize from '@utils/use-window-size';
-import {
-  buildPromoPriceData,
-  pickImprovingOffer,
-} from '../b2b-offer-rows';
+import { buildPromoPriceData, pickImprovingOffer } from '../b2b-offer-rows';
 
 interface RenderPopupOrAddToCartProps {
   props: { data: Product & { variantCount?: number } };
@@ -127,8 +124,7 @@ function RenderPopupOrAddToCart({
     const promoPriceData = buildPromoPriceData(priceData, matchingOffer);
     const variation = {
       id: `promo-${matchingOffer.promo_code}-${matchingOffer.promo_row}`,
-      title:
-        matchingOffer.promo_title || `Promo ${matchingOffer.promo_code}`,
+      title: matchingOffer.promo_title || `Promo ${matchingOffer.promo_code}`,
       price: matchingOffer.promo_net_price,
       quantity: priceData.availability ?? 0,
     } as any;
