@@ -7,6 +7,7 @@ import {
   mapPortalToHomeSettings,
   type PortalPayload,
 } from '@/lib/home-settings/portal-mapper';
+import { cacheTag, SINGLE_TENANT_ID } from '@/lib/cache/tags';
 
 // =============================================================================
 // SINGLE-TENANT CONFIG (from .env)
@@ -68,7 +69,7 @@ async function fetchHomeSettingsWithConfig(
       },
       next: {
         revalidate: 300,
-        tags: tenantId ? [`home-settings-${tenantId}`] : ['home-settings'],
+        tags: [cacheTag('home-settings', tenantId || SINGLE_TENANT_ID)],
       },
     }).catch(() => null);
 

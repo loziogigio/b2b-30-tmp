@@ -2,6 +2,7 @@ import { cache } from 'react';
 import { headers } from 'next/headers';
 import { resolveTenant, isSingleTenant } from '@/lib/tenant';
 import { resolveSupportedLang } from '@/app/i18n/settings';
+import { cacheTag, SINGLE_TENANT_ID } from '@/lib/cache/tags';
 
 /**
  * Server-side product fetch for SEO metadata generation.
@@ -24,10 +25,11 @@ interface FetchConfig {
   apiSecret?: string;
   lang: string;
   sku: string;
+  tenantId: string;
 }
 
 async function fetchProductWithConfig(config: FetchConfig) {
-  const { pimApiUrl, apiKeyId, apiSecret, lang, sku } = config;
+  const { pimApiUrl, apiKeyId, apiSecret, lang, sku, tenantId } = config;
   const url = `${pimApiUrl}/api/search/search`;
 
   try {
@@ -44,7 +46,7 @@ async function fetchProductWithConfig(config: FetchConfig) {
         rows: 1,
         filters: { sku: [sku] },
       }),
-      next: { revalidate: 300 }, // Cache for 5 minutes
+      next: { revalidate: 300, tags: [cacheTag('products', tenantId)] },
     });
 
     if (!response.ok) return null;
@@ -74,6 +76,7 @@ const cachedFetch = cache(
         apiSecret: DEFAULT_API_SECRET,
         lang,
         sku,
+        tenantId: SINGLE_TENANT_ID,
       });
     }
 
@@ -89,6 +92,7 @@ const cachedFetch = cache(
       apiSecret: tenant.api.apiSecret,
       lang,
       sku,
+      tenantId: tenant.id,
     });
   },
 );

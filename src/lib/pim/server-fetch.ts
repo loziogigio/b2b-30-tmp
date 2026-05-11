@@ -2,6 +2,7 @@ import { cache } from 'react';
 import { headers } from 'next/headers';
 import { resolveTenant, isSingleTenant } from '@/lib/tenant';
 import { resolveSupportedLang } from '@/app/i18n/settings';
+import { cacheTag, SINGLE_TENANT_ID } from '@/lib/cache/tags';
 
 /**
  * Server-side PIM API fetch utilities.
@@ -21,6 +22,7 @@ interface ApiConfig {
   pimApiUrl: string;
   apiKeyId?: string;
   apiSecret?: string;
+  tenantId: string;
 }
 
 /** Resolve PIM API config for the current request */
@@ -30,6 +32,7 @@ async function getApiConfig(): Promise<ApiConfig | null> {
       pimApiUrl: DEFAULT_PIM_API_URL,
       apiKeyId: DEFAULT_API_KEY_ID,
       apiSecret: DEFAULT_API_SECRET,
+      tenantId: SINGLE_TENANT_ID,
     };
   }
 
@@ -46,6 +49,7 @@ async function getApiConfig(): Promise<ApiConfig | null> {
     pimApiUrl: tenant.api.pimApiUrl,
     apiKeyId: tenant.api.apiKeyId,
     apiSecret: tenant.api.apiSecret,
+    tenantId: tenant.id,
   };
 }
 
@@ -106,7 +110,10 @@ export const serverFetchPimProducts = cache(
         method: 'POST',
         headers: buildHeaders(config),
         body: JSON.stringify(body),
-        next: { revalidate: 300 },
+        next: {
+          revalidate: 300,
+          tags: [cacheTag('products', config.tenantId)],
+        },
       });
 
       if (!response.ok) return { results: [], total: 0 };
@@ -140,7 +147,7 @@ export const serverFetchPimMenu = cache(
       const response = await fetch(url, {
         method: 'GET',
         headers: buildHeaders(config),
-        next: { revalidate: 300 },
+        next: { revalidate: 300, tags: [cacheTag('menu', config.tenantId)] },
       });
 
       if (!response.ok) return [];
@@ -169,7 +176,10 @@ export const serverFetchCollections = cache(async (): Promise<any[]> => {
     const response = await fetch(url, {
       method: 'GET',
       headers: buildHeaders(config),
-      next: { revalidate: 300 },
+      next: {
+        revalidate: 300,
+        tags: [cacheTag('collections', config.tenantId)],
+      },
     });
 
     if (!response.ok) return [];
@@ -192,7 +202,10 @@ export const serverFetchCollectionBySlug = cache(
       const response = await fetch(url, {
         method: 'GET',
         headers: buildHeaders(config),
-        next: { revalidate: 300 },
+        next: {
+          revalidate: 300,
+          tags: [cacheTag('collections', config.tenantId)],
+        },
       });
 
       if (!response.ok) return null;
@@ -230,7 +243,10 @@ export async function fetchProductSkusForSitemap(
         rows,
         group_variants: true,
       }),
-      next: { revalidate: 3600 }, // 1 hour cache for sitemap
+      next: {
+        revalidate: 3600, // 1 hour cache for sitemap
+        tags: [cacheTag('sitemap', config.tenantId)],
+      },
     });
 
     if (!response.ok) return { skus: [], total: 0 };
