@@ -169,22 +169,23 @@ ENV PIM_API_PRIVATE_URL=$PIM_API_PRIVATE_URL
 ENV VINC_API_URL=$VINC_API_URL
 ENV VINC_INTERNAL_API_KEY=$VINC_INTERNAL_API_KEY
 
-# Run as non-root user for security
-RUN addgroup -S nextjs && adduser -S nextjs -G nextjs
+# Create the non-root user up front so the COPYs below can write files with the
+# correct owner via --chown. A `chown -R nextjs:nextjs /app` after copying would
+# rewrite ownership of the whole standalone tree into one extra layer — roughly
+# doubling the size of those files in the image and dominating the build time.
+RUN addgroup -S nextjs && adduser -S nextjs -G nextjs \
+    && chown nextjs:nextjs /app
 
 # Remove wget/curl/shell utilities to prevent RCE exploitation
 RUN rm -f /usr/bin/wget /usr/bin/curl 2>/dev/null || true
 
-# Create cache directory with correct permissions BEFORE switching user
-RUN mkdir -p /app/.next/cache && chown -R nextjs:nextjs /app/.next
+# Copy standalone server and static assets with the correct owner directly
+COPY --from=build --chown=nextjs:nextjs /app/.next/standalone ./
+COPY --from=build --chown=nextjs:nextjs /app/.next/static ./.next/static
+COPY --from=build --chown=nextjs:nextjs /app/public ./public
 
-# Copy standalone server and static assets (as root, then fix ownership)
-COPY --from=build /app/.next/standalone ./
-COPY --from=build /app/.next/static ./.next/static
-COPY --from=build /app/public ./public
-
-# Fix ownership of all copied files
-RUN chown -R nextjs:nextjs /app
+# Writable cache directory for Next.js (image cache, etc.)
+RUN mkdir -p /app/.next/cache && chown nextjs:nextjs /app/.next/cache
 
 # Switch to non-root user
 USER nextjs
