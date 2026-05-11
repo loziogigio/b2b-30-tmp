@@ -25,7 +25,10 @@ import { ErpHealthBanner } from '@components/common/erp-health-banner';
 describe('ErpHealthBanner', () => {
   beforeEach(() => {
     reportErpSuccess(); // healthy
-    mockTenantValue = { tenant: { name: 'Acme Supplies' }, isMultiTenant: true };
+    mockTenantValue = {
+      tenant: { name: 'Acme Supplies' },
+      isMultiTenant: true,
+    };
   });
 
   it('renders nothing when healthy', () => {

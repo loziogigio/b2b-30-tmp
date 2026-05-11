@@ -10,6 +10,7 @@ import ToasterProvider from 'src/app/provider/toaster-provider';
 import Providers from 'src/app/provider/provider';
 import { getServerHomeSettings } from '@/lib/home-settings/fetch-server';
 import { EliaDrawer } from '@components/elia/elia-drawer';
+import { ErpHealthBanner } from '@components/common/erp-health-banner';
 import { headers } from 'next/headers';
 import {
   resolveTenant,
@@ -268,6 +269,7 @@ export default async function RootLayout({
           isMultiTenant={isMultiTenant}
         >
           <ManagedUIContext>
+            <ErpHealthBanner lang={lang} />
             {children}
             <ManagedModal lang={lang} />
             <ManagedDrawer lang={lang} />

@@ -12,20 +12,20 @@
 
 ## File Structure
 
-| File | Responsibility | New/Modify |
-| --- | --- | --- |
-| `src/framework/basic-rest/erp/erp-health.ts` | Module-level health store + `useErpHealth()` hook | **New** |
-| `src/framework/basic-rest/erp/erp-health-interceptor.ts` | Pure `evaluateErpResponse()` helper + `addErpHealthInterceptor(axios)` | **New** |
-| `src/framework/basic-rest/utils/httpB2B.ts` | Wire `addErpHealthInterceptor` into the B2B axios instance | Modify |
-| `src/framework/basic-rest/utils/httpPIM.ts` | Wire `addErpHealthInterceptor` into the PIM axios instance | Modify |
-| `src/components/common/erp-health-banner.tsx` | The banner UI component (client) | **New** |
-| `src/app/[lang]/layout.tsx` | Mount `<ErpHealthBanner lang={lang} />` above `{children}` | Modify |
-| `src/lib/tenant/types.ts` | Optional `supportContact` on `TenantConfig` & `TenantPublicInfo`; thread through `toPublicInfo` + `buildTenantFromEnv` | Modify |
-| `src/lib/tenant/service.ts` | Read `support_contact` from the Mongo doc in `fromDocument()` | Modify |
-| `src/app/i18n/locales/{en,it,de,es,ar,he,zh}/common.json` | 3 new keys per locale | Modify |
-| `src/test/unit/erp-health.test.ts` | Tests for the store | **New** |
-| `src/test/unit/erp-health-interceptor.test.ts` | Tests for `evaluateErpResponse` | **New** |
-| `src/test/components/erp-health-banner.test.tsx` | Tests for the banner component | **New** |
+| File                                                      | Responsibility                                                                                                         | New/Modify |
+| --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ---------- |
+| `src/framework/basic-rest/erp/erp-health.ts`              | Module-level health store + `useErpHealth()` hook                                                                      | **New**    |
+| `src/framework/basic-rest/erp/erp-health-interceptor.ts`  | Pure `evaluateErpResponse()` helper + `addErpHealthInterceptor(axios)`                                                 | **New**    |
+| `src/framework/basic-rest/utils/httpB2B.ts`               | Wire `addErpHealthInterceptor` into the B2B axios instance                                                             | Modify     |
+| `src/framework/basic-rest/utils/httpPIM.ts`               | Wire `addErpHealthInterceptor` into the PIM axios instance                                                             | Modify     |
+| `src/components/common/erp-health-banner.tsx`             | The banner UI component (client)                                                                                       | **New**    |
+| `src/app/[lang]/layout.tsx`                               | Mount `<ErpHealthBanner lang={lang} />` above `{children}`                                                             | Modify     |
+| `src/lib/tenant/types.ts`                                 | Optional `supportContact` on `TenantConfig` & `TenantPublicInfo`; thread through `toPublicInfo` + `buildTenantFromEnv` | Modify     |
+| `src/lib/tenant/service.ts`                               | Read `support_contact` from the Mongo doc in `fromDocument()`                                                          | Modify     |
+| `src/app/i18n/locales/{en,it,de,es,ar,he,zh}/common.json` | 3 new keys per locale                                                                                                  | Modify     |
+| `src/test/unit/erp-health.test.ts`                        | Tests for the store                                                                                                    | **New**    |
+| `src/test/unit/erp-health-interceptor.test.ts`            | Tests for `evaluateErpResponse`                                                                                        | **New**    |
+| `src/test/components/erp-health-banner.test.tsx`          | Tests for the banner component                                                                                         | **New**    |
 
 > Note vs. spec: the interceptor lives in `src/framework/basic-rest/erp/` (next to the store) rather than `src/lib/auth/`, because it depends on `ERP_STATIC` (`@framework/utils/static`) and the store — both already in `framework`. This avoids any import cycle through `lib/auth`.
 
@@ -34,6 +34,7 @@
 ## Task 1: Tenant config — optional `supportContact`
 
 **Files:**
+
 - Modify: `src/lib/tenant/types.ts`
 - Modify: `src/lib/tenant/service.ts`
 
@@ -109,6 +110,7 @@ git commit -m "feat(tenant): add optional supportContact to tenant config"
 ## Task 2: `erp-health` store + `useErpHealth` hook
 
 **Files:**
+
 - Create: `src/framework/basic-rest/erp/erp-health.ts`
 - Test: `src/test/unit/erp-health.test.ts`
 
@@ -266,6 +268,7 @@ git commit -m "feat(erp): add erp-health store and useErpHealth hook"
 ## Task 3: `evaluateErpResponse` helper + `addErpHealthInterceptor`
 
 **Files:**
+
 - Create: `src/framework/basic-rest/erp/erp-health-interceptor.ts`
 - Test: `src/test/unit/erp-health-interceptor.test.ts`
 
@@ -283,7 +286,11 @@ import {
 describe('isCustomerContextUrl', () => {
   it('matches /erp/ paths', () => {
     expect(isCustomerContextUrl('/erp/get_multiple_prices')).toBe(true);
-    expect(isCustomerContextUrl('https://b2b.example.com/api/v1/erp/get_multiple_prices')).toBe(true);
+    expect(
+      isCustomerContextUrl(
+        'https://b2b.example.com/api/v1/erp/get_multiple_prices',
+      ),
+    ).toBe(true);
   });
 
   it('matches /b2b/cart paths', () => {
@@ -301,55 +308,100 @@ describe('isCustomerContextUrl', () => {
 describe('evaluateErpResponse', () => {
   it('500 on /erp/ while authorized → failure', () => {
     expect(
-      evaluateErpResponse({ status: 500, url: '/erp/get_multiple_prices', authorized: true, isError: true }),
+      evaluateErpResponse({
+        status: 500,
+        url: '/erp/get_multiple_prices',
+        authorized: true,
+        isError: true,
+      }),
     ).toBe('failure');
   });
 
   it('400 on /b2b/cart while authorized → failure', () => {
     expect(
-      evaluateErpResponse({ status: 400, url: '/api/b2b/cart/active', authorized: true, isError: true }),
+      evaluateErpResponse({
+        status: 400,
+        url: '/api/b2b/cart/active',
+        authorized: true,
+        isError: true,
+      }),
     ).toBe('failure');
   });
 
   it('401 on /erp/ → ignore (handled by auth interceptor)', () => {
     expect(
-      evaluateErpResponse({ status: 401, url: '/erp/get_multiple_prices', authorized: true, isError: true }),
+      evaluateErpResponse({
+        status: 401,
+        url: '/erp/get_multiple_prices',
+        authorized: true,
+        isError: true,
+      }),
     ).toBe('ignore');
   });
 
   it('500 on /erp/ while NOT authorized → ignore', () => {
     expect(
-      evaluateErpResponse({ status: 500, url: '/erp/get_multiple_prices', authorized: false, isError: true }),
+      evaluateErpResponse({
+        status: 500,
+        url: '/erp/get_multiple_prices',
+        authorized: false,
+        isError: true,
+      }),
     ).toBe('ignore');
   });
 
   it('network error (no status) on /erp/ → ignore', () => {
     expect(
-      evaluateErpResponse({ status: undefined, url: '/erp/get_multiple_prices', authorized: true, isError: true }),
+      evaluateErpResponse({
+        status: undefined,
+        url: '/erp/get_multiple_prices',
+        authorized: true,
+        isError: true,
+      }),
     ).toBe('ignore');
   });
 
   it('500 on unrelated url → ignore', () => {
     expect(
-      evaluateErpResponse({ status: 500, url: '/api/search/search', authorized: true, isError: true }),
+      evaluateErpResponse({
+        status: 500,
+        url: '/api/search/search',
+        authorized: true,
+        isError: true,
+      }),
     ).toBe('ignore');
   });
 
   it('200 on /b2b/cart → success', () => {
     expect(
-      evaluateErpResponse({ status: 200, url: '/api/b2b/cart/active', authorized: true, isError: false }),
+      evaluateErpResponse({
+        status: 200,
+        url: '/api/b2b/cart/active',
+        authorized: true,
+        isError: false,
+      }),
     ).toBe('success');
   });
 
   it('200 on unrelated url → ignore', () => {
     expect(
-      evaluateErpResponse({ status: 200, url: '/api/public/menu', authorized: true, isError: false }),
+      evaluateErpResponse({
+        status: 200,
+        url: '/api/public/menu',
+        authorized: true,
+        isError: false,
+      }),
     ).toBe('ignore');
   });
 
   it('3xx success-side response on /erp/ → ignore', () => {
     expect(
-      evaluateErpResponse({ status: 304, url: '/erp/get_multiple_prices', authorized: true, isError: false }),
+      evaluateErpResponse({
+        status: 304,
+        url: '/erp/get_multiple_prices',
+        authorized: true,
+        isError: false,
+      }),
     ).toBe('ignore');
   });
 });
@@ -397,7 +449,9 @@ export function evaluateErpResponse(input: {
   if (!isCustomerContextUrl(url)) return 'ignore';
 
   if (!isError) {
-    return status != null && status >= 200 && status < 300 ? 'success' : 'ignore';
+    return status != null && status >= 200 && status < 300
+      ? 'success'
+      : 'ignore';
   }
 
   // error branch
@@ -476,6 +530,7 @@ git commit -m "feat(erp): add erp-health axios interceptor and evaluator"
 ## Task 4: Wire the interceptor into both HTTP clients
 
 **Files:**
+
 - Modify: `src/framework/basic-rest/utils/httpB2B.ts`
 - Modify: `src/framework/basic-rest/utils/httpPIM.ts`
 
@@ -539,6 +594,7 @@ git commit -m "feat(erp): register erp-health interceptor on B2B and PIM http cl
 ## Task 5: i18n keys
 
 **Files:**
+
 - Modify: `src/app/i18n/locales/en/common.json`
 - Modify: `src/app/i18n/locales/it/common.json`
 - Modify: `src/app/i18n/locales/de/common.json`
@@ -636,6 +692,7 @@ git commit -m "feat(i18n): add erp-profile-error banner strings"
 ## Task 6: `<ErpHealthBanner>` component
 
 **Files:**
+
 - Create: `src/components/common/erp-health-banner.tsx`
 - Test: `src/test/components/erp-health-banner.test.tsx`
 
@@ -738,7 +795,10 @@ interface ErpHealthBannerProps {
 
 type ContactLink = { href: string; label: string } | null;
 
-function buildContactLink(contact: string | undefined, label: string): ContactLink {
+function buildContactLink(
+  contact: string | undefined,
+  label: string,
+): ContactLink {
   if (!contact) return null;
   const value = contact.trim();
   if (!value) return null;
@@ -806,7 +866,7 @@ export default ErpHealthBanner;
 In `src/test/components/erp-health-banner.test.tsx`, replace the `tel` assertion line with:
 
 ```typescript
-    expect(link).toHaveAttribute('href', 'tel:+39021234567');
+expect(link).toHaveAttribute('href', 'tel:+39021234567');
 ```
 
 - [ ] **Step 5: Run test to verify it passes**
@@ -831,6 +891,7 @@ git commit -m "feat(ui): add ErpHealthBanner component"
 ## Task 7: Mount the banner in the layout
 
 **Files:**
+
 - Modify: `src/app/[lang]/layout.tsx`
 
 - [ ] **Step 1: Import the banner**
@@ -847,26 +908,26 @@ import { ErpHealthBanner } from '@components/common/erp-health-banner';
 Find the JSX block:
 
 ```tsx
-          <ManagedUIContext>
-            {children}
-            <ManagedModal lang={lang} />
-            <ManagedDrawer lang={lang} />
-            {/* <EliaDrawer /> */}
-            <ToasterProvider />
-          </ManagedUIContext>
+<ManagedUIContext>
+  {children}
+  <ManagedModal lang={lang} />
+  <ManagedDrawer lang={lang} />
+  {/* <EliaDrawer /> */}
+  <ToasterProvider />
+</ManagedUIContext>
 ```
 
 Change it to:
 
 ```tsx
-          <ManagedUIContext>
-            <ErpHealthBanner lang={lang} />
-            {children}
-            <ManagedModal lang={lang} />
-            <ManagedDrawer lang={lang} />
-            {/* <EliaDrawer /> */}
-            <ToasterProvider />
-          </ManagedUIContext>
+<ManagedUIContext>
+  <ErpHealthBanner lang={lang} />
+  {children}
+  <ManagedModal lang={lang} />
+  <ManagedDrawer lang={lang} />
+  {/* <EliaDrawer /> */}
+  <ToasterProvider />
+</ManagedUIContext>
 ```
 
 - [ ] **Step 3: Type-check**
@@ -878,6 +939,7 @@ Expected: no errors.
 
 Run: `pnpm dev`, then in the browser log in as a B2B user whose ERP profile is broken (or whose backend returns `500` for `/erp/get_multiple_prices` / `400` for `/api/b2b/cart/active`).
 Expected:
+
 - The amber banner appears at the top with the title, body (with the tenant name), and the contact link if `supportContact` is configured.
 - Browsing other pages keeps the banner visible (no dismiss button).
 - When the backend recovers, the banner disappears after the next successful prices/cart call.
