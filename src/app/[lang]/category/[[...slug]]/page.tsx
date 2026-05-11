@@ -1,100 +1,35 @@
 // app/[lang]/category/[[...slug]]/page.tsx  (Next.js App Router)
 
 import { Metadata } from 'next';
+import { cache } from 'react';
 import {
   QueryClient,
   dehydrate,
   HydrationBoundary,
 } from '@tanstack/react-query';
 import CategoryPage from '@components/category/category-page';
+import CategoryJsonLd from '@components/seo/category-json-ld';
 import { getServerHomeSettings } from '@/lib/home-settings/fetch-server';
 import { serverFetchPimMenu } from '@/lib/pim/server-fetch';
-import { transformPimMenuTree } from '@framework/product/get-pim-menu';
-import { slugify } from '@utils/slugify';
+import {
+  transformPimMenuTree,
+  findNodeByPath,
+  buildNodeAncestry,
+  type MenuTreeNode,
+} from '@framework/product/get-pim-menu';
 
-// Types for menu tree (used by generateMetadata)
-interface MenuTreeNode {
-  id: string;
-  slug: string;
-  name: string;
-  label: string;
-  url: string | null;
-  path: string[];
-  isGroup: boolean;
-  children: MenuTreeNode[];
-  category_menu_image?: string | null;
-  category_banner_image?: string | null;
-  description?: string | null;
-}
+/**
+ * Load the header menu once per request: the raw items (for the React Query
+ * prefetch) and the transformed tree (for SEO metadata / breadcrumbs). Backed
+ * by `serverFetchPimMenu`, which is `revalidate: 300` + `menu-${tenant}`-tagged.
+ */
+const loadCategoryMenu = cache(async () => {
+  const raw = await serverFetchPimMenu('header');
+  return { raw, tree: transformPimMenuTree(raw as any) };
+});
 
-// Server-side menu fetch for SEO metadata
-async function fetchMenuForSeo(): Promise<MenuTreeNode[]> {
-  const PIM_API_BASE_URL = process.env.NEXT_PUBLIC_PIM_API_URL || '';
-  const url = `${PIM_API_BASE_URL}/api/public/menu?location=header`;
-
-  try {
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-API-Key': process.env.NEXT_PUBLIC_API_KEY_ID || '',
-        'X-API-Secret': process.env.NEXT_PUBLIC_API_SECRET || '',
-      },
-      next: { revalidate: 300 }, // Cache for 5 minutes
-    });
-
-    if (!response.ok) return [];
-
-    const data = await response.json();
-    if (!data.success) return [];
-
-    // Transform menu items
-    function transformItem(item: any, parentPath: string[] = []): MenuTreeNode {
-      const rawSlug = item.reference_id || item.label || item.id;
-      const slug = slugify(rawSlug);
-      const currentPath = [...parentPath, slug];
-
-      return {
-        id: item.id,
-        slug,
-        name: item.label,
-        label: item.label,
-        url: item.url || null,
-        path: currentPath,
-        isGroup: item.children?.length > 0,
-        children: (item.children || []).map((child: any) =>
-          transformItem(child, currentPath),
-        ),
-        category_menu_image: item.icon || null,
-        category_banner_image: item.image_url || null,
-        description: item.rich_text || null,
-      };
-    }
-
-    return (data.menuItems || []).map((item: any) => transformItem(item, []));
-  } catch {
-    return [];
-  }
-}
-
-// Find node by path
-function findNodeByPath(
-  tree: MenuTreeNode[],
-  pathSegments: string[],
-): MenuTreeNode | null {
-  if (!pathSegments.length) return null;
-
-  let current: MenuTreeNode | undefined;
-  let level = tree;
-
-  for (const segment of pathSegments) {
-    current = level.find((node) => node.slug === segment);
-    if (!current) return null;
-    level = current.children;
-  }
-
-  return current || null;
-}
+const ROOT_LABEL_IT = 'Tutti i gruppi';
+const ROOT_LABEL_EN = 'All Groups';
 
 // Generate dynamic SEO metadata for category pages
 export async function generateMetadata({
@@ -104,17 +39,20 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { lang, slug = [] } = await params;
 
-  const [menuTree, homeSettings] = await Promise.all([
-    fetchMenuForSeo(),
+  const [{ tree }, homeSettings] = await Promise.all([
+    loadCategoryMenu(),
     getServerHomeSettings(),
   ]);
 
   const brandingTitle = homeSettings?.branding?.title || 'VINC - B2B';
-  const siteUrl = process.env.NEXT_PUBLIC_WEBSITE_URL || '';
+  const siteUrl = (process.env.NEXT_PUBLIC_WEBSITE_URL || '').replace(
+    /\/$/,
+    '',
+  );
+  const rootLabel = lang === 'it' ? ROOT_LABEL_IT : ROOT_LABEL_EN;
 
-  // If no slug, show all categories page
+  // No slug → "all categories" page
   if (!slug.length) {
-    const title = lang === 'it' ? 'Tutti i gruppi' : 'All Groups';
     const description =
       lang === 'it'
         ? 'Esplora tutti i gruppi di prodotti'
@@ -122,7 +60,7 @@ export async function generateMetadata({
     const canonicalUrl = `${siteUrl}/${lang}/category`;
 
     return {
-      title: `${title} | ${brandingTitle}`,
+      title: `${rootLabel} | ${brandingTitle}`,
       description,
       alternates: {
         canonical: canonicalUrl,
@@ -132,28 +70,19 @@ export async function generateMetadata({
         },
       },
       openGraph: {
-        title,
+        title: rootLabel,
         description,
         url: canonicalUrl,
         siteName: brandingTitle,
         type: 'website',
         locale: lang === 'it' ? 'it_IT' : 'en_US',
       },
-      twitter: {
-        card: 'summary',
-        title,
-        description,
-      },
-      robots: {
-        index: true,
-        follow: true,
-      },
+      twitter: { card: 'summary', title: rootLabel, description },
+      robots: { index: true, follow: true },
     };
   }
 
-  // Find specific category
-  const category = findNodeByPath(menuTree, slug);
-
+  const category = findNodeByPath(tree, slug);
   if (!category) {
     return {
       title: `Categoria | ${brandingTitle}`,
@@ -167,14 +96,8 @@ export async function generateMetadata({
     (lang === 'it'
       ? `Scopri i prodotti della categoria ${categoryName}`
       : `Discover products in ${categoryName} category`);
-
-  // Build canonical URL with full path
   const canonicalUrl = `${siteUrl}/${lang}/category/${slug.join('/')}`;
-
-  // Get category image
   const categoryImage = category.category_banner_image || '';
-
-  // Build breadcrumb for keywords
   const keywords = [categoryName, ...slug].filter(Boolean);
 
   return {
@@ -196,14 +119,7 @@ export async function generateMetadata({
       type: 'website',
       locale: lang === 'it' ? 'it_IT' : 'en_US',
       images: categoryImage
-        ? [
-            {
-              url: categoryImage,
-              width: 1200,
-              height: 630,
-              alt: categoryName,
-            },
-          ]
+        ? [{ url: categoryImage, width: 1200, height: 630, alt: categoryName }]
         : [],
     },
     twitter: {
@@ -212,10 +128,7 @@ export async function generateMetadata({
       description: categoryDescription,
       images: categoryImage ? [categoryImage] : [],
     },
-    robots: {
-      index: true,
-      follow: true,
-    },
+    robots: { index: true, follow: true },
   };
 }
 
@@ -225,24 +138,35 @@ export default async function Page({
   params: Promise<{ lang: string; slug?: string[] }>;
 }) {
   const { lang, slug } = await params;
+  const slugSegments = slug ?? [];
 
-  // Prefetch menu data into React Query cache for SSR
+  const { raw, tree } = await loadCategoryMenu();
+
+  const category: MenuTreeNode | null = slugSegments.length
+    ? findNodeByPath(tree, slugSegments)
+    : null;
+  const ancestry =
+    category && slugSegments.length ? buildNodeAncestry(tree, category) : [];
+  const rootLabel = lang === 'it' ? ROOT_LABEL_IT : ROOT_LABEL_EN;
+
+  // Hydrate the menu into React Query for the client CategoryPage component.
   const queryClient = new QueryClient();
-
   await queryClient.prefetchQuery({
     queryKey: ['pim-menu', 'header'],
-    queryFn: async () => {
-      const rawItems = await serverFetchPimMenu('header');
-      return {
-        menuItems: transformPimMenuTree(rawItems),
-        flat: rawItems,
-      };
-    },
+    queryFn: async () => ({ menuItems: tree, flat: raw }),
   });
 
   return (
-    <HydrationBoundary state={dehydrate(queryClient)}>
-      <CategoryPage lang={lang} slug={slug ?? []} />
-    </HydrationBoundary>
+    <>
+      <CategoryJsonLd
+        category={category}
+        ancestry={ancestry}
+        lang={lang}
+        rootLabel={rootLabel}
+      />
+      <HydrationBoundary state={dehydrate(queryClient)}>
+        <CategoryPage lang={lang} slug={slugSegments} />
+      </HydrationBoundary>
+    </>
   );
 }
