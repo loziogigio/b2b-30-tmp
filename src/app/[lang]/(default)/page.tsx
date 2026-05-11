@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import {
   getLatestHomeTemplateVersion,
   getPublishedHomeTemplate,
+  getPublishedHomeTemplateCached,
 } from '@/lib/db/home-templates';
 import { HomePageWithPreview } from '@components/home/HomePageWithPreview';
 import {
@@ -101,7 +102,9 @@ export default async function Page({
         homeTemplate = await getPublishedHomeTemplate({ tags: versionTags });
       }
     } else {
-      homeTemplate = await getPublishedHomeTemplate({ tags: versionTags });
+      homeTemplate = await getPublishedHomeTemplateCached({
+        tags: versionTags,
+      });
     }
   } catch (err) {
     console.error('[Home Page] Error loading home template:', err);

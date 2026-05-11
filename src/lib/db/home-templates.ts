@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache';
 import { connectToDatabase, getHomeTemplateModelForDb } from './connection';
 import type {
   HomeTemplateDocument,
@@ -8,6 +9,8 @@ import {
   normalizeTagsInput,
   resolveVersion,
 } from '@/lib/page-version-resolver';
+import { isSingleTenant } from '@/lib/tenant';
+import { cacheTag, SINGLE_TENANT_ID } from '@/lib/cache/tags';
 
 const HOME_TEMPLATE_ID = 'home-page';
 
@@ -113,6 +116,27 @@ export async function getPublishedHomeTemplate(options?: {
     'blocks',
   );
   return result;
+}
+
+/**
+ * Cached wrapper around getPublishedHomeTemplate (per `revalidate: 300` + the
+ * `home-template-${tenant}` tag, so the PIM publish-event subscriber can flush it).
+ *
+ * Only used in single-tenant mode: in multi-tenant, connectToDatabase resolves
+ * the tenant DB from request headers, which `unstable_cache` callbacks can't read.
+ */
+const cachedPublishedHomeTemplate = unstable_cache(
+  (options?: { tags?: PageVersionTags | null }) =>
+    getPublishedHomeTemplate(options),
+  ['home-template', SINGLE_TENANT_ID],
+  { revalidate: 300, tags: [cacheTag('home-template', SINGLE_TENANT_ID)] },
+);
+
+export async function getPublishedHomeTemplateCached(options?: {
+  tags?: PageVersionTags | null;
+}): Promise<any | null> {
+  if (!isSingleTenant) return getPublishedHomeTemplate(options);
+  return cachedPublishedHomeTemplate(options);
 }
 
 /**
