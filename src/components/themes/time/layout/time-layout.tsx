@@ -6,7 +6,7 @@ import CartHydrator from '@framework/cart/b2b-cart';
 import ErpHydrator from '@components/common/erp-hydrator';
 import AuthGuard from '@components/common/auth-guard';
 import TimeHeader from './time-header';
-import TimeFooter from './time-footer';
+import SiteFooter from '@layouts/footer/site-footer';
 
 const MobileSearchOverlay = dynamic(
   () => import('@/layouts/b2b/mobile-search-overlay'),
@@ -53,7 +53,7 @@ export default function TimeLayout({
           {children}
         </main>
 
-        <TimeFooter lang={lang} />
+        <SiteFooter lang={lang} />
 
         {/* Mobile bottom navigation - same as default, works with time styling */}
         <B2BMobileNavigation lang={lang} />

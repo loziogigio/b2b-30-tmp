@@ -144,6 +144,14 @@ export const DEFAULT_HOME_SETTINGS: HomeSettings = {
     priceDecimals: 2,
   },
   headerConfig: DEFAULT_HEADER_CONFIG,
+  footer: {
+    columns: [],
+    socialLinks: [],
+    showNewsletter: false,
+    // bgColor / textColor intentionally omitted — the footer falls back to
+    // branding.footerBackgroundColor / footerTextColor, and in the "time"
+    // theme the CSS var --color-footer-bg supplies the dark bar.
+  },
   // Default SEO meta tags - will be overridden by tenant settings
   meta_tags: {
     title: 'B2B Store',

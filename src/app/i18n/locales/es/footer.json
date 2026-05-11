@@ -38,5 +38,13 @@
   "text-opening-saturday": "Sabato",
   "text-opening-saturday-hours": "8.00 - 13.00",
   "text-legal-info": "",
-  "text-footer-copyright": "Copyright © {{year}} All rights reserved."
+  "text-footer-copyright": "Copyright © {{year}} All rights reserved.",
+  "newsletter-heading": "Mantente al día",
+  "newsletter-placeholder": "Introduce tu correo electrónico",
+  "newsletter-button": "Suscribirse",
+  "newsletter-success": "¡Gracias por suscribirte!",
+  "newsletter-error": "Algo salió mal. Inténtalo de nuevo.",
+  "newsletter-email-required": "Introduce tu correo electrónico",
+  "newsletter-email-invalid": "Dirección de correo electrónico no válida",
+  "text-footer-copyright-line": "Copyright © {{year}} {{company}}. Todos los derechos reservados."
 }

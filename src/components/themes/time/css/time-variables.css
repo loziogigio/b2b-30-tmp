@@ -74,6 +74,40 @@
   -webkit-backdrop-filter: blur(12px);
 }
 
+/* Time theme — site footer overrides (shared SiteFooter, themed via CSS) */
+[data-theme='time'] .site-footer {
+  border-top: 1px solid var(--time-gray-200);
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-size: 0.8125rem;
+}
+[data-theme='time'] .site-footer__inner {
+  padding-top: 3rem;
+  padding-bottom: 2.5rem;
+}
+[data-theme='time'] .site-footer__col-title {
+  opacity: 0.7;
+  letter-spacing: 0.06em;
+}
+[data-theme='time'] .site-footer__link:hover {
+  color: rgba(255, 255, 255, 0.85);
+}
+[data-theme='time'] .site-footer__newsletter-input {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}
+[data-theme='time'] .site-footer__newsletter-input::placeholder {
+  color: rgba(255, 255, 255, 0.45);
+}
+[data-theme='time'] .site-footer__newsletter-btn {
+  background: var(--time-red, var(--color-brand));
+}
+[data-theme='time'] .site-footer__copyright {
+  background: var(--time-dark);
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 500;
+}
+
 /* Time theme cart button */
 .time-cart-btn {
   display: flex;

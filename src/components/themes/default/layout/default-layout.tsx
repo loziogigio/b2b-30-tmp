@@ -6,7 +6,7 @@ import CartHydrator from '@framework/cart/b2b-cart';
 import ErpHydrator from '@components/common/erp-hydrator';
 import AuthGuard from '@components/common/auth-guard';
 import DefaultHeader from './default-header';
-import DefaultFooter from './default-footer';
+import SiteFooter from '@layouts/footer/site-footer';
 
 const MobileSearchOverlay = dynamic(
   () => import('@/layouts/b2b/mobile-search-overlay'),
@@ -52,7 +52,7 @@ export default function DefaultLayout({
           {children}
         </main>
 
-        <DefaultFooter lang={lang} />
+        <SiteFooter lang={lang} />
         <B2BMobileNavigation lang={lang} />
       </div>
     </AuthGuard>

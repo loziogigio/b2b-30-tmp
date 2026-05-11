@@ -38,5 +38,13 @@
   "text-opening-saturday": "Sabato",
   "text-opening-saturday-hours": "8.00 - 13.00",
   "text-legal-info": "",
-  "text-footer-copyright": "Copyright © {{year}} All rights reserved."
+  "text-footer-copyright": "Copyright © {{year}} All rights reserved.",
+  "newsletter-heading": "Bleiben Sie auf dem Laufenden",
+  "newsletter-placeholder": "E-Mail-Adresse eingeben",
+  "newsletter-button": "Abonnieren",
+  "newsletter-success": "Danke für Ihre Anmeldung!",
+  "newsletter-error": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
+  "newsletter-email-required": "Bitte geben Sie Ihre E-Mail-Adresse ein",
+  "newsletter-email-invalid": "Ungültige E-Mail-Adresse",
+  "text-footer-copyright-line": "Copyright © {{year}} {{company}}. Alle Rechte vorbehalten."
 }

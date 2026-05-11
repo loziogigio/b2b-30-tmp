@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
-import Footer from '@layouts/footer/footer';
+import Footer from '@layouts/footer/site-footer';
 import B2BMobileNavigation from '@layouts/mobile-navigation/b2b-mobile-navigation';
 import CartHydrator from '@framework/cart/b2b-cart';
 import ErpHydrator from '@components/common/erp-hydrator';

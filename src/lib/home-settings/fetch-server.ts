@@ -3,6 +3,10 @@ import { headers } from 'next/headers';
 import type { HomeSettings } from '@/lib/home-settings/types';
 import { resolveTenant, isSingleTenant } from '@/lib/tenant';
 import { DEFAULT_HOME_SETTINGS } from '@/lib/home-settings/defaults';
+import {
+  mapPortalToHomeSettings,
+  type PortalPayload,
+} from '@/lib/home-settings/portal-mapper';
 
 // =============================================================================
 // SINGLE-TENANT CONFIG (from .env)
@@ -50,11 +54,15 @@ async function fetchHomeSettingsWithConfig(
 
   try {
     const baseUrl = resolveBaseUrl(pimApiUrl);
-    const url = new URL('/api/b2b/home-settings', `${baseUrl}/`).toString();
+    const url = new URL(
+      '/api/b2b/b2b/public/home?portal=default',
+      `${baseUrl}/`,
+    ).toString();
 
     const response = await fetch(url, {
       headers: {
         'Content-Type': 'application/json',
+        'x-auth-method': 'api-key',
         ...(apiKeyId && { 'X-API-Key': apiKeyId }),
         ...(apiSecret && { 'X-API-Secret': apiSecret }),
       },
@@ -73,8 +81,8 @@ async function fetchHomeSettingsWithConfig(
       return null;
     }
 
-    const data = (await response.json()) as HomeSettings;
-    return data;
+    const data = (await response.json()) as { portal?: PortalPayload };
+    return mapPortalToHomeSettings(data?.portal);
   } catch {
     return null;
   }

@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { DEFAULT_HOME_SETTINGS } from '@/lib/home-settings/defaults';
 import { resolveTenant, isSingleTenant } from '@/lib/tenant';
+import {
+  mapPortalToHomeSettings,
+  type PortalPayload,
+} from '@/lib/home-settings/portal-mapper';
 
 // Default values from .env (used in single-tenant mode)
 const DEFAULT_PIM_API_URL =
@@ -43,25 +47,30 @@ async function getTenantConfig(req: NextRequest) {
 export async function GET(req: NextRequest) {
   try {
     const config = await getTenantConfig(req);
+    const base = (config.pimApiUrl || '').replace(/\/$/, '');
 
-    const response = await fetch(`${config.pimApiUrl}/api/b2b/home-settings`, {
-      cache: 'no-store',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(config.apiKeyId && { 'X-API-Key': config.apiKeyId }),
-        ...(config.apiSecret && { 'X-API-Secret': config.apiSecret }),
+    const response = await fetch(
+      `${base}/api/b2b/b2b/public/home?portal=default`,
+      {
+        cache: 'no-store',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-auth-method': 'api-key',
+          ...(config.apiKeyId && { 'X-API-Key': config.apiKeyId }),
+          ...(config.apiSecret && { 'X-API-Secret': config.apiSecret }),
+        },
       },
-    });
+    );
 
     if (!response.ok) {
-      // Return default branding settings when PIM API doesn't have config
+      // Return default settings when the PIM API doesn't have a portal yet
       return NextResponse.json(DEFAULT_HOME_SETTINGS);
     }
 
-    const data = await response.json();
-    return NextResponse.json(data);
+    const data = (await response.json()) as { portal?: PortalPayload };
+    return NextResponse.json(mapPortalToHomeSettings(data?.portal));
   } catch {
-    // Return default branding settings on error
+    // Return default settings on error
     return NextResponse.json(DEFAULT_HOME_SETTINGS);
   }
 }

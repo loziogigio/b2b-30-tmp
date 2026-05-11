@@ -167,6 +167,68 @@ export interface MetaTags {
 }
 
 // ============================================================================
+// Footer Types
+//
+// Mirror of the admin (vinc-commerce-suite) `IB2CStorefrontFooter` model,
+// camelCased to match this file's convention. When `FooterConfig` is present on
+// `HomeSettings`, it supersedes the legacy top-level `footerHtml` field.
+// ============================================================================
+
+export type FooterItemType = 'text' | 'link' | 'image';
+
+export interface FooterColumnItem {
+  type: FooterItemType;
+  /** type: "text" — text / inline-HTML content */
+  textContent?: string;
+  /** type: "image" */
+  imageUrl?: string;
+  imageAlt?: string;
+  /** Max image width in px (defaults to 200 at render time) */
+  imageMaxWidth?: number;
+  /** type: "link" */
+  label?: string;
+  href?: string;
+  openInNewTab?: boolean;
+}
+
+export interface FooterLink {
+  label: string;
+  href: string;
+  openInNewTab?: boolean;
+}
+
+export interface FooterColumn {
+  title: string;
+  /** Mixed content items — when present, take priority over `links` */
+  items?: FooterColumnItem[];
+  /** Legacy links array — fallback when `items` is absent */
+  links: FooterLink[];
+}
+
+export interface FooterSocialLink {
+  /** e.g. "facebook" | "instagram" | "x" | "twitter" | "linkedin" | "youtube" | ... */
+  platform: string;
+  url: string;
+}
+
+export interface FooterConfig {
+  columns?: FooterColumn[];
+  socialLinks?: FooterSocialLink[];
+  copyrightText?: string;
+  showNewsletter?: boolean;
+  newsletterHeading?: string;
+  newsletterPlaceholder?: string;
+  /** Footer background color (overrides branding.footerBackgroundColor) */
+  bgColor?: string;
+  /** Footer text color (overrides branding.footerTextColor) */
+  textColor?: string;
+  /** Full HTML footer (published) — when set, overrides structured columns */
+  footerHtml?: string;
+  /** Full HTML footer (draft) — never rendered on the public site */
+  footerHtmlDraft?: string;
+}
+
+// ============================================================================
 // Home Settings Main Interface
 // ============================================================================
 
@@ -177,9 +239,13 @@ export interface HomeSettings {
   defaultCardVariant: 'b2b' | 'horizontal' | 'compact' | 'detailed';
   cardStyle: ProductCardStyle;
 
-  /** Custom footer HTML content (published version, sanitized with DOMPurify on render) */
+  /** Structured footer configuration (from `portal.footer`). When present,
+   *  supersedes the legacy top-level `footerHtml` / `footerHtmlDraft`. */
+  footer?: FooterConfig;
+
+  /** @deprecated Use `footer.footerHtml`. Kept for backward compatibility. */
   footerHtml?: string;
-  /** Draft footer HTML content (for preview before publishing) */
+  /** @deprecated Use `footer.footerHtmlDraft`. */
   footerHtmlDraft?: string;
 
   /** Published header configuration */
