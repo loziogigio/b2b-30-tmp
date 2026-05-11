@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { addAuthInterceptors } from '@/lib/auth';
+import { addErpHealthInterceptor } from '@framework/erp/erp-health-interceptor';
 
 /**
  * Get base URL for API proxy
@@ -33,6 +34,9 @@ const http = axios.create({
 
 // Add auth interceptors (request header + 401 response handling)
 addAuthInterceptors(http);
+
+// Track ERP/B2B profile health (4xx/5xx on customer-context endpoints)
+addErpHealthInterceptor(http);
 
 export const get = async <T = any>(
   url: string,
