@@ -65,6 +65,9 @@ export interface TenantConfig {
   builderUrl?: string;
   /** B2B storefront theme (e.g., "default", "time") */
   b2bTheme?: string;
+  /** Support contact shown to users when their ERP/B2B profile is broken
+   *  (email, phone, or URL). Optional. */
+  supportContact?: string;
   /** Whether this tenant is active */
   isActive: boolean;
   /** Timestamps */
@@ -98,6 +101,7 @@ export interface TenantPublicInfo {
   requireLogin?: boolean;
   builderUrl?: string;
   b2bTheme?: string;
+  supportContact?: string;
 }
 
 /**
@@ -127,6 +131,7 @@ export function toPublicInfo(tenant: TenantConfig): TenantPublicInfo {
     requireLogin: tenant.requireLogin,
     builderUrl: tenant.builderUrl,
     b2bTheme: tenant.b2bTheme,
+    supportContact: tenant.supportContact,
   };
 }
 
@@ -167,6 +172,7 @@ export function buildTenantFromEnv(): TenantConfig {
     // NEXT_PUBLIC_THEME so the value isn't bundled to the client and the
     // tenant context stays the single source of truth.
     b2bTheme: process.env.B2B_THEME || 'default',
+    supportContact: process.env.NEXT_PUBLIC_SUPPORT_CONTACT || undefined,
     isActive: true,
   };
 }

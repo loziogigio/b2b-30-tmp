@@ -42,6 +42,7 @@ interface TenantDocument {
   home_settings_customer_id?: string;
   builder_url?: string;
   b2b_theme?: string;
+  support_contact?: string;
   status: string;
 }
 
@@ -72,6 +73,7 @@ function fromDocument(doc: TenantDocument): TenantConfig {
     homeSettingsCustomerId: doc.home_settings_customer_id,
     builderUrl: doc.builder_url,
     b2bTheme: doc.b2b_theme || 'default',
+    supportContact: doc.support_contact,
     isActive: doc.status === 'active',
   };
 }
