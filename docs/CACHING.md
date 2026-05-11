@@ -49,9 +49,16 @@ VINC_TENANT_ID=…       # optional explicit tenant id for cache-tag scoping (si
 REVALIDATE_SECRET=…    # required to use POST /api/revalidate
 ```
 
-## Not yet done (see docs/superpowers/specs/2026-05-11-caching-and-seo-listing.md)
-- B-3.2: rework `/category/[[...slug]]` into the canonical, server-rendered, **paginated**
-  category page (`?page=N`, `rel=prev/next`, canonical, `CollectionPage` + breadcrumb JSON-LD)
-  so deep category URLs are crawlable — distinct from the interactive `/search`.
+## Category pages (B-3.2)
+- `/category/[[...slug]]` emits `BreadcrumbList` + `CollectionPage` JSON-LD (`CategoryJsonLd`)
+  and reads the menu via the tagged `serverFetchPimMenu`.
+- **Leaf** categories render a server-side, **paginated** product grid (`CategorySeoProducts`):
+  `?page=N` is its own SSR page, `page>1` is self-canonical, `rel=prev/next`, products are in the
+  HTML (image + name + link to the PDP). The client `CategoryPage` skips its products carousel there.
+  Pagination is plain `<a>` navigation. Per-page size: `CATEGORY_PRODUCTS_PER_PAGE` (24).
+
+### Follow-ups (see docs/superpowers/specs/2026-05-11-caching-and-seo-listing.md)
+- Upgrade the leaf grid items to the full interactive product card / ERP prices, hydrated over
+  the SSR markup (currently a lean image + name + link).
 - Optional: a root-level `[slug]` CMS-page catch-all (portal-managed content pages, like b2c's
   `/chi-siamo`), with `revalidate` + `page-${tenant}-${slug}` tags.

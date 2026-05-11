@@ -17,6 +17,7 @@ import CategoryChildrenCarousel from './category-children-carousel';
 import CategorySubcategoriesGrid from './category-subcategories-grid';
 import { useHomeSettings } from '@/hooks/use-home-settings';
 import { isEmptyHtml } from '@/lib/html';
+import { extractSearchText } from '@/lib/category-search-text';
 
 const NUM_ITEM = 6;
 const MAX_ROWS = 5;
@@ -149,9 +150,13 @@ function CategoryHero({
 export default function CategoryPage({
   lang,
   slug,
+  disableLeafCarousel = false,
 }: {
   lang: string;
   slug: string[];
+  /** When true, the leaf-category branch renders nothing — the page is showing
+   *  the server-rendered, paginated SEO product grid instead. */
+  disableLeafCarousel?: boolean;
 }) {
   const { t } = useTranslation(lang, 'common');
   const { settings } = useHomeSettings();
@@ -254,13 +259,17 @@ export default function CategoryPage({
       {/* Category content */}
       <div className="py-4">
         {(() => {
-          // 1) Leaf: show its own carousel and stop
+          // 1) Leaf: the server-rendered, paginated SEO product grid handles
+          //    leaf categories (see CategorySeoProducts). When that's in play we
+          //    render nothing here; otherwise fall back to the products carousel.
           if (
             slug.length &&
             current &&
             !(current.isGroup && (current.children?.length ?? 0) > 0)
           ) {
-            return <CategoryLeafCarousel lang={lang} node={current} />;
+            return disableLeafCarousel ? null : (
+              <CategoryLeafCarousel lang={lang} node={current} />
+            );
           }
 
           // 2) Check if current node's children are ALL leaves (no subcategories)
@@ -339,23 +348,6 @@ export default function CategoryPage({
       </div>
     </div>
   );
-}
-
-/* =========================
-   Extract search text from URL-like strings (e.g., "shop?text=luce" -> "luce")
-========================= */
-function extractSearchText(url: string | undefined, fallback: string): string {
-  if (!url) return fallback;
-  const qs = url.includes('?') ? url.split('?')[1] : '';
-  if (qs) {
-    const sp = new URLSearchParams(qs);
-    // Check for text param first, then category filters
-    const text = sp.get('text') || sp.get('q');
-    if (text) return text;
-    const category = sp.get('filters-category') || sp.get('category');
-    if (category) return category;
-  }
-  return fallback;
 }
 
 /* =========================
