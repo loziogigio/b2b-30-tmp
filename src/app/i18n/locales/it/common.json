@@ -615,5 +615,8 @@
   "export-generated-by": "Generato automaticamente da VINC B2B",
   "export-price-notice-title": "Nota importante:",
   "export-price-notice-line-1": "I prezzi indicati nel presente documento sono aggiornati alla data e all’orario di generazione del PDF e risultano validi esclusivamente in riferimento a tale momento.",
-  "export-price-notice-line-2": "Essi possono essere soggetti a variazioni successive; si invita pertanto a verificarne l’effettiva validità al momento della consultazione o dell’eventuale conferma d’ordine."
+  "export-price-notice-line-2": "Essi possono essere soggetti a variazioni successive; si invita pertanto a verificarne l’effettiva validità al momento della consultazione o dell’eventuale conferma d’ordine.",
+  "error-erp-profile-title": "Si è verificato un problema con il tuo account",
+  "error-erp-profile-body": "Non è stato possibile caricare i prezzi o il carrello. Potrebbe esserci un problema con il profilo del tuo account: contatta {{tenant}} per assistenza.",
+  "error-erp-profile-contact-cta": "Contatta {{tenant}}"
 }

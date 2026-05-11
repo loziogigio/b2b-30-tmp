@@ -284,5 +284,8 @@
   "text-back-to-home": "العودة إلى الصفحة الرئيسية",
   "line-item-note": "ملاحظة السطر",
   "line-item-note-placeholder": "أضف ملاحظة لهذا المنتج...",
-  "line-item-note-saved": "تم حفظ الملاحظة"
+  "line-item-note-saved": "تم حفظ الملاحظة",
+  "error-erp-profile-title": "هناك مشكلة في حسابك",
+  "error-erp-profile-body": "تعذّر تحميل الأسعار أو سلة التسوق. قد تكون هناك مشكلة في ملف حسابك — يُرجى التواصل مع {{tenant}} للحصول على المساعدة.",
+  "error-erp-profile-contact-cta": "التواصل مع {{tenant}}"
 }

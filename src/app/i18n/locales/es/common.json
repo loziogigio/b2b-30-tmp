@@ -292,5 +292,8 @@
   "text-back-to-home": "Volver a la página principal",
   "line-item-note": "Nota de línea",
   "line-item-note-placeholder": "Agregar una nota para este artículo...",
-  "line-item-note-saved": "Nota guardada"
+  "line-item-note-saved": "Nota guardada",
+  "error-erp-profile-title": "Hay un problema con tu cuenta",
+  "error-erp-profile-body": "No se pudieron cargar tus precios ni tu carrito. Puede haber un problema con el perfil de tu cuenta: ponte en contacto con {{tenant}} para obtener ayuda.",
+  "error-erp-profile-contact-cta": "Contactar con {{tenant}}"
 }

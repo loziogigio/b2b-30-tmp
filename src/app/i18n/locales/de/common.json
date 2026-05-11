@@ -292,5 +292,8 @@
   "text-back-to-home": "Zurück zur Startseite",
   "line-item-note": "Positionsnotiz",
   "line-item-note-placeholder": "Notiz für diesen Artikel hinzufügen...",
-  "line-item-note-saved": "Notiz gespeichert"
+  "line-item-note-saved": "Notiz gespeichert",
+  "error-erp-profile-title": "Es gibt ein Problem mit Ihrem Konto",
+  "error-erp-profile-body": "Ihre Preise oder Ihr Warenkorb konnten nicht geladen werden. Möglicherweise liegt ein Problem mit Ihrem Kontoprofil vor – bitte wenden Sie sich an {{tenant}}.",
+  "error-erp-profile-contact-cta": "{{tenant}} kontaktieren"
 }

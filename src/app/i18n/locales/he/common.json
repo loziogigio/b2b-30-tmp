@@ -284,5 +284,8 @@
   "text-back-to-home": "חזרה לדף הבית",
   "line-item-note": "הערת שורה",
   "line-item-note-placeholder": "הוסף הערה לפריט זה...",
-  "line-item-note-saved": "ההערה נשמרה"
+  "line-item-note-saved": "ההערה נשמרה",
+  "error-erp-profile-title": "יש בעיה בחשבון שלך",
+  "error-erp-profile-body": "לא הצלחנו לטעון את המחירים או העגלה שלך. ייתכן שיש בעיה בפרופיל החשבון שלך — אנא צרו קשר עם {{tenant}} לקבלת עזרה.",
+  "error-erp-profile-contact-cta": "צרו קשר עם {{tenant}}"
 }

@@ -284,5 +284,8 @@
   "text-back-to-home": "返回首页",
   "line-item-note": "行备注",
   "line-item-note-placeholder": "为此商品添加备注...",
-  "line-item-note-saved": "备注已保存"
+  "line-item-note-saved": "备注已保存",
+  "error-erp-profile-title": "您的账户出现问题",
+  "error-erp-profile-body": "无法加载您的价格或购物车。您的账户资料可能存在问题，请联系 {{tenant}} 获取帮助。",
+  "error-erp-profile-contact-cta": "联系 {{tenant}}"
 }

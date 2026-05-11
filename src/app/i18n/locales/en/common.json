@@ -488,5 +488,8 @@
   "export-generated-by": "Generated automatically by VINC B2B",
   "export-price-notice-title": "Important note:",
   "export-price-notice-line-1": "The prices shown in this document are valid as of the date and time of PDF generation and only refer to that exact moment.",
-  "export-price-notice-line-2": "They may be subject to subsequent changes; please verify their current validity before placing or confirming an order."
+  "export-price-notice-line-2": "They may be subject to subsequent changes; please verify their current validity before placing or confirming an order.",
+  "error-erp-profile-title": "There's a problem with your account",
+  "error-erp-profile-body": "We couldn't load your prices or cart. There may be an issue with your account profile — please contact {{tenant}} for assistance.",
+  "error-erp-profile-contact-cta": "Contact {{tenant}}"
 }
