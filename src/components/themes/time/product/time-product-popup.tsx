@@ -17,6 +17,7 @@ import {
   IoArrowRedoOutline,
   IoArrowForwardOutline,
 } from 'react-icons/io5';
+import CopyableCode from '@components/themes/time/shared/copyable-code';
 import {
   HiOutlinePrinter,
   HiOutlineSwitchHorizontal,
@@ -33,14 +34,16 @@ import { useQuery } from '@tanstack/react-query';
 import { ERP_STATIC } from '@framework/utils/static';
 import type { ErpPriceData } from '@utils/transform/erp-prices';
 import { fetchErpPrices } from '@framework/erp/prices';
+import { usePimProductListQuery } from '@framework/product/get-pim-product';
 import { useLikes } from '@contexts/likes/likes.context';
 import { useReminders } from '@contexts/reminders/reminders.context';
 import { useUI } from '@contexts/ui.context';
 import { useHomeSettings } from '@/hooks/use-home-settings';
 import { productPlaceholder } from '@assets/placeholders';
-import AddToCart from '@components/product/add-to-cart';
 import { printProductDetail } from '@utils/print-product';
 import TimeVariantsGrid from './time-variants-grid';
+import TimeOfferRows from './time-offer-rows';
+import { TimeStatusBadges, usePromoGating } from './time-promo-gated-cta';
 
 type GalleryImage = {
   id?: string | number;
@@ -51,7 +54,7 @@ type GalleryImage = {
 
 export default function TimeProductPopup({ lang }: { lang: string }) {
   const { t } = useTranslation(lang, 'common');
-  const { data: product, stack } = useModalState() as {
+  const { data: passedProduct, stack } = useModalState() as {
     data: any;
     stack: any[];
   };
@@ -63,6 +66,38 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
   const { isAuthorized, hidePrices } = useUI();
   const { settings } = useHomeSettings();
   const decimals = settings?.cardStyle?.priceDecimals ?? 2;
+  const passedSku = String(passedProduct?.sku ?? '');
+
+  /* ── Thin-product detection — when callers (e.g. cart drawer) hand us
+       just a sku/image stub, fetch the full PIM product by sku so we get
+       the real gallery, description, model, dimensions, variants, etc. ── */
+  const isThinProduct =
+    !!passedProduct &&
+    (!Array.isArray(passedProduct.gallery) ||
+      passedProduct.gallery.length === 0 ||
+      !passedProduct.html_description);
+  const { data: pimResults = [] } = usePimProductListQuery(
+    { limit: 1, filters: { sku: passedSku ? [passedSku] : [] } },
+    // Leaf product only — `groupByParent: true` would return the parent
+    // and replace `id` with the parent's entity_code, breaking the ERP
+    // price query for variant cart lines.
+    { enabled: !!passedSku && isThinProduct, groupByParent: false },
+  );
+  const fetchedProduct = pimResults[0];
+
+  /* Merge: prefer fetched fields, fall back to whatever the caller passed.
+     Preserve the caller's `id` when it exists — it's the entity_code the
+     ERP price query needs to key off. */
+  const product = useMemo(() => {
+    if (!passedProduct) return null;
+    if (!fetchedProduct) return passedProduct;
+    return {
+      ...passedProduct,
+      ...fetchedProduct,
+      id: passedProduct.id || fetchedProduct.id,
+    };
+  }, [passedProduct, fetchedProduct]);
+
   const sku = String(product?.sku ?? '');
   const favorite = isAuthorized && sku ? likes.isLiked(sku) : false;
   const hasReminder = isAuthorized && sku ? reminders.hasReminder(sku) : false;
@@ -108,13 +143,7 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
     : 0;
   const hasValidPrice = erpPrice && netPrice != null && Number(netPrice) > 0;
   const isOutOfStock = erpPrice ? Number(erpPrice.availability) <= 0 : false;
-  const canAdd = erpPrice?.product_label_action?.ADD_TO_CART ?? true;
-
-  /* ── Packaging ── */
-  const um =
-    erpPrice?.packaging_option_default?.packaging_uom || product?.unit || null;
-  const mv = erpPrice?.packaging_option_smallest?.qty_x_packaging ?? null;
-  const cf = erpPrice?.packaging_option_default?.qty_x_packaging ?? null;
+  const { hasMultiplePromos } = usePromoGating(erpPrice, product);
 
   /* ── Likes / Reminders init ── */
   useEffect(() => {
@@ -203,16 +232,19 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
               <span className="hidden sm:inline text-white/40">|</span>
               <span className="hidden sm:inline text-white/90 text-sm font-medium">
                 {t('text-product-variants', {
-                  defaultValue: 'Varianti prodotto',
+                  defaultValue: 'Anteprima varianti prodotto',
                 })}
               </span>
             </div>
             <button
               onClick={closeModal}
               aria-label="Close"
-              className="w-8 h-8 rounded-full border border-white/30 flex items-center justify-center hover:bg-white/20 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-2 bg-white text-[var(--time-red)] hover:bg-[var(--time-dark)] hover:text-white font-bold uppercase tracking-wide text-sm rounded-full px-4 py-2 shadow-lg ring-2 ring-white/80 transition-all cursor-pointer"
             >
-              <IoClose size={18} />
+              <IoClose size={20} strokeWidth={3} />
+              <span className="hidden sm:inline">
+                {t('text-close', { defaultValue: 'Chiudi' })}
+              </span>
             </button>
           </div>
         </div>
@@ -239,7 +271,7 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
     <div className="h-full overflow-y-auto bg-white relative">
       {/* Accent bar */}
       <div className="sticky top-0 z-20 bg-brand text-white">
-        <div className="max-w-[1200px] mx-auto flex items-center justify-between px-5 md:px-8 lg:px-10 py-3">
+        <div className="max-w-[1200px] flex items-center justify-between px-5 md:px-8 lg:px-10 py-3">
           <div className="flex items-center gap-3">
             <button
               onClick={() => (stack.length > 1 ? goBack() : closeModal())}
@@ -250,20 +282,25 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
             </button>
             <span className="hidden sm:inline text-white/40">|</span>
             <span className="hidden sm:inline text-white/90 text-sm font-medium">
-              {t('text-product-detail', { defaultValue: 'Dettaglio prodotto' })}
+              {t('text-product-preview', {
+                defaultValue: 'Anteprima prodotto',
+              })}
             </span>
           </div>
           <button
             onClick={closeModal}
             aria-label="Close"
-            className="w-8 h-8 rounded-full border border-white/30 flex items-center justify-center hover:bg-white/20 transition-colors cursor-pointer"
+            className="inline-flex items-center gap-2 bg-white text-[var(--time-red)] hover:bg-[var(--time-dark)] hover:text-white font-bold uppercase tracking-wide text-sm rounded-full px-4 py-2 shadow-lg ring-2 ring-white/80 transition-all cursor-pointer"
           >
-            <IoClose size={18} />
+            <IoClose size={20} strokeWidth={3} />
+            <span className="hidden sm:inline">
+              {t('text-close', { defaultValue: 'Chiudi' })}
+            </span>
           </button>
         </div>
       </div>
 
-      <div className="max-w-[1200px] mx-auto p-5 md:p-8 lg:p-10">
+      <div className="max-w-[1200px] p-5 md:p-8 lg:p-10">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 xl:gap-10">
           {/* ── LEFT: Gallery ── */}
           <div>
@@ -353,16 +390,22 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
 
           {/* ── RIGHT: Product Info ── */}
           <div className="flex flex-col">
-            {/* Brand + SKU */}
+            {/* Brand + SKU + Parent SKU (codice figura) */}
             <div className="flex items-center gap-2.5 flex-wrap mb-3">
               {product.brand?.name && (
                 <span className="bg-[var(--time-red)] text-white text-xs sm:text-[13px] font-extrabold px-2.5 py-[4px] rounded-[6px] font-[family-name:var(--font-body)] uppercase">
-                  {product.brand.name}
+                  {product.brand.name as string}
                 </span>
               )}
               <span className="text-xs sm:text-[13px] font-semibold text-[var(--time-gray-500)] font-mono">
                 {sku}
               </span>
+              {product.parent_sku &&
+                String(product.parent_sku) !== String(sku) && (
+                  <span className="bg-[var(--time-gray-100)] text-[var(--time-gray-500)] text-[11px] sm:text-xs font-bold px-2 py-[3px] rounded-md font-mono uppercase tracking-wider">
+                    Fig: {product.parent_sku as string}
+                  </span>
+                )}
             </div>
 
             {/* Title */}
@@ -374,12 +417,12 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
             <button
               type="button"
               onClick={navigateToProductPage}
-              className="inline-flex items-center gap-1.5 text-xs sm:text-[13px] font-semibold text-[var(--time-red)] mb-4 cursor-pointer bg-transparent border-none p-0 font-[family-name:var(--font-body)] hover:underline"
+              className="inline-flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-white mb-4 cursor-pointer bg-[var(--time-red)] hover:bg-[var(--time-dark)] border-none px-4 py-2 rounded-full shadow-md transition-colors font-[family-name:var(--font-body)]"
             >
               {t('text-view-full-product', {
                 defaultValue: 'Vedi scheda completa',
               })}
-              <IoArrowForwardOutline size={14} />
+              <IoArrowForwardOutline size={16} />
             </button>
 
             {/* Description */}
@@ -391,13 +434,58 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
 
             {/* Quick specs */}
             <div className="grid grid-cols-2 gap-x-5 gap-y-1.5 p-3 rounded-xl bg-[var(--time-gray-50)] border border-[var(--time-gray-100)] mb-4 text-xs sm:text-[13px]">
+              {sku && (
+                <>
+                  <span className="text-[var(--time-gray-400)] font-medium">
+                    {t('text-product-code', {
+                      defaultValue: 'Codice Prodotto',
+                    })}
+                  </span>
+                  <CopyableCode value={String(sku).toUpperCase()} />
+                </>
+              )}
+              {product.parent_sku &&
+                String(product.parent_sku) !== String(sku) && (
+                  <>
+                    <span className="text-[var(--time-gray-400)] font-medium">
+                      {t('text-figure-code', {
+                        defaultValue: 'Codice Figura',
+                      })}
+                    </span>
+                    <CopyableCode
+                      value={String(product.parent_sku).toUpperCase()}
+                    />
+                  </>
+                )}
               {product.model && (
                 <>
                   <span className="text-[var(--time-gray-400)] font-medium">
                     {t('text-model', { defaultValue: 'Modello' })}
                   </span>
                   <span className="font-bold text-[var(--time-dark)]">
-                    {product.model}
+                    {product.model as string}
+                  </span>
+                </>
+              )}
+              {product.weight != null && (
+                <>
+                  <span className="text-[var(--time-gray-400)] font-medium">
+                    {t('text-weight', { defaultValue: 'Peso' })}
+                  </span>
+                  <span className="font-bold text-[var(--time-dark)]">
+                    {product.weight as number}{' '}
+                    {(product.weight_uom as string) || 'kg'}
+                  </span>
+                </>
+              )}
+              {product.volume != null && (
+                <>
+                  <span className="text-[var(--time-gray-400)] font-medium">
+                    {t('text-volume', { defaultValue: 'Volume' })}
+                  </span>
+                  <span className="font-bold text-[var(--time-dark)]">
+                    {product.volume as number}{' '}
+                    {(product.volume_uom as string) || 'cm³'}
                   </span>
                 </>
               )}
@@ -427,75 +515,25 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
                   </span>
                 </>
               )}
+              <div className="col-span-2">
+                <TimeStatusBadges
+                  priceData={erpPrice}
+                  product={product}
+                  hasMultiplePromos={hasMultiplePromos}
+                  onPromoClick={navigateToProductPage}
+                  t={t}
+                />
+              </div>
             </div>
 
-            {/* ── Price section ── */}
-            {isAuthorized && !hidePrices && (
-              <div className="p-4 rounded-[12px] border-2 border-[var(--time-gray-100)] bg-white mb-4">
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-xs sm:text-[13px] text-[var(--time-gray-400)] font-medium">
-                    {t('text-list-price', { defaultValue: 'Listino' })}
-                  </span>
-                  {(um || mv != null || cf != null) && (
-                    <span className="text-xs sm:text-[13px] text-[var(--time-gray-400)] font-mono">
-                      {um && <>UM: {um}</>}
-                      {mv != null && <> · MV: {mv}</>}
-                      {cf != null && <> · CF: {cf}</>}
-                    </span>
-                  )}
-                </div>
-
-                {hasDiscount && (
-                  <div className="text-sm sm:text-[15px] text-[var(--time-gray-400)] line-through mb-1.5 tabular-nums">
-                    &euro;{Number(listPrice).toFixed(decimals)}
-                  </div>
-                )}
-
-                {/* Tiered discount bar */}
-                {hasDiscount && discountTiers && (
-                  <div className="flex items-center gap-2 bg-[#fef2f2] rounded-md px-3 py-1.5 mb-2">
-                    <span className="text-xs sm:text-[13px] font-bold text-[var(--time-red)] uppercase font-[family-name:var(--font-body)]">
-                      {t('text-discount', { defaultValue: 'Sconto' })}
-                    </span>
-                    <span className="text-xs sm:text-[13px] font-semibold text-[var(--time-dark)] font-[family-name:var(--font-body)]">
-                      {discountTiers}
-                    </span>
-                  </div>
-                )}
-
-                {/* Net price */}
-                <div className="flex items-center gap-2.5 mb-3">
-                  {netPrice != null && Number(netPrice) > 0 ? (
-                    <>
-                      <span className="text-[26px] sm:text-[30px] font-[900] text-[var(--time-dark)] font-[family-name:var(--font-heading)] tabular-nums tracking-[-0.02em]">
-                        &euro;{Number(netPrice).toFixed(decimals)}
-                      </span>
-                      {hasDiscount && (
-                        <span className="text-xs sm:text-[13px] font-bold text-[#059669] font-[family-name:var(--font-body)]">
-                          Risparmi &euro;
-                          {(Number(listPrice) - Number(netPrice)).toFixed(
-                            decimals,
-                          )}
-                        </span>
-                      )}
-                    </>
-                  ) : (
-                    <span className="text-sm sm:text-[15px] text-[var(--time-gray-400)]">
-                      &mdash;
-                    </span>
-                  )}
-                </div>
-
-                {/* Add to cart */}
-                {hasValidPrice && canAdd && (
-                  <AddToCart
-                    lang={lang}
-                    product={product}
-                    priceData={erpPrice}
-                    showPlaceholder={false}
-                    className="w-full"
-                  />
-                )}
+            {/* LISTINO + per-PROMO addable rows */}
+            {isAuthorized && hasValidPrice && (
+              <div className="mb-4">
+                <TimeOfferRows
+                  lang={lang}
+                  product={product}
+                  priceData={erpPrice}
+                />
               </div>
             )}
 

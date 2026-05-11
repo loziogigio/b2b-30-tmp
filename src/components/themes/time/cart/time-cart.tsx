@@ -9,10 +9,12 @@ import Image from '@components/ui/image';
 import Scrollbar from '@components/ui/scrollbar';
 import { useCart } from '@contexts/cart/cart.context';
 import { useUI } from '@contexts/ui.context';
+import { useModalAction } from '@components/common/modal/modal.context';
 import usePrice from '@framework/product/use-price';
 import UpdateCart from '@components/product/update-cart';
 import { ROUTES } from '@utils/routes';
 import { useTranslation } from 'src/app/i18n/client';
+import { HiOutlineTrash } from 'react-icons/hi';
 
 const Delivery = dynamic(() => import('@layouts/header/delivery'), {
   ssr: false,
@@ -36,7 +38,21 @@ export default function TimeCart({ lang }: { lang: string }) {
   const { t } = useTranslation(lang, 'common');
   const { closeDrawer, hidePrices } = useUI();
   const { items, total, isEmpty, clearItemFromCart } = useCart();
+  const { openModal } = useModalAction();
   const { price: cartTotal } = usePrice({ amount: total, currencyCode: 'EUR' });
+
+  const openPreview = (item: any) => {
+    // The popup detects thin product data and re-fetches by sku, so we
+    // just need to hand it the cart item. We still pre-shape `image` as
+    // an object so the placeholder/skeleton during the fetch isn't blank.
+    const imgUrl = prefixImageUrl(item?.image, 'gallery_') ?? item?.image ?? '';
+    const product = {
+      ...item,
+      image: imgUrl ? { thumbnail: imgUrl, original: imgUrl } : item?.image,
+    };
+    closeDrawer();
+    openModal('PRODUCT_VIEW', product);
+  };
 
   return (
     <div className="flex h-full w-full flex-col font-[var(--font-body)]">
@@ -105,8 +121,15 @@ export default function TimeCart({ lang }: { lang: string }) {
                   key={`${item.id}-${item.rowId ?? i}`}
                   className="group relative flex items-start gap-3 py-3 border-b border-[var(--time-gray-50)] last:border-b-0"
                 >
-                  {/* Image */}
-                  <div className="relative w-[52px] h-[52px] shrink-0 rounded-[var(--radius-btn)] overflow-hidden bg-gradient-to-br from-[var(--time-gray-50)] to-[var(--time-gray-100)]">
+                  {/* Image — click to open preview */}
+                  <button
+                    type="button"
+                    onClick={() => openPreview(item)}
+                    aria-label={t('text-view-product', {
+                      defaultValue: 'Visualizza prodotto',
+                    })}
+                    className="relative w-[52px] h-[52px] shrink-0 rounded-[var(--radius-btn)] overflow-hidden bg-gradient-to-br from-[var(--time-gray-50)] to-[var(--time-gray-100)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--time-red)]/40"
+                  >
                     <Image
                       src={
                         prefixImageUrl(item?.image, 'gallery_') ??
@@ -119,25 +142,7 @@ export default function TimeCart({ lang }: { lang: string }) {
                       alt={item?.name || 'Product'}
                       className="h-full w-full object-cover"
                     />
-                    <button
-                      onClick={() => clearItemFromCart(item)}
-                      className="absolute inset-0 hidden items-center justify-center bg-black/30 text-white transition md:flex md:opacity-0 md:group-hover:opacity-100"
-                      aria-label="remove"
-                    >
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                      >
-                        <polyline points="3,6 5,6 21,6" />
-                        <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
-                      </svg>
-                    </button>
-                  </div>
+                  </button>
 
                   {/* Info */}
                   <div className="flex-1 min-w-0">
@@ -146,9 +151,14 @@ export default function TimeCart({ lang }: { lang: string }) {
                         {item.sku}
                       </span>
                     )}
-                    <div className="text-[13px] font-semibold text-[var(--time-dark)] truncate leading-tight">
+                    <button
+                      type="button"
+                      onClick={() => openPreview(item)}
+                      className="text-left text-[13px] font-semibold text-[var(--time-dark)] truncate leading-tight w-full hover:text-[var(--time-red)] transition-colors"
+                      title={item?.name}
+                    >
                       {item?.name}
-                    </div>
+                    </button>
                     {!hidePrices && (
                       <div className="text-[11px] text-[var(--time-gray-400)] mt-0.5 font-[var(--font-mono)]">
                         {qty} × {money(unit)}
@@ -161,12 +171,25 @@ export default function TimeCart({ lang }: { lang: string }) {
                     />
                   </div>
 
-                  {/* Line total */}
-                  {!hidePrices && (
-                    <div className="shrink-0 text-right text-sm font-bold text-[var(--time-dark)] tabular-nums pt-1">
-                      {money(unit * qty)}
-                    </div>
-                  )}
+                  {/* Right column: line total + explicit delete */}
+                  <div className="shrink-0 flex flex-col items-end gap-1.5 pt-1">
+                    {!hidePrices && (
+                      <div className="text-right text-sm font-bold text-[var(--time-dark)] tabular-nums">
+                        {money(unit * qty)}
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => clearItemFromCart(item)}
+                      aria-label={t('text-remove', {
+                        defaultValue: 'Rimuovi',
+                      })}
+                      title={t('text-remove', { defaultValue: 'Rimuovi' })}
+                      className="inline-flex items-center justify-center w-7 h-7 rounded-[var(--radius-btn)] text-[var(--time-gray-400)] hover:text-[var(--time-red)] hover:bg-[rgba(230,57,70,0.08)] transition-colors"
+                    >
+                      <HiOutlineTrash className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               );
             })}

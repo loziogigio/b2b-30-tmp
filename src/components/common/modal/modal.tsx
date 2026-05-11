@@ -50,7 +50,7 @@ const Modal: FC<ModalProps> = ({
             leaveFrom="translate-x-0"
             leaveTo="translate-x-full"
           >
-            <DialogPanel className="fixed inset-0 z-[9999] bg-white flex flex-col overflow-hidden">
+            <DialogPanel className="fixed inset-0 md:left-[15%] z-[9999] bg-white flex flex-col overflow-hidden md:shadow-2xl">
               <button
                 onClick={onClose}
                 aria-label="Close panel"

@@ -200,10 +200,20 @@ export const TechSpecsFilters = ({
   // No specs available
   if (!specFilters?.length) return null;
 
+  // Sort spec filters alphabetically by their displayed label
+  const sortedSpecFilters = [...specFilters].sort((a, b) => {
+    const aLabel = specLabelMap[a.key] || a.label;
+    const bLabel = specLabelMap[b.key] || b.label;
+    return aLabel.localeCompare(bLabel, undefined, {
+      numeric: true,
+      sensitivity: 'base',
+    });
+  });
+
   // Render just the filter items (wrapper is provided by parent)
   return (
     <>
-      {specFilters.map((filter, index) => (
+      {sortedSpecFilters.map((filter, index) => (
         <React.Fragment key={filter.key}>
           <FiltersB2BItem
             lang={lang}
@@ -215,7 +225,7 @@ export const TechSpecsFilters = ({
             isSpecFilter
             isLoading={isFetchingFilters}
           />
-          {index < specFilters.length - 1 && (
+          {index < sortedSpecFilters.length - 1 && (
             <hr className="border-border-base mx-4" />
           )}
         </React.Fragment>

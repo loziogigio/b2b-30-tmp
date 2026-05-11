@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import { AiOutlineStar, AiOutlineInbox } from 'react-icons/ai';
 import type { ProductResult } from '@/lib/elia/types';
+import { formatPriceIt } from '@utils/money';
 
 interface ProductCardProps {
   product: ProductResult;
@@ -54,7 +55,7 @@ export function ProductCard({ product, priceDecimals = 2 }: ProductCardProps) {
         {/* Footer */}
         <div className="flex items-center justify-between">
           <span className="text-lg font-bold text-blue-600">
-            €{product.price.toFixed(priceDecimals)}
+            €{formatPriceIt(product.price, priceDecimals)}
           </span>
 
           <span

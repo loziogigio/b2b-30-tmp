@@ -14,6 +14,12 @@ import { useLikes } from '@contexts/likes/likes.context';
 import { useReminders } from '@contexts/reminders/reminders.context';
 import { IoIosHeart, IoIosHeartEmpty } from 'react-icons/io';
 import { ReminderIcon, ReminderIconFilled } from '@components/icons/app-icons';
+import {
+  hasActivePromo,
+  PromoGatedCta,
+  TimeStatusBadges,
+  usePromoGating,
+} from './time-promo-gated-cta';
 import cn from 'classnames';
 import { useHomeSettings } from '@/hooks/use-home-settings';
 
@@ -65,8 +71,10 @@ export default function TimeProductCard({
     : 0;
 
   const isOutOfStock = priceData ? Number(priceData.availability) <= 0 : false;
-  const canAddToCart = priceData?.product_label_action?.ADD_TO_CART ?? true;
-  const hasValidPrice = priceData && netPrice != null && Number(netPrice) > 0;
+  // Same legacy gating as TimeSearchRow: promo-gated items get the PROMO CTA
+  // instead of the inline qty selector, with a cart-total readout next to it.
+  const { hasMultiplePromos, isPromoGated, canInlineAdd, cartQty } =
+    usePromoGating(priceData, product);
 
   function handleClick() {
     if (hasVariants) {
@@ -105,21 +113,29 @@ export default function TimeProductCard({
           className="object-cover"
         />
 
-        {/* Discount badge */}
-        {!hidePrices && discountPercent > 0 && (
-          <span className="absolute top-2 left-2 bg-[var(--time-red)] text-white text-[10px] sm:text-[11px] font-bold px-[7px] py-[3px] rounded-[5px] font-[family-name:var(--font-body)]">
-            {discountTiers || `-${discountPercent}%`}
-          </span>
-        )}
-
-        {/* Promo badge */}
-        {!hidePrices &&
-          (priceData?.is_promo || product.has_active_promo) &&
-          discountPercent === 0 && (
-            <span className="absolute top-2 left-2 bg-[var(--time-red)] text-white text-[10px] sm:text-[11px] font-bold px-[7px] py-[3px] rounded-[5px] font-[family-name:var(--font-body)]">
-              PROMO
+        {/* Top-left stack: parent code (always) + discount/promo badge */}
+        <div className="absolute top-2 left-2 flex flex-col gap-1 items-start">
+          {(parent_sku || sku) && (
+            <span
+              className="bg-[var(--time-dark)]/85 backdrop-blur-[4px] text-white text-[10px] sm:text-[11px] font-semibold px-[7px] py-[3px] rounded-[5px] font-mono tracking-wide max-w-[160px] truncate"
+              title={String(parent_sku || sku)}
+            >
+              {parent_sku || sku}
             </span>
           )}
+          {!hidePrices && discountPercent > 0 && (
+            <span className="bg-[var(--time-red)] text-white text-[10px] sm:text-[11px] font-bold px-[7px] py-[3px] rounded-[5px] font-[family-name:var(--font-body)]">
+              {discountTiers || `-${discountPercent}%`}
+            </span>
+          )}
+          {!hidePrices &&
+            hasActivePromo(product, priceData) &&
+            discountPercent === 0 && (
+              <span className="bg-[var(--time-red)] text-white text-[10px] sm:text-[11px] font-bold px-[7px] py-[3px] rounded-[5px] font-[family-name:var(--font-body)]">
+                PROMO
+              </span>
+            )}
+        </div>
 
         {/* Variant count badge */}
         {hasVariants && variantCount > 1 && (
@@ -216,9 +232,16 @@ export default function TimeProductCard({
         </div>
 
         {/* Product name */}
-        <h4 className="text-[13px] sm:text-sm font-bold text-[var(--time-dark)] leading-snug font-[family-name:var(--font-body)] whitespace-nowrap overflow-hidden text-ellipsis mb-2.5">
+        <h4 className="text-[13px] sm:text-sm font-bold text-[var(--time-dark)] leading-snug font-[family-name:var(--font-body)] whitespace-nowrap overflow-hidden text-ellipsis mb-1.5">
           {name || 'Product'}
         </h4>
+
+        {/* Model */}
+        {model && (
+          <div className="mb-2.5 text-[11px] sm:text-xs font-bold text-[var(--time-dark)] truncate font-[family-name:var(--font-body)]">
+            {model as string}
+          </div>
+        )}
 
         {/* Price */}
         {!hidePrices && (
@@ -251,30 +274,40 @@ export default function TimeProductCard({
           </div>
         )}
 
-        {/* Availability */}
+        {/* Availability + status badges */}
         {priceData && !hasVariants && (
-          <div className="flex items-center gap-1.5 mt-1.5">
-            <span
-              className="w-[6px] h-[6px] rounded-full inline-block"
-              style={{
-                background: isOutOfStock
-                  ? 'var(--time-red, #dc2626)'
-                  : 'var(--time-success, #16a34a)',
-              }}
+          <div className="flex items-start gap-2 mt-1.5 flex-wrap">
+            <div className="flex items-center gap-1.5">
+              <span
+                className="w-[6px] h-[6px] rounded-full inline-block"
+                style={{
+                  background: isOutOfStock
+                    ? 'var(--time-red, #dc2626)'
+                    : 'var(--time-success, #16a34a)',
+                }}
+              />
+              <span
+                className="text-[11px] sm:text-xs font-semibold font-[family-name:var(--font-body)]"
+                style={{
+                  color: isOutOfStock
+                    ? 'var(--time-red, #dc2626)'
+                    : 'var(--time-success, #16a34a)',
+                }}
+              >
+                {isOutOfStock
+                  ? priceData?.product_label_action?.LABEL ||
+                    t('text-out-stock', { defaultValue: 'Non disponibile' })
+                  : t('text-in-stock', { defaultValue: 'Disponibile' })}
+              </span>
+            </div>
+            <TimeStatusBadges
+              priceData={priceData}
+              product={product}
+              hasMultiplePromos={hasMultiplePromos}
+              onPromoClick={handleClick}
+              t={t}
+              size="sm"
             />
-            <span
-              className="text-[11px] sm:text-xs font-semibold font-[family-name:var(--font-body)]"
-              style={{
-                color: isOutOfStock
-                  ? 'var(--time-red, #dc2626)'
-                  : 'var(--time-success, #16a34a)',
-              }}
-            >
-              {isOutOfStock
-                ? priceData?.product_label_action?.LABEL ||
-                  t('text-out-stock', { defaultValue: 'Non disponibile' })
-                : t('text-in-stock', { defaultValue: 'Disponibile' })}
-            </span>
           </div>
         )}
 
@@ -289,7 +322,7 @@ export default function TimeProductCard({
               >
                 {t('text-view-variants', { defaultValue: 'Vedi varianti' })}
               </button>
-            ) : hasValidPrice && canAddToCart ? (
+            ) : canInlineAdd ? (
               <AddToCart
                 lang={lang}
                 product={product}
@@ -297,7 +330,15 @@ export default function TimeProductCard({
                 showPlaceholder={false}
                 className="w-full"
               />
+            ) : isPromoGated ? (
+              <PromoGatedCta
+                cartQty={cartQty}
+                onClick={handleClick}
+                t={t}
+                size="sm"
+              />
             ) : (
+              // Other gating reasons: keep the original Visualizza CTA.
               <button
                 onClick={handleClick}
                 className="w-full h-8 rounded-[var(--radius-btn)] border-none bg-[var(--time-dark)] text-white text-[11px] sm:text-xs font-bold cursor-pointer font-[family-name:var(--font-body)] transition-colors hover:bg-[var(--time-red)]"

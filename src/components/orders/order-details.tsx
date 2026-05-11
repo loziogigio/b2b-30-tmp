@@ -1,6 +1,6 @@
 'use client';
 
-import { money } from '@utils/money';
+import { money, formatPriceIt } from '@utils/money';
 import OrderItemsTable from './order-items-table';
 import Link from 'next/link';
 import {
@@ -74,7 +74,7 @@ export default function OrderDetails({ order, lang }: Props) {
         <div className="flex items-center justify-between text-base">
           <span className="font-medium">{t('orders-total')}</span>
           <span className="font-semibold">
-            €{money((order as any).total).toFixed(decimals)}
+            €{formatPriceIt(money((order as any).total), decimals)}
           </span>
         </div>
       </div>

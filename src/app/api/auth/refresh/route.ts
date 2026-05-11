@@ -133,6 +133,28 @@ export async function POST(request: NextRequest) {
 
     const refreshResponse = await tokenResponse.json();
 
+    // Defense-in-depth: refuse to install tokens issued for a different tenant.
+    // Mirrors the same check in /api/auth/callback. If we ever see a mismatch
+    // here, we also clear the refresh-token cookie so the client stops polling.
+    if (!refreshResponse.tenant_id || refreshResponse.tenant_id !== tenantId) {
+      console.error('[refresh] tenant_id mismatch', {
+        expected: tenantId,
+        received: refreshResponse.tenant_id,
+      });
+      const errorResponse = NextResponse.json(
+        { success: false, message: 'tenant_mismatch' },
+        { status: 401 },
+      );
+      errorResponse.cookies.set(AUTH_COOKIES.REFRESH_TOKEN, '', {
+        path: '/',
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 0,
+      });
+      return errorResponse;
+    }
+
     const isProduction = process.env.NODE_ENV === 'production';
     const expiresIn = refreshResponse.expires_in || 900;
 

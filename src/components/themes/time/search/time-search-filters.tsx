@@ -48,7 +48,7 @@ export default function TimeSearchFilters({
           border-radius: 4px;
         }
       `}</style>
-      <SearchFiltersB2B lang={lang} text={text} />
+      <SearchFiltersB2B lang={lang} text={text} allowBlankSearch />
     </div>
   );
 }

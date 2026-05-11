@@ -3,6 +3,7 @@
 import { OrderSummary } from '@framework/order/types-b2b-orders-list';
 import { useTranslation } from 'src/app/i18n/client';
 import { useHomeSettings } from '@/hooks/use-home-settings';
+import { formatPriceIt } from '@utils/money';
 
 type Props = {
   orders: OrderSummary[];
@@ -60,7 +61,7 @@ export default function OrdersList({
               <div className="text-right">
                 <p className="text-sm text-gray-500">{t('orders-total')}</p>
                 <p className="font-semibold">
-                  {o.ordered_total.toFixed(decimals)}
+                  {formatPriceIt(o.ordered_total, decimals)}
                 </p>
               </div>
             </li>

@@ -65,6 +65,89 @@ async function getCategoryMap(
   return promise;
 }
 
+// ---------------------------------------------------------------------------
+// promo_type label cache (keyed by upstream PIM URL + lang).
+// The PIM facet for `promo_type` ships the bare code (e.g. "LIP") with no
+// friendly label. Products carry `promotions[].label` / `.name` (e.g. "LIFE
+// IN POOL"), so we harvest a code → label map by scanning a small page of
+// promoted products and cache it for 10 minutes per (tenant, lang).
+// Mirrors dfl-b2b/server/api/pim-search.js#getPromoTypeMap.
+// ---------------------------------------------------------------------------
+type PromoMap = Record<string, string>;
+type PromoCacheEntry = {
+  map: PromoMap;
+  loadedAt: number;
+  promise?: Promise<PromoMap>;
+};
+const promoCache = new Map<string, PromoCacheEntry>();
+const PROMO_MAP_TTL_MS = 10 * 60 * 1000;
+const PROMO_HARVEST_ROWS = 50;
+
+async function getPromoTypeMap(
+  baseUrl: string,
+  headers: Record<string, string>,
+  lang: string,
+): Promise<PromoMap> {
+  const cacheKey = `${baseUrl}::${lang}`;
+  const entry = promoCache.get(cacheKey);
+  if (entry && Date.now() - entry.loadedAt < PROMO_MAP_TTL_MS) return entry.map;
+  if (entry?.promise) return entry.promise;
+
+  const promise = (async () => {
+    const map: PromoMap = {};
+    try {
+      const url = new URL('api/search/search', baseUrl);
+      const resp = await fetch(url.toString(), {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lang,
+          rows: PROMO_HARVEST_ROWS,
+          filters: { has_active_promo: true },
+        }),
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        const docs: any[] = data?.data?.results || data?.results || [];
+        for (const doc of docs) {
+          const proms = Array.isArray(doc?.promotions) ? doc.promotions : [];
+          for (const p of proms) {
+            const code = p?.promo_type;
+            const label = p?.label || p?.name;
+            if (code && label && !map[code]) map[code] = label;
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[PIM Proxy] promo-type map load failed:', err);
+    }
+    promoCache.set(cacheKey, { map, loadedAt: Date.now() });
+    return map;
+  })();
+  promoCache.set(cacheKey, { map: {}, loadedAt: 0, promise });
+  return promise;
+}
+
+// Rewrites facet_results.promo_type entries in-place so the sidebar renders
+// "GIORNALINO SUPERPREZZI" instead of the bare "SPR" code. Both `label` and
+// `entity.label` are populated so consumers that read either path get the
+// friendly title.
+function enrichPromoFacetLabels(data: any, promoMap: PromoMap): any {
+  if (!promoMap || Object.keys(promoMap).length === 0) return data;
+  const facets = data?.data?.facet_results || data?.facet_results;
+  const list = facets?.promo_type;
+  if (!Array.isArray(list)) return data;
+  for (const f of list) {
+    const code = String(f?.value ?? '');
+    const friendly = promoMap[code];
+    if (!friendly) continue;
+    f.label = friendly;
+    if (!f.entity || typeof f.entity !== 'object') f.entity = {};
+    if (!f.entity.label) f.entity.label = friendly;
+  }
+  return data;
+}
+
 // Drill-down dedup: drop ancestors when a descendant is also selected,
 // then expand each remaining id to its L3 leaf descendants.
 function expandCategoryFilterToLeaves(
@@ -292,7 +375,45 @@ async function proxyRequest(
     // Handle non-JSON responses
     const contentType = response.headers.get('content-type');
     if (contentType && contentType.includes('application/json')) {
-      const data = await response.json();
+      let data = await response.json();
+
+      // For search responses, enrich facet_results.promo_type with friendly
+      // labels harvested from promotions[]. PIM ships the raw codes (SPR /
+      // ZZZ / LIP) but products carry the human title — same approach as
+      // dfl-b2b/server/api/pim-search.
+      if (
+        method === 'POST' &&
+        response.ok &&
+        (pathString === 'api/search/search' ||
+          pathString.endsWith('/search/search'))
+      ) {
+        const promoFacet =
+          data?.data?.facet_results?.promo_type ||
+          data?.facet_results?.promo_type;
+        if (Array.isArray(promoFacet) && promoFacet.length > 0) {
+          const proxyHeaders: Record<string, string> = {
+            Accept: 'application/json',
+          };
+          if (config.apiKeyId) proxyHeaders['X-API-Key'] = config.apiKeyId;
+          if (config.apiSecret) proxyHeaders['X-API-Secret'] = config.apiSecret;
+          // Honour the lang the caller requested so the promo titles match
+          // the rest of the response (falls back to env / 'it').
+          let lang = process.env.NEXT_PUBLIC_PIM_DEFAULT_LANG || 'it';
+          try {
+            if (typeof fetchOptions.body === 'string') {
+              const parsed = JSON.parse(fetchOptions.body);
+              if (typeof parsed?.lang === 'string' && parsed.lang.trim()) {
+                lang = parsed.lang.trim();
+              }
+            }
+          } catch {
+            // body wasn't JSON — keep default lang
+          }
+          const promoMap = await getPromoTypeMap(baseUrl, proxyHeaders, lang);
+          data = enrichPromoFacetLabels(data, promoMap);
+        }
+      }
+
       return NextResponse.json(data, { status: response.status });
     } else {
       const text = await response.text();

@@ -14,6 +14,12 @@ import { useLikes } from '@contexts/likes/likes.context';
 import { useReminders } from '@contexts/reminders/reminders.context';
 import { IoIosHeart, IoIosHeartEmpty } from 'react-icons/io';
 import { ReminderIcon, ReminderIconFilled } from '@components/icons/app-icons';
+import {
+  hasActivePromo,
+  PromoGatedCta,
+  TimeStatusBadges,
+  usePromoGating,
+} from '@components/themes/time/product/time-promo-gated-cta';
 import React from 'react';
 
 interface TimeSearchCardProps {
@@ -64,9 +70,10 @@ export default function TimeSearchCard({
     : 0;
 
   const isOutOfStock = priceData ? Number(priceData.availability) <= 0 : false;
-  const canAddToCart = priceData?.product_label_action?.ADD_TO_CART ?? true;
-  const hasValidPrice = priceData && netPrice != null && Number(netPrice) > 0;
   const variantCount = product.variantCount ?? variations.length;
+  // Same legacy gating as TimeSearchRow / TimeProductCard.
+  const { hasMultiplePromos, isPromoGated, canInlineAdd, cartQty } =
+    usePromoGating(priceData, product);
 
   // Packaging info from ERP
   const um = priceData?.packaging_option_default?.packaging_uom || unit || null;
@@ -101,7 +108,7 @@ export default function TimeSearchCard({
           </span>
         )}
         {!hidePrices &&
-          (priceData?.is_promo || product.has_active_promo) &&
+          hasActivePromo(product, priceData) &&
           discountPercent === 0 && (
             <span className="bg-[var(--time-red)] text-white text-[11px] sm:text-xs font-bold px-2 py-[3px] rounded-[5px] font-[family-name:var(--font-body)] uppercase">
               PROMO
@@ -285,32 +292,43 @@ export default function TimeSearchCard({
             </div>
           )}
 
-          {/* Availability */}
+          {/* Availability + status badges */}
           {priceData && !hasVariants && (
-            <div className="flex items-center gap-1.5">
-              <span
-                className="w-[7px] h-[7px] rounded-full inline-block"
-                style={{
-                  background: isOutOfStock ? '#ef4444' : '#22c55e',
-                }}
+            <div className="flex items-start gap-2 flex-wrap">
+              <div className="flex items-center gap-1.5">
+                <span
+                  className="w-[7px] h-[7px] rounded-full inline-block"
+                  style={{
+                    background: isOutOfStock ? '#ef4444' : '#22c55e',
+                  }}
+                />
+                <span
+                  className="text-xs sm:text-[13px] font-semibold font-[family-name:var(--font-body)]"
+                  style={{
+                    color: isOutOfStock ? '#dc2626' : '#16a34a',
+                  }}
+                >
+                  {isOutOfStock
+                    ? priceData?.product_label_action?.LABEL ||
+                      t('text-out-stock', {
+                        defaultValue: 'Non disponibile',
+                      })
+                    : t('text-in-stock', { defaultValue: 'Disponibile' })}
+                </span>
+              </div>
+              <TimeStatusBadges
+                priceData={priceData}
+                product={product}
+                hasMultiplePromos={hasMultiplePromos}
+                onPromoClick={handleClick}
+                t={t}
               />
-              <span
-                className="text-xs sm:text-[13px] font-semibold font-[family-name:var(--font-body)]"
-                style={{
-                  color: isOutOfStock ? '#dc2626' : '#16a34a',
-                }}
-              >
-                {isOutOfStock
-                  ? priceData?.product_label_action?.LABEL ||
-                    t('text-out-stock', { defaultValue: 'Non disponibile' })
-                  : t('text-in-stock', { defaultValue: 'Disponibile' })}
-              </span>
             </div>
           )}
 
           {/* CTA */}
           {isAuthorized && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-stretch gap-1.5 w-full">
               {hasVariants ? (
                 <button
                   onClick={handleClick}
@@ -320,7 +338,7 @@ export default function TimeSearchCard({
                     defaultValue: 'Vedi varianti',
                   })}
                 </button>
-              ) : hasValidPrice && canAddToCart ? (
+              ) : canInlineAdd ? (
                 <AddToCart
                   lang={lang}
                   product={product}
@@ -328,7 +346,15 @@ export default function TimeSearchCard({
                   showPlaceholder={false}
                   className="w-full"
                 />
+              ) : isPromoGated ? (
+                <PromoGatedCta
+                  cartQty={cartQty}
+                  onClick={handleClick}
+                  t={t}
+                  size="md"
+                />
               ) : (
+                // Other gating reasons: keep the original Visualizza CTA.
                 <button
                   onClick={handleClick}
                   className="w-full h-9 rounded-[var(--radius-btn)] border-none bg-[var(--time-dark)] text-white text-xs sm:text-[13px] font-bold cursor-pointer font-[family-name:var(--font-body)] tracking-[0.03em] transition-colors hover:bg-[var(--time-red)]"

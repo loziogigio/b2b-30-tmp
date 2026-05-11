@@ -9,6 +9,7 @@ import { useTranslation } from 'src/app/i18n/client';
 import { useHomeSettings } from '@/hooks/use-home-settings';
 import { useModalAction } from '@components/common/modal/modal.context';
 import { fetchPimProductList } from '@framework/product/get-pim-product';
+import { formatPriceIt } from '@utils/money';
 
 type Props = {
   items?: TransformedOrderItem[];
@@ -218,7 +219,7 @@ export default function OrderItemsTable({
                   </div>
 
                   <div className="flex items-center justify-center text-sm">
-                    {it.price.toFixed(decimals)}
+                    {formatPriceIt(it.price, decimals)}
                   </div>
 
                   <div className="flex items-center justify-center text-sm">

@@ -39,16 +39,19 @@ export default function TimeVariantsQuickView({ lang }: { lang: string }) {
             <span className="hidden sm:inline text-white/40">|</span>
             <span className="hidden sm:inline text-white/90 text-sm font-medium">
               {t('text-product-variants', {
-                defaultValue: 'Varianti prodotto',
+                defaultValue: 'Anteprima varianti prodotto',
               })}
             </span>
           </div>
           <button
             onClick={closeModal}
             aria-label="Close"
-            className="w-8 h-8 rounded-full border border-white/30 flex items-center justify-center hover:bg-white/20 transition-colors cursor-pointer"
+            className="inline-flex items-center gap-2 bg-white text-[var(--time-red)] hover:bg-[var(--time-dark)] hover:text-white font-bold uppercase tracking-wide text-sm rounded-full px-4 py-2 shadow-lg ring-2 ring-white/80 transition-all cursor-pointer"
           >
-            <IoClose size={18} />
+            <IoClose size={20} strokeWidth={3} />
+            <span className="hidden sm:inline">
+              {t('text-close', { defaultValue: 'Chiudi' })}
+            </span>
           </button>
         </div>
       </div>

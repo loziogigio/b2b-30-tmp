@@ -5,6 +5,7 @@ import Link from 'next/link';
 import type { ErpPriceData } from '@utils/transform/erp-prices';
 import { formatAvailability } from '@utils/format-availability';
 import { useTranslation } from 'src/app/i18n/client';
+import LastOrdered from '../last-ordered';
 
 type Props = {
   product: any;
@@ -74,6 +75,11 @@ export default function B2BInfoBlock({ product, priceData, lang }: Props) {
   const availability = Number(priceData?.availability ?? 0);
   const buyDid = Boolean(priceData?.buy_did);
   const buyDidLast = priceData?.buy_did_last_date;
+  const buyDidAmount = priceData?.buy_did_amount;
+  const isPromo = Boolean(
+    priceData?.is_promo || priceData?.promo || product?.has_active_promo,
+  );
+  const promoCount = Number(priceData?.count_promo ?? 0);
 
   const stato =
     priceData?.product_label_action?.LABEL ??
@@ -87,7 +93,6 @@ export default function B2BInfoBlock({ product, priceData, lang }: Props) {
   const brandName = product?.brand?.name || product?.brand?.label || 'Brand';
 
   const isNew = Boolean((product as any)?.is_new);
-  const isPromo = Boolean(priceData?.is_promo || product?.has_active_promo);
 
   return (
     <div className="mt-2 bg-white">
@@ -141,7 +146,26 @@ export default function B2BInfoBlock({ product, priceData, lang }: Props) {
                   : 'text-red-600'
             }`}
           >
-            {stato}
+            <span className="inline-flex items-center gap-2 flex-wrap">
+              <span>{stato}</span>
+              {isPromo && (
+                <span className="bg-red-600 text-white text-[10px] font-extrabold px-2 py-[2px] rounded uppercase tracking-wide">
+                  {promoCount > 1
+                    ? t('text-see-offers', { defaultValue: 'Vedi offerte' })
+                    : t('text-in-promo', { defaultValue: 'In offerta' })}
+                </span>
+              )}
+              {buyDid && (
+                <span
+                  className="bg-emerald-600 text-white text-[10px] font-extrabold px-2 py-[2px] rounded uppercase tracking-wide"
+                  title={buyDidLast || undefined}
+                >
+                  {t('text-already-ordered', {
+                    defaultValue: 'Già ordinato',
+                  })}
+                </span>
+              )}
+            </span>
           </dd>
 
           {availability > 0 && priceData && (
@@ -158,13 +182,17 @@ export default function B2BInfoBlock({ product, priceData, lang }: Props) {
             </>
           )}
 
-          {buyDid && buyDidLast && (
+          {buyDid && (buyDidLast || buyDidAmount) && (
             <>
               <dt className="border-b border-border-base bg-gray-50 px-4 py-3 text-[12px] font-semibold uppercase text-gray-600 sm:text-sm">
                 {t('text-last-ordered')}
               </dt>
               <dd className="border-b border-border-base px-4 py-3 text-sm text-brand-dark">
-                {buyDidLast}
+                <LastOrdered
+                  lang={lang}
+                  priceData={priceData}
+                  variant="detail"
+                />
               </dd>
             </>
           )}

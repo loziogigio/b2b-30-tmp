@@ -240,12 +240,30 @@ export function GroupsNavigator({ lang, text }: GroupsNavigatorProps) {
   }, [searchParams]);
 
   const [expanded, setExpanded] = useState(false);
+  // Visual drill state, independent of URL filter. Tracks the menu node
+  // whose children are being browsed. This matters in B2B where many
+  // intermediate menu nodes don't carry an ERP group code in their URL,
+  // so we can't tie navigation to the URL filter alone.
+  const [navNodeId, setNavNodeId] = useState<string | null>(null);
 
-  // Derive drilled node from URL — the deepest selected node with children
-  // This survives page refresh since it's computed from URL params
-  const drilledNode = useMemo(() => {
+  // Locate a node by its menu id anywhere in the tree
+  const findNodeById = useCallback(
+    (nodes: MenuTreeNode[], id: string): MenuTreeNode | null => {
+      for (const n of nodes) {
+        if (n.id === id) return n;
+        if (n.children.length) {
+          const found = findNodeById(n.children, id);
+          if (found) return found;
+        }
+      }
+      return null;
+    },
+    [],
+  );
+
+  // Derive drilled node — prefer explicit navigation, fall back to URL
+  const urlDrilledNode = useMemo(() => {
     if (selectedCodes.length === 0) return null;
-    // Find the deepest selected node that has children (to show its children)
     let deepest: MenuTreeNode | null = null;
     for (const code of selectedCodes) {
       const node = findNodeByGroupCode(tree, code);
@@ -256,6 +274,11 @@ export function GroupsNavigator({ lang, text }: GroupsNavigatorProps) {
     }
     return deepest;
   }, [selectedCodes, tree]);
+
+  const drilledNode = useMemo(() => {
+    if (navNodeId) return findNodeById(tree, navNodeId);
+    return urlDrilledNode;
+  }, [navNodeId, tree, urlDrilledNode, findNodeById]);
 
   // Build breadcrumb path for current drilled level
   const breadcrumbPath = useMemo(() => {
@@ -298,24 +321,23 @@ export function GroupsNavigator({ lang, text }: GroupsNavigatorProps) {
     [selectedCodes],
   );
 
+  // Does this subtree contain any node with an ERP group code?
+  // Container nodes without a code (e.g. B2B intermediate menu levels)
+  // are still navigable when their descendants have codes.
+  const hasCodeInSubtree = useCallback((node: MenuTreeNode): boolean => {
+    if (extractGroupCode(node)) return true;
+    return node.children.some(hasCodeInSubtree);
+  }, []);
+
   // Filter rules:
-  //   - Drop nodes without an ERP group code (like "BAGNO" whose URL points to
-  //     a marketing PDF). They can't be used as a filter (no code), the drill
-  //     chevron does nothing, and their children are already reachable via the
-  //     ERP facet. Keeping them just shows a grayed-out dead entry.
-  //   - Once facet counts are loaded, also hide coded groups with own count
-  //     of 0 (unless selected or containing a selected descendant) — clicking
-  //     them would filter by a code that yields no products.
+  //   - Keep nodes with a code OR with any descendant carrying a code
+  //     (so B2B navigation containers stay drillable).
+  //   - Zero-count branches stay visible (rendered muted) so users can see
+  //     the full taxonomy even when no products match — matches the default
+  //     template's facet behavior.
   // Sort: selected first, then by count descending, then by label.
   const displayItems = useMemo(() => {
-    let items = baseDisplayItems.filter((node) => !!extractGroupCode(node));
-    if (groupFacets) {
-      items = items.filter((node) => {
-        if (hasSelectedDescendant(node)) return true;
-        const code = extractGroupCode(node)!;
-        return (countMap[code] ?? 0) > 0;
-      });
-    }
+    const items = baseDisplayItems.filter(hasCodeInSubtree);
     return [...items].sort((a, b) => {
       const aCode = extractGroupCode(a);
       const bCode = extractGroupCode(b);
@@ -328,14 +350,7 @@ export function GroupsNavigator({ lang, text }: GroupsNavigatorProps) {
       if (bCount !== aCount) return bCount - aCount;
       return a.label.localeCompare(b.label, undefined, { numeric: true });
     });
-  }, [
-    baseDisplayItems,
-    groupFacets,
-    countMap,
-    selectedCodes,
-    getTotalCount,
-    hasSelectedDescendant,
-  ]);
+  }, [baseDisplayItems, selectedCodes, getTotalCount, hasCodeInSubtree]);
 
   // Toggle a group code in the URL filter
   const toggleGroup = useCallback(
@@ -362,39 +377,26 @@ export function GroupsNavigator({ lang, text }: GroupsNavigatorProps) {
     [searchParams, pathname, router],
   );
 
-  // Drill into a group via chevron (select it to drill down)
-  const drillInto = useCallback(
-    (node: MenuTreeNode) => {
-      const code = extractGroupCode(node);
-      if (code) {
-        toggleGroup(code);
-      }
-    },
-    [toggleGroup],
-  );
+  // Drill into a group via chevron — visual navigation only.
+  // Coded nodes still work; uncoded container nodes also drill in
+  // because nav state is decoupled from the URL filter.
+  const drillInto = useCallback((node: MenuTreeNode) => {
+    setExpanded(false);
+    setNavNodeId(node.id);
+  }, []);
 
-  // Navigate breadcrumb: set filter to the clicked ancestor
-  const goToLevel = useCallback(
-    (node: MenuTreeNode) => {
-      const code = extractGroupCode(node);
-      const params = new URLSearchParams(searchParams?.toString() ?? '');
-      if (code) {
-        params.set(GROUP_PARAM, code);
-      } else {
-        params.delete(GROUP_PARAM);
-      }
-      setExpanded(false);
-      const qs = params.toString();
-      router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-    },
-    [searchParams, pathname, router],
-  );
+  // Navigate breadcrumb: walk up to the clicked ancestor visually.
+  const goToLevel = useCallback((node: MenuTreeNode) => {
+    setExpanded(false);
+    setNavNodeId(node.id);
+  }, []);
 
-  // Clear all group filters and go to root
+  // Clear all group filters AND visual navigation; jump back to root
   const clearAll = useCallback(() => {
     const params = new URLSearchParams(searchParams?.toString() ?? '');
     params.delete(GROUP_PARAM);
     setExpanded(false);
+    setNavNodeId(null);
     const qs = params.toString();
     router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   }, [searchParams, pathname, router]);
@@ -420,6 +422,42 @@ export function GroupsNavigator({ lang, text }: GroupsNavigatorProps) {
             </DisclosureButton>
             <DisclosurePanel>
               <div className="px-4 pb-2">
+                {/* Drill-down breadcrumb (visual nav) */}
+                {breadcrumbPath.length > 0 && (
+                  <div className="flex items-center flex-wrap gap-1 mb-2">
+                    <button
+                      type="button"
+                      onClick={() => setNavNodeId(null)}
+                      className="inline-flex items-center px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-[11px] font-medium hover:bg-gray-200 transition-colors"
+                    >
+                      {t('text-all', { defaultValue: 'Tutti' })} ×
+                    </button>
+                    {breadcrumbPath.map((n, i) => {
+                      const isLast = i === breadcrumbPath.length - 1;
+                      return (
+                        <React.Fragment key={n.id}>
+                          <IoChevronForward className="text-gray-400 text-xs" />
+                          <button
+                            type="button"
+                            onClick={() => !isLast && goToLevel(n)}
+                            className={cn(
+                              'inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium transition-colors capitalize',
+                              isLast
+                                ? 'bg-brand text-white cursor-default'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200',
+                            )}
+                            title={n.label}
+                          >
+                            <span className="truncate max-w-[140px]">
+                              {normalizeLabel(n.label)}
+                            </span>
+                          </button>
+                        </React.Fragment>
+                      );
+                    })}
+                  </div>
+                )}
+
                 {/* Items at current level */}
                 <div className="flex flex-col">
                   {(expanded

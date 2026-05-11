@@ -3,7 +3,7 @@
 // drill-down feels more natural when you start broad → narrow).
 import {
   PIM_FACET_FIELDS as DEFAULT_PIM_FACET_FIELDS,
-  PIM_FACET_LABELS,
+  PIM_FACET_LABELS as DEFAULT_PIM_FACET_LABELS,
   STOCK_STATUS_LABELS,
   BOOLEAN_LABELS,
 } from 'vinc-pim';
@@ -18,17 +18,23 @@ const desiredOrder = [
   'stock_status',
 ];
 
-const indexed = new Map(desiredOrder.map((k, i) => [k, i]));
-export const PIM_FACET_FIELDS: string[] = [...DEFAULT_PIM_FACET_FIELDS].sort(
-  (a, b) => {
-    const ai = indexed.has(a)
-      ? (indexed.get(a) as number)
-      : desiredOrder.length;
-    const bi = indexed.has(b)
-      ? (indexed.get(b) as number)
-      : desiredOrder.length;
-    return ai - bi;
-  },
-);
+// Extra facets the b2b storefront needs but the default vinc-pim list omits.
+// Kept local so we don't have to rebuild the published vinc-pim package.
+const EXTRA_FACET_FIELDS = ['promo_type'];
 
-export { PIM_FACET_LABELS, STOCK_STATUS_LABELS, BOOLEAN_LABELS };
+const indexed = new Map(desiredOrder.map((k, i) => [k, i]));
+export const PIM_FACET_FIELDS: string[] = [
+  ...DEFAULT_PIM_FACET_FIELDS,
+  ...EXTRA_FACET_FIELDS.filter((k) => !DEFAULT_PIM_FACET_FIELDS.includes(k)),
+].sort((a, b) => {
+  const ai = indexed.has(a) ? (indexed.get(a) as number) : desiredOrder.length;
+  const bi = indexed.has(b) ? (indexed.get(b) as number) : desiredOrder.length;
+  return ai - bi;
+});
+
+export const PIM_FACET_LABELS: Record<string, string> = {
+  ...DEFAULT_PIM_FACET_LABELS,
+  promo_type: 'Promozione',
+};
+
+export { STOCK_STATUS_LABELS, BOOLEAN_LABELS };

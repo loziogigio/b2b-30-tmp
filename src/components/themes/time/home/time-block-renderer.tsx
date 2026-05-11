@@ -249,7 +249,6 @@ const TimeBlockRenderer: React.FC<TimeBlockRendererProps> = ({
 
     const transformedData = slides.map((slide: any) => transformSlide(slide));
 
-    // Side banners from config or default promotional cards
     const sideBanners: Array<{
       title: string;
       subtitle?: string;
@@ -257,50 +256,37 @@ const TimeBlockRenderer: React.FC<TimeBlockRendererProps> = ({
       link?: string;
       gradient: string;
       buttonStyle: 'light' | 'red';
-    }> = block.config?.sideBanners || [
-      {
-        title: 'Tutte le\nOfferte',
-        subtitle: 'Scopri le promozioni attive',
-        label: 'Scopri ora',
-        link: `/${lang}/search?collection=offerte`,
-        gradient: 'linear-gradient(135deg, #e63946 0%, #be123c 100%)',
-        buttonStyle: 'light' as const,
-      },
-      {
-        title: 'Nuovi\nInserimenti',
-        label: 'Vedi tutti',
-        link: `/${lang}/search?collection=nuovi-arrivi`,
-        gradient: 'linear-gradient(135deg, #1a1d23 0%, #2d3748 100%)',
-        buttonStyle: 'red' as const,
-      },
-    ];
-
-    const quickActions = block.config?.quickActions;
+    }> = Array.isArray(block.config?.sideBanners)
+      ? block.config.sideBanners
+      : [];
+    const hasSideBanners = sideBanners.length > 0;
 
     return (
-      <>
-        <BlockWrapper
-          fullWidth={isFullWidth}
-          className={block.config?.className || ''}
-        >
-          <div className="pt-7 pb-10">
-            <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] xl:grid-cols-[1fr_340px] gap-4 items-stretch">
-              <div className="overflow-hidden rounded-2xl">
-                <TimeHeroCarousel slides={transformedData} lang={lang} />
-              </div>
+      <BlockWrapper
+        fullWidth={isFullWidth}
+        className={block.config?.className || ''}
+      >
+        <div className="pt-7 pb-10">
+          <div
+            className={
+              hasSideBanners
+                ? 'grid grid-cols-1 lg:grid-cols-[1fr_280px] xl:grid-cols-[1fr_340px] gap-4 items-stretch'
+                : 'grid grid-cols-1 gap-4 items-stretch'
+            }
+          >
+            <div className="overflow-hidden rounded-2xl">
+              <TimeHeroCarousel slides={transformedData} lang={lang} />
+            </div>
+            {hasSideBanners && (
               <div className="hidden lg:flex flex-col gap-4">
                 {sideBanners.slice(0, 2).map((banner, idx) => (
                   <SideBanner key={idx} banner={banner} />
                 ))}
               </div>
-            </div>
+            )}
           </div>
-        </BlockWrapper>
-
-        <BlockWrapper fullWidth={isFullWidth} className={BLOCK_SPACING}>
-          <TimeQuickActions actions={quickActions} lang={lang} />
-        </BlockWrapper>
-      </>
+        </div>
+      </BlockWrapper>
     );
   }
 

@@ -175,6 +175,9 @@ export function transformPimProduct(raw: PimProduct): Product {
       : [],
     tag: [],
     category: { id: '', name: '', slug: '' },
+    category_ancestors: Array.isArray((raw as any).category_ancestors)
+      ? ((raw as any).category_ancestors as string[])
+      : [],
     sold: 0,
     // Pass through media for documents, videos, 3D models
     media: raw.media || [],

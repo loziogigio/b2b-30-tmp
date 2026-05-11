@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useState } from 'react';
+import { forwardRef, useEffect, useRef, useState } from 'react';
 import cn from 'classnames';
 import { useSearchQuery } from '@framework/product/use-search';
 import SearchBox from '@components/common/search-box';
@@ -52,7 +52,25 @@ const SearchB2B = forwardRef<HTMLDivElement, Props>(
       e.preventDefault();
     }
     function handleAutoSearch(e: React.FormEvent<HTMLInputElement>) {
-      setSearchText(e.currentTarget.value);
+      const newText = e.currentTarget.value;
+      // When the user starts typing a fresh query (empty → non-empty), drop
+      // any pre-applied filter chips so the new search isn't accidentally
+      // narrowed by stale state. Only fires on the transition, not on every
+      // keystroke, to avoid router-push storms.
+      if (newText && !searchText) {
+        const hasUrlFilters = Array.from(searchParams?.keys() ?? []).some((k) =>
+          k.startsWith('filters-'),
+        );
+        if (hasUrlFilters && pathname) {
+          const params = new URLSearchParams();
+          searchParams?.forEach((v, k) => {
+            if (!k.startsWith('filters-')) params.set(k, v);
+          });
+          const qs = params.toString();
+          router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+        }
+      }
+      setSearchText(newText);
     }
     const RECENT_KEY = 'b2b-recent-searches';
     function pushRecent(term: string) {
@@ -85,11 +103,22 @@ const SearchB2B = forwardRef<HTMLDivElement, Props>(
       closeSearch(); // ✅ closes desktop overlay if open
     }
 
-    // Sync input with URL param `text` - clears when URL text is empty (e.g., Clear All clicked)
+    // Sync input with URL param `text` ONLY when the URL's `text` itself
+    // actually changes (page navigation, Clear All, etc.). Other URL changes
+    // — e.g. clicking a filter chip while the user is typing — must not
+    // wipe the un-submitted text out of the input.
+    const lastUrlTextRef = useRef<string | null>(null);
     useEffect(() => {
       const urlText = (searchParams?.get('text') || '').trim();
-      if (urlText !== searchText) {
-        setSearchText(urlText);
+      if (lastUrlTextRef.current === null) {
+        // First render: adopt whatever the URL says.
+        lastUrlTextRef.current = urlText;
+        if (urlText !== searchText) setSearchText(urlText);
+        return;
+      }
+      if (urlText !== lastUrlTextRef.current) {
+        lastUrlTextRef.current = urlText;
+        if (urlText !== searchText) setSearchText(urlText);
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [searchParams]);

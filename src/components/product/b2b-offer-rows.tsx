@@ -13,16 +13,12 @@ import { useUI } from '@contexts/ui.context';
 import { useHomeSettings } from '@/hooks/use-home-settings';
 import PackagingGrid from './packaging-grid';
 import AddToCart from './add-to-cart';
+import { formatPriceIt } from '@utils/money';
 
 type Props = {
   lang: string;
   product: any;
   priceData?: ErpPriceData;
-};
-
-const fmtNum = (v: unknown, decimals: number) => {
-  const n = Number(v);
-  return Number.isFinite(n) ? n.toFixed(decimals) : '';
 };
 
 const fmtDate = (iso?: string) => {
@@ -307,7 +303,7 @@ function PriceCell({
       {showStrike && (
         <div className="flex flex-col items-end leading-tight">
           <span className="text-xs text-gray-400 line-through">
-            {fmtNum(gross, decimals)} €
+            {formatPriceIt(gross, decimals)} €
           </span>
           {discounts.length > 0 && (
             <span className="text-[10px] font-bold text-red-600">
@@ -322,7 +318,9 @@ function PriceCell({
           showStrike ? 'text-red-600' : 'text-gray-900',
         )}
       >
-        <span className="text-xl md:text-2xl">{fmtNum(net, decimals)}</span>
+        <span className="text-xl md:text-2xl">
+          {formatPriceIt(net, decimals)}
+        </span>
         <span className="text-sm font-semibold">€</span>
       </span>
     </div>

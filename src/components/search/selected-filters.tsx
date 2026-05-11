@@ -1,16 +1,29 @@
-import Heading from '@components/ui/heading';
 import { useTranslation } from 'src/app/i18n/client';
 import { FilteredItem } from './filtered-item';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import isEmpty from 'lodash/isEmpty';
-import { useEffect, useState, useMemo } from 'react';
-import useQueryParam from '@utils/use-query-params';
+import { useMemo } from 'react';
 
 type Props = {
   lang: string;
-  allowedKeys?: string[]; // e.g., ['filters-promo_type', 'filters-brand_id']
-  labelMap?: Record<string, Record<string, string>>; // key -> (value -> label)
+  /**
+   * Optional whitelist of `filters-<key>` URL params to render. Anything not
+   * in the list still renders if `allowedKeys` is `undefined`. We don't gate
+   * by default so URL-only filters (e.g. `filters-promo_code`, which has no
+   * facet feed) still show as chips when applied.
+   */
+  allowedKeys?: string[];
+  /** `filters-<key> → value → human label` map; falls back to the raw value when missing. */
+  labelMap?: Record<string, Record<string, string>>;
 };
+
+// Multi-value separators a single facet may use in the URL.
+const MULTI_VALUE_SEPARATORS = /[,;]/;
+
+/** Strip the `filters-` prefix and capitalise for the chip's "key" label. */
+function prettyKey(filterParam: string): string {
+  const key = filterParam.replace(/^filters-/, '');
+  return key.replace(/[._]/g, ' ');
+}
 
 export default function SelectedFilters({
   lang,
@@ -18,67 +31,85 @@ export default function SelectedFilters({
   labelMap,
 }: Props) {
   const { t } = useTranslation(lang, 'common');
-
   const { push } = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { clearQueryParam, updateQueryparams } = useQueryParam(pathname ?? '/');
-  const [state, setState] = useState({});
 
-  useEffect(() => {
-    const next: Record<string, string | string[]> = {};
-    searchParams?.forEach((value, key) => {
-      // Only include whitelisted facet keys if provided
-      if (allowedKeys && !allowedKeys.includes(key)) return;
-      if (value.includes(',')) next[key] = value.split(',');
-      else next[key] = value;
-    });
-    setState(next);
-  }, [searchParams, allowedKeys]);
-
-  function handleArrayUpdate(key: string, item: string) {
-    let o = searchParams?.get(key)?.split(',');
-    if (o?.includes(item)) {
-      updateQueryparams(key, o.filter((i) => i !== item).join(','));
-    }
-  }
-  // Check if there are any filter params (excluding non-filter params like 'view', 'source', 'period', 'page_size', 'text', 'q')
-  const hasFilters = useMemo(() => {
-    let hasFilterParam = false;
-    searchParams?.forEach((_, key) => {
-      if (key.startsWith('filters-')) {
-        hasFilterParam = true;
+  // [{ paramKey, value, label }] — one entry per individual filter value, so
+  // multi-value params (e.g. brand_id=12,18) render as separate chips.
+  const chips = useMemo(() => {
+    const out: { paramKey: string; value: string; label: string }[] = [];
+    if (!searchParams) return out;
+    searchParams.forEach((rawValue, paramKey) => {
+      if (!paramKey.startsWith('filters-')) return;
+      if (allowedKeys && !allowedKeys.includes(paramKey)) return;
+      if (!rawValue) return;
+      const values = rawValue.split(MULTI_VALUE_SEPARATORS).filter(Boolean);
+      const valueLabels = labelMap?.[paramKey] ?? {};
+      for (const value of values) {
+        out.push({
+          paramKey,
+          value,
+          label: valueLabels[value] || value,
+        });
       }
     });
-    return hasFilterParam;
-  }, [searchParams]);
+    return out;
+  }, [searchParams, allowedKeys, labelMap]);
+
+  const removeFilterValue = (paramKey: string, valueToRemove: string) => {
+    if (!searchParams) return;
+    const params = new URLSearchParams(searchParams.toString());
+    const current = params.get(paramKey);
+    if (!current) return;
+    const next = current
+      .split(MULTI_VALUE_SEPARATORS)
+      .filter((v) => v && v !== valueToRemove)
+      .join(',');
+    if (next) params.set(paramKey, next);
+    else params.delete(paramKey);
+    const search = params.toString();
+    push(search ? `${pathname}?${search}` : pathname || '/', {
+      scroll: false,
+    });
+  };
+
+  const clearAllFilters = () => {
+    if (!searchParams) return;
+    const params = new URLSearchParams();
+    searchParams.forEach((value, key) => {
+      if (!key.startsWith('filters-')) params.set(key, value);
+    });
+    const search = params.toString();
+    push(search ? `${pathname}?${search}` : pathname || '/', {
+      scroll: false,
+    });
+  };
+
+  if (chips.length === 0) return null;
 
   return (
-    <>
-      {hasFilters && (
-        <div className="block mb-4">
-          <div className="flex items-center justify-end">
-            {/* @ts-ignore */}
-            <button
-              className="flex-shrink transition duration-150 ease-in text-sm font-medium text-red-600 hover:text-red-700 focus:outline-none hover:underline"
-              aria-label={t('text-clear-all')}
-              onClick={() => {
-                // Clear all filter params while preserving source, period, page_size, view, etc.
-                const params = new URLSearchParams();
-                searchParams?.forEach((value, key) => {
-                  if (!key.startsWith('filters-')) {
-                    params.set(key, value);
-                  }
-                });
-                const search = params.toString();
-                push(search ? `${pathname}?${search}` : pathname);
-              }}
-            >
-              {t('text-clear-all')}
-            </button>
-          </div>
+    <div className="block mb-4">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center flex-wrap min-w-0">
+          {chips.map((c) => (
+            <FilteredItem
+              key={`${c.paramKey}:${c.value}`}
+              itemKey={prettyKey(c.paramKey)}
+              itemValue={c.label}
+              onClick={() => removeFilterValue(c.paramKey, c.value)}
+            />
+          ))}
         </div>
-      )}
-    </>
+        <button
+          type="button"
+          className="shrink-0 text-sm font-medium text-red-600 hover:text-red-700 hover:underline focus:outline-none transition-colors"
+          aria-label={t('text-clear-all')}
+          onClick={clearAllFilters}
+        >
+          {t('text-clear-all')}
+        </button>
+      </div>
+    </div>
   );
 }

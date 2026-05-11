@@ -9,6 +9,7 @@ import {
 } from '@utils/transform/erp-prices';
 import { useUI } from '@contexts/ui.context';
 import { useHomeSettings } from '@/hooks/use-home-settings';
+import { formatPriceIt } from '@utils/money';
 
 export type PriceSlice = Pick<
   ErpPriceData,
@@ -77,13 +78,8 @@ export default function PriceAndPromo({
     (gross_price == null || Number(gross_price) <= 0);
   if (hasNoValidPrice) return null;
 
-  // Format prices to consistent decimal places
-  const fmtPrice = (v: unknown): string => {
-    const n = Number(v);
-    return Number.isFinite(n) ? n.toFixed(decimals) : String(v);
-  };
-  const priceDiscountFmt = fmtPrice(price_discount);
-  const grossPriceFmt = fmtPrice(gross_price);
+  const priceDiscountFmt = formatPriceIt(price_discount, decimals);
+  const grossPriceFmt = formatPriceIt(gross_price, decimals);
 
   const showPrev =
     gross_price != null && Number(gross_price) !== Number(price_discount);

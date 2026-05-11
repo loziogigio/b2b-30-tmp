@@ -119,6 +119,19 @@ export default function CartTableB2B({ lang = 'it' }: { lang?: string }) {
       generatedBy: t('export-generated-by', {
         defaultValue: 'Generated automatically by VINC B2B',
       }),
+      priceNoticeTitle: t('export-price-notice-title', {
+        defaultValue: 'Nota importante:',
+      }),
+      priceNoticeLines: [
+        t('export-price-notice-line-1', {
+          defaultValue:
+            'I prezzi indicati nel presente documento sono aggiornati alla data e all’orario di generazione del PDF e risultano validi esclusivamente in riferimento a tale momento.',
+        }),
+        t('export-price-notice-line-2', {
+          defaultValue:
+            'Essi possono essere soggetti a variazioni successive; si invita pertanto a verificarne l’effettiva validità al momento della consultazione o dell’eventuale conferma d’ordine.',
+        }),
+      ],
     }),
     [t],
   );
@@ -406,9 +419,10 @@ export default function CartTableB2B({ lang = 'it' }: { lang?: string }) {
     let url: string | null = null;
 
     try {
+      // Excel exports never include prices — only quantities and packaging info.
       const html = renderCartExcelHtml(snapshot, {
         labels: exportLabels,
-        hidePrices,
+        hidePrices: true,
         priceDecimals,
       });
       const blob = new Blob([html], {

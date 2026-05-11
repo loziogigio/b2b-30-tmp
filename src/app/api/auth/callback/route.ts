@@ -165,6 +165,19 @@ export async function GET(request: NextRequest) {
     console.log('[auth/callback] user in response:', tokenData.user);
     console.log('[auth/callback] user.customers:', tokenData.user?.customers);
 
+    // Defense-in-depth: refuse to set auth cookies if the IdP returned tokens
+    // for a different tenant than this storefront serves. This prevents a
+    // cross-tenant data leak if the IdP's session-tenant guard ever regresses.
+    if (!tokenData.tenant_id || tokenData.tenant_id !== tenantId) {
+      console.error('[auth/callback] tenant_id mismatch', {
+        expected: tenantId,
+        received: tokenData.tenant_id,
+      });
+      const redirectUrl = new URL('/it', publicOrigin);
+      redirectUrl.searchParams.set('auth_error', 'tenant_mismatch');
+      return NextResponse.redirect(redirectUrl);
+    }
+
     // Store tokens in cookies
     const cookieStore = await cookies();
 

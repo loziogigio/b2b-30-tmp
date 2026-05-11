@@ -17,6 +17,23 @@ import UpdateCart from '@components/product/update-cart';
 import { TimeCard } from '@/components/themes/time/account/time-account-primitives';
 import { useTranslation } from 'src/app/i18n/client';
 import { updateLineNote } from '@framework/cart/b2b-cart';
+import { useModalAction } from '@components/common/modal/modal.context';
+
+// Opens the cart-line item in the product preview modal. The popup itself
+// re-fetches the full PIM product by sku, so we just hand it the cart item
+// with `image` pre-shaped to an object so the placeholder during fetch
+// isn't blank.
+function useOpenCartItemPreview() {
+  const { openModal } = useModalAction();
+  return (item: any) => {
+    const imgUrl = prefixImageUrl(item?.image, 'gallery_') ?? item?.image ?? '';
+    const product = {
+      ...item,
+      image: imgUrl ? { thumbnail: imgUrl, original: imgUrl } : item?.image,
+    };
+    openModal('PRODUCT_VIEW', product);
+  };
+}
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -95,6 +112,7 @@ function TimeCartRow({
   lang: string;
 }) {
   const { clearItemFromCart, meta } = useCart();
+  const openPreview = useOpenCartItemPreview();
   const { t } = useTranslation(lang, 'common');
   const net = unitNet(item);
   const gross = unitGross(item);
@@ -102,6 +120,11 @@ function TimeCartRow({
   const lineTotal = net * qty;
   const discount =
     gross > 0 && gross > net ? Math.round((1 - net / gross) * 100) : 0;
+  const discountTiers =
+    typeof (item as any).listing_type_discounts === 'string'
+      ? ((item as any).listing_type_discounts as string).trim()
+      : '';
+  const discountLabel = discountTiers || (discount > 0 ? `-${discount}%` : '');
   const isAvailable = (item as any).stock !== 0;
 
   const [showNote, setShowNote] = useState(false);
@@ -134,8 +157,15 @@ function TimeCartRow({
           !isAvailable && 'opacity-50',
         )}
       >
-        {/* Image */}
-        <div className="w-[48px] h-[48px] rounded-[8px] bg-gradient-to-br from-[#f8f9fb] to-[#eef0f4] flex items-center justify-center overflow-hidden">
+        {/* Image — click to open preview */}
+        <button
+          type="button"
+          onClick={() => openPreview(item)}
+          aria-label={t('text-view-product', {
+            defaultValue: 'Visualizza prodotto',
+          })}
+          className="w-[48px] h-[48px] rounded-[8px] bg-gradient-to-br from-[#f8f9fb] to-[#eef0f4] flex items-center justify-center overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--time-red)]/40"
+        >
           <Image
             src={
               prefixImageUrl(item?.image, 'gallery_') ??
@@ -147,7 +177,7 @@ function TimeCartRow({
             alt={item?.name || ''}
             className="h-full w-full object-cover"
           />
-        </div>
+        </button>
 
         {/* Info: SKU + model + name stacked compactly */}
         <div className="min-w-0">
@@ -164,12 +194,14 @@ function TimeCartRow({
               MODELLO: {item.model}
             </div>
           )}
-          <div
-            className="text-[11px] text-[var(--time-gray-500)] leading-tight truncate"
+          <button
+            type="button"
+            onClick={() => openPreview(item)}
+            className="block text-left text-[11px] text-[var(--time-gray-500)] leading-tight truncate w-full hover:text-[var(--time-red)] transition-colors"
             title={item.name || ''}
           >
             {item.name}
-          </div>
+          </button>
           {!isAvailable && (
             <div className="inline-flex items-center gap-1 mt-0.5 text-red-500 text-[10px] font-semibold">
               <AlertIcon /> Non disponibile
@@ -259,10 +291,10 @@ function TimeCartRow({
 
         {/* Promo */}
         <div className="flex justify-center">
-          {discount > 0 ? (
+          {discountLabel ? (
             <span
               className={cn(
-                'text-[10px] font-bold text-white px-2 py-0.5 rounded-[5px]',
+                'text-[10px] font-bold text-white px-2 py-0.5 rounded-[5px] whitespace-nowrap',
                 discount >= 40
                   ? 'bg-[var(--time-red)]'
                   : discount >= 25
@@ -270,7 +302,7 @@ function TimeCartRow({
                     : 'bg-gray-500',
               )}
             >
-              -{discount}%
+              {discountLabel}
             </span>
           ) : (
             <span className="text-[var(--time-gray-300)] text-[10px]">—</span>
@@ -302,7 +334,14 @@ function TimeCartRow({
       {/* Mobile card */}
       <div className="md:hidden py-3 border-b border-[var(--time-gray-100)] last:border-b-0">
         <div className="flex gap-3">
-          <div className="w-[52px] h-[52px] shrink-0 rounded-[10px] bg-gradient-to-br from-[#f8f9fb] to-[#eef0f4] overflow-hidden">
+          <button
+            type="button"
+            onClick={() => openPreview(item)}
+            aria-label={t('text-view-product', {
+              defaultValue: 'Visualizza prodotto',
+            })}
+            className="w-[52px] h-[52px] shrink-0 rounded-[10px] bg-gradient-to-br from-[#f8f9fb] to-[#eef0f4] overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--time-red)]/40"
+          >
             <Image
               src={
                 prefixImageUrl(item?.image, 'gallery_') ??
@@ -314,7 +353,7 @@ function TimeCartRow({
               alt={item?.name || ''}
               className="h-full w-full object-cover"
             />
-          </div>
+          </button>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-0.5">
               {item.sku && (
@@ -322,10 +361,10 @@ function TimeCartRow({
                   {item.sku}
                 </span>
               )}
-              {discount > 0 && (
+              {discountLabel && (
                 <span
                   className={cn(
-                    'text-[10px] font-bold text-white px-1.5 py-0.5 rounded-[4px]',
+                    'text-[10px] font-bold text-white px-1.5 py-0.5 rounded-[4px] whitespace-nowrap',
                     discount >= 40
                       ? 'bg-[var(--time-red)]'
                       : discount >= 25
@@ -333,13 +372,18 @@ function TimeCartRow({
                         : 'bg-gray-500',
                   )}
                 >
-                  -{discount}%
+                  {discountLabel}
                 </span>
               )}
             </div>
-            <div className="text-[13px] font-semibold text-[var(--time-dark)] truncate">
+            <button
+              type="button"
+              onClick={() => openPreview(item)}
+              className="block text-left text-[13px] font-semibold text-[var(--time-dark)] truncate w-full hover:text-[var(--time-red)] transition-colors"
+              title={item.name || ''}
+            >
               {item.name}
-            </div>
+            </button>
             <div className="text-[11px] text-[var(--time-gray-400)] mt-0.5">
               {money(net)} × {qty} ={' '}
               <span className="font-bold text-[var(--time-dark)]">

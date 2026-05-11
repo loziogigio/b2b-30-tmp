@@ -171,6 +171,14 @@
   "text-items-found": "Items Found",
   "text-pieces-available": "Pieces Available",
   "text-close": "Close",
+  "text-go-back": "Back",
+  "text-product-preview": "Product preview",
+  "text-product-code": "Product code",
+  "text-figure-code": "Figure code",
+  "text-product-variants": "Product variants preview",
+  "text-view-full-product": "View full product",
+  "text-weight": "Weight",
+  "text-volume": "Volume",
   "text-cart": "Cart",
   "text-product": "Product",
   "text-shipping": "Shipping",
@@ -298,6 +306,7 @@
   "text-saved-cart-empty": "This cart does not contain any items.",
   "text-line-total": "Line total",
   "text-quantity": "Quantity",
+  "text-qty-short": "Qty",
   "text-saved-carts-refresh-hint": "Totals and item counts are refreshed from the server.",
   "text-refresh": "Refresh",
   "text-refreshing": "Refreshing...",
@@ -476,5 +485,8 @@
   "export-print-with-images": "Print with images",
   "export-print-without-images": "Print without images",
   "export-close": "Close",
-  "export-generated-by": "Generated automatically by VINC B2B"
+  "export-generated-by": "Generated automatically by VINC B2B",
+  "export-price-notice-title": "Important note:",
+  "export-price-notice-line-1": "The prices shown in this document are valid as of the date and time of PDF generation and only refer to that exact moment.",
+  "export-price-notice-line-2": "They may be subject to subsequent changes; please verify their current validity before placing or confirming an order."
 }

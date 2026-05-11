@@ -2,6 +2,7 @@
 import type { Product } from '@framework/types';
 import type { ErpPriceData } from '@utils/transform/erp-prices';
 import { getAvailabilityDisplay } from '@utils/format-availability';
+import { formatPriceIt } from '@utils/money';
 
 /**
  * Print product detail page
@@ -305,13 +306,13 @@ export function printProductDetail(
                 Number(priceData.price_discount || priceData.price)
                 ? `
               <div style="text-decoration:line-through;color:#64748b;font-size:16px;">
-                € ${Number(priceData.gross_price).toFixed(priceDecimals)}
+                € ${formatPriceIt(priceData.gross_price, priceDecimals)}
               </div>
             `
                 : ''
             }
             <div class="price-value" style="${priceData.is_promo ? 'color:#dc2626;' : ''}">
-              € ${Number(priceData.price_discount || priceData.price).toFixed(priceDecimals)}
+              € ${formatPriceIt(priceData.price_discount || priceData.price, priceDecimals)}
             </div>
           </div>
           ${priceData.is_promo ? '<div style="display:inline-block;background:#dc2626;color:white;padding:4px 12px;border-radius:9999px;font-size:11px;margin-top:8px;font-weight:600;">PROMO</div>' : ''}

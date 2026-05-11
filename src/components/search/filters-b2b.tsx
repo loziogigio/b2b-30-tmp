@@ -9,7 +9,6 @@ import {
   type PimTransformedFilter,
 } from '@framework/product/get-pim-filters';
 import { FiltersB2BItem } from './filters-b2b-item';
-import { PIM_FACET_FIELDS } from '@framework/utils/filters';
 import { useQuery } from '@tanstack/react-query';
 import {
   getUserLikes as apiGetUserLikes,
@@ -18,6 +17,7 @@ import {
 import { getUserReminders as apiGetUserReminders } from '@framework/reminders';
 import { ProductTypeBreadcrumb } from './product-type-breadcrumb';
 import { GroupsNavigator, GroupsBreadcrumb } from './groups-navigator';
+import { CategoryNavigator } from './category-navigator';
 import { TechSpecsFilters } from './tech-specs-filters';
 import { IoIosArrowUp, IoIosArrowDown } from 'react-icons/io';
 import {
@@ -26,10 +26,17 @@ import {
   DisclosurePanel,
 } from '@headlessui/react';
 
-export const SearchFiltersB2B: React.FC<{ lang: string; text?: string }> = ({
-  lang,
-  text,
-}) => {
+export const SearchFiltersB2B: React.FC<{
+  lang: string;
+  text?: string;
+  /**
+   * When true, facets load even with no text and no filters applied — the
+   * sidebar reflects the full catalog facet counts. Used by the time theme
+   * where the search page is browsable from a blank state. Defaults to
+   * false so the existing default-theme behavior (gated facet load) stays.
+   */
+  allowBlankSearch?: boolean;
+}> = ({ lang, text, allowBlankSearch = false }) => {
   const { t } = useTranslation(lang, 'common');
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -46,12 +53,19 @@ export const SearchFiltersB2B: React.FC<{ lang: string; text?: string }> = ({
   const isSpecialSource =
     source === 'likes' || source === 'trending' || source === 'reminders';
 
-  // Blank search: no text, no filters, no special source — new empty tab
+  // Blank search: no text, no filters, no special source — new empty tab.
+  // When `allowBlankSearch` is true (time theme), we never short-circuit so
+  // the sidebar shows full-catalog facet counts even with nothing typed.
   const hasFilters = Object.keys(urlParams).some((k) =>
     k.startsWith('filters-'),
   );
   const isBlankSearch =
-    !isSpecialSource && !text && !urlParams.text && !urlParams.q && !hasFilters;
+    !allowBlankSearch &&
+    !isSpecialSource &&
+    !text &&
+    !urlParams.text &&
+    !urlParams.q &&
+    !hasFilters;
 
   // Fetch SKUs for likes/trending/reminders pages
   const { data: specialSkus, isLoading: isLoadingSkus } = useQuery({
@@ -137,26 +151,40 @@ export const SearchFiltersB2B: React.FC<{ lang: string; text?: string }> = ({
       (!isSpecialSource || (isSpecialSource && !isLoadingSkus)),
   });
 
-  // Build label map for selected chips: { 'filters-<key>': { value: label } }
-  const labelMap: Record<string, Record<string, string>> = React.useMemo(() => {
-    const map: Record<string, Record<string, string>> = {};
-    for (const f of filters ?? []) {
-      const k = `filters-${f.key}`;
-      map[k] = {};
-      for (const v of f.values ?? [])
-        map[k][String(v.value)] = v.label || String(v.value);
-    }
-    return map;
+  // Sticky label map for selected chips: { 'filters-<key>': { value: label } }.
+  // Once a friendly label has been seen for a code (e.g. promo_type=ZZZ →
+  // "GIORNALINO SUPERPREZZI") we keep it across renders. Otherwise narrowing
+  // the search until the bucket disappears would regress the chip back to
+  // the raw code.
+  const [stickyLabelMap, setStickyLabelMap] = React.useState<
+    Record<string, Record<string, string>>
+  >({});
+  React.useEffect(() => {
+    if (!filters || filters.length === 0) return;
+    setStickyLabelMap((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const f of filters) {
+        const k = `filters-${f.key}`;
+        const current = next[k] || {};
+        let bucketChanged = false;
+        for (const v of f.values ?? []) {
+          const value = String(v.value);
+          const label = v.label || value;
+          if (current[value] !== label) {
+            current[value] = label;
+            bucketChanged = true;
+          }
+        }
+        if (bucketChanged) {
+          next[k] = current;
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
   }, [filters]);
-
-  const allowedKeys = React.useMemo(() => {
-    // Prefer keys from loaded filters (dynamic)
-    if (filters && filters.length) {
-      return filters.map((f) => `filters-${f.key}`);
-    }
-    // Fallback to static PIM facet fields
-    return PIM_FACET_FIELDS.map((k) => `filters-${k}`);
-  }, [filters]);
+  const labelMap = stickyLabelMap;
 
   // Get selected product type code from URL
   const selectedProductTypeCode = searchParams.get('filters-product_type_code');
@@ -219,12 +247,10 @@ export const SearchFiltersB2B: React.FC<{ lang: string; text?: string }> = ({
       {/* Groups breadcrumb path */}
       <GroupsBreadcrumb lang={lang} />
 
-      {/* Selected Filters (Clear All) */}
-      <SelectedFilters
-        lang={lang}
-        allowedKeys={allowedKeys}
-        labelMap={labelMap}
-      />
+      {/* Selected Filters chips + Clear All. We deliberately don't pass
+          `allowedKeys` so URL-only filters (e.g. filters-promo_code) chip
+          up too — `labelMap` still resolves human labels for known facets. */}
+      <SelectedFilters lang={lang} labelMap={labelMap} />
 
       {/* Unified Filter Container */}
       <div className="border rounded-md border-border-base bg-white">
@@ -258,26 +284,82 @@ export const SearchFiltersB2B: React.FC<{ lang: string; text?: string }> = ({
             )}
 
             {/*
-              Sidebar render order:
-                1. Header facets (BRAND etc.)
-                2. CATEGORIA cascade (category_ancestors)
-                3. TIPO PRODOTTO breadcrumb (when narrowed)
-                4. SPECIFICHE TECNICHE accordion (when narrowed)
-                5. Tail / boolean facets (stock_status, has_active_promo, attribute_is_new_b, promo_type)
+              Sidebar render order (matches dfl-b2b reference):
+                1. PROMOZIONE       (promo_type)
+                2. NOVITÀ           (attribute_is_new_b)
+                3. MARCA            (brand_id) + any other header facet
+                4. CATEGORIA cascade (category_ancestors)
+                5. TIPO PRODOTTO    (product_type_code) — list or breadcrumb
+                6. SPECIFICHE TECNICHE accordion (when narrowed)
+                7. Tail / boolean facets (stock_status)
             */}
             {(() => {
-              const TAIL_KEYS = new Set([
-                'attribute_is_new_b',
+              // Top-of-sidebar facets, in display order.
+              const TOP_ORDER = [
+                'promo_type', // PROMOZIONE
+                'attribute_is_new_b', // NOVITÀ
+              ];
+              const TOP_KEYS = new Set(TOP_ORDER);
+              // Tail / boolean facets stay at the bottom.
+              const TAIL_KEYS = new Set(['stock_status']);
+              // Filters intentionally hidden from the sidebar UI.
+              // `has_active_promo` is redundant once `promo_type` is shown
+              // (the typed list filters more precisely than a Sì/No flag).
+              const HIDDEN_KEYS = new Set(['has_active_promo']);
+              // Boolean facets become uninformative when only one bucket
+              // exists ("Novità: Sì (X)" doesn't narrow anything if every
+              // product carries the flag) — hide them in that case.
+              const SINGLE_VALUE_BOOLEAN_FACETS = new Set([
                 'has_active_promo',
-                'promo_type',
-                'stock_status',
+                'attribute_is_new_b',
               ]);
-              const filters = mainFilters || [];
+              // Boolean facets we only want to expose as a single "Sì" toggle
+              // — the "No" bucket is just "every other product" and adds noise.
+              // The facet still narrows results when checked.
+              const TRUE_ONLY_BOOLEAN_FACETS = new Set(['attribute_is_new_b']);
+              const isTruthy = (v: string) => v === 'true' || v === '1';
+
+              const filters = (mainFilters || [])
+                .filter((f) => {
+                  if (HIDDEN_KEYS.has(f.key)) return false;
+                  if (
+                    SINGLE_VALUE_BOOLEAN_FACETS.has(f.key) &&
+                    Array.isArray(f.values) &&
+                    f.values.length <= 1
+                  ) {
+                    return false;
+                  }
+                  return true;
+                })
+                .map((f) => {
+                  if (
+                    TRUE_ONLY_BOOLEAN_FACETS.has(f.key) &&
+                    Array.isArray(f.values)
+                  ) {
+                    const trueOnly = f.values.filter((v: any) =>
+                      isTruthy(String(v?.value)),
+                    );
+                    return { ...f, values: trueOnly };
+                  }
+                  return f;
+                })
+                // Drop facets that ended up empty after the value-level filter.
+                .filter((f) => !Array.isArray(f.values) || f.values.length > 0);
+              const topFilters = TOP_ORDER.map((k) =>
+                filters.find((f) => f.key === k),
+              ).filter(Boolean) as typeof filters;
               const headerFilters = filters.filter(
-                (f) => f.key !== 'category_ancestors' && !TAIL_KEYS.has(f.key),
+                (f) =>
+                  f.key !== 'category_ancestors' &&
+                  f.key !== 'product_type_code' &&
+                  !TOP_KEYS.has(f.key) &&
+                  !TAIL_KEYS.has(f.key),
               );
               const categoryFilter = filters.find(
                 (f) => f.key === 'category_ancestors',
+              );
+              const productTypeFilter = filters.find(
+                (f) => f.key === 'product_type_code',
               );
               const tailFilters = filters.filter((f) => TAIL_KEYS.has(f.key));
 
@@ -297,13 +379,30 @@ export const SearchFiltersB2B: React.FC<{ lang: string; text?: string }> = ({
 
               return (
                 <>
-                  {/* 1. Header facets (BRAND, …) */}
+                  {/* 1. PROMOZIONE   2. NOVITÀ */}
+                  {topFilters.map((f) => renderFilter(f))}
+
+                  {/* 3. MARCA + any other header facet */}
                   {headerFilters.map((f) => renderFilter(f))}
 
-                  {/* 2. CATEGORIA */}
-                  {categoryFilter && renderFilter(categoryFilter)}
+                  {/* 4. CATEGORIA — drill-down navigator */}
+                  {categoryFilter && (
+                    <>
+                      <CategoryNavigator
+                        lang={lang}
+                        label={categoryFilter.label}
+                        values={categoryFilter.values}
+                      />
+                      <hr className="border-border-base mx-4" />
+                    </>
+                  )}
 
-                  {/* 3. TIPO PRODOTTO breadcrumb */}
+                  {/* 5. TIPO PRODOTTO (list — only when no type is selected/auto-detected) */}
+                  {!effectiveProductTypeCode &&
+                    productTypeFilter &&
+                    renderFilter(productTypeFilter)}
+
+                  {/* 5b. TIPO PRODOTTO breadcrumb */}
                   {effectiveProductTypeCode && effectiveProductTypeLabel && (
                     <>
                       <ProductTypeBreadcrumb
@@ -316,7 +415,7 @@ export const SearchFiltersB2B: React.FC<{ lang: string; text?: string }> = ({
                     </>
                   )}
 
-                  {/* 4. SPECIFICHE TECNICHE accordion */}
+                  {/* 6. SPECIFICHE TECNICHE accordion */}
                   {effectiveProductTypeCode && (
                     <>
                       <div className="block">
@@ -350,7 +449,7 @@ export const SearchFiltersB2B: React.FC<{ lang: string; text?: string }> = ({
                     </>
                   )}
 
-                  {/* 5. Tail / boolean facets */}
+                  {/* 7. Tail / boolean facets (DISPONIBILITÀ) */}
                   {tailFilters.map((f, i) =>
                     renderFilter(f, i < tailFilters.length - 1),
                   )}

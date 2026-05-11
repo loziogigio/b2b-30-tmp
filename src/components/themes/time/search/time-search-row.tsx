@@ -14,6 +14,12 @@ import { useLikes } from '@contexts/likes/likes.context';
 import { useReminders } from '@contexts/reminders/reminders.context';
 import { IoIosHeart, IoIosHeartEmpty } from 'react-icons/io';
 import { ReminderIcon, ReminderIconFilled } from '@components/icons/app-icons';
+import {
+  hasActivePromo,
+  PromoGatedCta,
+  TimeStatusBadges,
+  usePromoGating,
+} from '@components/themes/time/product/time-promo-gated-cta';
 import React from 'react';
 
 interface TimeSearchRowProps {
@@ -64,8 +70,12 @@ export default function TimeSearchRow({
     : 0;
 
   const isOutOfStock = priceData ? Number(priceData.availability) <= 0 : false;
-  const canAddToCart = priceData?.product_label_action?.ADD_TO_CART ?? true;
-  const hasValidPrice = priceData && netPrice != null && Number(netPrice) > 0;
+  // Legacy PvQuantityInput.vue gating + cart-total readout. When a promo
+  // gates direct add (multiple promos, or a non-improving threshold promo)
+  // we replace the inline qty selector with a PROMO CTA that opens the
+  // preview/promo modal instead.
+  const { hasMultiplePromos, isPromoGated, canInlineAdd, cartQty } =
+    usePromoGating(priceData, product);
   const variantCount = product.variantCount ?? variations.length;
   const um = priceData?.packaging_option_default?.packaging_uom || unit || null;
   const mv = priceData?.packaging_option_smallest?.qty_x_packaging ?? null;
@@ -116,7 +126,7 @@ export default function TimeSearchRow({
             </span>
           )}
           {!hidePrices &&
-            (priceData?.is_promo || product.has_active_promo) &&
+            hasActivePromo(product, priceData) &&
             discountPercent === 0 && (
               <span className="bg-[var(--time-red)] text-white text-[10px] sm:text-[11px] font-bold px-1.5 py-[2px] rounded font-[family-name:var(--font-body)]">
                 PROMO
@@ -127,98 +137,115 @@ export default function TimeSearchRow({
 
       {/* Content */}
       <div className="flex-1 px-5 py-4 flex flex-col gap-1.5 min-w-0">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 flex-wrap">
-            {brand?.name && (brand as any)?.brand_id ? (
-              <Link
-                href={`/${lang}/search?filters-brand_id=${(brand as any).brand_id}`}
-                className="text-xs sm:text-[13px] font-bold text-[var(--time-red)] font-[family-name:var(--font-body)] uppercase tracking-[0.06em] hover:underline"
-              >
-                {brand.name}
-              </Link>
-            ) : (
-              <span className="text-xs sm:text-[13px] font-bold text-[var(--time-red)] font-[family-name:var(--font-body)] uppercase tracking-[0.06em]">
-                {brand?.name || ''}
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-col gap-1.5 min-w-0">
+            <div className="flex items-center gap-3 flex-wrap">
+              {brand?.name && (brand as any)?.brand_id ? (
+                <Link
+                  href={`/${lang}/search?filters-brand_id=${(brand as any).brand_id}`}
+                  className="text-xs sm:text-[13px] font-bold text-[var(--time-red)] font-[family-name:var(--font-body)] uppercase tracking-[0.06em] hover:underline"
+                >
+                  {brand.name}
+                </Link>
+              ) : (
+                <span className="text-xs sm:text-[13px] font-bold text-[var(--time-red)] font-[family-name:var(--font-body)] uppercase tracking-[0.06em]">
+                  {brand?.name || ''}
+                </span>
+              )}
+              <span className="text-[11px] sm:text-xs text-[var(--time-gray-400)] font-mono">
+                SKU {sku || parent_sku || ''}
               </span>
-            )}
-            <span className="text-[11px] sm:text-xs text-[var(--time-gray-400)] font-mono">
-              SKU {sku || parent_sku || ''}
-            </span>
-            {hasVariants && variantCount > 1 && (
-              <span className="bg-[var(--time-gray-100)] text-[var(--time-gray-600)] text-[11px] sm:text-xs font-semibold px-2 py-[2px] rounded font-[family-name:var(--font-body)]">
-                {variantCount} varianti
-              </span>
+              {hasVariants && variantCount > 1 && (
+                <span className="bg-[var(--time-gray-100)] text-[var(--time-gray-600)] text-[11px] sm:text-xs font-semibold px-2 py-[2px] rounded font-[family-name:var(--font-body)]">
+                  {variantCount} varianti
+                </span>
+              )}
+            </div>
+            <h3
+              className="text-[15px] sm:text-base font-bold text-[var(--time-dark)] leading-[1.3] font-[family-name:var(--font-body)] cursor-pointer"
+              onClick={handleClick}
+            >
+              {name || 'Product'}
+            </h3>
+            {model && (
+              <p className="!mb-0 text-xs sm:text-[13px] font-bold text-[var(--time-dark)] font-[family-name:var(--font-body)] truncate">
+                {model}
+              </p>
             )}
           </div>
-          {isAuthorized && (
-            <div className="flex items-center gap-0.5 shrink-0">
-              {(isOutOfStock || hasReminder) && (
+          <div className="flex flex-col items-end gap-1.5 shrink-0">
+            {isAuthorized && (
+              <div className="flex items-center gap-0.5">
+                {(isOutOfStock || hasReminder) && (
+                  <button
+                    type="button"
+                    aria-label="Toggle reminder"
+                    className={`shrink-0 p-0.5 rounded transition-colors ${hasReminder ? 'text-yellow-500' : 'text-[var(--time-gray-400)] hover:text-yellow-500'}`}
+                    onClick={async (e) => {
+                      e.stopPropagation();
+                      if (!sku) return;
+                      setReminderLoading(true);
+                      try {
+                        await reminders.toggle(sku);
+                      } finally {
+                        setReminderLoading(false);
+                      }
+                    }}
+                    disabled={reminderLoading || !sku}
+                  >
+                    {hasReminder ? (
+                      <ReminderIconFilled className="text-[16px]" />
+                    ) : (
+                      <ReminderIcon className="text-[16px]" />
+                    )}
+                  </button>
+                )}
                 <button
                   type="button"
-                  aria-label="Toggle reminder"
-                  className={`shrink-0 p-0.5 rounded transition-colors ${hasReminder ? 'text-yellow-500' : 'text-[var(--time-gray-400)] hover:text-yellow-500'}`}
+                  aria-label="Toggle wishlist"
+                  className={`shrink-0 p-0.5 rounded transition-colors ${isFavorite ? 'text-[var(--time-red)]' : 'text-[var(--time-gray-400)] hover:text-[var(--time-red)]'}`}
                   onClick={async (e) => {
                     e.stopPropagation();
                     if (!sku) return;
-                    setReminderLoading(true);
+                    setLikeLoading(true);
                     try {
-                      await reminders.toggle(sku);
+                      await likes.toggle(sku);
                     } finally {
-                      setReminderLoading(false);
+                      setLikeLoading(false);
                     }
                   }}
-                  disabled={reminderLoading || !sku}
+                  disabled={likeLoading || !sku}
                 >
-                  {hasReminder ? (
-                    <ReminderIconFilled className="text-[16px]" />
+                  {isFavorite ? (
+                    <IoIosHeart className="text-[16px]" />
                   ) : (
-                    <ReminderIcon className="text-[16px]" />
+                    <IoIosHeartEmpty className="text-[16px]" />
                   )}
                 </button>
+              </div>
+            )}
+            {(brand as any)?.logo_url &&
+              (brand as any).logo_url.trim() !== '' &&
+              (brand as any)?.brand_id && (
+                <Link
+                  href={`/${lang}/search?filters-brand_id=${(brand as any).brand_id}`}
+                  className="block w-[72px] h-[36px] sm:w-[88px] sm:h-[40px]"
+                  title={brand?.name || 'Brand'}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <img
+                    src={(brand as any).logo_url}
+                    alt={brand?.name || 'Brand'}
+                    className="w-full h-full object-contain"
+                  />
+                </Link>
               )}
-              <button
-                type="button"
-                aria-label="Toggle wishlist"
-                className={`shrink-0 p-0.5 rounded transition-colors ${isFavorite ? 'text-[var(--time-red)]' : 'text-[var(--time-gray-400)] hover:text-[var(--time-red)]'}`}
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  if (!sku) return;
-                  setLikeLoading(true);
-                  try {
-                    await likes.toggle(sku);
-                  } finally {
-                    setLikeLoading(false);
-                  }
-                }}
-                disabled={likeLoading || !sku}
-              >
-                {isFavorite ? (
-                  <IoIosHeart className="text-[16px]" />
-                ) : (
-                  <IoIosHeartEmpty className="text-[16px]" />
-                )}
-              </button>
-            </div>
-          )}
+          </div>
         </div>
-
-        <h3
-          className="text-[15px] sm:text-base font-bold text-[var(--time-dark)] leading-[1.3] font-[family-name:var(--font-body)] cursor-pointer"
-          onClick={handleClick}
-        >
-          {name || 'Product'}
-        </h3>
 
         {description && (
           <p className="!mb-0 text-[13px] sm:text-sm text-[var(--time-gray-500)] leading-[1.3] font-[family-name:var(--font-body)] line-clamp-2">
             {description}
-          </p>
-        )}
-
-        {/* Model — own bold line */}
-        {model && (
-          <p className="!mb-0 text-xs sm:text-[13px] font-bold text-[var(--time-dark)] font-[family-name:var(--font-body)] truncate">
-            {model}
           </p>
         )}
 
@@ -234,7 +261,7 @@ export default function TimeSearchRow({
       {/* Price + Actions */}
       <div className="w-[220px] px-5 py-4 flex flex-col justify-center gap-2.5 border-l border-[var(--time-gray-100)] shrink-0">
         {!hidePrices && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {netPrice != null && Number(netPrice) > 0 ? (
               <div className="flex items-center gap-2">
                 <span className="text-xl sm:text-[22px] font-extrabold text-[var(--time-dark)] font-[family-name:var(--font-body)] tabular-nums">
@@ -266,19 +293,28 @@ export default function TimeSearchRow({
         )}
 
         {priceData && !hasVariants && (
-          <div className="flex items-center gap-1.5">
-            <span
-              className="w-[7px] h-[7px] rounded-full inline-block"
-              style={{ background: isOutOfStock ? '#ef4444' : '#22c55e' }}
+          <div className="flex items-start gap-2 flex-wrap">
+            <div className="flex items-center gap-1.5">
+              <span
+                className="w-[7px] h-[7px] rounded-full inline-block"
+                style={{ background: isOutOfStock ? '#ef4444' : '#22c55e' }}
+              />
+              <span
+                className="text-xs sm:text-[13px] font-semibold font-[family-name:var(--font-body)]"
+                style={{ color: isOutOfStock ? '#dc2626' : '#16a34a' }}
+              >
+                {isOutOfStock
+                  ? priceData?.product_label_action?.LABEL || 'Non disponibile'
+                  : 'Disponibile'}
+              </span>
+            </div>
+            <TimeStatusBadges
+              priceData={priceData}
+              product={product}
+              hasMultiplePromos={hasMultiplePromos}
+              onPromoClick={handleClick}
+              t={t}
             />
-            <span
-              className="text-xs sm:text-[13px] font-semibold font-[family-name:var(--font-body)]"
-              style={{ color: isOutOfStock ? '#dc2626' : '#16a34a' }}
-            >
-              {isOutOfStock
-                ? priceData?.product_label_action?.LABEL || 'Non disponibile'
-                : 'Disponibile'}
-            </span>
           </div>
         )}
 
@@ -291,7 +327,7 @@ export default function TimeSearchRow({
               >
                 {t('text-view-variants', { defaultValue: 'Vedi varianti' })}
               </button>
-            ) : hasValidPrice && canAddToCart ? (
+            ) : canInlineAdd ? (
               <AddToCart
                 lang={lang}
                 product={product}
@@ -299,7 +335,21 @@ export default function TimeSearchRow({
                 showPlaceholder={false}
                 className="w-full"
               />
+            ) : // Add-to-cart is gated (no price, ADD_TO_CART=false, or
+            // promo-gated like a min-value/min-pieces threshold). Mirror the
+            // legacy PvQuantityInput layout: keep the cart total visible,
+            // and place an external-link / arrow icon next to it that opens
+            // the preview/promo modal.
+            isPromoGated ? (
+              <PromoGatedCta
+                cartQty={cartQty}
+                onClick={handleClick}
+                t={t}
+                size="md"
+              />
             ) : (
+              // Other gating reasons (no price, ADD_TO_CART=false): keep the
+              // generic "Visualizza" CTA — same behaviour as before.
               <button
                 onClick={handleClick}
                 className="flex-1 h-9 rounded-[var(--radius-btn)] border-none bg-[var(--time-dark)] text-white text-xs sm:text-[13px] font-bold cursor-pointer font-[family-name:var(--font-body)] transition-colors hover:bg-[var(--time-red)]"

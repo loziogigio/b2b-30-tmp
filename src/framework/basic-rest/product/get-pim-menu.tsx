@@ -127,3 +127,53 @@ export function findNodeByPath(
 
   return current || null;
 }
+
+// ===============================
+// Helper to find node by id (recursive search)
+// ===============================
+export function findNodeById(
+  tree: MenuTreeNode[],
+  id: string,
+): MenuTreeNode | null {
+  for (const node of tree) {
+    if (node.id === id) return node;
+    const found = findNodeById(node.children, id);
+    if (found) return found;
+  }
+  return null;
+}
+
+// ===============================
+// Pick the deepest matching node for a list of category ids
+// ===============================
+export function findDeepestNodeForCategoryIds(
+  tree: MenuTreeNode[],
+  categoryIds: string[],
+): MenuTreeNode | null {
+  let deepest: MenuTreeNode | null = null;
+  for (const id of categoryIds) {
+    const node = findNodeById(tree, id);
+    if (node && (!deepest || node.path.length > deepest.path.length)) {
+      deepest = node;
+    }
+  }
+  return deepest;
+}
+
+// ===============================
+// Build the path of nodes (root → leaf) for a node
+// ===============================
+export function buildNodeAncestry(
+  tree: MenuTreeNode[],
+  node: MenuTreeNode,
+): MenuTreeNode[] {
+  const result: MenuTreeNode[] = [];
+  let level = tree;
+  for (const slug of node.path) {
+    const found = level.find((n) => n.slug === slug);
+    if (!found) break;
+    result.push(found);
+    level = found.children;
+  }
+  return result;
+}

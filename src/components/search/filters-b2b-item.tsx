@@ -92,21 +92,21 @@ export const FiltersB2BItem = ({
 
   const visibleCount = 5;
 
-  // Filter out zero-count values (unless currently selected), then sort:
-  // selected first, then by count descending, then by label as tiebreaker
+  // Sort: selected first, then by count descending, then by label as tiebreaker.
+  // Zero-count items stay visible (rendered muted) so users can see what facet
+  // values exist even when no products match — matches the default template
+  // behavior for `category-navigator` / `groups-navigator`.
   const sortedValues = React.useMemo(() => {
-    return values
-      .filter((v) => v.count > 0 || formState.includes(v.value))
-      .sort((a, b) => {
-        const aSelected = formState.includes(a.value);
-        const bSelected = formState.includes(b.value);
-        if (aSelected && !bSelected) return -1;
-        if (!aSelected && bSelected) return 1;
-        // Higher count first
-        if (b.count !== a.count) return b.count - a.count;
-        // Tiebreaker: label alphabetically/numerically
-        return a.label.localeCompare(b.label, undefined, { numeric: true });
-      });
+    return [...values].sort((a, b) => {
+      const aSelected = formState.includes(a.value);
+      const bSelected = formState.includes(b.value);
+      if (aSelected && !bSelected) return -1;
+      if (!aSelected && bSelected) return 1;
+      // Higher count first (pushes count=0 to the bottom)
+      if (b.count !== a.count) return b.count - a.count;
+      // Tiebreaker: label alphabetically/numerically
+      return a.label.localeCompare(b.label, undefined, { numeric: true });
+    });
   }, [values, formState]);
 
   const shownValues = expanded

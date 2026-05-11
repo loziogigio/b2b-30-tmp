@@ -27,7 +27,23 @@ function mapFilterKey(key: string): string {
 // ===============================
 // Resolve labels for special fields
 // ===============================
-function resolveLabel(field: string, value: string, apiLabel?: string): string {
+function resolveLabel(
+  field: string,
+  value: string,
+  apiLabel?: string,
+  promoTypeMap?: Record<string, string>,
+): string {
+  // promo_type: prefer the harvested human label (e.g. "LIP" → "LIFE IN POOL")
+  // when we have one; the PIM facet itself ships the bare code without a
+  // user-friendly label.
+  if (field === 'promo_type') {
+    if (promoTypeMap && promoTypeMap[value]) return promoTypeMap[value];
+    if (apiLabel && apiLabel.trim() !== '' && apiLabel !== value) {
+      return apiLabel;
+    }
+    return value;
+  }
+
   // Use API label if provided and not empty (backend enriches product_type_code labels)
   if (apiLabel && apiLabel.trim() !== '') {
     return apiLabel;
@@ -74,12 +90,35 @@ function harvestSpecUoms(docs: any[] | undefined): Record<string, string> {
 }
 
 // ===============================
+// Harvest promo_type code → label map from product docs.
+// PIM facet returns the bare code (e.g. "LIP") with no friendly label, but
+// products carry promotions[] with both `promo_type` and a `label`/`name`.
+// Mirrors the dfl-b2b server-side enrichment.
+// ===============================
+function harvestPromoTypeLabels(
+  docs: any[] | undefined,
+): Record<string, string> {
+  const map: Record<string, string> = {};
+  if (!Array.isArray(docs)) return map;
+  for (const doc of docs) {
+    const proms = Array.isArray(doc?.promotions) ? doc.promotions : [];
+    for (const p of proms) {
+      const code = p?.promo_type;
+      const label = p?.label || p?.name;
+      if (code && label && !map[code]) map[code] = label;
+    }
+  }
+  return map;
+}
+
+// ===============================
 // Transform PIM facets to UI format
 // ===============================
 function transformPimFacets(
   facetResults: Record<string, PimFacetValue[]>,
   lang: string = 'it',
   specUomMap: Record<string, string> = {},
+  promoTypeMap: Record<string, string> = {},
 ): PimTransformedFilter[] {
   if (!facetResults || typeof facetResults !== 'object') return [];
 
@@ -99,7 +138,10 @@ function transformPimFacets(
 
     transformed.push({
       key: field,
-      label: facetGroup[0]?.key_label || PIM_FACET_LABELS[field] || field,
+      // Local labels win over the API's `key_label` for known facets so we
+      // can rename / translate (e.g. PROMO_TYPE → "Promozione") without a
+      // backend round-trip.
+      label: PIM_FACET_LABELS[field] || facetGroup[0]?.key_label || field,
       values: facetGroup.map((f) => {
         // Extract label from entity if available (supports multilingual)
         let label = f.label;
@@ -111,7 +153,7 @@ function transformPimFacets(
           }
         }
 
-        const resolved = resolveLabel(field, f.value, label);
+        const resolved = resolveLabel(field, f.value, label, promoTypeMap);
         // Append harvested UoM for spec_* fields (idempotent — won't double-suffix).
         const uom = field.startsWith('spec_') ? specUomMap[field] : '';
         const finalLabel =
@@ -183,7 +225,13 @@ export const fetchPimFilters = async (
   const specUomMap = harvestSpecUoms(docs);
   const lang = body.lang || 'it';
 
-  return transformPimFacets(facetResults, lang, specUomMap);
+  // Promo-type labels: the PIM proxy enriches facet_results.promo_type with
+  // friendly labels (mirrors dfl-b2b's server-side getPromoTypeMap). We still
+  // run the local harvest as a fast path in case proxy enrichment is bypassed
+  // (e.g. tests, direct PIM hits) — both paths feed the same resolveLabel.
+  const promoTypeMap = harvestPromoTypeLabels(docs);
+
+  return transformPimFacets(facetResults, lang, specUomMap, promoTypeMap);
 };
 
 // ===============================

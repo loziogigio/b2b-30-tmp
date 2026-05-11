@@ -135,12 +135,11 @@ export const TimeProductSearch: FC<TimeProductSearchProps> = ({
   const isSpecialSource =
     source === 'likes' || source === 'trending' || source === 'reminders';
 
-  // Blank search: no text, no filters, no special source — new empty tab
-  const isBlankSearch =
-    !isSpecialSource &&
-    !pimParams.text &&
-    !pimParams.filters &&
-    !collectionSlug;
+  // The search page is browsable with no text — when nothing is typed and no
+  // filter is applied we run the full-catalog query (paginated by PIM). The
+  // only case we still skip is a special-source tab with no params, which
+  // would emit an unscoped feed; those tabs always carry their own context.
+  const isBlankSearch = false;
 
   const urlFiltersForSpecialQuery = useMemo(() => {
     const filters: Record<string, any> = {};

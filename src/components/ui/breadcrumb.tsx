@@ -1,106 +1,75 @@
 'use client';
 
 import React from 'react';
-import ActiveLink from '@components/ui/active-link';
+import NextLink from 'next/link';
 import useBreadcrumb, { convertBreadcrumbTitle } from '@utils/use-breadcrumb';
-import { IoChevronForward, IoHomeOutline } from 'react-icons/io5';
-import { ROUTES } from '@utils/routes';
+import { IoChevronForward } from 'react-icons/io5';
+import { HiOutlineHome } from 'react-icons/hi';
 import { useTranslation } from 'src/app/i18n/client';
 
-interface Props {
-  children: any;
-}
+const PILL_BASE =
+  'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium max-w-[18rem] truncate transition-colors';
+const PILL_NEUTRAL = 'bg-gray-100 text-gray-700 hover:bg-gray-200';
+const PILL_ACTIVE = 'bg-brand text-white cursor-default';
 
-const BreadcrumbItem: React.FC<Props> = ({ children, ...props }) => {
-  return (
-    <li
-      className="text-sm text-brand-muted px-2.5 transition duration-200 ease-in ltr:first:pl-0 rtl:first:pr-0 ltr:last:pr-0 rtl:last:pl-0 hover:text-brand-dark"
-      {...props}
-    >
-      {children}
-    </li>
-  );
-};
-
-const BreadcrumbSeparator: React.FC<Props> = ({ children, ...props }) => {
-  return (
-    <li className="text-base text-brand-dark mt-[1px]" {...props}>
-      {children}
-    </li>
-  );
-};
-
-export const BreadcrumbItems = (props: any) => {
-  let children: any = React.Children.toArray(props.children);
-
-  children = children.map((child: string, index: number) => (
-    <BreadcrumbItem key={`breadcrumb_item${index}`}>{child}</BreadcrumbItem>
-  ));
-
-  const lastIndex = children.length - 1;
-
-  children = children.reduce((acc: any, child: string, index: number) => {
-    const notLast = index < lastIndex;
-    if (notLast) {
-      acc.push(
-        child,
-        <BreadcrumbSeparator key={`breadcrumb_sep${index}`}>
-          {props.separator}
-        </BreadcrumbSeparator>,
-      );
-    } else {
-      acc.push(child);
-    }
-    return acc;
-  }, []);
-
-  return (
-    <div className="flex items-center borobazarBreadcrumb">
-      <ol className="flex items-center w-full overflow-hidden">{children}</ol>
-    </div>
-  );
-};
-
-const Breadcrumb: React.FC<{ separator?: string; lang: string }> = ({
-  separator = (
-    <IoChevronForward className="text-brand-dark text-opacity-40 text-15px" />
-  ),
+const Breadcrumb: React.FC<{ separator?: React.ReactNode; lang: string }> = ({
   lang,
 }) => {
   const breadcrumbs = useBreadcrumb();
   const { t } = useTranslation(lang, 'common');
+  const items = breadcrumbs ?? [];
+  const lastIndex = items.length - 1;
+
   return (
-    <BreadcrumbItems separator={separator}>
-      <ActiveLink
-        href={`${ROUTES.HOME}${lang}`}
-        activeClassName="font-semibold text-heading"
-        className="inline-flex items-center"
-        lang={lang}
-      >
-        <IoHomeOutline className="ltr:mr-1.5 rtl:ml-1.5 text-brand-dark text-15px" />
-        {t('breadcrumb-home')}
-      </ActiveLink>
-
-      {breadcrumbs?.map((breadcrumb: any) => {
-        const breadcrumbText = convertBreadcrumbTitle(breadcrumb.breadcrumb);
-        const translationKey = `breadcrumb-${breadcrumbText.replace(/\s+/g, '-')}`;
-        const translatedText = t(translationKey, {
-          defaultValue: breadcrumbText,
-        });
-
-        return (
-          <ActiveLink
-            href={breadcrumb.href}
-            activeClassName="font-semibold text-heading"
-            className="capitalize"
-            key={breadcrumb.href}
-            lang={lang}
+    <nav aria-label="Breadcrumb" className="flex items-center mb-3">
+      <ol className="flex items-center w-full gap-1.5 overflow-hidden whitespace-nowrap min-w-0">
+        <li className="shrink-0">
+          <NextLink
+            href={`/${lang}`}
+            aria-label="Home"
+            className={`${PILL_BASE} ${PILL_NEUTRAL}`}
           >
-            {translatedText}
-          </ActiveLink>
-        );
-      })}
-    </BreadcrumbItems>
+            <HiOutlineHome className="text-base" aria-hidden="true" />
+          </NextLink>
+        </li>
+
+        {items.map((breadcrumb: any, idx: number) => {
+          const isLast = idx === lastIndex;
+          const breadcrumbText = convertBreadcrumbTitle(breadcrumb.breadcrumb);
+          const translationKey = `breadcrumb-${breadcrumbText.replace(/\s+/g, '-')}`;
+          const translatedText = t(translationKey, {
+            defaultValue: breadcrumbText,
+          });
+
+          return (
+            <React.Fragment key={breadcrumb.href}>
+              <li className="shrink-0 text-gray-400" aria-hidden="true">
+                <IoChevronForward className="text-base" />
+              </li>
+              <li className="min-w-0">
+                {isLast ? (
+                  <span
+                    aria-current="page"
+                    title={translatedText}
+                    className={`${PILL_BASE} ${PILL_ACTIVE} capitalize`}
+                  >
+                    {translatedText}
+                  </span>
+                ) : (
+                  <NextLink
+                    href={breadcrumb.href}
+                    title={translatedText}
+                    className={`${PILL_BASE} ${PILL_NEUTRAL} capitalize`}
+                  >
+                    {translatedText}
+                  </NextLink>
+                )}
+              </li>
+            </React.Fragment>
+          );
+        })}
+      </ol>
+    </nav>
   );
 };
 

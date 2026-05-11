@@ -8,6 +8,7 @@ import { useTranslation } from 'src/app/i18n/client';
 import { useTenantOptional } from '@contexts/tenant.context';
 import { useHomeSettingsContext } from '@contexts/home-settings.context';
 import { useAutoRefreshToken } from '@/hooks/use-auto-refresh-token';
+import { useActivityHeartbeat } from '@/hooks/use-activity-heartbeat';
 import { getClientSSOLoginUrl } from '@/lib/sso-api';
 import Logo from '@components/ui/logo';
 import { IoAlertCircle, IoClose } from 'react-icons/io5';
@@ -86,6 +87,10 @@ export default function AuthGuard({ children, lang }: AuthGuardProps) {
 
   // Auto-refresh token before it expires (only when authorized)
   useAutoRefreshToken();
+
+  // Heartbeat real user activity to the SSO IdP so idle sessions
+  // (8h+ no input by default) are revoked on the next refresh.
+  useActivityHeartbeat();
 
   // Get auth error from URL params
   const authError = searchParams.get('auth_error');

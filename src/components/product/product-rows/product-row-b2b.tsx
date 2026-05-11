@@ -22,6 +22,7 @@ import VariantsFilterBar from './variants-filter-bar';
 import { fetchErpPrices } from '@framework/erp/prices';
 import { ERP_STATIC } from '@framework/utils/static';
 import { useQuery } from '@tanstack/react-query';
+import LastOrdered from '../last-ordered';
 
 const AddToCart = dynamic(() => import('@components/product/add-to-cart'), {
   ssr: false,
@@ -587,9 +588,11 @@ export default function ProductRowB2B({
                         <span className="bg-gray-700 text-white px-2 py-0.5 rounded-full font-semibold text-[10px]">
                           {t('ordered', { defaultValue: 'ORDERED' })}
                         </span>
-                        <span className="text-xs text-gray-700">
-                          {vPrice.buy_did_last_date}
-                        </span>
+                        <LastOrdered
+                          lang={lang}
+                          priceData={vPrice}
+                          variant="row"
+                        />
                       </div>
                     ) : (
                       <div className="text-center sm:text-right text-gray-300"></div>

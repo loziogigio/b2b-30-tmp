@@ -264,6 +264,30 @@ export function buildAddItemRequest(
     ? String(sourceItem.sku)
     : String(input.item_id);
 
+  // Legacy dfl-b2b reads cart lines through `raw_data._context.{search,pricing}`
+  // (see dfl-app/dfl-b2b/store/cart.js). Mirror the shape produced by
+  // dfl-b2b/server/lib/transform.js so the legacy cart still renders parent
+  // info, model, short description and the multi-column packaging grid for
+  // lines created by this client.
+  const legacyContext = {
+    dfl_cart: input,
+    search: {
+      id_parent: sourceItem?.id_parent,
+      parent_sku: sourceItem?.parent_sku,
+      model: sourceItem?.model,
+      short_description: sourceItem?.shortDescription,
+    },
+    pricing: {
+      packaging_options: (pkgAll || []).map((p) => ({
+        code: p.packaging_code,
+        um: p.packaging_uom || '',
+        label: p.packaging_uom || p.packaging_uom_description,
+        qty: p.qty_x_packaging,
+        is_default: p.packaging_is_default,
+      })),
+    },
+  };
+
   return {
     // Required
     entity_code: String(input.item_id),
@@ -278,7 +302,8 @@ export function buildAddItemRequest(
     // Product source — products in this B2B project come from the internal
     // PIM catalog (commerce-suite enum: "pim" | "external" | "manual").
     product_source: 'pim' as const,
-    external_ref: resolvedSku,
+    // external_ref must mirror entity_code per the orders/{id}/items contract.
+    external_ref: String(input.item_id),
     added_from: 'b2b_erp',
     added_via: 'web',
 
@@ -311,6 +336,9 @@ export function buildAddItemRequest(
     // Promo
     promo_code: promoCode,
     promo_row: promoRow,
+
+    // Legacy dfl-b2b cart context — captured into raw_data by commerce-suite.
+    _context: legacyContext,
 
     // Note
     ...(input.note ? { note: input.note } : {}),

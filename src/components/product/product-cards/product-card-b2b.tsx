@@ -23,6 +23,7 @@ import AddToCart from '../add-to-cart';
 import { Eye } from '@components/icons/eye-icon';
 import useWindowSize from '@utils/use-window-size';
 import { buildPromoPriceData, pickImprovingOffer } from '../b2b-offer-rows';
+import LastOrdered from '../last-ordered';
 
 interface RenderPopupOrAddToCartProps {
   props: { data: Product & { variantCount?: number } };
@@ -462,18 +463,35 @@ const ProductCardB2B: React.FC<ProductProps> = ({
         )}
 
         {/* Availability / Variant count - same structure for both */}
-        <div className="text-[10px] sm:text-xs text-gray-400 whitespace-nowrap text-center pb-1 sm:pb-2 flex items-center justify-center">
-          {hasMultipleVariants
-            ? `${product.variantCount} varianti`
-            : priceData
-              ? Number(priceData.availability) > 0
-                ? formatAvailability(
-                    priceData.availability,
-                    priceData.packaging_option_default?.packaging_uom,
-                  )
-                : (priceData.product_label_action?.LABEL ?? '—')
-              : '—'}
+        <div className="text-[10px] sm:text-xs text-gray-400 whitespace-nowrap text-center pb-1 sm:pb-2 flex items-center justify-center gap-1.5">
+          <span>
+            {hasMultipleVariants
+              ? `${product.variantCount} varianti`
+              : priceData
+                ? Number(priceData.availability) > 0
+                  ? formatAvailability(
+                      priceData.availability,
+                      priceData.packaging_option_default?.packaging_uom,
+                    )
+                  : (priceData.product_label_action?.LABEL ?? '—')
+                : '—'}
+          </span>
+          {priceData?.buy_did && (
+            <span
+              className="bg-[#16a34a] text-white text-[9px] sm:text-[10px] font-extrabold px-1.5 py-[1px] rounded uppercase tracking-wide"
+              title={priceData?.buy_did_last_date || undefined}
+            >
+              {t('text-already-ordered', { defaultValue: 'Già ordinato' })}
+            </span>
+          )}
         </div>
+
+        <LastOrdered
+          lang={lang}
+          priceData={priceData}
+          variant="card"
+          className="px-1.5 sm:px-2 pb-1.5 sm:pb-2 -mt-0.5"
+        />
       </div>
     </article>
   );

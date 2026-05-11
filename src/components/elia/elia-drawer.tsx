@@ -16,6 +16,7 @@ import { EliaReasoningSteps } from '@components/elia/elia-reasoning-steps';
 import { EliaInput } from '@components/elia/input';
 import { AiOutlineClose, AiOutlineSearch, AiOutlineUser } from 'react-icons/ai';
 import { useHomeSettings } from '@/hooks/use-home-settings';
+import { formatPriceIt } from '@utils/money';
 import {
   BsStars,
   BsChevronDown,
@@ -83,7 +84,7 @@ function EliaProductCard({
         )}
         {price && (
           <p className="text-sm font-semibold text-blue-600 mt-0.5">
-            €{Number(price).toFixed(priceDecimals)}
+            €{formatPriceIt(price, priceDecimals)}
           </p>
         )}
       </div>
@@ -158,7 +159,7 @@ function EliaAnalyzedProductCard({
           )}
           {price && (
             <p className="text-sm font-semibold text-blue-600 mt-0.5">
-              €{Number(price).toFixed(priceDecimals)}
+              €{formatPriceIt(price, priceDecimals)}
             </p>
           )}
         </div>

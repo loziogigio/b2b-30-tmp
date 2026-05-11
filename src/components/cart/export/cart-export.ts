@@ -34,6 +34,10 @@ export interface ExportLabels {
   printWithoutImages: string;
   close: string;
   generatedBy: string;
+  /** Heading for the red disclaimer shown at the top of the PDF (e.g. "Important note:"). */
+  priceNoticeTitle: string;
+  /** Body lines for the red disclaimer; each entry becomes its own paragraph. */
+  priceNoticeLines: string[];
 }
 
 export const DEFAULT_EXPORT_LABELS: ExportLabels = {
@@ -70,6 +74,11 @@ export const DEFAULT_EXPORT_LABELS: ExportLabels = {
   printWithoutImages: 'Print without images',
   close: 'Close',
   generatedBy: 'Generated automatically by VINC B2B',
+  priceNoticeTitle: 'Nota importante:',
+  priceNoticeLines: [
+    'I prezzi indicati nel presente documento sono aggiornati alla data e all’orario di generazione del PDF e risultano validi esclusivamente in riferimento a tale momento.',
+    'Essi possono essere soggetti a variazioni successive; si invita pertanto a verificarne l’effettiva validità al momento della consultazione o dell’eventuale conferma d’ordine.',
+  ],
 };
 
 export interface ExportRowData {
@@ -447,6 +456,33 @@ export function renderCartPdfHtml(
       background: #f8fafc;
     }
     .muted { color: #64748b; font-size: 10px; display: inline-block; margin-top: 2px; }
+    .price-notice {
+      margin: 0 0 24px;
+      padding: 16px 20px;
+      border: 1px solid #fecaca;
+      border-left: 4px solid #dc2626;
+      background: #fef2f2;
+      color: #b91c1c;
+      border-radius: 6px;
+      font-size: 12px;
+      line-height: 1.55;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .price-notice .price-notice-title {
+      display: block;
+      margin: 0 0 6px;
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+    .price-notice p {
+      margin: 0 0 6px;
+    }
+    .price-notice p:last-child {
+      margin-bottom: 0;
+    }
     .meta, .totals {
       border: 1px solid #e2e8f0;
       display: inline-table;
@@ -478,6 +514,16 @@ export function renderCartPdfHtml(
     <h1>${escapeHtml(l.cartTitle)}</h1>
     <div class="subtitle">VINC B2B</div>
   </header>
+  ${
+    hp
+      ? ''
+      : `<aside class="price-notice" role="note" aria-label="${escapeHtml(l.priceNoticeTitle)}">
+    <span class="price-notice-title">${escapeHtml(l.priceNoticeTitle)}</span>
+    ${(l.priceNoticeLines ?? [])
+      .map((line) => `<p>${escapeHtml(line)}</p>`)
+      .join('')}
+  </aside>`
+  }
   <div class="actions">
     <button type="button" onclick="document.body.classList.remove('hide-images'); window.print();">${escapeHtml(l.printWithImages)}</button>
     <button type="button" class="secondary" onclick="document.body.classList.add('hide-images'); window.print(); window.setTimeout(() => document.body.classList.remove('hide-images'), 100);">${escapeHtml(l.printWithoutImages)}</button>

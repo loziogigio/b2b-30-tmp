@@ -4,7 +4,7 @@
 import React from 'react';
 import NextLink from 'next/link';
 import { IoChevronForward } from 'react-icons/io5';
-import { HiOutlineViewGrid } from 'react-icons/hi';
+import { HiOutlineHome } from 'react-icons/hi';
 import { useTranslation } from 'src/app/i18n/client';
 import type { MenuTreeNode } from '@utils/transform/b2b-menu-tree';
 
@@ -16,6 +16,11 @@ interface BreadcrumbNavProps {
   allLabel?: string;
 }
 
+const PILL_BASE =
+  'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium max-w-[18rem] truncate transition-colors';
+const PILL_NEUTRAL = 'bg-gray-100 text-gray-700 hover:bg-gray-200';
+const PILL_ACTIVE = 'bg-brand text-white cursor-default';
+
 const CategoryBreadcrumb: React.FC<BreadcrumbNavProps> = ({
   lang,
   categories,
@@ -25,53 +30,76 @@ const CategoryBreadcrumb: React.FC<BreadcrumbNavProps> = ({
 }) => {
   const { t } = useTranslation(lang, 'common');
 
-  // Prefer receiving allLabel from server to avoid any chance of late i18n mismatch.
-  // Fallback is still fine in most setups; add suppressHydrationWarning just in case.
   const allText =
     allLabel ?? t('all-categories', { defaultValue: 'All Groups' });
   const lastIndex = categories.length - 1;
+  const isRoot = categories.length === 0;
 
   const toCategoryHref = (node?: MenuTreeNode) =>
     node ? `/${lang}/category/${node.path.join('/')}` : `/${lang}/category`;
 
   return (
     <nav aria-label="Breadcrumb" className="flex items-center mb-3">
-      <ol className="flex items-center w-full overflow-hidden whitespace-nowrap min-w-0">
-        {/* All Categories */}
-        <li className="text-sm px-2.5 ltr:first:pl-0 inline-flex items-center gap-1 shrink-0">
+      <ol className="flex items-center w-full gap-1.5 overflow-hidden whitespace-nowrap min-w-0">
+        {/* 1) Home — always neutral, links to homepage */}
+        <li className="shrink-0">
           <NextLink
-            href={toCategoryHref()}
-            className="text-brand-muted hover:text-brand-dark inline-flex items-center gap-1"
-            onClick={onAllCategoriesClick}
+            href={`/${lang}`}
+            aria-label="Home"
+            className={`${PILL_BASE} ${PILL_NEUTRAL}`}
           >
-            <HiOutlineViewGrid className="text-lg" aria-hidden="true" />
-            <span suppressHydrationWarning>{allText}</span>
+            <HiOutlineHome className="text-base" aria-hidden="true" />
           </NextLink>
         </li>
 
-        {/* Path */}
+        <li className="shrink-0 text-gray-400" aria-hidden="true">
+          <IoChevronForward className="text-base" />
+        </li>
+
+        {/* 2) Tutti i gruppi — always present, active when at category root */}
+        <li className="shrink-0">
+          {isRoot ? (
+            <span
+              aria-current="page"
+              title={allText}
+              className={`${PILL_BASE} ${PILL_ACTIVE}`}
+            >
+              <span suppressHydrationWarning>{allText}</span>
+            </span>
+          ) : (
+            <NextLink
+              href={toCategoryHref()}
+              className={`${PILL_BASE} ${PILL_NEUTRAL}`}
+              onClick={onAllCategoriesClick}
+            >
+              <span suppressHydrationWarning>{allText}</span>
+            </NextLink>
+          )}
+        </li>
+
+        {/* 3) Path */}
         {categories.map((cat, idx) => {
           const isLast = idx === lastIndex;
           return (
             <React.Fragment key={cat.id ?? idx}>
-              <li className="text-base text-brand-dark mt-[1px] shrink-0">
-                <IoChevronForward className="text-brand-dark/40 text-15px" />
+              <li className="shrink-0 text-gray-400" aria-hidden="true">
+                <IoChevronForward className="text-base" />
               </li>
 
-              <li className="text-sm px-2.5 min-w-0">
+              <li className="min-w-0">
                 {isLast ? (
                   <span
                     aria-current="page"
                     title={cat.label}
-                    className="font-semibold text-brand-dark cursor-default block truncate"
+                    className={`${PILL_BASE} ${PILL_ACTIVE}`}
                   >
                     {cat.label}
                   </span>
                 ) : (
                   <NextLink
                     href={toCategoryHref(cat)}
-                    className="text-blue-600 hover:underline block truncate"
                     title={cat.label}
+                    className={`${PILL_BASE} ${PILL_NEUTRAL}`}
                     onClick={() => onCategorySelect?.(cat)}
                   >
                     {cat.label}

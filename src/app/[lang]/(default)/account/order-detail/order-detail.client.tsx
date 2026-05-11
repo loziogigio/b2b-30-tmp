@@ -11,6 +11,7 @@ import {
   renderOrderPrintHtml,
   OrderExportSnapshot,
 } from '@components/orders/export/order-export';
+import { formatPriceIt } from '@utils/money';
 
 // ---- tiny helpers ---------------------------------------------------------
 function money(v: any) {
@@ -271,7 +272,7 @@ export default function OrderDetailClient({ lang, initialParams }: Props) {
         />
         <StatCard
           label={t('orders-total')}
-          value={`€${money((order as any).total).toFixed(decimals)}`}
+          value={`€${formatPriceIt(money((order as any).total), decimals)}`}
         />
       </div>
 
