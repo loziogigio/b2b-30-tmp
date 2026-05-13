@@ -13,6 +13,7 @@ import Image from 'next/image';
 import { useCart } from '@contexts/cart/cart.context';
 import type { Item } from '@contexts/cart/cart.utils';
 import type { AddToCartInput } from '@utils/transform/cart';
+import { getCartItemRenderKey } from '@components/cart/cart-item-key';
 import UpdateCart from '@components/product/update-cart';
 import { TimeCard } from '@/components/themes/time/account/time-account-primitives';
 import { useTranslation } from 'src/app/i18n/client';
@@ -549,7 +550,7 @@ export default function TimeCartTable({
           ) : (
             filteredRows.map((item, i) => (
               <TimeCartRow
-                key={`${item.id}-${item.rowId ?? i}`}
+                key={getCartItemRenderKey(item, i)}
                 item={item}
                 index={i}
                 lang={lang}

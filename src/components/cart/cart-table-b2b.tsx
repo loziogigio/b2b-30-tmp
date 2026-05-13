@@ -5,6 +5,7 @@ import cn from 'classnames';
 import { useQueryClient } from '@tanstack/react-query';
 import { Item } from '@contexts/cart/cart.utils';
 import { useCart } from '@contexts/cart/cart.context';
+import { useCartTotals, unitNet } from '@/hooks/use-cart-totals';
 import CartTotals from './cart-totals';
 import CartMobileList from './cart-mobile-list';
 import CartDesktopTable from './cart-desktop-table';
@@ -30,18 +31,6 @@ type SortKey =
   | 'priceDiscount'
   | 'quantity'
   | 'lineTotal';
-
-const unitNet = (r: Item) =>
-  Number(r.priceDiscount ?? r.__cartMeta?.price_discount ?? r.price ?? 0);
-const unitGross = (r: Item) =>
-  Number(
-    r.priceGross ??
-      r.__cartMeta?.gross_price ??
-      r.gross_price ??
-      r.price_gross ??
-      r.price ??
-      0,
-  );
 
 const SORT_LABELS: Record<SortKey, string> = {
   rowId: 'Row',
@@ -182,18 +171,7 @@ export default function CartTableB2B({ lang = 'it' }: { lang?: string }) {
     return list;
   }, [baseRows, query, onlyPromo, sortKey, sortAsc]);
 
-  const totals = useMemo(() => {
-    const net = baseRows.reduce(
-      (s, r) => s + unitNet(r) * Number(r.quantity ?? 0),
-      0,
-    );
-    const gross = baseRows.reduce(
-      (s, r) => s + unitGross(r) * Number(r.quantity ?? 0),
-      0,
-    );
-    const vat = net * 0.22; // demo VAT
-    return { net, gross, vat, doc: net + vat };
-  }, [baseRows]);
+  const totals = useCartTotals();
 
   const filtersSummary = useMemo(() => {
     const parts: string[] = [];

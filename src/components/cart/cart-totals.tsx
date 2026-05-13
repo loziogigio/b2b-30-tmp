@@ -22,8 +22,6 @@ type Props = {
 };
 
 export default function CartTotals({ totals, className }: Props) {
-  const rate = totals.vatRate ?? 22;
-
   return (
     <div
       className={cn('mt-4 flex flex-col items-end gap-1 text-sm', className)}
@@ -37,7 +35,7 @@ export default function CartTotals({ totals, className }: Props) {
         <span className="font-semibold">{currency(totals.net)}</span>
       </div>
       <div className="flex w-full max-w-md items-center justify-between">
-        <span className="text-gray-600">IVA ({rate}%)</span>
+        <span className="text-gray-600">IVA</span>
         <span>{currency(totals.vat)}</span>
       </div>
       <div className="flex w-full max-w-md items-center justify-between border-t pt-2">

@@ -15,6 +15,7 @@ import UpdateCart from '@components/product/update-cart';
 import { ROUTES } from '@utils/routes';
 import { useTranslation } from 'src/app/i18n/client';
 import { HiOutlineTrash } from 'react-icons/hi';
+import { getCartItemRenderKey } from '@components/cart/cart-item-key';
 
 const Delivery = dynamic(() => import('@layouts/header/delivery'), {
   ssr: false,
@@ -118,7 +119,7 @@ export default function TimeCart({ lang }: { lang: string }) {
 
               return (
                 <div
-                  key={`${item.id}-${item.rowId ?? i}`}
+                  key={getCartItemRenderKey(item, i)}
                   className="group relative flex items-start gap-3 py-3 border-b border-[var(--time-gray-50)] last:border-b-0"
                 >
                   {/* Image — click to open preview */}

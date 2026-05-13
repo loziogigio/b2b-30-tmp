@@ -58,7 +58,11 @@ const CartButton: React.FC<CartButtonProps> = ({
     return openDrawer();
   }
 
-  const amount = formatCurrency(total || 0, currency, locale);
+  const amount = formatCurrency(meta?.totalDoc ?? total ?? 0, currency, locale);
+  const vatAmount =
+    Number(meta?.vat ?? 0) > 0
+      ? formatCurrency(Number(meta?.vat ?? 0), currency, locale)
+      : null;
 
   const resolvedVariant: 'full' | 'amount' | 'none' =
     hideLabel || hidePrices ? 'none' : summaryVariant;
@@ -77,13 +81,16 @@ const CartButton: React.FC<CartButtonProps> = ({
         <div className="flex flex-col items-end leading-tight">
           {resolvedVariant === 'full' ? (
             <div className="text-[11px] uppercase tracking-wide text-gray-600">
-              {t('text-cart')}
+              {meta?.vat ? 'Totale documento' : t('text-cart')}
             </div>
           ) : null}
           {resolvedVariant !== 'none' ? (
             <div className="text-sm sm:text-base font-semibold text-gray-900">
               {amount}
             </div>
+          ) : null}
+          {resolvedVariant === 'full' && vatAmount ? (
+            <div className="text-[11px] text-gray-500">IVA {vatAmount}</div>
           ) : null}
         </div>
       )}

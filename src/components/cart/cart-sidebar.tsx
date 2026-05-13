@@ -14,6 +14,7 @@ import Heading from '@components/ui/heading';
 import Text from '@components/ui/text';
 import DeleteIcon from '@components/icons/delete-icon';
 import { confirmAction } from '@utils/toast-confirm';
+import { getCartItemRenderKey } from './cart-item-key';
 
 export default function CartSidebar({ lang }: { lang: string }) {
   const { t } = useTranslation(lang, 'common');
@@ -57,7 +58,7 @@ export default function CartSidebar({ lang }: { lang: string }) {
             {items?.map((item, i) => (
               <CartItem
                 item={item}
-                key={`${(item as any).rowId ?? i}-${item.id}-${(item as any).promo_code ?? 0}-${(item as any).promo_row ?? 0}`}
+                key={getCartItemRenderKey(item, i)}
                 lang={lang}
               />
             ))}

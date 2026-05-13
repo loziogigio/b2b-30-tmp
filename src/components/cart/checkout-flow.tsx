@@ -15,6 +15,7 @@ import CheckoutSendOrder from '@components/checkout/checkout-send-order';
 import ProcessingOrdersTable from '@components/checkout/processing-orders-table';
 import { useQuery } from '@tanstack/react-query';
 import { useCart } from '@contexts/cart/cart.context';
+import { useCartTotals } from '@/hooks/use-cart-totals';
 import CartTotals from './cart-totals';
 import CartListSidebar from './cart-list-sidebar';
 import { useTranslation } from 'src/app/i18n/client';
@@ -154,12 +155,16 @@ function CheckoutFlowInner({
 }) {
   const { t } = useTranslation(lang, 'common');
   // ⬇️ also pull setItemQuantity so we can handle +/- from the table
-  const { total, totalItems, items, setItemQuantity } = useCart();
+  const { total, totalItems, items, setItemQuantity, meta } = useCart();
+  // Same totals the cart table shows (net / gross / VAT / document) so the
+  // top bar and the collapsed summary stay in sync with the cart step.
+  const totals = useCartTotals();
 
   const itemCount = totalItems || items?.length || 0;
   const totalDisplay = useMemo(
-    () => formatEUR(totalOverride ?? total ?? 0),
-    [totalOverride, total],
+    () =>
+      formatEUR(totals.doc || meta?.totalDoc || totalOverride || total || 0),
+    [totals.doc, meta?.totalDoc, totalOverride, total],
   );
 
   const [stage, setStage] = useState<Stage>('cart');
@@ -239,8 +244,6 @@ function CheckoutFlowInner({
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const { meta } = useCart();
-
   return (
     <div className="mx-auto flex flex-col">
       {/* Top bar */}
@@ -256,10 +259,17 @@ function CheckoutFlowInner({
 
         <div className="flex items-center gap-3">
           <div className="text-right">
-            <div className="text-xs text-gray-500">{t('text-total-net')}</div>
+            <div className="text-xs text-gray-500">
+              {totals.vat > 0 ? 'Totale documento' : t('text-total-net')}
+            </div>
             <div className="text-base font-semibold" suppressHydrationWarning>
               {totalDisplay}
             </div>
+            {totals.vat > 0 && (
+              <div className="text-xs text-gray-500" suppressHydrationWarning>
+                IVA {formatEUR(totals.vat)}
+              </div>
+            )}
           </div>
           {stage === 'cart' ? (
             <button
@@ -391,20 +401,7 @@ function CheckoutFlowInner({
               <div className="mt-4 rounded-md border border-gray-200 bg-white">
                 <div className="flex items-center justify-between px-4 py-3 sm:px-6">
                   <div>
-                    {meta && (
-                      <CartTotals
-                        totals={{
-                          gross: meta.totalGross,
-                          net: meta.totalNet,
-                          vat: meta.vat,
-                          doc: meta.totalDoc,
-                          vatRate:
-                            meta.totalNet > 0
-                              ? Math.round((meta.vat / meta.totalNet) * 100)
-                              : undefined,
-                        }}
-                      />
-                    )}
+                    {(items?.length ?? 0) > 0 && <CartTotals totals={totals} />}
                   </div>
                   <button
                     onClick={backToCart}

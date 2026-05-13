@@ -15,6 +15,7 @@ import Text from '@components/ui/text';
 import DeleteIcon from '@components/icons/delete-icon';
 import { useTranslation } from 'src/app/i18n/client';
 import dynamic from 'next/dynamic';
+import { getCartItemRenderKey } from './cart-item-key';
 
 const Delivery = dynamic(() => import('@layouts/header/delivery'), {
   ssr: false,
@@ -81,7 +82,7 @@ export default function Cart({ lang }: { lang: string }) {
             {items?.map((item, i) => (
               <CartItem
                 item={item}
-                key={`${item.id}-${item.rowId ?? i}`}
+                key={getCartItemRenderKey(item, i)}
                 lang={lang}
               />
             ))}
