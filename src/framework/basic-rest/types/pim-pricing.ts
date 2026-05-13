@@ -53,7 +53,7 @@ export interface PimPackagingOption {
 
 /**
  * 'priced'     — the product has a usable `pricing.list`
- * 'on-request' — no pricing block (or list missing); show "Prezzo su richiesta"
+ * 'on-request' — no pricing block (or list missing); price is hidden
  * 'draft'      — explicit draft status from the PIM
  */
 export type PricingStatus = 'priced' | 'on-request' | 'draft';
@@ -80,12 +80,24 @@ export interface ProductPricing {
 }
 
 /**
- * Derive the canonical ProductPricing from the raw pricing block, with a
- * fallback to the first sellable packaging's per-unit pricing when the
- * top-level block is missing or has no `list`. The BE search enrichment
- * sometimes strips the variant root `pricing` but keeps
- * `packaging_options[].pricing.list_unit` populated, so we look there
- * before declaring the product on-request.
+ * Italian standard VAT, used as a last-resort fallback when neither the
+ * product nor its parent ships `vat_rate` (BE search enrichment currently
+ * strips the variant root `pricing`, and the per-packaging pricing block
+ * doesn't carry VAT info either). Tenants in other jurisdictions can
+ * override later by ensuring the PIM payload carries `vat_rate`.
+ */
+const FALLBACK_VAT_RATE = 22;
+
+/**
+ * Derive the canonical ProductPricing from the raw pricing block, with two
+ * cascading fallbacks:
+ *
+ *   1. The first sellable `packaging_options[].pricing.list_unit` when the
+ *      product/variant root `pricing` is stripped (BE enrichment bug).
+ *   2. `parentPricing` for VAT context — `vat_rate` and `vat_included` are
+ *      catalog-level attributes, so when a variant has no `pricing` of its
+ *      own we read the parent's. Without this, the cart payload ends up
+ *      with `vat_rate: 0` and the BE rejects the add with 400.
  *
  * `vat_included: false` is the common case; `true` means list already
  * carries VAT and we back it out to expose a NET `list`.
@@ -94,16 +106,29 @@ export function normalizeProductPricing(
   raw: PimPricing | undefined,
   rawStatus?: string,
   packagingOptions: PimPackagingOption[] = [],
+  parentPricing?: PimPricing,
 ): ProductPricing {
   if (rawStatus === 'draft') return { status: 'draft' };
 
-  const source = pickPricingSource(raw, packagingOptions);
+  const source = pickPricingSource(raw, packagingOptions, parentPricing);
   if (!source) return { status: 'on-request' };
 
   const listInput = Number(source.list);
   const retailInput = source.retail != null ? Number(source.retail) : undefined;
-  const vatRate = source.vat_rate != null ? Number(source.vat_rate) : 0;
-  const vatIncluded = Boolean(source.vat_included);
+  // vat_rate cascade: source → parent → fallback. The packaging-level pricing
+  // block has no VAT info, and the BE strips the variant root pricing, so
+  // without these fallbacks the cart payload would carry vat_rate: 0 and
+  // get rejected with a 400.
+  const vatRate =
+    source.vat_rate != null
+      ? Number(source.vat_rate)
+      : parentPricing?.vat_rate != null
+        ? Number(parentPricing.vat_rate)
+        : FALLBACK_VAT_RATE;
+  const vatIncluded =
+    source.vat_included != null
+      ? Boolean(source.vat_included)
+      : Boolean(parentPricing?.vat_included);
   const factor = 1 + vatRate / 100;
 
   const list = vatIncluded && factor > 0 ? listInput / factor : listInput;
@@ -130,11 +155,15 @@ export function normalizeProductPricing(
  * Internal: pick whichever pricing block has a usable per-unit list price.
  * The top-level `pricing` wins when it has `list`; otherwise we walk the
  * sellable packaging entries and reuse the first packaging's `list_unit`
- * (or `list / qty`) as the headline price.
+ * (or `list / qty`) as the headline price. VAT info (`vat_rate`,
+ * `vat_included`, `currency`) is inherited from the top-level pricing
+ * block when the packaging block doesn't carry it — those are
+ * catalog-level attributes that shouldn't vary per packaging.
  */
 function pickPricingSource(
   top: PimPricing | undefined,
   packagings: PimPackagingOption[],
+  parent?: PimPricing,
 ): PimPricing | null {
   if (top?.list != null) return top;
 
@@ -160,6 +189,10 @@ function pickPricingSource(
       ...p,
       list: perUnit,
       retail: retailPerUnit,
+      // VAT context cascade: packaging → top-level → parent
+      vat_rate: p.vat_rate ?? top?.vat_rate ?? parent?.vat_rate,
+      vat_included: p.vat_included ?? top?.vat_included ?? parent?.vat_included,
+      currency: p.currency ?? top?.currency ?? parent?.currency,
     };
   }
 

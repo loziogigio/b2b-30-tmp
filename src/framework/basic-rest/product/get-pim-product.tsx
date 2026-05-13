@@ -100,7 +100,17 @@ function buildPictures(raw: PimProduct): {
 // ===============================
 // Transform PIM product to internal Product type
 // ===============================
-export function transformPimProduct(raw: PimProduct): Product {
+/**
+ * `parentPricing` is threaded into recursive variant transforms so each
+ * variant inherits the parent's VAT context (vat_rate / vat_included /
+ * currency) when its own `pricing` block is stripped by BE enrichment.
+ * Without this the cart payload ends up with vat_rate: 0 and the BE
+ * rejects the add with 400.
+ */
+export function transformPimProduct(
+  raw: PimProduct,
+  parentPricing?: import('../types/pim-pricing').PimPricing,
+): Product {
   // Extract model from attributes if not directly available
   // Handle both array format and multilingual object format
   let modelAttr: PimProductAttribute | undefined;
@@ -156,6 +166,7 @@ export function transformPimProduct(raw: PimProduct): Product {
     rawWithPricing.pricing,
     rawWithPricing.status,
     packagingOptions,
+    parentPricing,
   );
 
   return {
@@ -216,7 +227,7 @@ export function transformPimProduct(raw: PimProduct): Product {
     parent_sku: raw.parent_sku || raw.parent_entity_code || '',
     // Map API variants to frontend variations
     variations: Array.isArray(raw.variants)
-      ? raw.variants.map((v) => transformPimProduct(v))
+      ? raw.variants.map((v) => transformPimProduct(v, rawWithPricing.pricing))
       : [],
     tag: [],
     category: { id: '', name: '', slug: '' },
