@@ -2,10 +2,6 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import { Product } from '@framework/types';
-import { fetchErpPrices } from '@framework/erp/prices';
-import { useQuery } from '@tanstack/react-query';
-import { ERP_STATIC } from '@framework/utils/static';
-import { useUI } from '@contexts/ui.context';
 import TimeProductCard from '@components/themes/time/product/time-product-card';
 import TimeScrollArrows from '@components/themes/time/shared/time-scroll-arrows';
 import { useHorizontalScroll } from '@components/themes/time/shared/use-horizontal-scroll';
@@ -97,26 +93,6 @@ export default function TimeProductCarousel({
   } = useHorizontalScroll({ scrollAmount: 320 });
 
   // ERP prices
-  const entity_codes = useMemo<string[]>(() => {
-    if (!Array.isArray(products)) return [];
-    return products
-      .map((p: any) => {
-        const variations = Array.isArray(p?.variations) ? p.variations : [];
-        if (variations.length === 1) return String(variations[0]?.id ?? '');
-        if (variations.length > 1) return '';
-        return String(p?.id ?? '');
-      })
-      .filter((v) => v && v !== '');
-  }, [products]);
-
-  const { isAuthorized } = useUI();
-  const erpPayload = { entity_codes, ...ERP_STATIC };
-  const { data: erpPricesData } = useQuery({
-    queryKey: ['erp-prices', erpPayload],
-    queryFn: () => fetchErpPrices(erpPayload),
-    enabled: isAuthorized && entity_codes.length > 0,
-  });
-
   const normalizedSlug = categorySlug ? `/${lang}/${categorySlug}` : undefined;
 
   return (
@@ -219,7 +195,6 @@ export default function TimeProductCarousel({
                       }
                     : p;
                   const erpKey = String(targetProduct?.id ?? p?.id ?? '');
-                  const priceData = erpPricesData?.[erpKey];
 
                   const cardWidth = hasBreakpoints
                     ? `calc((100% - ${(cardLayout.slidesPerView - 1) * cardLayout.gap}px) / ${cardLayout.slidesPerView})`
@@ -237,7 +212,6 @@ export default function TimeProductCarousel({
                       <TimeProductCard
                         product={targetProduct}
                         lang={lang}
-                        priceData={priceData}
                         className={
                           cardWidth
                             ? 'w-full h-full flex flex-col'

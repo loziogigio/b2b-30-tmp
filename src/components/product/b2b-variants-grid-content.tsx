@@ -1,23 +1,16 @@
 // components/product/b2b-variants-grid-content.tsx
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useInfiniteQuery } from '@tanstack/react-query';
-import { LIMITS } from '@framework/utils/limits';
-import { fetchErpPrices } from '@framework/erp/prices';
+import { useMemo, useRef, useState } from 'react';
 import { getThemedComponent } from '@/lib/theme/registry';
-import ProductCardLoader from '@components/ui/loaders/product-card-loader';
 
 const ThemedProductCard = getThemedComponent('ProductCard');
 import cn from 'classnames';
 import Image from '@components/ui/image';
 import { productPlaceholder } from '@assets/placeholders';
 import Link from 'next/link';
-import { ERP_STATIC } from '@framework/utils/static';
 import { useUI } from '@contexts/ui.context';
 import { useTranslation } from 'src/app/i18n/client';
-import Button from '@components/ui/button';
-import Alert from '@components/ui/alert';
 
 type VariantMinimal = {
   id: string | number;
@@ -59,9 +52,6 @@ export default function B2BVariantsGridContent({
     ? product.variations
     : [];
 
-  const allIds = useMemo(() => variants.map((v) => String(v.id)), [variants]);
-  const totalCount = allIds.length;
-
   // Filter + sort UI
   const [sortKey, setSortKey] = useState<
     'sku-asc' | 'price-asc' | 'price-desc'
@@ -101,58 +91,14 @@ export default function B2BVariantsGridContent({
     );
   }, [variants, selectedModels, query]);
 
-  const pageSize = LIMITS.PRODUCTS_LIMITS;
-
-  const {
-    data: pages,
-    isFetching,
-    isFetchingNextPage,
-    fetchNextPage,
-    hasNextPage,
-    error,
-    refetch,
-  } = useInfiniteQuery({
-    queryKey: [
-      'erp-variant-prices',
-      product?.id ?? 'no-product',
-      allIds.join(','),
-      pageSize,
-    ],
-    enabled: isAuthorized && totalCount > 0,
-    initialPageParam: 0,
-    queryFn: async ({ pageParam }) => {
-      const start = pageParam as number;
-      const slice = allIds.slice(start, start + pageSize);
-      if (slice.length === 0) return { prices: {}, nextIndex: undefined };
-      const res = await fetchErpPrices({ ...ERP_STATIC, entity_codes: slice });
-      return {
-        prices: res as Record<string, any>,
-        nextIndex: start + slice.length,
-      };
-    },
-    getNextPageParam: (lastPage) =>
-      typeof lastPage?.nextIndex === 'number' && lastPage.nextIndex < totalCount
-        ? lastPage.nextIndex
-        : undefined,
-  });
-
-  const priceMap = useMemo(() => {
-    const merged: Record<string, any> = {};
-    pages?.pages?.forEach((p) => Object.assign(merged, p.prices));
-    return merged;
-  }, [pages]);
-
+  // Prices are inline on each variant (variant.price = pricing.list, post-transform).
+  // Unpriced variants (status !== 'priced') get +Infinity so they sink to the
+  // bottom of price-asc and to the top of price-desc.
   const getSortPrice = (variant: any): number => {
-    const row = priceMap[String(variant?.id)];
-    if (!row) return Number.POSITIVE_INFINITY;
-    const anyPD = row as any;
-    const v =
-      anyPD.price_discount ??
-      anyPD.net_price ??
-      anyPD.price ??
-      anyPD.gross_price;
-    const n = Number(v);
-    return Number.isFinite(n) ? n : Number.POSITIVE_INFINITY;
+    const list = variant?.pricing?.list;
+    const fallback = variant?.price;
+    const v = list != null ? Number(list) : Number(fallback);
+    return Number.isFinite(v) && v > 0 ? v : Number.POSITIVE_INFINITY;
   };
 
   const sorted = useMemo(() => {
@@ -186,84 +132,28 @@ export default function B2BVariantsGridContent({
       });
     }
     return copy;
-  }, [filtered, sortKey, priceMap, isAuthorized, selectedModels]);
+  }, [filtered, sortKey, isAuthorized, selectedModels]);
 
-  // Scroll + infinite loading
   const scrollRef = useRef<HTMLDivElement | null>(null);
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!hasNextPage || isFetchingNextPage) return;
-    const sentinel = sentinelRef.current;
-    if (!sentinel) return;
-
-    const observerOptions: IntersectionObserverInit = useWindowScroll
-      ? { rootMargin: '400px 0px', threshold: 0 }
-      : { root: scrollRef.current, rootMargin: '400px 0px', threshold: 0 };
-
-    const io = new IntersectionObserver((entries) => {
-      if (entries.some((e) => e.isIntersecting)) fetchNextPage();
-    }, observerOptions);
-
-    io.observe(sentinel);
-    return () => io.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage, useWindowScroll]);
-
-  const loadedCount = Object.keys(priceMap).length;
   const parentSku = parent_sku ?? sku;
   const title = name || parentSku || '';
 
-  // Grid content (shared between scroll modes)
   const gridContent = (
-    <>
-      <div
-        className={cn(
-          'grid gap-2 md:gap-3 2xl:gap-4',
-          'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6',
-        )}
-      >
-        {sorted.map((v) => {
-          const id = String(v.id);
-          const priceData = priceMap[id];
-          return (
-            <ThemedProductCard
-              key={`variant-${id}`}
-              product={v as any}
-              lang={lang}
-              priceData={priceData}
-              className="w-full"
-            />
-          );
-        })}
-
-        {isAuthorized &&
-          isFetching &&
-          !pages?.pages?.length &&
-          Array.from({
-            length: Math.min(pageSize, sorted.length || totalCount),
-          }).map((_, i) => (
-            <ProductCardLoader
-              key={`skeleton-${i}`}
-              uniqueKey={`skeleton-${i}`}
-            />
-          ))}
-      </div>
-
-      {/* sentinel for infinite scroll */}
-      <div ref={sentinelRef} className="h-8" />
-
-      {isAuthorized && hasNextPage && (
-        <div className="pt-2 text-center">
-          <Button
-            loading={isFetchingNextPage}
-            disabled={isFetchingNextPage}
-            onClick={() => fetchNextPage()}
-          >
-            Load more prices
-          </Button>
-        </div>
+    <div
+      className={cn(
+        'grid gap-2 md:gap-3 2xl:gap-4',
+        'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6',
       )}
-    </>
+    >
+      {sorted.map((v) => (
+        <ThemedProductCard
+          key={`variant-${String(v.id)}`}
+          product={v as any}
+          lang={lang}
+          className="w-full"
+        />
+      ))}
+    </div>
   );
 
   return (
@@ -323,16 +213,8 @@ export default function B2BVariantsGridContent({
         </div>
       </div>
 
-      {/* Controls: counter, search, sort, model tags */}
+      {/* Controls: search, sort, model tags */}
       <div className="border-b px-3 sm:px-4 py-2.5">
-        {isAuthorized ? (
-          <div className="flex justify-end mb-1">
-            <div className="text-[11px] text-gray-600">
-              {loadedCount}/{totalCount} priced
-            </div>
-          </div>
-        ) : null}
-
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
             <input
@@ -405,19 +287,6 @@ export default function B2BVariantsGridContent({
             </button>
           )}
         </div>
-
-        {error && (
-          <div className="mt-2">
-            <Alert
-              message={(error as any)?.message || 'Failed to load prices.'}
-            />
-            <div className="mt-2">
-              <Button size="small" onClick={() => refetch()}>
-                Retry
-              </Button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Grid area */}

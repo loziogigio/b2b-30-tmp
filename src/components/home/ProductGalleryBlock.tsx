@@ -1,17 +1,12 @@
 'use client';
 
 import cn from 'classnames';
-import { useMemo } from 'react';
 import { Product } from '@framework/types';
 import { getThemedComponent } from '@/lib/theme/registry';
 
 // Default theme uses ProductCardB2B; time theme swaps in TimeProductCard.
 const ThemedProductCard = getThemedComponent('ProductCard');
 import ProductCardLoader from '@components/ui/loaders/product-card-loader';
-import { fetchErpPrices } from '@framework/erp/prices';
-import { useQuery } from '@tanstack/react-query';
-import { ERP_STATIC } from '@framework/utils/static';
-import { useUI } from '@contexts/ui.context';
 
 type ProductGalleryBlockProps = {
   products: Product[];
@@ -57,34 +52,6 @@ export const ProductGalleryBlock = ({
   lang,
   loading = false,
 }: ProductGalleryBlockProps) => {
-  const { isAuthorized } = useUI();
-
-  // Collect entity_codes for ERP price lookup
-  const entity_codes = useMemo<string[]>(() => {
-    if (!Array.isArray(products)) return [];
-    return products
-      .map((p: any) => {
-        const variations = Array.isArray(p?.variations) ? p.variations : [];
-        if (variations.length === 1) return String(variations[0]?.id ?? '');
-        if (variations.length > 1) return ''; // skip multi-variation items for ERP lookup
-        return String(p?.id ?? '');
-      })
-      .filter((v) => v && v !== '');
-  }, [products]);
-
-  const erpEnabled = entity_codes.length > 0;
-
-  const erpPayload = {
-    entity_codes,
-    ...ERP_STATIC,
-  };
-
-  const { data: erpPricesData } = useQuery({
-    queryKey: ['erp-prices', erpPayload],
-    queryFn: () => fetchErpPrices(erpPayload),
-    enabled: isAuthorized && erpEnabled,
-  });
-
   if (!Array.isArray(products) || products.length === 0) {
     if (loading) {
       // Show loading placeholders
@@ -165,16 +132,13 @@ export const ProductGalleryBlock = ({
             }
           : product;
 
-        // Effective key for ERP lookup
-        const erpKey = String(targetProduct?.id ?? product?.id ?? '');
-        const priceData = erpPricesData?.[erpKey];
+        const cardKey = String(targetProduct?.id ?? product?.id ?? '');
 
         return (
           <ThemedProductCard
-            key={`gallery-${erpKey}`}
+            key={`gallery-${cardKey}`}
             product={targetProduct}
             lang={lang}
-            priceData={priceData}
             className="h-full flex flex-col"
           />
         );

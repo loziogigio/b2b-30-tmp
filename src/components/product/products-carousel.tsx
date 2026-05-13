@@ -12,11 +12,7 @@ import cn from 'classnames';
 import { getDirection } from '@utils/get-direction';
 import { useMemo, useState } from 'react';
 import { getThemedComponent } from '@/lib/theme/registry';
-import { fetchErpPrices } from '@framework/erp/prices';
-import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
-import { ERP_STATIC } from '@framework/utils/static';
-import { useUI } from '@contexts/ui.context';
 import { useTranslation } from 'src/app/i18n/client';
 
 const ThemedProductCard = getThemedComponent('ProductCard');
@@ -111,34 +107,6 @@ const ProductsCarousel: React.FC<ProductsCarouselProps> = ({
   const shownCount = products?.length ?? 0;
   const hasMoreResults =
     totalResults === undefined ? true : totalResults > shownCount;
-
-  // ---- ERP: collect entity_codes from the *effective* product id ----
-  const entity_codes = useMemo<string[]>(() => {
-    if (!Array.isArray(products)) return [];
-    return products
-      .map((p: any) => {
-        const variations = Array.isArray(p?.variations) ? p.variations : [];
-        if (variations.length === 1) return String(variations[0]?.id ?? '');
-        if (variations.length > 1) return ''; // skip multi-variation items for ERP lookup
-        return String(p?.id ?? '');
-      })
-      .filter((v) => v && v !== '');
-  }, [products]);
-
-  const erpEnabled = entity_codes.length > 0;
-  const { isAuthorized } = useUI();
-
-  const erpPayload = {
-    entity_codes,
-    ...ERP_STATIC,
-  };
-
-  const { data: erpPricesData, isLoading: isLoadingErpPrices } = useQuery({
-    queryKey: ['erp-prices', erpPayload],
-    queryFn: () => fetchErpPrices(erpPayload),
-    enabled: isAuthorized && erpEnabled,
-  });
-  // console.log('sliderEnd', sliderEnd)
 
   return (
     <div
@@ -246,20 +214,17 @@ const ProductsCarousel: React.FC<ProductsCarouselProps> = ({
                         }
                       : p;
 
-                    // Effective key for ERP lookup + React key
-                    const erpKey = String(targetProduct?.id ?? p?.id ?? '');
-                    const priceData = erpPricesData?.[erpKey];
+                    const slideKey = String(targetProduct?.id ?? p?.id ?? '');
 
                     return (
                       <SwiperSlide
-                        key={`slide-${erpKey}`}
+                        key={`slide-${slideKey}`}
                         className="!h-auto px-1.5 md:px-2 xl:px-2.5 py-4"
                       >
                         <div className="h-full">
                           <ThemedProductCard
                             product={targetProduct}
                             lang={lang}
-                            priceData={priceData}
                             className="h-full flex flex-col"
                           />
                         </div>

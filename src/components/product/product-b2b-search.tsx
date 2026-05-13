@@ -17,16 +17,13 @@ import {
 // variant (TimeProductCard) when tenant.b2bTheme === 'time'.
 const ThemedProductCard = getThemedComponent('ProductCard');
 import ProductRowB2B from './product-rows/product-row-b2b';
-import { fetchErpPrices } from '@framework/erp/prices';
 import { useMemo, useEffect, useRef, useState } from 'react';
-import { ERP_STATIC } from '@framework/utils/static';
 import {
   IoGridOutline,
   IoListOutline,
   IoInformationCircleOutline,
 } from 'react-icons/io5';
 import type { ErpPriceData } from '@utils/transform/erp-prices';
-import { useUI } from '@contexts/ui.context';
 import {
   getUserLikes as apiGetUserLikes,
   getTrendingProductsPage as apiGetTrendingPage,
@@ -262,73 +259,6 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
     ? !!specialSourceQuery.hasNextPage
     : baseQuery.hasNextPage;
 
-  // ⬇️ Include ALL variant ids so list view has prices when expanded
-  // --- ERP prices: fetch only for newly loaded page and merge (only when authorized)
-  const [erpPricesMap, setErpPricesMap] = useState<
-    Record<string, ErpPriceData>
-  >({});
-  const fetchedCodesRef = useRef<Set<string>>(new Set());
-  const { isAuthorized } = useUI();
-
-  // Reset ERP cache when search signature changes
-  const searchSignature = useMemo(() => {
-    const base = JSON.stringify(pimParams);
-    if (isSpecialSource) {
-      if (source === 'likes') return `likes:${pageSizeParam}`;
-      if (source === 'reminders') return `reminders:${pageSizeParam}`;
-      return `trending:${period}:${pageSizeParam}`;
-    }
-    return `base:${base}`;
-  }, [isSpecialSource, source, period, pageSizeParam, pimParams]);
-
-  const prevSig = useRef<string>('');
-  useEffect(() => {
-    if (prevSig.current !== searchSignature) {
-      prevSig.current = searchSignature;
-      setErpPricesMap({});
-      fetchedCodesRef.current = new Set();
-    }
-  }, [searchSignature]);
-
-  const lastItems: Product[] = useMemo(() => {
-    const pages = (data as any)?.pages;
-    if (!pages?.length) return [];
-    const last = pages[pages.length - 1];
-    return last?.items ?? [];
-  }, [data]);
-
-  const newCodes = useMemo(() => {
-    // Only fetch ERP prices for single-variant products (variantCount <= 1 or undefined)
-    const singleVariantProducts = (lastItems as any[]).filter(
-      (p) => !p?.variantCount || p.variantCount <= 1,
-    );
-    const codes = singleVariantProducts.flatMap((p) => {
-      const vars = Array.isArray(p?.variations) ? p.variations : [];
-      return vars.length > 0
-        ? vars.map((v: any) => String(v?.id ?? ''))
-        : [String(p?.id ?? '')];
-    });
-    return codes.filter((c) => c && !fetchedCodesRef.current.has(c));
-  }, [lastItems]);
-
-  useEffect(() => {
-    if (!isAuthorized || !newCodes.length) return;
-    const payload = { entity_codes: newCodes, ...ERP_STATIC } as any;
-    let mounted = true;
-    fetchErpPrices(payload)
-      .then((res) => {
-        if (!mounted || !res) return;
-        setErpPricesMap((prev) => ({ ...prev, ...(res as any) }));
-        for (const c of newCodes) fetchedCodesRef.current.add(c);
-      })
-      .catch(() => {});
-    return () => {
-      mounted = false;
-    };
-  }, [newCodes]);
-
-  const getPrice = (id: string | number) => erpPricesMap[String(id)];
-
   // Infinite scroll: auto-load more when user scrolls near bottom
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const isLoadingMoreRef = useRef(false);
@@ -429,9 +359,10 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
           ) : (
             data?.pages?.map((page: any) =>
               page?.items?.map((p: any) => {
-                // With grouped search: p has variantCount attached
-                // Without grouped search: p may have variations array
-                // For single-variant products (variantCount === 1 OR variations.length === 1), use variant's data
+                // Collapse single-variant groups onto the variant so the card
+                // renders the variant's SKU/pricing directly. Multi-variant
+                // groups stay on the parent (the card opens the variants
+                // quick view).
                 const vars = Array.isArray(p.variations) ? p.variations : [];
                 const isSingleVariant =
                   vars.length === 1 &&
@@ -439,26 +370,13 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
                 const target = isSingleVariant
                   ? { ...vars[0], variantCount: 1 }
                   : p;
-                // Skip ERP price for grouped products with multiple variants
-                const hasMultipleVariants =
-                  target.variantCount && target.variantCount > 1;
-                // For single-variant products, use the variant's ID for price lookup (ERP prices are fetched by variant ID)
-                const priceId = hasMultipleVariants
-                  ? null
-                  : vars.length === 1
-                    ? vars[0]?.id
-                    : target.id;
-                const priceData = priceId ? getPrice(priceId) : undefined;
 
                 if (isList) {
-                  // list: always render parent row; variants appear in the row itself
                   return (
                     <ProductRowB2B
                       key={`row-${target.id}`}
                       lang={lang}
                       product={target}
-                      getPrice={getPrice}
-                      priceData={priceData}
                       forceShowReminderToggle={source === 'reminders'}
                     />
                   );
@@ -469,7 +387,6 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
                     key={`card-${target.id}`}
                     product={target}
                     lang={lang}
-                    priceData={priceData}
                     forceShowReminderToggle={source === 'reminders'}
                     className={cardClassName}
                   />

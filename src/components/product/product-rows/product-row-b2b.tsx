@@ -33,7 +33,12 @@ type GetPrice = (id: string | number) => ErpPriceData | undefined;
 interface Props {
   lang: string;
   product: Product & { variantCount?: number }; // parent with optional variant count from grouping
-  getPrice: GetPrice;
+  /**
+   * Optional. The list view used to thread an ERP price map from the parent
+   * search; with inline pricing we read variant.pricing directly, so callers
+   * can omit this and we fall back to a no-op getter.
+   */
+  getPrice?: GetPrice;
   priceData?: ErpPriceData; // parent price (or single-variation)
   className?: string;
   // show Search + Model tags controls only if variant count >= this value
@@ -43,6 +48,8 @@ interface Props {
   /** Show reminder toggle even if product is in stock (e.g., on reminders page) */
   forceShowReminderToggle?: boolean;
 }
+
+const NO_PRICE: GetPrice = () => undefined;
 
 // Parent row: 3 columns (image | info | brand)
 const GRID_PARENT_3 =
@@ -68,7 +75,7 @@ const Dash = () => <span className="text-gray-300">—</span>;
 export default function ProductRowB2B({
   lang,
   product,
-  getPrice,
+  getPrice = NO_PRICE,
   priceData,
   className,
   filterThreshold = 0,

@@ -3,18 +3,13 @@
 import type { FC } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { LIMITS } from '@framework/utils/limits';
-import { Product } from '@framework/types';
 import { useTranslation } from 'src/app/i18n/client';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import {
   usePimProductListInfiniteQuery,
   fetchPimProductList,
 } from '@framework/product/get-pim-product';
-import { fetchErpPrices } from '@framework/erp/prices';
 import { useMemo, useEffect, useRef, useState } from 'react';
-import { ERP_STATIC } from '@framework/utils/static';
-import type { ErpPriceData } from '@utils/transform/erp-prices';
-import { useUI } from '@contexts/ui.context';
 import {
   getUserLikes as apiGetUserLikes,
   getTrendingProductsPage as apiGetTrendingPage,
@@ -251,69 +246,6 @@ export const TimeProductSearch: FC<TimeProductSearchProps> = ({
     ? !!specialSourceQuery.hasNextPage
     : baseQuery.hasNextPage;
 
-  // ERP prices
-  const [erpPricesMap, setErpPricesMap] = useState<
-    Record<string, ErpPriceData>
-  >({});
-  const fetchedCodesRef = useRef<Set<string>>(new Set());
-  const { isAuthorized } = useUI();
-
-  const searchSignature = useMemo(() => {
-    const base = JSON.stringify(pimParams);
-    if (isSpecialSource) {
-      if (source === 'likes') return `likes:${pageSizeParam}`;
-      if (source === 'reminders') return `reminders:${pageSizeParam}`;
-      return `trending:${period}:${pageSizeParam}`;
-    }
-    return `base:${base}`;
-  }, [isSpecialSource, source, period, pageSizeParam, pimParams]);
-
-  const prevSig = useRef<string>('');
-  useEffect(() => {
-    if (prevSig.current !== searchSignature) {
-      prevSig.current = searchSignature;
-      setErpPricesMap({});
-      fetchedCodesRef.current = new Set();
-    }
-  }, [searchSignature]);
-
-  const lastItems: Product[] = useMemo(() => {
-    const pages = (data as any)?.pages;
-    if (!pages?.length) return [];
-    return pages[pages.length - 1]?.items ?? [];
-  }, [data]);
-
-  const newCodes = useMemo(() => {
-    const singleVariantProducts = (lastItems as any[]).filter(
-      (p) => !p?.variantCount || p.variantCount <= 1,
-    );
-    const codes = singleVariantProducts.flatMap((p) => {
-      const vars = Array.isArray(p?.variations) ? p.variations : [];
-      return vars.length > 0
-        ? vars.map((v: any) => String(v?.id ?? ''))
-        : [String(p?.id ?? '')];
-    });
-    return codes.filter((c) => c && !fetchedCodesRef.current.has(c));
-  }, [lastItems]);
-
-  useEffect(() => {
-    if (!isAuthorized || !newCodes.length) return;
-    const payload = { entity_codes: newCodes, ...ERP_STATIC } as any;
-    let mounted = true;
-    fetchErpPrices(payload)
-      .then((res) => {
-        if (!mounted || !res) return;
-        setErpPricesMap((prev) => ({ ...prev, ...(res as any) }));
-        for (const c of newCodes) fetchedCodesRef.current.add(c);
-      })
-      .catch(() => {});
-    return () => {
-      mounted = false;
-    };
-  }, [newCodes, isAuthorized]);
-
-  const getPrice = (id: string | number) => erpPricesMap[String(id)];
-
   // Infinite scroll
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const isLoadingMoreRef = useRef(false);
@@ -525,14 +457,6 @@ export const TimeProductSearch: FC<TimeProductSearchProps> = ({
                 const target = isSingleVariant
                   ? { ...vars[0], variantCount: 1 }
                   : p;
-                const hasMultipleVariants =
-                  target.variantCount && target.variantCount > 1;
-                const priceId = hasMultipleVariants
-                  ? null
-                  : vars.length === 1
-                    ? vars[0]?.id
-                    : target.id;
-                const priceData = priceId ? getPrice(priceId) : undefined;
                 // Only stagger animation on first page; subsequent pages appear instantly
                 const animIndex = pageIdx === 0 ? pageItemIndex : 0;
                 pageItemIndex++;
@@ -543,7 +467,6 @@ export const TimeProductSearch: FC<TimeProductSearchProps> = ({
                       key={`row-${target.id}`}
                       product={target}
                       lang={lang}
-                      priceData={priceData}
                       index={animIndex}
                     />
                   );
@@ -554,7 +477,6 @@ export const TimeProductSearch: FC<TimeProductSearchProps> = ({
                     key={`card-${target.id}`}
                     product={target}
                     lang={lang}
-                    priceData={priceData}
                     index={animIndex}
                   />
                 );
