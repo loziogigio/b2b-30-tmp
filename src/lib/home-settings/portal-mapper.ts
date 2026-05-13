@@ -197,6 +197,7 @@ export function mapPortalToHomeSettings(
 
   return {
     ...DEFAULT_HOME_SETTINGS,
+    companyName: portal.name,
     branding: mapBranding(portal.branding),
     headerConfig: portal.header_config ?? DEFAULT_HOME_SETTINGS.headerConfig,
     ...(portal.header_config_draft && {

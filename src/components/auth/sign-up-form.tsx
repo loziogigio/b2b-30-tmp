@@ -5,7 +5,6 @@ import Input from '@components/ui/form/input';
 import Button from '@components/ui/button';
 import { useForm } from 'react-hook-form';
 import Logo from '@components/ui/logo';
-import Image from '@components/ui/image';
 import { useModalAction } from '@components/common/modal/modal.context';
 import CloseButton from '@components/ui/close-button';
 import cn from 'classnames';
@@ -28,7 +27,7 @@ export default function SignUpForm({
 }: RegistrationRequestFormProps) {
   const { t } = useTranslation(lang, ['common', 'forms']);
   const { mutate: submitRequest, isPending } = useRegistrationRequestMutation();
-  const { closeModal, openModal } = useModalAction();
+  const { closeModal } = useModalAction();
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   const {
@@ -37,10 +36,6 @@ export default function SignUpForm({
     formState: { errors },
     reset,
   } = useForm<RegistrationRequestInputType>();
-
-  function handleSignIn() {
-    return openModal('LOGIN_VIEW');
-  }
 
   function onSubmit(data: RegistrationRequestInputType) {
     submitRequest(data, {
@@ -56,21 +51,13 @@ export default function SignUpForm({
     return (
       <div
         className={cn(
-          'flex mx-auto rounded-lg md:w-[720px] lg:w-[920px] xl:w-[1000px] 2xl:w-[1200px]',
+          'flex mx-auto rounded-lg md:w-[480px] lg:w-[540px]',
           className,
         )}
       >
         {isPopup && <CloseButton onClick={closeModal} />}
         <div className="flex w-full mx-auto overflow-hidden rounded-lg bg-white shadow-2xl ring-1 ring-black/5">
-          <div className="md:w-1/2 lg:w-[55%] xl:w-[60%] registration hidden md:block relative">
-            <Image
-              src="/assets/images/login-desk.svg"
-              alt="B2B shop counter"
-              fill
-              className="object-contain"
-            />
-          </div>
-          <div className="w-full md:w-1/2 lg:w-[45%] xl:w-[40%] py-10 px-4 sm:px-8 md:px-6 lg:px-8 xl:px-12 rounded-md shadow-dropDown flex flex-col justify-center items-center text-center">
+          <div className="w-full py-10 px-4 sm:px-8 md:px-10 rounded-md shadow-dropDown flex flex-col justify-center items-center text-center">
             <div className="mb-6">
               <Logo />
             </div>
@@ -111,23 +98,15 @@ export default function SignUpForm({
   return (
     <div
       className={cn(
-        'flex mx-auto rounded-lg md:w-[720px] lg:w-[920px] xl:w-[1000px] 2xl:w-[1200px]',
+        'flex mx-auto rounded-lg md:w-[560px] lg:w-[640px]',
         className,
       )}
     >
       {isPopup && <CloseButton onClick={closeModal} />}
       <div className="flex w-full mx-auto overflow-hidden rounded-lg bg-white shadow-2xl ring-1 ring-black/5">
-        <div className="md:w-1/2 lg:w-[55%] xl:w-[60%] registration hidden md:block relative">
-          <Image
-            src="/assets/images/login-desk.svg"
-            alt="B2B shop counter"
-            fill
-            className="object-contain"
-          />
-        </div>
-        <div className="w-full md:w-1/2 lg:w-[45%] xl:w-[40%] py-6 sm:py-10 px-4 sm:px-8 md:px-6 lg:px-8 xl:px-12 rounded-md shadow-dropDown flex flex-col justify-center">
+        <div className="w-full py-6 sm:py-10 px-4 sm:px-8 md:px-10 rounded-md shadow-dropDown flex flex-col justify-center">
           <div className="text-center mb-6 pt-2.5">
-            <div onClick={closeModal}>
+            <div onClick={closeModal} className="flex justify-center">
               <Logo />
             </div>
             <h4 className="text-xl font-semibold text-brand-dark sm:text-2xl sm:pt-3">
@@ -136,16 +115,6 @@ export default function SignUpForm({
             <p className="mt-2 text-sm text-body">
               {t('common:registration-request-subtitle')}
             </p>
-            <div className="mt-3 mb-1 text-sm text-center sm:text-base text-body">
-              {t('common:text-already-registered')}
-              <button
-                type="button"
-                className="text-sm font-semibold ltr:ml-1 rtl:mr-1 sm:text-base text-brand hover:no-underline focus:outline-none"
-                onClick={handleSignIn}
-              >
-                {t('common:text-sign-in-now')}
-              </button>
-            </div>
           </div>
           <form
             onSubmit={handleSubmit(onSubmit)}

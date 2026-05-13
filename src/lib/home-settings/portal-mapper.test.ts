@@ -12,6 +12,7 @@ describe('mapPortalToHomeSettings', () => {
 
   it('maps branding snake_case → camelCase, falling back to defaults', () => {
     const hs = mapPortalToHomeSettings({
+      name: 'Acme S.r.l.',
       branding: {
         title: 'Acme',
         logo_url: 'https://cdn/logo.png',
@@ -19,6 +20,7 @@ describe('mapPortalToHomeSettings', () => {
         accent_color: '#0000ff',
       },
     });
+    expect(hs.companyName).toBe('Acme S.r.l.');
     expect(hs.branding.title).toBe('Acme');
     expect(hs.branding.logo).toBe('https://cdn/logo.png');
     expect(hs.branding.primaryColor).toBe('#ff0000');

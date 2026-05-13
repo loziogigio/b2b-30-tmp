@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useUI } from '@contexts/ui.context';
 import { useModalAction } from '@components/common/modal/modal.context';
@@ -10,8 +10,19 @@ import { useHomeSettingsContext } from '@contexts/home-settings.context';
 import { useAutoRefreshToken } from '@/hooks/use-auto-refresh-token';
 import { useActivityHeartbeat } from '@/hooks/use-activity-heartbeat';
 import { getClientSSOLoginUrl } from '@/lib/sso-api';
+import { getCompanyProfile } from '@/lib/company-profile';
 import Logo from '@components/ui/logo';
 import { IoAlertCircle, IoClose } from 'react-icons/io5';
+import {
+  HiArrowRight,
+  HiOutlineBuildingOffice2,
+  HiOutlineCheckBadge,
+  HiOutlineEnvelope,
+  HiOutlineGlobeAlt,
+  HiOutlineIdentification,
+  HiOutlineMapPin,
+  HiOutlinePhone,
+} from 'react-icons/hi2';
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -66,6 +77,15 @@ const AUTH_ERROR_MESSAGES: Record<
 // Fallback to env variable if tenant context not available
 const ENV_REQUIRE_LOGIN = process.env.NEXT_PUBLIC_REQUIRE_LOGIN === 'true';
 
+function splitInfoLines(value?: string | null): string[] {
+  if (!value) return [];
+
+  return value
+    .split(/\s*\|\s*|\s*;\s*/g)
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
 /**
  * AuthGuard - Optionally blocks access to the app if user is not authenticated.
  *
@@ -98,6 +118,18 @@ export default function AuthGuard({ children, lang }: AuthGuardProps) {
 
   // Get company branding from home settings
   const branding = homeSettings?.settings?.branding;
+  const companyProfile = useMemo(
+    () => getCompanyProfile(homeSettings?.settings),
+    [homeSettings?.settings],
+  );
+  const legalInfoLines = useMemo(
+    () =>
+      splitInfoLines(companyProfile.legalLine).filter(
+        (line) =>
+          !companyProfile.vatNumber || !line.includes(companyProfile.vatNumber),
+      ),
+    [companyProfile.legalLine, companyProfile.vatNumber],
+  );
 
   // Get requireLogin from tenant config, fallback to env variable
   const requireLogin = tenantContext?.tenant?.requireLogin ?? ENV_REQUIRE_LOGIN;
@@ -176,106 +208,296 @@ export default function AuthGuard({ children, lang }: AuthGuardProps) {
 
   // Not authorized - show blocking overlay with login prompt and company info
   return (
-    <div className="fixed inset-0 z-40 flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
-      <div className="flex flex-col items-center gap-6 p-8 text-center max-w-lg">
-        {/* Auth Error Alert */}
-        {authError && showError && (
-          <div className="w-full mb-2 p-4 bg-red-50 border border-red-200 rounded-lg relative">
-            <button
-              onClick={dismissError}
-              className="absolute top-2 right-2 p-1 text-red-400 hover:text-red-600 hover:bg-red-100 rounded"
-              aria-label="Chiudi"
-            >
-              <IoClose className="w-4 h-4" />
-            </button>
-            <div className="flex items-start gap-3 pr-6">
-              <IoAlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-              <div className="text-left">
-                <p className="font-medium text-red-800">
-                  {errorInfo?.title || 'Errore di autenticazione'}
+    <div className="fixed inset-0 z-40 overflow-y-auto bg-[radial-gradient(circle_at_top,_rgba(59,130,246,0.14),_transparent_30%),linear-gradient(135deg,#f8fbff_0%,#eef4fb_45%,#e8eef7_100%)]">
+      <div className="absolute inset-0 opacity-60">
+        <div className="absolute left-[8%] top-[12%] h-40 w-40 rounded-full bg-brand/10 blur-3xl" />
+        <div className="absolute bottom-[14%] right-[10%] h-56 w-56 rounded-full bg-sky-200/30 blur-3xl" />
+      </div>
+
+      <div className="relative min-h-screen w-full xl:grid xl:grid-cols-[40%_60%]">
+        <div className="hidden bg-[linear-gradient(160deg,rgba(15,23,42,0.96)_0%,rgba(30,41,59,0.94)_42%,rgba(37,99,235,0.88)_100%)] text-white xl:flex xl:min-h-screen xl:justify-end">
+          <div className="flex w-full max-w-[42rem] flex-col justify-center px-10 py-16 2xl:px-16">
+            <div className="space-y-6">
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-slate-100/90">
+                <HiOutlineCheckBadge className="h-4 w-4" />
+                {t('text-login-portal-label', {
+                  defaultValue: 'B2B Portal',
+                })}
+              </div>
+
+              <div className="space-y-4">
+                <p className="text-sm font-medium uppercase tracking-[0.28em] text-sky-100/75">
+                  {companyProfile.brandName ||
+                    t('text-login-portal-eyebrow', {
+                      defaultValue: 'Private commerce',
+                    })}
                 </p>
-                <p className="text-sm text-red-600 mt-1">
-                  {errorMessage ||
-                    errorInfo?.description ||
-                    'Si è verificato un errore. Riprova.'}
+                <h1 className="max-w-md text-4xl font-semibold leading-tight text-white">
+                  {companyProfile.name}
+                </h1>
+                <p className="max-w-lg text-base leading-7 text-slate-200/88">
+                  {companyProfile.description ||
+                    t('text-login-subtitle', {
+                      defaultValue: 'Sign in to manage your orders',
+                    })}
                 </p>
               </div>
             </div>
+
+            <div className="flex flex-col gap-4">
+              <div className="rounded-2xl border border-white/10 bg-white/10 p-5 backdrop-blur-sm">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/12 ring-1 ring-inset ring-white/10 shadow-[0_10px_30px_rgba(15,23,42,0.12)]">
+                    <HiOutlineMapPin className="h-5 w-5 text-sky-100" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-white">
+                      {t('text-delivery-address', {
+                        defaultValue: 'Address',
+                      })}
+                    </p>
+                    <div className="mt-2 space-y-1 text-sm leading-6 text-slate-200/80">
+                      {companyProfile.addressLines.length > 0 ? (
+                        companyProfile.addressLines.map((line) => (
+                          <p
+                            key={line}
+                            className="border-b border-white/5 pb-2 last:border-b-0 last:pb-0"
+                          >
+                            {line}
+                          </p>
+                        ))
+                      ) : (
+                        <p>{companyProfile.brandName || companyProfile.name}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-white/10 p-5 backdrop-blur-sm">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/12 ring-1 ring-inset ring-white/10 shadow-[0_10px_30px_rgba(15,23,42,0.12)]">
+                    <HiOutlinePhone className="h-5 w-5 text-sky-100" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-white">
+                      {t('text-login-company-contact-title', {
+                        defaultValue: 'Contact',
+                      })}
+                    </p>
+                    <div className="mt-2 space-y-2 text-sm leading-6 text-slate-200/80">
+                      {companyProfile.phone && (
+                        <a
+                          href={`tel:${companyProfile.phone.replace(/\s+/g, '')}`}
+                          className="flex items-start gap-2 transition-colors hover:text-white"
+                        >
+                          <HiOutlinePhone className="mt-1 h-4 w-4 shrink-0 text-sky-100/90" />
+                          <span>{companyProfile.phone}</span>
+                        </a>
+                      )}
+                      {companyProfile.email && (
+                        <a
+                          href={`mailto:${companyProfile.email}`}
+                          className="flex items-start gap-2 transition-colors hover:text-white"
+                        >
+                          <HiOutlineEnvelope className="mt-1 h-4 w-4 shrink-0 text-sky-100/90" />
+                          <span>{companyProfile.email}</span>
+                        </a>
+                      )}
+                      {!companyProfile.phone && !companyProfile.email && (
+                        <p>{companyProfile.description}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-white/10 p-5 backdrop-blur-sm">
+                <div className="flex items-start gap-4">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/12 ring-1 ring-inset ring-white/10 shadow-[0_10px_30px_rgba(15,23,42,0.12)]">
+                    <HiOutlineBuildingOffice2 className="h-5 w-5 text-sky-100" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-white">
+                      {t('text-login-company-legal-title', {
+                        defaultValue: 'Company',
+                      })}
+                    </p>
+                    <div className="mt-2 space-y-2 text-sm leading-6 text-slate-200/80">
+                      <p>{companyProfile.name}</p>
+                      {companyProfile.vatNumber && (
+                        <p className="flex items-start gap-2">
+                          <HiOutlineIdentification className="mt-1 h-4 w-4 shrink-0 text-sky-100/90" />
+                          <span>VAT {companyProfile.vatNumber}</span>
+                        </p>
+                      )}
+                      {companyProfile.websiteUrl && (
+                        <a
+                          href={companyProfile.websiteUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-start gap-2 transition-colors hover:text-white"
+                        >
+                          <HiOutlineGlobeAlt className="mt-1 h-4 w-4 shrink-0 text-sky-100/90" />
+                          <span>
+                            {companyProfile.websiteUrl.replace(
+                              /^https?:\/\//,
+                              '',
+                            )}
+                          </span>
+                        </a>
+                      )}
+                      {legalInfoLines.map((line) => (
+                        <p
+                          key={line}
+                          className="text-xs leading-5 text-slate-300/90"
+                        >
+                          {line}
+                        </p>
+                      ))}
+                      {companyProfile.legalLine &&
+                        legalInfoLines.length === 0 && (
+                          <p className="text-xs leading-5 text-slate-300/90">
+                            {companyProfile.legalLine}
+                          </p>
+                        )}
+                      {!companyProfile.legalLine &&
+                        companyProfile.brandName && (
+                          <p className="text-xs leading-5 text-slate-300/90">
+                            {companyProfile.brandName}
+                          </p>
+                        )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-        )}
-
-        {/* Company Logo */}
-        <Logo className="h-20 w-auto" />
-
-        {/* Company Name */}
-        {branding?.title && (
-          <h2 className="text-3xl font-bold text-gray-800">{branding.title}</h2>
-        )}
-
-        {/* Login Required Message */}
-        <div className="mt-4">
-          <h1 className="text-xl font-semibold text-brand-dark">
-            {t('text-login-required', { defaultValue: 'Accesso Richiesto' })}
-          </h1>
-          <p className="mt-2 text-sm text-gray-600">
-            {t('text-login-required-description', {
-              defaultValue:
-                "Effettua l'accesso per visualizzare questo sito. Se non hai un account, contatta il tuo fornitore.",
-            })}
-          </p>
         </div>
 
-        {/* Login Button - Redirects to SSO */}
-        <button
-          onClick={handleLogin}
-          className="mt-2 rounded-lg bg-brand px-8 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-dark shadow-lg hover:shadow-xl"
-        >
-          {t('text-login', { defaultValue: 'Login' })}
-        </button>
-
-        {/* Sign Up Link */}
-        <p className="text-sm text-gray-500">
-          {t("text-don't-have-account", {
-            defaultValue: "Don't have an account?",
-          })}{' '}
-          <button
-            onClick={handleSignUp}
-            className="font-semibold text-brand underline hover:text-brand-dark"
-          >
-            {t('text-create-account', { defaultValue: 'Request access' })}
-          </button>
-        </p>
-
-        {/* Company Links */}
-        {(branding?.websiteUrl || branding?.shopUrl) && (
-          <div className="mt-6 pt-6 border-t border-gray-200 w-full">
-            <div className="flex items-center justify-center gap-4 text-sm text-gray-500">
-              {branding?.websiteUrl && (
-                <a
-                  href={branding.websiteUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-brand transition-colors"
-                >
-                  {t('text-visit-website', { defaultValue: 'Visit Website' })}
-                </a>
+        <div className="flex min-h-screen items-center justify-center px-4 py-10 sm:px-6 lg:px-10 xl:bg-white/40 xl:backdrop-blur-[2px]">
+          <div className="w-full max-w-[36rem] rounded-[32px] border border-white/60 bg-white/78 p-6 shadow-[0_24px_80px_rgba(15,23,42,0.14)] backdrop-blur sm:p-8 lg:p-10">
+            <div className="mx-auto flex w-full max-w-lg flex-col gap-6">
+              {/* Auth Error Alert */}
+              {authError && showError && (
+                <div className="relative mb-2 w-full rounded-2xl border border-red-200 bg-red-50 p-4 shadow-sm">
+                  <button
+                    onClick={dismissError}
+                    className="absolute right-2 top-2 rounded p-1 text-red-400 hover:bg-red-100 hover:text-red-600"
+                    aria-label="Chiudi"
+                  >
+                    <IoClose className="w-4 h-4" />
+                  </button>
+                  <div className="flex items-start gap-3 pr-6">
+                    <IoAlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                    <div className="text-left">
+                      <p className="font-medium text-red-800">
+                        {errorInfo?.title || 'Errore di autenticazione'}
+                      </p>
+                      <p className="text-sm text-red-600 mt-1">
+                        {errorMessage ||
+                          errorInfo?.description ||
+                          'Si è verificato un errore. Riprova.'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
               )}
-              {branding?.websiteUrl && branding?.shopUrl && (
-                <span className="text-gray-300">|</span>
-              )}
-              {branding?.shopUrl && (
-                <a
-                  href={branding.shopUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-brand transition-colors"
+
+              <div className="space-y-6">
+                <div className="flex justify-center xl:hidden">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-slate-500 shadow-sm">
+                    <HiOutlineCheckBadge className="h-4 w-4 text-brand" />
+                    {t('text-login-portal-label', {
+                      defaultValue: 'B2B Portal',
+                    })}
+                  </div>
+                </div>
+
+                <div className="flex justify-center">
+                  <div className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-[0_18px_48px_rgba(15,23,42,0.08)]">
+                    <Logo className="h-16 w-auto sm:h-[4.5rem]" />
+                  </div>
+                </div>
+
+                <div className="space-y-3 text-center">
+                  {branding?.title && (
+                    <p className="text-sm font-semibold uppercase tracking-[0.22em] text-slate-500">
+                      {branding.title}
+                    </p>
+                  )}
+                  <h2 className="text-3xl font-semibold tracking-tight text-slate-950">
+                    {t('text-login-required', {
+                      defaultValue: 'Accesso Richiesto',
+                    })}
+                  </h2>
+                  <p className="mx-auto max-w-md text-sm leading-6 text-slate-600 sm:text-[15px]">
+                    {t('text-login-required-description', {
+                      defaultValue:
+                        "Effettua l'accesso per visualizzare questo sito. Se non hai un account, contatta il tuo fornitore.",
+                    })}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <button
+                  onClick={handleLogin}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-brand px-8 py-4 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(37,99,235,0.28)] transition-all hover:-translate-y-0.5 hover:bg-brand-dark hover:shadow-[0_18px_36px_rgba(37,99,235,0.32)]"
                 >
-                  {t('text-visit-shop', { defaultValue: 'Visit Shop' })}
-                </a>
+                  {t('text-login', { defaultValue: 'Login' })}
+                  <HiArrowRight className="h-4 w-4" />
+                </button>
+
+                <p className="text-center text-sm text-slate-500">
+                  {t("text-don't-have-account", {
+                    defaultValue: "Don't have an account?",
+                  })}{' '}
+                  <button
+                    onClick={handleSignUp}
+                    className="font-semibold text-brand underline decoration-2 underline-offset-4 hover:text-brand-dark"
+                  >
+                    {t('text-create-account', {
+                      defaultValue: 'Request access',
+                    })}
+                  </button>
+                </p>
+              </div>
+
+              {(branding?.websiteUrl || branding?.shopUrl) && (
+                <div className="border-t border-slate-200 pt-5">
+                  <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm text-slate-500">
+                    {branding?.websiteUrl && (
+                      <a
+                        href={branding.websiteUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="transition-colors hover:text-brand"
+                      >
+                        {t('text-visit-website', {
+                          defaultValue: 'Visit Website',
+                        })}
+                      </a>
+                    )}
+                    {branding?.websiteUrl && branding?.shopUrl && (
+                      <span className="text-slate-300">|</span>
+                    )}
+                    {branding?.shopUrl && (
+                      <a
+                        href={branding.shopUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="transition-colors hover:text-brand"
+                      >
+                        {t('text-visit-shop', { defaultValue: 'Visit Shop' })}
+                      </a>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

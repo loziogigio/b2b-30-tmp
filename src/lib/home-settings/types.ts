@@ -235,6 +235,7 @@ export interface FooterConfig {
 export interface HomeSettings {
   _id?: string;
   customerId?: string;
+  companyName?: string;
   branding: CompanyBranding;
   defaultCardVariant: 'b2b' | 'horizontal' | 'compact' | 'detailed';
   cardStyle: ProductCardStyle;
