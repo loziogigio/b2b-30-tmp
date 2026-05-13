@@ -81,6 +81,18 @@ export function productToErpPriceData(
   // reference so PriceCell can render the strikethrough.
   const allPromoOffers = flattenPromoOffers(packagingOptions, pricing.list);
 
+  // Legacy `is_improving_promo`: when the LISTINO's default-for-sale
+  // packaging qty already covers a promo's min_quantity, buying at the
+  // listino MV auto-applies the promo. B2BOfferRows uses this flag to
+  // hide the LISTINO counter so the promo row is the only add path.
+  const listinoMv = Math.max(
+    Number(defaultForSale.qty_x_packaging ?? 1),
+    1,
+  );
+  const isImprovingPromo = allPromoOffers.some(
+    (o) => Math.max(Number(o.promo_qty_required ?? 0), 1) <= listinoMv,
+  );
+
   const netPrice = pricing.list;
   // `gross_price` in the legacy ErpPriceData drives the PriceCell
   // strikethrough. For B2B, the legit "old price" is the NET retail/MSRP,
@@ -117,6 +129,7 @@ export function productToErpPriceData(
     // card's headline price isn't tinted red just because offers exist.
     is_promo: false,
     promo: false,
+    is_improving_promo: isImprovingPromo,
     count_promo: allPromoOffers.length,
     num_promo: allPromoOffers.length,
     discount_description: '',
