@@ -70,7 +70,11 @@ export function buildPromoPriceData(
 ): ErpPriceData {
   const baseDefault = base.packaging_option_default;
   const promoStep = Math.max(offer.promo_qty_required || 0, 1);
-  const promoPackaging: PackagingOption = {
+
+  // `packaging_option_default` drives AddToCart's step — the MV
+  // (Minimum Vendita) for this promo. We carry promoStep here so the
+  // qty counter increments in multiples of the min purchasable amount.
+  const stepPackaging: PackagingOption = {
     packaging_uom_description: baseDefault?.packaging_uom_description ?? '',
     packaging_code: baseDefault?.packaging_code ?? 'MV',
     packaging_is_default: true,
@@ -78,6 +82,13 @@ export function buildPromoPriceData(
     qty_x_packaging: promoStep,
     packaging_uom: baseDefault?.packaging_uom ?? '',
   };
+
+  // The grid column should show the *catalog* packaging size (CFZ = 1
+  // piece), not the inflated promo step. Reuse the listino's default
+  // packaging so the buyer sees "CFZ 1" alongside the "MV 2" header.
+  const displayPackaging: PackagingOption = baseDefault
+    ? { ...baseDefault, packaging_is_default: true }
+    : stepPackaging;
 
   return {
     ...base,
@@ -93,9 +104,10 @@ export function buildPromoPriceData(
     end_promo_date: offer.promo_end_date,
     start_promo_date: offer.promo_start_date,
     discount_extra: offer.promo_extra_discounts,
-    packaging_option_default: promoPackaging,
-    // Show only the promo's required packaging in the grid for this row
-    packaging_options_all: [promoPackaging],
+    packaging_option_default: stepPackaging,
+    // Show only the promo's sellable packaging in the grid for this row,
+    // with its original catalog qty (not the promo step).
+    packaging_options_all: [displayPackaging],
   };
 }
 
