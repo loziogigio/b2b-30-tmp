@@ -40,11 +40,12 @@ type Props = {
 };
 
 /**
- * Build a PriceSlice from a Product's inline pricing block. Mirrors the
- * ERP semantics: `gross_price` = list × (1 + VAT) for the strikethrough,
- * `price_discount` = NET list for the headline. Promotions stay out of
- * the headline (min_quantity gating makes the promo price conditional);
- * we only surface them via `count_promo` for the "+N" badge.
+ * Build a PriceSlice from a Product's inline pricing block. For B2B the
+ * only legit strikethrough is when retail/MSRP is genuinely higher than
+ * the customer's list price — VAT-inflated values are not a markdown.
+ * `is_promo` describes whether *this* price is a promo override, not
+ * whether promos exist alongside it; we surface offers via the "+N" /
+ * Promo badge instead so the headline price doesn't turn red.
  */
 function productToPriceSlice(product?: Product | null): PriceSlice | null {
   const pricing = product?.pricing;
@@ -62,9 +63,9 @@ function productToPriceSlice(product?: Product | null): PriceSlice | null {
 
   return {
     price_discount: pricing.list,
-    gross_price: pricing.gross ?? pricing.list,
+    gross_price: pricing.retail ?? pricing.list,
     discount_description: '',
-    is_promo: count_promo > 0,
+    is_promo: false,
     count_promo,
   };
 }
