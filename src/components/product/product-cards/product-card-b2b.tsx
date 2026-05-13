@@ -23,6 +23,7 @@ import AddToCart from '../add-to-cart';
 import { Eye } from '@components/icons/eye-icon';
 import useWindowSize from '@utils/use-window-size';
 import { buildPromoPriceData, pickImprovingOffer } from '../b2b-offer-rows';
+import { productToErpPriceData } from '@utils/transform/inline-to-erp';
 import LastOrdered from '../last-ordered';
 
 interface RenderPopupOrAddToCartProps {
@@ -47,19 +48,31 @@ function RenderPopupOrAddToCart({
   const hasVariants =
     (data.variantCount && data.variantCount > 1) || variations.length > 1;
 
+  // Prefer the ERP slice (back-compat); otherwise synthesize from the
+  // inline product.pricing so the counter still renders on cards inside
+  // carousels / lists (which no longer fetch ERP).
+  const effectivePriceData: ErpPriceData | undefined =
+    priceData ?? productToErpPriceData(data) ?? undefined;
+
   // Check availability from ERP data
-  const isOutOfStock = priceData ? Number(priceData.availability) <= 0 : false;
-  const canAddToCart = priceData?.product_label_action?.ADD_TO_CART ?? true;
+  const isOutOfStock = effectivePriceData
+    ? Number(effectivePriceData.availability) <= 0
+    : false;
+  const canAddToCart =
+    effectivePriceData?.product_label_action?.ADD_TO_CART ?? true;
 
   // Promo gate: if there are promos but the buyer can't trigger them with the
   // default MV (or there are multiple promos to choose from), surface the
   // detail modal instead of an ambiguous counter.
-  const promoCount = (priceData as any)?.all_promo_offers?.length ?? 0;
+  const promoCount =
+    (effectivePriceData as any)?.all_promo_offers?.length ?? 0;
   const hasPromo =
     promoCount > 0 ||
-    Boolean((priceData as any)?.promo) ||
-    Boolean((priceData as any)?.is_promo);
-  const isImprovingPromo = Boolean((priceData as any)?.is_improving_promo);
+    Boolean((effectivePriceData as any)?.promo) ||
+    Boolean((effectivePriceData as any)?.is_promo);
+  const isImprovingPromo = Boolean(
+    (effectivePriceData as any)?.is_improving_promo,
+  );
   const promoNeedsDetail = hasPromo && (promoCount > 1 || !isImprovingPromo);
 
   function handlePopupView() {
@@ -74,7 +87,8 @@ function RenderPopupOrAddToCart({
   if (isOutOfStock && !canAddToCart) {
     return (
       <span className="text-[11px] md:text-xs font-bold text-brand-light uppercase inline-block bg-brand-danger rounded-full px-2.5 pt-1 pb-[3px]">
-        {priceData?.product_label_action?.LABEL || t('text-out-stock')}
+        {effectivePriceData?.product_label_action?.LABEL ||
+          t('text-out-stock')}
       </span>
     );
   }
@@ -92,13 +106,14 @@ function RenderPopupOrAddToCart({
   }
 
   // Check if we have a valid price - if not, don't show add to cart
-  const anyPD = priceData as any;
+  const anyPD = effectivePriceData as any;
   const price =
     anyPD?.price_discount ??
     anyPD?.net_price ??
     anyPD?.gross_price ??
     anyPD?.price_gross;
-  const hasValidPrice = priceData && price != null && Number(price) > 0;
+  const hasValidPrice =
+    effectivePriceData && price != null && Number(price) > 0;
 
   // No valid price - don't show add to cart, just return null (visualizza prodotto button will show below)
   if (!hasValidPrice) {
@@ -120,14 +135,19 @@ function RenderPopupOrAddToCart({
   // When the listino MV already triggers a promo, swap the priceData for the
   // matching offer so the cart line is added with the promo price + tier
   // discounts + promo_code/row, rather than as a flat listino line.
-  const matchingOffer = priceData ? pickImprovingOffer(priceData) : null;
-  if (matchingOffer && priceData) {
-    const promoPriceData = buildPromoPriceData(priceData, matchingOffer);
+  const matchingOffer = effectivePriceData
+    ? pickImprovingOffer(effectivePriceData)
+    : null;
+  if (matchingOffer && effectivePriceData) {
+    const promoPriceData = buildPromoPriceData(
+      effectivePriceData,
+      matchingOffer,
+    );
     const variation = {
       id: `promo-${matchingOffer.promo_code}-${matchingOffer.promo_row}`,
       title: matchingOffer.promo_title || `Promo ${matchingOffer.promo_code}`,
       price: matchingOffer.promo_net_price,
-      quantity: priceData.availability ?? 0,
+      quantity: effectivePriceData.availability ?? 0,
     } as any;
     return (
       <AddToCart
@@ -135,7 +155,7 @@ function RenderPopupOrAddToCart({
         product={data}
         priceData={promoPriceData}
         variation={variation}
-        serverItemId={priceData.entity_code ?? data?.id}
+        serverItemId={effectivePriceData.entity_code ?? data?.id}
         showPlaceholder={false}
       />
     );
@@ -146,7 +166,7 @@ function RenderPopupOrAddToCart({
     <AddToCart
       lang={lang}
       product={data}
-      priceData={priceData}
+      priceData={effectivePriceData}
       showPlaceholder={false}
     />
   );
@@ -429,8 +449,7 @@ const ProductCardB2B: React.FC<ProductProps> = ({
       {/* Price and CTA Section */}
       <div className="flex flex-col mt-auto">
         {/* Price - only for single-variant products. PriceAndPromo prefers
-            inline product.pricing and falls back to ERP priceData; it also
-            renders "Prezzo su richiesta" for on-request/draft items. */}
+            inline product.pricing and falls back to ERP priceData. */}
         {(priceData || product?.pricing) && (
           <PriceAndPromo
             name={name}
