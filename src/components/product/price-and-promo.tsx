@@ -26,8 +26,7 @@ type Props = {
   sku?: string;
   /**
    * Product with inline pricing (preferred source). When `product.pricing`
-   * is 'priced', it overrides `priceData`. When 'on-request' or 'draft',
-   * the card renders a "Prezzo su richiesta" hint instead of nothing.
+   * is 'priced', it overrides `priceData`. Otherwise nothing is rendered.
    */
   product?: Product | null;
   // Accept ERP or the slice; allow undefined/null
@@ -97,27 +96,12 @@ export default function PriceAndPromo({
   // Hide prices when toggle is active (like when not logged in)
   if (hidePrices) return null;
 
-  // Inline product pricing wins over the ERP slice. Status === 'on-request'
-  // / 'draft' falls through with effective=null, then we render the hint.
+  // Inline product pricing wins over the ERP slice.
   const productSlice = productToPriceSlice(product);
   const effective: Partial<PriceSlice> | ErpPriceData | null =
     productSlice ?? priceData ?? null;
 
   if (!effective) {
-    const status = product?.pricing?.status;
-    if (status === 'on-request' || status === 'draft') {
-      return (
-        <span
-          className={cn(
-            'text-xs italic',
-            invertColors ? 'text-white/80' : 'text-gray-500',
-            className,
-          )}
-        >
-          Prezzo su richiesta
-        </span>
-      );
-    }
     return null;
   }
 
@@ -220,9 +204,9 @@ export default function PriceAndPromo({
               type="button"
               onClick={onPromosClick}
               title="View all promotions"
-              className="bg-red-500 text-white text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0.5 rounded-full font-semibold"
+              className="bg-red-500 text-white text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide"
             >
-              +{count_promo}
+              Promo
             </button>
           )}
         </div>

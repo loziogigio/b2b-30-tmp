@@ -140,10 +140,30 @@ function toErpPromoOffer(
     promo_net_price: Number(p.promo_price ?? 0),
     promo_ref_list_price: listNet,
     promo_standard_price: listNet,
-    promo_start_date: p.start_date ?? '',
-    promo_end_date: p.end_date ?? '',
+    promo_start_date: toYmd(p.start_date),
+    promo_end_date: toYmd(p.end_date),
     promo_extra_discounts:
       p.discount_percentage != null ? [Number(p.discount_percentage)] : [],
     promo_gift_qty: 0,
   };
+}
+
+/**
+ * Normalize PIM promo dates to YYYY-MM-DD so the existing offer-row
+ * formatter renders DD/MM/YYYY. The BE ships ISO timestamps
+ * (e.g. "2026-05-14T22:00:00.000Z") which the existing fmtDate regex
+ * doesn't match — it falls through to the raw string and the UI shows
+ * the full ISO timestamp instead of an Italian-formatted date.
+ */
+function toYmd(value?: string): string {
+  if (!value) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  const t = Date.parse(value);
+  if (Number.isNaN(t)) return value;
+  const d = new Date(t);
+  return `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}-${pad2(d.getUTCDate())}`;
+}
+
+function pad2(n: number): string {
+  return String(n).padStart(2, '0');
 }
