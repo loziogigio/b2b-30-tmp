@@ -428,11 +428,14 @@ const ProductCardB2B: React.FC<ProductProps> = ({
 
       {/* Price and CTA Section */}
       <div className="flex flex-col mt-auto">
-        {/* Price - only for single-variant products */}
-        {priceData && (
+        {/* Price - only for single-variant products. PriceAndPromo prefers
+            inline product.pricing and falls back to ERP priceData; it also
+            renders "Prezzo su richiesta" for on-request/draft items. */}
+        {(priceData || product?.pricing) && (
           <PriceAndPromo
             name={name}
             sku={sku}
+            product={product}
             priceData={priceData}
             currency="EUR"
             withSchemaOrg={true}

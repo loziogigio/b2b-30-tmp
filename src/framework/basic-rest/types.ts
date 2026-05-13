@@ -46,12 +46,24 @@ export type Tag = {
   name: string;
   slug: string;
 };
+import type {
+  PimPackagingOption,
+  ProductPricing,
+} from './types/pim-pricing';
+
 export type Product = {
   id: number | string;
   id_parent?: number | string;
   name: string;
   slug: string;
+  /** Unit NET list price, derived from inline `pricing.list`. 0 when status !== 'priced'. */
   price: number;
+  /** Unit GROSS list price (NET * (1 + vat_rate/100) when !vat_included). */
+  priceGross?: number;
+  /** Normalized inline pricing block; absent for products that never had a pricing payload. */
+  pricing?: ProductPricing;
+  /** Inline packaging options (with their own pricing + promotions). */
+  packagingOptions?: PimPackagingOption[];
   quantity: number;
   sold: number;
   unit: string;

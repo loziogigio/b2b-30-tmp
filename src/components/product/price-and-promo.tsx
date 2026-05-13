@@ -10,6 +10,7 @@ import {
 import { useUI } from '@contexts/ui.context';
 import { useHomeSettings } from '@/hooks/use-home-settings';
 import { formatPriceIt } from '@utils/money';
+import type { Product } from '@framework/types';
 
 export type PriceSlice = Pick<
   ErpPriceData,
@@ -23,6 +24,12 @@ export type PriceSlice = Pick<
 type Props = {
   name?: string;
   sku?: string;
+  /**
+   * Product with inline pricing (preferred source). When `product.pricing`
+   * is 'priced', it overrides `priceData`. When 'on-request' or 'draft',
+   * the card renders a "Prezzo su richiesta" hint instead of nothing.
+   */
+  product?: Product | null;
   // Accept ERP or the slice; allow undefined/null
   priceData?: Partial<PriceSlice> | ErpPriceData | null;
   className?: string;
@@ -32,6 +39,36 @@ type Props = {
   /** Use white text for dark backgrounds */
   invertColors?: boolean;
 };
+
+/**
+ * Build a PriceSlice from a Product's inline pricing block. Mirrors the
+ * ERP semantics: `gross_price` = list × (1 + VAT) for the strikethrough,
+ * `price_discount` = NET list for the headline. Promotions stay out of
+ * the headline (min_quantity gating makes the promo price conditional);
+ * we only surface them via `count_promo` for the "+N" badge.
+ */
+function productToPriceSlice(product?: Product | null): PriceSlice | null {
+  const pricing = product?.pricing;
+  if (!pricing || pricing.status !== 'priced' || pricing.list == null) {
+    return null;
+  }
+
+  const packagingPromos = (product?.packagingOptions ?? []).flatMap(
+    (opt) => opt.promotions ?? [],
+  );
+  const rootPromos = Array.isArray(product?.promotions)
+    ? (product?.promotions as unknown[])
+    : [];
+  const count_promo = packagingPromos.length + rootPromos.length;
+
+  return {
+    price_discount: pricing.list,
+    gross_price: pricing.gross ?? pricing.list,
+    discount_description: '',
+    is_promo: count_promo > 0,
+    count_promo,
+  };
+}
 
 const splitDiscountLines = (v: unknown): string[] => {
   if (!v && v !== 0) return [];
@@ -45,6 +82,7 @@ const splitDiscountLines = (v: unknown): string[] => {
 export default function PriceAndPromo({
   name,
   sku,
+  product,
   priceData,
   className,
   currency = 'EUR',
@@ -59,10 +97,32 @@ export default function PriceAndPromo({
   // Hide prices when toggle is active (like when not logged in)
   if (hidePrices) return null;
 
-  if (!priceData) return null;
+  // Inline product pricing wins over the ERP slice. Status === 'on-request'
+  // / 'draft' falls through with effective=null, then we render the hint.
+  const productSlice = productToPriceSlice(product);
+  const effective: Partial<PriceSlice> | ErpPriceData | null =
+    productSlice ?? priceData ?? null;
+
+  if (!effective) {
+    const status = product?.pricing?.status;
+    if (status === 'on-request' || status === 'draft') {
+      return (
+        <span
+          className={cn(
+            'text-xs italic',
+            invertColors ? 'text-white/80' : 'text-gray-500',
+            className,
+          )}
+        >
+          Prezzo su richiesta
+        </span>
+      );
+    }
+    return null;
+  }
 
   // normalize shapes (support net_price and price_gross too)
-  const anyPD = priceData as any;
+  const anyPD = effective as any;
   const price_discount = anyPD.price_discount ?? anyPD.net_price;
   const gross_price = anyPD.gross_price ?? anyPD.price_gross;
   const discount_description = anyPD.discount_description;

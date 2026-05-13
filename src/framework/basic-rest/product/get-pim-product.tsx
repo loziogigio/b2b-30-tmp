@@ -9,6 +9,10 @@ import type {
   PimProductAttribute,
   PimSearchResponse,
 } from 'vinc-pim';
+import {
+  normalizeProductPricing,
+  type RawPimProductWithPricing,
+} from '../types/pim-pricing';
 
 // ===============================
 // Image versioning: PIM pre-generates S3 variants with filename prefixes
@@ -116,6 +120,14 @@ export function transformPimProduct(raw: PimProduct): Product {
   const originalUrl =
     raw.image?.original || raw.cover_image_url || raw.images?.[0]?.url || '';
 
+  // Inline pricing block (drafts and no-pricelist items have status !== 'priced').
+  const rawWithPricing = raw as RawPimProductWithPricing;
+  const pricing = normalizeProductPricing(
+    rawWithPricing.pricing,
+    rawWithPricing.status,
+  );
+  const packagingOptions = rawWithPricing.packaging_options ?? [];
+
   return {
     id: raw.entity_code || raw.id || '', // Prefer entity_code for ERP compatibility
     sku: raw.sku || '',
@@ -142,8 +154,11 @@ export function transformPimProduct(raw: PimProduct): Product {
     large_pictures: pics.original,
     quantity: raw.quantity || 0,
     unit: raw.unit || 'pcs',
-    price: 0, // Price comes from ERP
+    price: pricing.list ?? 0,
     sale_price: 0,
+    priceGross: pricing.gross,
+    pricing,
+    packagingOptions,
     product_type: 'simple',
     brand: raw.brand
       ? {
