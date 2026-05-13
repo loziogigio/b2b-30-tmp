@@ -384,8 +384,14 @@ export default function ProductRowB2B({
           ) : null}
           {sortedVariants.map((v) => {
             const isPseudo = !!(v as any).__pseudo;
+            // For pseudo rows (products without variations), the row IS
+            // the parent. Synthesize priceData from the parent's inline
+            // pricing when the caller didn't pass an ERP slice — the
+            // list-view search no longer threads priceData, so without
+            // this fallback the row would have no packaging grid, price
+            // or add-to-cart.
             const vPrice: ErpPriceData | undefined = isPseudo
-              ? priceData
+              ? (priceData ?? productToErpPriceData(product) ?? undefined)
               : getVariantPrice(v.id);
             const vImg = v.image?.thumbnail || productPlaceholder;
             const targetSku = String(v.sku ?? sku ?? '').trim();
