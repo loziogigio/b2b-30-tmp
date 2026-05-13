@@ -7,6 +7,7 @@ import { useCart } from '@contexts/cart/cart.context';
 import type { Item } from '@contexts/cart/cart.utils';
 import { generateCartItem } from '@utils/generate-cart-item';
 import { useTranslation } from 'src/app/i18n/client';
+import { toast } from 'react-toastify';
 import type { ErpPriceData } from '@utils/transform/erp-prices';
 
 interface AddToCartProps {
@@ -275,10 +276,21 @@ export default function AddToCart({
   }, [item, serverItemId]);
 
   const scheduleSync = (targetU: number) => {
-    // optimistic local update — use the unmangled-id lookupItem so the reducer
-    // updates the actual cart line for this promo identity instead of pushing
-    // a phantom item with a "id.variationId" key.
-    setItemQuantity(lookupItem, fromUnits(targetU));
+    // Snap qty up to a multiple of the packaging step before sending.
+    // The packaging_option_default.qty_x_packaging is the minimum
+    // sellable unit (e.g. a promo with qty_required=2 sets step=2), and
+    // the BE rejects sub-step quantities with "Minimum order quantity is N".
+    const stepU = toUnits(step);
+    const snappedU =
+      targetU > 0 && stepU > 0
+        ? Math.ceil(targetU / stepU) * stepU
+        : targetU;
+
+    setItemQuantity(lookupItem, fromUnits(snappedU));
+    if (snappedU !== targetU) {
+      pendingTargetRef.current = fromUnits(snappedU);
+      setDraft(String(fromUnits(snappedU)));
+    }
 
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
@@ -286,12 +298,27 @@ export default function AddToCart({
       try {
         const payload = buildAddPayload({
           itemId: serverItemId ?? lookupItem.id,
-          qty: fromUnits(targetU),
+          qty: fromUnits(snappedU),
           priceData: effectivePriceData,
           promo_code: item.__cartMeta?.promo_code,
           promo_row: item.__cartMeta?.promo_row,
         });
         await addToCartServer?.(payload, lookupItem);
+      } catch (err: any) {
+        // The BE returns 4xx with `{ error: "..." }` (e.g. min-quantity,
+        // out-of-stock). Surface it as a toast instead of letting the
+        // axios error escape to the Next.js runtime overlay.
+        const beMessage =
+          err?.response?.data?.error ||
+          err?.response?.data?.message ||
+          err?.message ||
+          'Errore durante l\'aggiunta al carrello';
+        toast.error(beMessage);
+        // Roll back the optimistic update so the input reflects the
+        // server-side state, not the rejected qty.
+        setItemQuantity(lookupItem, 0);
+        pendingTargetRef.current = 0;
+        setDraft('0');
       } finally {
         setIsSyncing(false);
       }
