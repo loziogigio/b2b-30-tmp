@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import Container from '@components/ui/container';
 import {
   ProductComparisonTable,
@@ -11,13 +11,11 @@ import { useCompareList } from '@/contexts/compare/compare.context';
 import { useSearchParams } from 'next/navigation';
 import type { Product } from '@framework/types';
 import { HiOutlineExclamationCircle } from 'react-icons/hi';
-import { fetchErpPrices } from '@framework/erp/prices';
-import { ERP_STATIC } from '@framework/utils/static';
 import { useUI } from '@contexts/ui.context';
 import { useHomeSettings } from '@/hooks/use-home-settings';
 import type { ErpPriceData } from '@utils/transform/erp-prices';
+import { productToErpPriceData } from '@utils/transform/inline-to-erp';
 import { usePimProductListQuery } from '@framework/product/get-pim-product';
-import { useQuery } from '@tanstack/react-query';
 import { getAvailabilityDisplay } from '@utils/format-availability';
 import { exportToExcel, exportToPDF } from '@utils/export-comparison';
 import { useTranslation } from 'src/app/i18n/client';
@@ -148,9 +146,6 @@ export default function ProductCompareClient({
   const { isAuthorized, hidePrices } = useUI();
   const { settings } = useHomeSettings();
   const priceDecimals = settings?.cardStyle?.priceDecimals ?? 2;
-  const [erpPricesMap, setErpPricesMap] = useState<
-    Record<string, ErpPriceData>
-  >({});
 
   // Auto add pivot SKU from query param
   useEffect(() => {
@@ -181,53 +176,26 @@ export default function ProductCompareClient({
     error: queryError,
   } = usePimProductListQuery(queryParams, { enabled: limitedSkus.length > 0 });
 
-  // ---- ERP: collect entity_codes from children or parent ----
-  // For comparison, we need prices for ALL children (unlike carousel which skips multi-variation)
-  const entity_codes = useMemo<string[]>(() => {
-    if (!Array.isArray(rawProducts)) return [];
-    const codes: string[] = [];
-
+  // Build the price map from inline pricing on each product / variant —
+  // no ERP roundtrip. The downstream comparison shape still expects the
+  // ErpPriceData layout, so we synthesize it.
+  const erpPricesMap = useMemo<Record<string, ErpPriceData>>(() => {
+    if (!Array.isArray(rawProducts)) return {};
+    const map: Record<string, ErpPriceData> = {};
     rawProducts.forEach((p: any) => {
       const variations = Array.isArray(p?.variations) ? p.variations : [];
-
       if (variations.length > 0) {
-        // Has children: collect all children entity_codes (use child ID)
         variations.forEach((child: any) => {
-          const childId = String(child?.id ?? '');
-          if (childId) codes.push(childId);
+          const synth = productToErpPriceData(child);
+          if (synth) map[String(child?.id ?? '')] = synth;
         });
       } else {
-        // No children: use parent entity_code (parent ID)
-        const parentId = String(p?.id ?? '');
-        if (parentId) codes.push(parentId);
+        const synth = productToErpPriceData(p);
+        if (synth) map[String(p?.id ?? '')] = synth;
       }
     });
-
-    return codes.filter(Boolean);
+    return map;
   }, [rawProducts]);
-
-  const erpEnabled = entity_codes.length > 0;
-
-  const erpPayload = useMemo(
-    () => ({
-      entity_codes,
-      ...ERP_STATIC,
-    }),
-    [entity_codes],
-  );
-
-  const { data: erpPricesData } = useQuery({
-    queryKey: ['erp-prices-compare', erpPayload],
-    queryFn: () => fetchErpPrices(erpPayload),
-    enabled: isAuthorized && erpEnabled,
-  });
-
-  // Update ERP prices map when data arrives
-  useEffect(() => {
-    if (erpPricesData) {
-      setErpPricesMap(erpPricesData as Record<string, ErpPriceData>);
-    }
-  }, [erpPricesData]);
 
   // Map products to comparison format with ERP prices
   const products = useMemo(() => {

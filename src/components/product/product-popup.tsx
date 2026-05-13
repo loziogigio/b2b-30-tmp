@@ -21,11 +21,8 @@ import {
 import { IoClose, IoChevronBack } from 'react-icons/io5';
 import { useTranslation } from 'src/app/i18n/client';
 
-// ERP prices
-import { useQuery } from '@tanstack/react-query';
-import { ERP_STATIC } from '@framework/utils/static';
 import type { ErpPriceData } from '@utils/transform/erp-prices';
-import { fetchErpPrices } from '@framework/erp/prices';
+import { productToErpPriceData } from '@utils/transform/inline-to-erp';
 import { useLikes } from '@contexts/likes/likes.context';
 import { useReminders } from '@contexts/reminders/reminders.context';
 import { useUI } from '@contexts/ui.context';
@@ -64,19 +61,10 @@ export default function ProductPopup({ lang }: { lang: string }) {
   const [shareButtonStatus, setShareButtonStatus] = useState(false);
   const toggleShare = () => setShareButtonStatus((s) => !s);
 
-  // --- ERP prices for this product ---
-  const entityCodes = [String(product?.id ?? '')].filter(Boolean); // string[]
-  const erpPayload = { ...ERP_STATIC, entity_codes: entityCodes };
-
-  const { data: erpPricesData } = useQuery({
-    queryKey: ['erp-prices', entityCodes],
-    queryFn: () => fetchErpPrices(erpPayload),
-    enabled: isAuthorized && entityCodes.length > 0,
-  });
-
-  const erpPrice: ErpPriceData | undefined = Array.isArray(erpPricesData)
-    ? erpPricesData[0]
-    : (erpPricesData as any)?.[entityCodes[0]];
+  // Pricing now ships inline on the PIM product; synthesize the ErpPriceData
+  // shape so B2BOfferRows / B2BInfoBlock / AddToCart keep working unchanged.
+  const erpPrice: ErpPriceData | undefined =
+    productToErpPriceData(product) ?? undefined;
 
   const productUrl = `${process.env.NEXT_PUBLIC_WEBSITE_URL}/${lang}${ROUTES.PRODUCT}?sku=${encodeURIComponent(product?.sku ?? '')}`;
   const isInCompare = hasSku(sku);

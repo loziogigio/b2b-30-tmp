@@ -11,10 +11,8 @@ import Image from '@components/ui/image';
 import CopyableCode from '@components/themes/time/shared/copyable-code';
 import { useTranslation } from 'src/app/i18n/client';
 import { usePimProductListQuery } from '@framework/product/get-pim-product';
-import { useQuery } from '@tanstack/react-query';
-import { fetchErpPrices } from '@framework/erp/prices';
-import { ERP_STATIC } from '@framework/utils/static';
 import type { ErpPriceData } from '@utils/transform/erp-prices';
+import { productToErpPriceData } from '@utils/transform/inline-to-erp';
 import { useUI } from '@contexts/ui.context';
 import { useLikes } from '@contexts/likes/likes.context';
 import { useReminders } from '@contexts/reminders/reminders.context';
@@ -102,10 +100,6 @@ const TimeProductDetail: React.FC<{
       ? variations[0]
       : first;
 
-  /* ── ERP prices ── */
-  const entityCodes = isMultiVariantParent
-    ? []
-    : [String(data?.id ?? '')].filter(Boolean);
   const { isAuthorized, hidePrices } = useUI();
   const inPageCartRef = useRef<HTMLDivElement | null>(null);
   const [showStickyBar, setShowStickyBar] = useState(false);
@@ -127,14 +121,12 @@ const TimeProductDetail: React.FC<{
   }, []);
   const { settings } = useHomeSettings();
   const decimals = settings?.cardStyle?.priceDecimals ?? 2;
-  const { data: erpPricesData } = useQuery({
-    queryKey: ['erp-prices', entityCodes],
-    queryFn: () => fetchErpPrices({ ...ERP_STATIC, entity_codes: entityCodes }),
-    enabled: isAuthorized && entityCodes.length > 0,
-  });
-  const erpPrice: ErpPriceData | undefined = Array.isArray(erpPricesData)
-    ? erpPricesData[0]
-    : (erpPricesData as any)?.[entityCodes[0]];
+
+  // Multi-variant parents render their variants grid; for everything else,
+  // synthesize ErpPriceData from inline product.pricing (no ERP roundtrip).
+  const erpPrice: ErpPriceData | undefined = isMultiVariantParent
+    ? undefined
+    : (productToErpPriceData(data) ?? undefined);
 
   /* ── Derived price info ── */
   const anyPD = erpPrice as any;

@@ -30,10 +30,8 @@ import {
   useModalState,
 } from '@components/common/modal/modal.context';
 import { useTranslation } from 'src/app/i18n/client';
-import { useQuery } from '@tanstack/react-query';
-import { ERP_STATIC } from '@framework/utils/static';
 import type { ErpPriceData } from '@utils/transform/erp-prices';
-import { fetchErpPrices } from '@framework/erp/prices';
+import { productToErpPriceData } from '@utils/transform/inline-to-erp';
 import { usePimProductListQuery } from '@framework/product/get-pim-product';
 import { useLikes } from '@contexts/likes/likes.context';
 import { useReminders } from '@contexts/reminders/reminders.context';
@@ -116,16 +114,9 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
     else addSkuToCompare(sku);
   }, [sku, hasSku, addSkuToCompare, removeSkuFromCompare]);
 
-  /* ── ERP prices ── */
-  const entityCodes = [String(product?.id ?? '')].filter(Boolean);
-  const { data: erpPricesData } = useQuery({
-    queryKey: ['erp-prices', entityCodes],
-    queryFn: () => fetchErpPrices({ ...ERP_STATIC, entity_codes: entityCodes }),
-    enabled: isAuthorized && entityCodes.length > 0,
-  });
-  const erpPrice: ErpPriceData | undefined = Array.isArray(erpPricesData)
-    ? erpPricesData[0]
-    : (erpPricesData as any)?.[entityCodes[0]];
+  /* ── Pricing: synthesized from inline product.pricing ── */
+  const erpPrice: ErpPriceData | undefined =
+    productToErpPriceData(product) ?? undefined;
 
   /* ── Derived price info ── */
   const anyPD = erpPrice as any;

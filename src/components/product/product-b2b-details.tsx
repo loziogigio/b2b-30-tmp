@@ -25,12 +25,8 @@ import Link from 'next/link';
 import { productPlaceholder } from '@assets/placeholders';
 import cn from 'classnames';
 
-// NEW: ERP prices
-import { useQuery } from '@tanstack/react-query';
-import { ERP_STATIC } from '@framework/utils/static';
 import type { ErpPriceData } from '@utils/transform/erp-prices';
-
-import { fetchErpPrices } from '@framework/erp/prices';
+import { productToErpPriceData } from '@utils/transform/inline-to-erp';
 import { useLikes } from '@contexts/likes/likes.context';
 import { useReminders } from '@contexts/reminders/reminders.context';
 import { useUI } from '@contexts/ui.context';
@@ -150,26 +146,16 @@ const ProductB2BDetails: React.FC<{
       ? variations[0]
       : first;
 
-  // ---- ERP prices (entity_codes must be string[]) ----
-  // Skip for multi-variant parents (prices are fetched per-variant in the grid)
-  const entityCodes = isMultiVariantParent
-    ? []
-    : [String(data?.id ?? '')].filter(Boolean);
-  const erpPayload = { ...ERP_STATIC, entity_codes: entityCodes };
-
-  const { isAuthorized: isAuthForPrices } = useUI();
   const { settings } = useHomeSettings();
   const decimals = settings?.cardStyle?.priceDecimals ?? 2;
-  const { data: erpPricesData } = useQuery({
-    queryKey: ['erp-prices', entityCodes],
-    queryFn: () => fetchErpPrices(erpPayload),
-    enabled: isAuthForPrices && entityCodes.length > 0,
-  });
 
-  // pick the ERP price slice for this product (shape may vary by backend)
-  const erpPrice: ErpPriceData | undefined = Array.isArray(erpPricesData)
-    ? erpPricesData[0]
-    : (erpPricesData as any)?.[entityCodes[0]];
+  // Multi-variant parents have no price of their own; the variants grid
+  // renders each child with its own inline pricing. For everything else,
+  // synthesize ErpPriceData from product.pricing so B2BOfferRows /
+  // B2BInfoBlock / AddToCart keep working without an ERP roundtrip.
+  const erpPrice: ErpPriceData | undefined = isMultiVariantParent
+    ? undefined
+    : (productToErpPriceData(data) ?? undefined);
 
   // Likes context
   const likes = useLikes();
