@@ -200,16 +200,6 @@ export default function PriceAndPromo({
             </span>
             <span className="text-sm sm:text-base font-normal">€</span>
           </div>
-          {count_promo > 0 && (
-            <button
-              type="button"
-              onClick={onPromosClick}
-              title="View all promotions"
-              className="bg-red-500 text-white text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide"
-            >
-              Promo
-            </button>
-          )}
         </div>
       </div>
     </Wrapper>
