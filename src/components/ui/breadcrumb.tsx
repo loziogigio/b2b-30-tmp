@@ -7,10 +7,10 @@ import { IoChevronForward } from 'react-icons/io5';
 import { HiOutlineHome } from 'react-icons/hi';
 import { useTranslation } from 'src/app/i18n/client';
 
-const PILL_BASE =
-  'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium max-w-[18rem] truncate transition-colors';
-const PILL_NEUTRAL = 'bg-gray-100 text-gray-700 hover:bg-gray-200';
-const PILL_ACTIVE = 'bg-brand text-white cursor-default';
+const ITEM_BASE =
+  'inline-flex items-center gap-1.5 text-sm max-w-[18rem] truncate transition-colors';
+const ITEM_LINK = 'text-gray-500 hover:text-gray-700 hover:underline';
+const ITEM_ACTIVE = 'text-gray-700 font-medium cursor-default';
 
 const Breadcrumb: React.FC<{ separator?: React.ReactNode; lang: string }> = ({
   lang,
@@ -27,7 +27,7 @@ const Breadcrumb: React.FC<{ separator?: React.ReactNode; lang: string }> = ({
           <NextLink
             href={`/${lang}`}
             aria-label="Home"
-            className={`${PILL_BASE} ${PILL_NEUTRAL}`}
+            className={`${ITEM_BASE} ${ITEM_LINK}`}
           >
             <HiOutlineHome className="text-base" aria-hidden="true" />
           </NextLink>
@@ -43,15 +43,15 @@ const Breadcrumb: React.FC<{ separator?: React.ReactNode; lang: string }> = ({
 
           return (
             <React.Fragment key={breadcrumb.href}>
-              <li className="shrink-0 text-gray-400" aria-hidden="true">
-                <IoChevronForward className="text-base" />
+              <li className="shrink-0 text-gray-300" aria-hidden="true">
+                <IoChevronForward className="text-sm" />
               </li>
               <li className="min-w-0">
                 {isLast ? (
                   <span
                     aria-current="page"
                     title={translatedText}
-                    className={`${PILL_BASE} ${PILL_ACTIVE} capitalize`}
+                    className={`${ITEM_BASE} ${ITEM_ACTIVE} capitalize`}
                   >
                     {translatedText}
                   </span>
@@ -59,7 +59,7 @@ const Breadcrumb: React.FC<{ separator?: React.ReactNode; lang: string }> = ({
                   <NextLink
                     href={breadcrumb.href}
                     title={translatedText}
-                    className={`${PILL_BASE} ${PILL_NEUTRAL} capitalize`}
+                    className={`${ITEM_BASE} ${ITEM_LINK} capitalize`}
                   >
                     {translatedText}
                   </NextLink>
