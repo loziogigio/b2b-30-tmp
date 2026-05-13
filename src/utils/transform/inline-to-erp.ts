@@ -54,7 +54,13 @@ export function productToErpPriceData(
   const allPromoOffers = flattenPromoOffers(packagingOptions, pricing.list);
 
   const netPrice = pricing.list;
-  const grossPrice = pricing.gross ?? pricing.list;
+  // `gross_price` in the legacy ErpPriceData drives the PriceCell
+  // strikethrough. For B2B, the legit "old price" is the NET retail/MSRP,
+  // not the VAT-inclusive gross — otherwise every product shows a fake
+  // strikethrough just because of VAT. When retail equals list there's
+  // no markdown, so we make gross == net and PriceCell hides the strike.
+  const retailPrice = pricing.retail ?? pricing.list;
+  const grossPrice = retailPrice;
 
   return {
     entity_code: String(product.id ?? ''),

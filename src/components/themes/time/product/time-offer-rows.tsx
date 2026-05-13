@@ -244,7 +244,9 @@ function Row({
   footer,
 }: RowProps) {
   const isPromo = labelTone === 'promo';
-  const showStrike = !hidePrices && gross > 0 && Number(gross) !== Number(net);
+  // Only strike when there's a real markdown (retail > list). Equal values
+  // mean no MSRP discount — don't render a misleading line-through.
+  const showStrike = !hidePrices && gross > 0 && Number(gross) > Number(net);
   const savings = showStrike
     ? (Number(gross) - Number(net)).toFixed(decimals)
     : null;

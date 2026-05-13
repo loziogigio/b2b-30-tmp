@@ -296,8 +296,11 @@ function PriceCell({
   net: number;
   extraDiscounts: number[];
 }) {
-  const showStrike = gross > 0 && Number(gross) !== Number(net);
+  // Only strike when there's a real markdown (gross > net). Equal values
+  // mean no MSRP discount — don't render a misleading line-through.
+  const showStrike = gross > 0 && Number(gross) > Number(net);
   const discounts = (extraDiscounts ?? []).filter((v) => v && v !== 0);
+  const fmtDiscount = (d: number) => `-${Math.abs(Number(d))}%`;
   return (
     <div className="flex items-center justify-end gap-2 whitespace-nowrap">
       {showStrike && (
@@ -307,7 +310,7 @@ function PriceCell({
           </span>
           {discounts.length > 0 && (
             <span className="text-[10px] font-bold text-red-600">
-              {discounts.map((d) => `${d}%`).join(' ')}
+              {discounts.map(fmtDiscount).join(' ')}
             </span>
           )}
         </div>
