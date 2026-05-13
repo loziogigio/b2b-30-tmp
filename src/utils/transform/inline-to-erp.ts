@@ -109,8 +109,14 @@ export function productToErpPriceData(
     packaging_options_all: mappedPackagings,
     packaging_options: [],
     all_promo_offers: allPromoOffers,
-    is_promo: allPromoOffers.length > 0,
-    promo: allPromoOffers.length > 0,
+    // is_promo / promo describe whether *this* price line is a promo
+    // override (legacy is_improving_promo flow), not whether promos
+    // exist alongside the listino. The PROMO rows get their own
+    // is_promo: true via buildPromoPriceData; the base LISTINO line
+    // must stay false so its Counter renders green (not red) and the
+    // card's headline price isn't tinted red just because offers exist.
+    is_promo: false,
+    promo: false,
     count_promo: allPromoOffers.length,
     num_promo: allPromoOffers.length,
     discount_description: '',
