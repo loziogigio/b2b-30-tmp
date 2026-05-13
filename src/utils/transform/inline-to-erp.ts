@@ -34,44 +34,47 @@ export function productToErpPriceData(
 
   const packagingOptions = product.packagingOptions ?? [];
   const packagingInfo = product.packagingInfo ?? [];
-  // Build a code → info lookup so we can fill UOM / description /
-  // default-for-sale / min-sell flags from packaging_info on each
-  // sellable packaging_options entry. PIM ships these as separate lists
-  // (informational vs filtered-by-tag-sellable) but the legacy
-  // ErpPriceData PackagingOption shape needs them merged.
-  const infoByCode: Record<string, PimPackagingInfo> = {};
-  for (const info of packagingInfo) {
-    if (info?.code) infoByCode[info.code] = info;
+
+  // packaging_info is the master list (full catalog of packagings,
+  // ordered MV first → UM column, then the others). packaging_options
+  // is tag-filtered to the customer's tier and carries pricing. We
+  // iterate info in its natural order and merge sellability/pricing
+  // from options by code; entries without a matching option still
+  // appear in packaging_options_all for display (so the PackagingGrid
+  // can render MV alongside the sellable codes).
+  const optionByCode: Record<string, PimPackagingOption> = {};
+  for (const opt of packagingOptions) {
+    if (opt?.code) optionByCode[opt.code] = opt;
   }
 
-  const mappedPackagings = packagingOptions.map((opt) =>
-    toErpPackaging(opt, infoByCode[opt.code ?? '']),
+  // Source of truth for the mapping: packaging_info if shipped; else
+  // fall back to packaging_options (BE rollout / legacy products).
+  const mappedPackagings: PackagingOption[] =
+    packagingInfo.length > 0
+      ? packagingInfo.map((info) =>
+          toErpPackaging(optionByCode[info.code], info),
+        )
+      : packagingOptions.map((opt) => toErpPackaging(opt));
+
+  // Legacy ErpPriceData semantics:
+  //   packaging_option_default  → the customer's default packaging FOR
+  //                               SALE (typically CFZ — the smallest
+  //                               sellable). Maps to PIM's `is_smallest`.
+  //   packaging_option_smallest → same in most catalogs.
+  //
+  // PIM's `is_default: true` flags the UM/display unit (typically MV)
+  // and we keep that on `packaging_is_default` so the PackagingGrid UM
+  // column resolves to MV's uom. The "default for sale" pick is a
+  // separate calculation that prefers sellable + smallest.
+  const sellablePackagings = mappedPackagings.filter(
+    (p) => p.packaging_code && optionByCode[p.packaging_code],
   );
-  // Flags: use packaging_info hints when available, otherwise infer
-  // first-as-default and smallest-qty-as-smallest.
-  if (mappedPackagings.length > 0) {
-    const explicitDefault = mappedPackagings.findIndex(
-      (p) => p.packaging_is_default,
-    );
-    if (explicitDefault < 0) mappedPackagings[0].packaging_is_default = true;
-    const explicitSmallest = mappedPackagings.findIndex(
-      (p) => p.packaging_is_smallest,
-    );
-    if (explicitSmallest < 0) {
-      const smallestIndex = mappedPackagings.reduce(
-        (best, opt, idx, arr) =>
-          opt.qty_x_packaging < arr[best].qty_x_packaging ? idx : best,
-        0,
-      );
-      mappedPackagings[smallestIndex].packaging_is_smallest = true;
-    }
-  }
-  const defaultPackaging =
-    mappedPackagings.find((p) => p.packaging_is_default) ??
+  const defaultForSale =
+    sellablePackagings.find((p) => p.packaging_is_smallest) ??
+    sellablePackagings[0] ??
     mappedPackagings[0] ??
     fallbackPackaging(product);
-  const smallestPackaging =
-    mappedPackagings.find((p) => p.packaging_is_smallest) ?? defaultPackaging;
+  const smallestPackaging = defaultForSale;
 
   // Promotions live per-packaging in the inline shape; flatten to the
   // legacy "all promo offers" list, carrying the list price as the
@@ -101,7 +104,7 @@ export function productToErpPriceData(
      */
     availability: 1,
     discount: [],
-    packaging_option_default: defaultPackaging,
+    packaging_option_default: defaultForSale,
     packaging_option_smallest: smallestPackaging,
     packaging_options_all: mappedPackagings,
     packaging_options: [],
@@ -114,23 +117,29 @@ export function productToErpPriceData(
   };
 }
 
+/**
+ * Build a legacy PackagingOption from a sellable `packaging_options`
+ * entry, an informational `packaging_info` entry, or both. When only
+ * `info` is present (no matching option), the packaging is still
+ * surfaced for display but isn't sellable.
+ */
 function toErpPackaging(
-  opt: PimPackagingOption,
+  opt: PimPackagingOption | undefined,
   info?: PimPackagingInfo,
 ): PackagingOption {
-  const qty = Number(opt.qty ?? info?.qty ?? 1) || 1;
   // packaging_uom is a unit of measure ("PZ", "KG", "LT"), not the
   // packaging code ("CFZ", "IMB"). The BE cart payload validates this,
   // so we look it up from packaging_info and only fall back to the code
-  // when info is missing (legacy data or BE rollout gap).
-  const code = opt.code ?? '';
+  // when info is missing.
+  const code = (opt?.code ?? info?.code ?? '').trim();
+  const qty = Number(opt?.qty ?? info?.qty ?? 1) || 1;
   const uom = info?.uom || code;
   const description = info?.description || code;
   return {
     packaging_uom_description: description,
     packaging_code: code,
     packaging_is_default: Boolean(info?.is_default),
-    packaging_is_smallest: Boolean(info?.is_min_sell),
+    packaging_is_smallest: Boolean(info?.is_smallest ?? info?.is_min_sell),
     qty_x_packaging: qty,
     packaging_uom: uom,
   };

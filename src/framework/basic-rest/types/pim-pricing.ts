@@ -54,10 +54,17 @@ export interface PimPackagingOption {
 /**
  * Informational packaging entry (never tag-filtered). The sellable
  * `packaging_options[]` entries reference these by `code`; this is where
- * UOM, description, default-for-sale and min-sell flags live. The cart
- * payload's `packaging_uom` field must be a real UOM ("PZ", "KG", "LT"),
- * not the packaging code ("CFZ", "IMB"), so the synth merges this info
- * onto each PackagingOption before sending.
+ * UOM, description and the catalog flags live.
+ *
+ * Flag semantics (PIM ≠ legacy ERP):
+ *   - `is_default: true`  → default UM/display unit (typically MV).
+ *                           PackagingGrid shows this in the UM column.
+ *   - `is_smallest: true` → smallest sellable packaging (typically CFZ).
+ *                           Maps to legacy `packaging_option_default` —
+ *                           the default packaging the customer buys in.
+ *
+ * `is_min_sell` is accepted as a back-compat alias for `is_smallest`
+ * (some earlier PIM revisions named it that way).
  */
 export interface PimPackagingInfo {
   _id?: string;
@@ -66,6 +73,8 @@ export interface PimPackagingInfo {
   qty?: number;
   uom?: string;
   is_default?: boolean;
+  is_smallest?: boolean;
+  /** @deprecated Older PIM payloads used this name; prefer `is_smallest`. */
   is_min_sell?: boolean;
 }
 
