@@ -19,9 +19,7 @@ import { useUI } from '@contexts/ui.context';
 import { IoIosHeart, IoIosHeartEmpty } from 'react-icons/io';
 import { ReminderIcon, ReminderIconFilled } from '@components/icons/app-icons';
 import VariantsFilterBar from './variants-filter-bar';
-import { fetchErpPrices } from '@framework/erp/prices';
-import { ERP_STATIC } from '@framework/utils/static';
-import { useQuery } from '@tanstack/react-query';
+import { productToErpPriceData } from '@utils/transform/inline-to-erp';
 import LastOrdered from '../last-ordered';
 
 const AddToCart = dynamic(() => import('@components/product/add-to-cart'), {
@@ -137,30 +135,23 @@ export default function ProductRowB2B({
 
   const [showVars, setShowVars] = useState<boolean>(shouldShowRows ?? false);
 
-  // -------- Fetch ERP prices for variants when expanded --------
-  const variantIds = useMemo(() => {
-    if (!hasMultiple) return [];
-    return variations.map((v: any) => String(v?.id ?? '')).filter(Boolean);
-  }, [variations, hasMultiple]);
+  // Variant prices come from inline product.pricing on each variation. We
+  // synthesize the ErpPriceData shape so PackagingGrid / PriceAndPromo /
+  // AddToCart keep working unchanged, then index by variant id.
+  const variantPriceMap = useMemo<Record<string, ErpPriceData>>(() => {
+    const map: Record<string, ErpPriceData> = {};
+    variations.forEach((v: any) => {
+      const synth = productToErpPriceData(v);
+      if (synth) map[String(v?.id ?? '')] = synth;
+    });
+    return map;
+  }, [variations]);
 
-  const { data: variantPricesMap = {} } = useQuery({
-    queryKey: ['erp-variant-prices-row', product.id, variantIds.join(',')],
-    queryFn: async () => {
-      if (!variantIds.length) return {};
-      const res = await fetchErpPrices({
-        ...ERP_STATIC,
-        entity_codes: variantIds,
-      });
-      return res as Record<string, ErpPriceData>;
-    },
-    enabled: isAuthorized && showVars && hasMultiple && variantIds.length > 0,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-  });
-
-  // Combined price getter: check local variant prices first, then parent's getPrice
+  // Local variant pricing wins, with the optional parent getPrice as a fallback
+  // (legacy callers that still thread an ERP price map can override per-id).
   const getVariantPrice = (id: string | number): ErpPriceData | undefined => {
     const strId = String(id);
-    return variantPricesMap[strId] ?? getPrice(strId);
+    return variantPriceMap[strId] ?? getPrice(strId);
   };
 
   // -------- Filters (Search + Model tags) --------
