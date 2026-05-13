@@ -162,6 +162,7 @@ export function transformPimProduct(
   // headline price to show.
   const rawWithPricing = raw as RawPimProductWithPricing;
   const packagingOptions = rawWithPricing.packaging_options ?? [];
+  const packagingInfo = rawWithPricing.packaging_info ?? [];
   const pricing = normalizeProductPricing(
     rawWithPricing.pricing,
     rawWithPricing.status,
@@ -200,6 +201,7 @@ export function transformPimProduct(
     priceGross: pricing.gross,
     pricing,
     packagingOptions,
+    packagingInfo,
     product_type: 'simple',
     brand: raw.brand
       ? {

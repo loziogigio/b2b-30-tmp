@@ -5,6 +5,7 @@ import type {
 } from './erp-prices';
 import type { Product } from '@framework/types';
 import type {
+  PimPackagingInfo,
   PimPackagingOption,
   PimPackagingPromotion,
 } from '@framework/types/pim-pricing';
@@ -32,19 +33,43 @@ export function productToErpPriceData(
   }
 
   const packagingOptions = product.packagingOptions ?? [];
-  const mappedPackagings = packagingOptions.map(toErpPackaging);
-  // Mark first entry as default and the smallest-qty entry as smallest.
-  // Inline packagings don't carry default/smallest flags, so we infer.
-  if (mappedPackagings.length > 0) {
-    mappedPackagings[0].packaging_is_default = true;
-    const smallestIndex = mappedPackagings.reduce(
-      (best, opt, idx, arr) =>
-        opt.qty_x_packaging < arr[best].qty_x_packaging ? idx : best,
-      0,
-    );
-    mappedPackagings[smallestIndex].packaging_is_smallest = true;
+  const packagingInfo = product.packagingInfo ?? [];
+  // Build a code → info lookup so we can fill UOM / description /
+  // default-for-sale / min-sell flags from packaging_info on each
+  // sellable packaging_options entry. PIM ships these as separate lists
+  // (informational vs filtered-by-tag-sellable) but the legacy
+  // ErpPriceData PackagingOption shape needs them merged.
+  const infoByCode: Record<string, PimPackagingInfo> = {};
+  for (const info of packagingInfo) {
+    if (info?.code) infoByCode[info.code] = info;
   }
-  const defaultPackaging = mappedPackagings[0] ?? fallbackPackaging(product);
+
+  const mappedPackagings = packagingOptions.map((opt) =>
+    toErpPackaging(opt, infoByCode[opt.code ?? '']),
+  );
+  // Flags: use packaging_info hints when available, otherwise infer
+  // first-as-default and smallest-qty-as-smallest.
+  if (mappedPackagings.length > 0) {
+    const explicitDefault = mappedPackagings.findIndex(
+      (p) => p.packaging_is_default,
+    );
+    if (explicitDefault < 0) mappedPackagings[0].packaging_is_default = true;
+    const explicitSmallest = mappedPackagings.findIndex(
+      (p) => p.packaging_is_smallest,
+    );
+    if (explicitSmallest < 0) {
+      const smallestIndex = mappedPackagings.reduce(
+        (best, opt, idx, arr) =>
+          opt.qty_x_packaging < arr[best].qty_x_packaging ? idx : best,
+        0,
+      );
+      mappedPackagings[smallestIndex].packaging_is_smallest = true;
+    }
+  }
+  const defaultPackaging =
+    mappedPackagings.find((p) => p.packaging_is_default) ??
+    mappedPackagings[0] ??
+    fallbackPackaging(product);
   const smallestPackaging =
     mappedPackagings.find((p) => p.packaging_is_smallest) ?? defaultPackaging;
 
@@ -89,18 +114,25 @@ export function productToErpPriceData(
   };
 }
 
-function toErpPackaging(opt: PimPackagingOption): PackagingOption {
-  const qty = Number(opt.qty ?? 1) || 1;
-  // The inline shape only ships `code` + `qty`. We treat the first
-  // packaging entry as the default (callers can override) and the
-  // smallest by qty as "smallest". Description falls back to the code.
+function toErpPackaging(
+  opt: PimPackagingOption,
+  info?: PimPackagingInfo,
+): PackagingOption {
+  const qty = Number(opt.qty ?? info?.qty ?? 1) || 1;
+  // packaging_uom is a unit of measure ("PZ", "KG", "LT"), not the
+  // packaging code ("CFZ", "IMB"). The BE cart payload validates this,
+  // so we look it up from packaging_info and only fall back to the code
+  // when info is missing (legacy data or BE rollout gap).
+  const code = opt.code ?? '';
+  const uom = info?.uom || code;
+  const description = info?.description || code;
   return {
-    packaging_uom_description: opt.code ?? '',
-    packaging_code: opt.code ?? '',
-    packaging_is_default: false, // set by caller after sorting
-    packaging_is_smallest: false,
+    packaging_uom_description: description,
+    packaging_code: code,
+    packaging_is_default: Boolean(info?.is_default),
+    packaging_is_smallest: Boolean(info?.is_min_sell),
     qty_x_packaging: qty,
-    packaging_uom: opt.code ?? '',
+    packaging_uom: uom,
   };
 }
 

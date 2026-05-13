@@ -52,6 +52,24 @@ export interface PimPackagingOption {
 }
 
 /**
+ * Informational packaging entry (never tag-filtered). The sellable
+ * `packaging_options[]` entries reference these by `code`; this is where
+ * UOM, description, default-for-sale and min-sell flags live. The cart
+ * payload's `packaging_uom` field must be a real UOM ("PZ", "KG", "LT"),
+ * not the packaging code ("CFZ", "IMB"), so the synth merges this info
+ * onto each PackagingOption before sending.
+ */
+export interface PimPackagingInfo {
+  _id?: string;
+  code: string;
+  description?: string;
+  qty?: number;
+  uom?: string;
+  is_default?: boolean;
+  is_min_sell?: boolean;
+}
+
+/**
  * 'priced'     — the product has a usable `pricing.list`
  * 'on-request' — no pricing block (or list missing); price is hidden
  * 'draft'      — explicit draft status from the PIM
@@ -62,6 +80,7 @@ export type PricingStatus = 'priced' | 'on-request' | 'draft';
 export interface RawPimProductWithPricing extends PimProduct {
   status?: string;
   pricing?: PimPricing;
+  packaging_info?: PimPackagingInfo[];
   packaging_options?: PimPackagingOption[];
   promotions?: PimPackagingPromotion[];
   promo_code?: string[] | string;

@@ -47,6 +47,7 @@ export type Tag = {
   slug: string;
 };
 import type {
+  PimPackagingInfo,
   PimPackagingOption,
   ProductPricing,
 } from './types/pim-pricing';
@@ -64,6 +65,8 @@ export type Product = {
   pricing?: ProductPricing;
   /** Inline packaging options (with their own pricing + promotions). */
   packagingOptions?: PimPackagingOption[];
+  /** Packaging info (UOM, description, default/smallest flags), referenced by code. */
+  packagingInfo?: PimPackagingInfo[];
   quantity: number;
   sold: number;
   unit: string;
