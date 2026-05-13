@@ -181,7 +181,14 @@ export default function B2BOfferRows({ lang, product, priceData }: Props) {
             endDate={fmtDate(offer.promo_end_date)}
           >
             <PackCol>
-              <PackagingGrid pd={promoPriceData} />
+              {/* Promo first column shows MV (Minima Vendita) with the
+                  minimum purchasable qty for the offer, not the duplicate
+                  UM/PZ pair from the LISTINO row. */}
+              <PackagingGrid
+                pd={promoPriceData}
+                umLabel="MV"
+                uom={String(Math.max(Number(offer.promo_qty_required ?? 1), 1))}
+              />
             </PackCol>
 
             {!hidePrices ? (
