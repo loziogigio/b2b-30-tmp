@@ -6,10 +6,19 @@ import type { PimProduct } from 'vinc-pim';
  * any echoed-back fields like `tag_filter`. The published `vinc-pim`
  * types pre-date this block, so we extend locally until the package
  * catches up.
+ *
+ * `list_unit` / `retail_unit` only appear on the per-packaging pricing
+ * (packaging_options[].pricing). They normalize the price to a single
+ * unit when the packaging qty is > 1 (e.g. CFZ qty=10 with list=100 →
+ * list_unit=10). When top-level `pricing` is stripped by the BE (no
+ * customer context), the storefront falls back to
+ * `packaging_options[0].pricing.list_unit` for a meaningful headline.
  */
 export interface PimPricing {
   list?: number;
   retail?: number;
+  list_unit?: number;
+  retail_unit?: number;
   currency?: string;
   vat_rate?: number;
   vat_included?: boolean;
@@ -71,21 +80,30 @@ export interface ProductPricing {
 }
 
 /**
- * Derive the canonical ProductPricing from the raw pricing block.
+ * Derive the canonical ProductPricing from the raw pricing block, with a
+ * fallback to the first sellable packaging's per-unit pricing when the
+ * top-level block is missing or has no `list`. The BE search enrichment
+ * sometimes strips the variant root `pricing` but keeps
+ * `packaging_options[].pricing.list_unit` populated, so we look there
+ * before declaring the product on-request.
+ *
  * `vat_included: false` is the common case; `true` means list already
  * carries VAT and we back it out to expose a NET `list`.
  */
 export function normalizeProductPricing(
   raw: PimPricing | undefined,
   rawStatus?: string,
+  packagingOptions: PimPackagingOption[] = [],
 ): ProductPricing {
   if (rawStatus === 'draft') return { status: 'draft' };
-  if (!raw || raw.list == null) return { status: 'on-request' };
 
-  const listInput = Number(raw.list);
-  const retailInput = raw.retail != null ? Number(raw.retail) : undefined;
-  const vatRate = raw.vat_rate != null ? Number(raw.vat_rate) : 0;
-  const vatIncluded = Boolean(raw.vat_included);
+  const source = pickPricingSource(raw, packagingOptions);
+  if (!source) return { status: 'on-request' };
+
+  const listInput = Number(source.list);
+  const retailInput = source.retail != null ? Number(source.retail) : undefined;
+  const vatRate = source.vat_rate != null ? Number(source.vat_rate) : 0;
+  const vatIncluded = Boolean(source.vat_included);
   const factor = 1 + vatRate / 100;
 
   const list = vatIncluded && factor > 0 ? listInput / factor : listInput;
@@ -102,8 +120,48 @@ export function normalizeProductPricing(
     list,
     retail,
     gross,
-    currency: raw.currency,
+    currency: source.currency,
     vatRate,
     vatIncluded,
   };
+}
+
+/**
+ * Internal: pick whichever pricing block has a usable per-unit list price.
+ * The top-level `pricing` wins when it has `list`; otherwise we walk the
+ * sellable packaging entries and reuse the first packaging's `list_unit`
+ * (or `list / qty`) as the headline price.
+ */
+function pickPricingSource(
+  top: PimPricing | undefined,
+  packagings: PimPackagingOption[],
+): PimPricing | null {
+  if (top?.list != null) return top;
+
+  for (const opt of packagings) {
+    if (opt.is_sellable === false) continue;
+    const p = opt.pricing;
+    if (!p) continue;
+    const qty = Number(opt.qty ?? 1) || 1;
+    const perUnit =
+      p.list_unit != null
+        ? Number(p.list_unit)
+        : p.list != null
+          ? Number(p.list) / qty
+          : null;
+    if (perUnit == null || !Number.isFinite(perUnit)) continue;
+    const retailPerUnit =
+      p.retail_unit != null
+        ? Number(p.retail_unit)
+        : p.retail != null
+          ? Number(p.retail) / qty
+          : undefined;
+    return {
+      ...p,
+      list: perUnit,
+      retail: retailPerUnit,
+    };
+  }
+
+  return null;
 }

@@ -13,6 +13,31 @@ import {
   normalizeProductPricing,
   type RawPimProductWithPricing,
 } from '../types/pim-pricing';
+import { ERP_STATIC } from '../utils/static';
+
+/**
+ * Returns the customer-context fields the PIM search endpoint uses to
+ * resolve `tag_filter` server-side. When the user isn't logged in,
+ * customer_code/address_code are still '0' — passing them through
+ * lets the BE decide whether to strip packaging_options or apply a
+ * default tier; not passing them at all keeps the response stripped.
+ *
+ * Keep this consistent with what the BE search route looks at:
+ * route.ts:144-162 reads `body.tag_filter`, `body.customer_code`,
+ * `body.address_code` and falls through to a tag resolver.
+ */
+function pimCustomerContext(): {
+  customer_code?: string;
+  address_code?: string;
+} {
+  const customer = ERP_STATIC.customer_code;
+  const address = ERP_STATIC.address_code;
+  if (!customer || customer === '0') return {};
+  return {
+    customer_code: customer,
+    ...(address && address !== '0' ? { address_code: address } : {}),
+  };
+}
 
 // ===============================
 // Image versioning: PIM pre-generates S3 variants with filename prefixes
@@ -121,12 +146,17 @@ export function transformPimProduct(raw: PimProduct): Product {
     raw.image?.original || raw.cover_image_url || raw.images?.[0]?.url || '';
 
   // Inline pricing block (drafts and no-pricelist items have status !== 'priced').
+  // When the top-level pricing is stripped by the BE (no customer context or
+  // tag mismatch), normalizeProductPricing falls back to the first sellable
+  // packaging_options[].pricing.list_unit so the storefront still has a
+  // headline price to show.
   const rawWithPricing = raw as RawPimProductWithPricing;
+  const packagingOptions = rawWithPricing.packaging_options ?? [];
   const pricing = normalizeProductPricing(
     rawWithPricing.pricing,
     rawWithPricing.status,
+    packagingOptions,
   );
-  const packagingOptions = rawWithPricing.packaging_options ?? [];
 
   return {
     id: raw.entity_code || raw.id || '', // Prefer entity_code for ERP compatibility
@@ -297,6 +327,11 @@ export const fetchPimProductList = async (
     text: params.q || params.text || '',
     start: params.start || 0,
     rows: params.rows || params.limit || params.per_page || 12,
+    // Customer context lets the BE pick the right pricelist tier and
+    // return tag-filtered packaging_options with inline pricing. Without
+    // these, the search route strips packaging_options entirely and the
+    // response carries pricing: null.
+    ...pimCustomerContext(),
   };
 
   // Only add filters if there are any
@@ -371,8 +406,11 @@ export const usePimProductListQuery = (
     return baseParams;
   }, [JSON.stringify(params), enabled, groupByParent]);
 
+  // Customer/address scope the cache: switching delivery address or
+  // logging in/out should produce a fresh fetch (different pricelist tier).
+  const ctx = pimCustomerContext();
   const query = useQuery<ProductWithVariantCount[], Error>({
-    queryKey: ['pim-search', stableParams],
+    queryKey: ['pim-search', ctx, stableParams],
     queryFn: async () => {
       const result = await fetchPimProductList(stableParams);
       // Add variantCount based on variations.length for consistency with infinite query
@@ -411,8 +449,15 @@ export const usePimProductListInfiniteQuery = (
     return rest;
   }, [JSON.stringify(params), groupByParent]);
 
+  const ctx = pimCustomerContext();
   return useInfiniteQuery({
-    queryKey: ['pim-search-infinite', baseParams, perPage, groupByParent],
+    queryKey: [
+      'pim-search-infinite',
+      ctx,
+      baseParams,
+      perPage,
+      groupByParent,
+    ],
     queryFn: async ({ pageParam = 0 }) => {
       const result = await fetchPimProductList({
         ...baseParams,
@@ -461,8 +506,9 @@ export const usePimGroupedProductListQuery = (
     };
   }, [JSON.stringify(params), enabled]);
 
+  const ctx = pimCustomerContext();
   const query = useQuery<GroupedSearchResult, Error>({
-    queryKey: ['pim-search-grouped', stableParams],
+    queryKey: ['pim-search-grouped', ctx, stableParams],
     queryFn: async () => {
       return await fetchPimProductList(stableParams);
     },
