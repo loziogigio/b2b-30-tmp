@@ -102,6 +102,14 @@ export function productToErpPriceData(
   const retailPrice = pricing.retail ?? pricing.list;
   const grossPrice = retailPrice;
 
+  // Tier discounts. Legacy ERP shipped these as `raw.discount` and
+  // `raw.discount_extra`; the cart adapter spreads them into
+  // discount1..6 per cart line. normalizeProductPricing already pulled
+  // them from the inline payload using the same source-cascade as
+  // `list`, so we just hand them through.
+  const discountTiers = pricing.discountTiers ?? [];
+  const discountExtraTiers = pricing.discountTiersExtra ?? [];
+
   return {
     entity_code: String(product.id ?? ''),
     net_price: netPrice,
@@ -115,7 +123,8 @@ export function productToErpPriceData(
      * out-of-stock by mistake. Once BE ships availability, swap this in.
      */
     availability: 1,
-    discount: [],
+    discount: discountTiers,
+    discount_extra: discountExtraTiers,
     packaging_option_default: defaultForSale,
     packaging_option_smallest: smallestPackaging,
     packaging_options_all: mappedPackagings,

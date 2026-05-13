@@ -23,6 +23,15 @@ export interface PimPricing {
   vat_rate?: number;
   vat_included?: boolean;
   tag_filter?: string[];
+  /**
+   * Tier discounts that produced this list price (e.g. [10, 5] → -10%
+   * then -5%). The cart adapter spreads them into discount1..6 on the
+   * cart line so the BE persists the same breakdown that the legacy
+   * ERP price response used to ship as `raw.discount`.
+   */
+  discount?: number[];
+  /** Extra promo-specific discounts; legacy `raw.discount_extra` equivalent. */
+  discount_extra?: number[];
 }
 
 export interface PimPackagingPromotion {
@@ -105,6 +114,16 @@ export interface ProductPricing {
   currency?: string;
   vatRate?: number;
   vatIncluded?: boolean;
+  /**
+   * Tier-discount breakdown that produced the `list` price. Legacy ERP
+   * shipped this as `raw.discount: number[]` and the cart adapter
+   * spreads it across discount1..6 on each cart line. Captured during
+   * the transform so the synth can hand it back to ErpPriceData.discount
+   * without losing fidelity.
+   */
+  discountTiers?: number[];
+  /** Extra/promo-specific tier discounts. Legacy `raw.discount_extra`. */
+  discountTiersExtra?: number[];
 }
 
 /**
@@ -143,6 +162,22 @@ export function normalizeProductPricing(
 
   const listInput = Number(source.list);
   const retailInput = source.retail != null ? Number(source.retail) : undefined;
+  // Tier discounts come from the same cascade as `list`: prefer the
+  // top-level pricing block, fall back to the packaging-level block we
+  // already walked into `source`. Empty arrays mean the cart adapter
+  // won't write any discount1..6 entries.
+  const discountTiers = pickDiscountTiers(
+    raw,
+    source,
+    packagingOptions,
+    (p) => p.discount,
+  );
+  const discountTiersExtra = pickDiscountTiers(
+    raw,
+    source,
+    packagingOptions,
+    (p) => p.discount_extra,
+  );
   // vat_rate cascade: source → parent → fallback. The packaging-level pricing
   // block has no VAT info, and the BE strips the variant root pricing, so
   // without these fallbacks the cart payload would carry vat_rate: 0 and
@@ -176,7 +211,39 @@ export function normalizeProductPricing(
     currency: source.currency,
     vatRate,
     vatIncluded,
+    discountTiers,
+    discountTiersExtra,
   };
+}
+
+/**
+ * Walks the same fallback ladder as `pickPricingSource` to pull a
+ * discount array off whichever pricing block has it. Returns [] when
+ * nothing's shipped.
+ */
+function pickDiscountTiers(
+  top: PimPricing | undefined,
+  source: PimPricing,
+  packagings: PimPackagingOption[],
+  pick: (p: PimPricing) => number[] | undefined,
+): number[] {
+  const tryList = (p: PimPricing | undefined) => {
+    if (!p) return undefined;
+    const arr = pick(p);
+    return Array.isArray(arr) && arr.length > 0
+      ? arr.map((v) => Number(v) || 0)
+      : undefined;
+  };
+  const fromTop = tryList(top);
+  if (fromTop) return fromTop;
+  const fromSource = tryList(source);
+  if (fromSource) return fromSource;
+  for (const opt of packagings) {
+    if (opt.is_sellable === false) continue;
+    const fromPkg = tryList(opt.pricing);
+    if (fromPkg) return fromPkg;
+  }
+  return [];
 }
 
 /**
