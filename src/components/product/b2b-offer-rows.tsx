@@ -35,6 +35,22 @@ const cleanTitle = (raw?: string) => {
 };
 
 /**
+ * Promo types that ship a flat NET price (no percentage stacking on
+ * top of the listino). For these we suppress the strikethrough gross
+ * AND drop discount_extra from the cart payload — the cart line is
+ * recorded as a plain unit price equal to promo_net_price, not as
+ * "list with N% off." Mirrors the legacy time-offer-rows set.
+ */
+const NET_PRICE_PROMO_TYPES = new Set([
+  'RigaPrezzoNettoQuantitaMinima',
+  'RigaValoreMinimoSconto',
+  'RigaASommaQuantitàArticoli',
+]);
+
+const isNetPricePromoType = (type?: string) =>
+  Boolean(type && NET_PRICE_PROMO_TYPES.has(type));
+
+/**
  * Build a synthetic ErpPriceData for a single promo line so AddToCart
  * uses the promo's qty step, prices, and code/row.
  */
@@ -90,20 +106,33 @@ export function buildPromoPriceData(
     ? { ...baseDefault, packaging_is_default: true }
     : stepPackaging;
 
+  // Net-price promos (RigaPrezzoNettoQuantitaMinima &c.) ship a flat
+  // unit price; the discount_percentage is informational, not a
+  // contractual discount, so drop it from the cart-line discount_extra.
+  // Otherwise the cart adapter would write discount1=N on a line whose
+  // unit_price is already the final net.
+  const netPriceOnly = isNetPricePromoType(offer.promo_type);
+
   return {
     ...base,
     net_price: offer.promo_net_price,
     price_discount: offer.promo_net_price,
-    gross_price: offer.promo_ref_list_price || base.gross_price,
+    gross_price: netPriceOnly
+      ? offer.promo_net_price
+      : offer.promo_ref_list_price || base.gross_price,
     is_promo: true,
     promo: true,
     promo_price: offer.promo_net_price,
     promo_code: offer.promo_code,
     promo_row: offer.promo_row,
     promo_title: offer.promo_title,
+    promo_type: offer.promo_type,
     end_promo_date: offer.promo_end_date,
     start_promo_date: offer.promo_start_date,
-    discount_extra: offer.promo_extra_discounts,
+    // Tier-discount % values for the small "-X%" line above the headline.
+    // Empty for net-price promos so neither the storefront chip nor the
+    // cart payload's discount1..6 records a stacked percentage.
+    discount_extra: netPriceOnly ? [] : offer.promo_extra_discounts,
     packaging_option_default: stepPackaging,
     // Show only the promo's sellable packaging in the grid for this row,
     // with its original catalog qty (not the promo step).
@@ -205,12 +234,26 @@ export default function B2BOfferRows({ lang, product, priceData }: Props) {
 
             {!hidePrices ? (
               <PriceCol>
-                <PriceCell
-                  decimals={decimals}
-                  gross={offer.promo_ref_list_price || baseGross}
-                  net={offer.promo_net_price}
-                  extraDiscounts={offer.promo_extra_discounts}
-                />
+                {(() => {
+                  // Net-price promos hide the strike + discount chip
+                  // because the promo_net_price is the final price (no
+                  // percentage stacking on top of the listino).
+                  const netPriceOnly = isNetPricePromoType(offer.promo_type);
+                  return (
+                    <PriceCell
+                      decimals={decimals}
+                      gross={
+                        netPriceOnly
+                          ? offer.promo_net_price
+                          : offer.promo_ref_list_price || baseGross
+                      }
+                      net={offer.promo_net_price}
+                      extraDiscounts={
+                        netPriceOnly ? [] : offer.promo_extra_discounts
+                      }
+                    />
+                  );
+                })()}
               </PriceCol>
             ) : (
               <div className="md:flex-1" />
@@ -319,7 +362,10 @@ function PriceCell({
   // mean no MSRP discount — don't render a misleading line-through.
   const showStrike = gross > 0 && Number(gross) > Number(net);
   const discounts = (extraDiscounts ?? []).filter((v) => v && v !== 0);
-  const fmtDiscount = (d: number) => `-${Math.abs(Number(d))}%`;
+  // Match the headline price's fraction-digit count (settings.priceDecimals):
+  // decimals=2 → "-1.86%", decimals=4 → "-1.8600%".
+  const fmtDiscount = (d: number) =>
+    `-${Math.abs(Number(d)).toFixed(decimals)}%`;
   return (
     <div className="flex items-center justify-end gap-2 whitespace-nowrap">
       {showStrike && (
