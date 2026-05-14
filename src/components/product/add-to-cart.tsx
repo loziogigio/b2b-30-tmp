@@ -64,20 +64,24 @@ const buildAddPayload = (args: {
 }) => {
   const { itemId, qty, priceData, promo_code, promo_row } = args;
 
-  // Merge base discounts with extras (fill first empty slots)
+  // Merge base discounts with extras (fill first empty slots). Pad to
+  // `slots` zeros FIRST so the fill loop has empty slots to write into —
+  // otherwise an empty `baseArr` (the common case for inline pricing,
+  // where the BE doesn't ship a `discount: number[]` ladder on the
+  // listino) makes findIndex return -1 and silently drops every extra.
   const mergeDiscounts = (baseArr: any[], extraArr: any[], slots = 6) => {
     const base = (baseArr ?? []).slice(0, slots).map((n) => Number(n) || 0);
+    while (base.length < slots) base.push(0);
     const extras = (extraArr ?? []).map((n) => Number(n) || 0);
 
     // fill first zero slots with non-zero extras (negative or positive)
     for (const v of extras) {
-      if (v === 0) continue; // change to `if (v <= 0) continue;` if you truly want only >0
+      if (v === 0) continue;
       const idx = base.findIndex((x) => x === 0);
       if (idx === -1) break;
       base[idx] = v;
     }
 
-    while (base.length < slots) base.push(0);
     return base.slice(0, slots);
   };
 
@@ -98,7 +102,14 @@ const buildAddPayload = (args: {
     // prices
     price: Number(priceData?.gross_price ?? 0),
     price_discount: Number(priceData?.net_price ?? 0),
-    vat_perc: String(priceData?.vat_perc ?? 0),
+    // ErpPriceData ships VAT as `vat_percent`; the legacy alias `vat_perc`
+    // was a no-op fallback that yielded 0, which made cart lines hit the
+    // BE with vat_rate=0 even though the cart total UI computed 22% locally.
+    vat_perc: String(
+      (priceData as any)?.vat_percent ??
+        (priceData as any)?.vat_perc ??
+        0,
+    ),
 
     // discounts (from array)
     discount1: d1,
@@ -159,10 +170,6 @@ export default function AddToCart({
   );
 
   const availability = effectivePriceData?.availability;
-  const availabilityU =
-    typeof availability === 'number' && availability > 0
-      ? toUnits(availability)
-      : Infinity;
 
   // Local cart item (safe even without priceData)
   const payloadForCart = useMemo(
@@ -326,9 +333,11 @@ export default function AddToCart({
   };
 
   const increment = () => {
-    const capU = Number.isFinite(availabilityU) ? availabilityU : Infinity;
+    // No availability cap: B2B buyers can order beyond on-hand stock
+    // (back-orders, scheduled supplier arrivals). The BE validates at
+    // checkout if a real limit applies.
     const baseU = toUnits(pendingTargetRef.current);
-    const nextU = Math.min(baseU + toUnits(step), capU);
+    const nextU = baseU + toUnits(step);
     if (nextU === baseU) return;
     const next = fromUnits(nextU);
     pendingTargetRef.current = next;
@@ -354,8 +363,6 @@ export default function AddToCart({
     }
     let targetU = toUnits(rawNum);
     targetU = snapToMultipleU(targetU);
-    if (Number.isFinite(availabilityU))
-      targetU = Math.min(targetU, availabilityU);
     const next = fromUnits(targetU);
     pendingTargetRef.current = next;
     setDraft(String(next));

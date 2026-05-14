@@ -264,30 +264,6 @@ export function buildAddItemRequest(
     ? String(sourceItem.sku)
     : String(input.item_id);
 
-  // Legacy dfl-b2b reads cart lines through `raw_data._context.{search,pricing}`
-  // (see dfl-app/dfl-b2b/store/cart.js). Mirror the shape produced by
-  // dfl-b2b/server/lib/transform.js so the legacy cart still renders parent
-  // info, model, short description and the multi-column packaging grid for
-  // lines created by this client.
-  const legacyContext = {
-    dfl_cart: input,
-    search: {
-      id_parent: sourceItem?.id_parent,
-      parent_sku: sourceItem?.parent_sku,
-      model: sourceItem?.model,
-      short_description: sourceItem?.shortDescription,
-    },
-    pricing: {
-      packaging_options: (pkgAll || []).map((p) => ({
-        code: p.packaging_code,
-        um: p.packaging_uom || '',
-        label: p.packaging_uom || p.packaging_uom_description,
-        qty: p.qty_x_packaging,
-        is_default: p.packaging_is_default,
-      })),
-    },
-  };
-
   return {
     // Required
     entity_code: String(input.item_id),
@@ -315,17 +291,17 @@ export function buildAddItemRequest(
         : sourceItem?.brand || '',
     category: '',
 
-    // Packaging (default column — what commerce-suite stores on the LineItem)
+    // Packaging — the active packaging on this line (commerce-suite
+    // stores these on the LineItem directly).
     packaging_code: pkgDefault?.packaging_code || sourceItem?.uom || '',
     packaging_label:
       pkgDefault?.packaging_uom || pkgDefault?.packaging_uom_description || '',
     pack_size: pkgDefault?.qty_x_packaging || 1,
     min_order_quantity: Number(input.qty_min_packing) || 1,
 
-    // Full packaging context — passed as extra fields. Commerce-suite persists
-    // the whole body into `raw_data`, so these come back verbatim on GET and
-    // let the cart render the complete UM | code columns grid without having
-    // to re-fetch ERP prices.
+    // Full packaging context — persisted into raw_data so the cart can
+    // re-render the UM/code grid on hydration without re-fetching the
+    // product. Kept lean: just the three structures, no dfl-era wrappers.
     packaging_options_all: pkgAll,
     packaging_option_default: pkgDefault,
     packaging_option_smallest: pkgSmallest,
@@ -336,9 +312,6 @@ export function buildAddItemRequest(
     // Promo
     promo_code: promoCode,
     promo_row: promoRow,
-
-    // Legacy dfl-b2b cart context — captured into raw_data by commerce-suite.
-    _context: legacyContext,
 
     // Note
     ...(input.note ? { note: input.note } : {}),
