@@ -213,8 +213,18 @@ const ProductCardB2B: React.FC<ProductProps> = ({
   const [likeLoading, setLikeLoading] = React.useState<boolean>(false);
   const [reminderLoading, setReminderLoading] = React.useState<boolean>(false);
 
-  // Check if product is out of stock
-  const isOutOfStock = priceData ? Number(priceData.availability) <= 0 : false;
+  // List-view search no longer threads ERP priceData, so synthesize from the
+  // inline product.pricing as a fallback. Without this the availability strip
+  // shows '—' and the out-of-stock check would short-circuit on missing data.
+  const effectivePriceData =
+    priceData ?? productToErpPriceData(product) ?? undefined;
+
+  // Out of stock when ERP/inline says <= 0, OR when there's no priceable data
+  // at all (on-request / draft products — we surface "non disponibile" + the
+  // reminder bell so buyers can still subscribe to restocks).
+  const isOutOfStock = effectivePriceData
+    ? Number(effectivePriceData.availability) <= 0
+    : true;
 
   // Check if this is a grouped product with multiple variants (skip price display)
   const hasMultipleVariants = Boolean(
@@ -354,9 +364,10 @@ const ProductCardB2B: React.FC<ProductProps> = ({
             )}
           </div>
 
-          {isAuthorized && priceData && (
+          {isAuthorized && !hasMultipleVariants && (
             <div className="flex items-center gap-1">
-              {/* Reminder Bell - show when out of stock OR when item has active reminder on reminders page */}
+              {/* Reminder Bell - show when out of stock OR when item has active reminder on reminders page.
+                  Skip for multi-variant parents: buyers act on the "vedi varianti" CTA, not on the parent itself. */}
               {(isOutOfStock || (forceShowReminderToggle && hasReminder)) && (
                 <button
                   type="button"
@@ -489,19 +500,20 @@ const ProductCardB2B: React.FC<ProductProps> = ({
           <span>
             {hasMultipleVariants
               ? `${product.variantCount} varianti`
-              : priceData
-                ? Number(priceData.availability) > 0
-                  ? formatAvailability(
-                      priceData.availability,
-                      priceData.packaging_option_default?.packaging_uom,
-                    )
-                  : (priceData.product_label_action?.LABEL ?? '—')
-                : '—'}
+              : effectivePriceData
+                ? formatAvailability(
+                    effectivePriceData.availability,
+                    effectivePriceData.packaging_option_default?.packaging_uom,
+                  )
+                : // No ERP data and no priceable inline pricing (on-request /
+                  // draft). formatAvailability(0) renders "non disponibile" —
+                  // the same wording used when stock hits zero.
+                  formatAvailability(0)}
           </span>
-          {priceData?.buy_did && (
+          {effectivePriceData?.buy_did && (
             <span
               className="bg-[#16a34a] text-white text-[9px] sm:text-[10px] font-extrabold px-1.5 py-[1px] rounded uppercase tracking-wide"
-              title={priceData?.buy_did_last_date || undefined}
+              title={effectivePriceData?.buy_did_last_date || undefined}
             >
               {t('text-already-ordered', { defaultValue: 'Già ordinato' })}
             </span>
@@ -510,7 +522,7 @@ const ProductCardB2B: React.FC<ProductProps> = ({
 
         <LastOrdered
           lang={lang}
-          priceData={priceData}
+          priceData={effectivePriceData}
           variant="card"
           className="px-1.5 sm:px-2 pb-1.5 sm:pb-2 -mt-0.5"
         />

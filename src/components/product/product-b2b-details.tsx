@@ -173,8 +173,9 @@ const ProductB2BDetails: React.FC<{
   const [addToReminderLoader, setAddToReminderLoader] = useState(false);
   const [shareButtonStatus, setShareButtonStatus] = useState(false);
 
-  // Check if product is out of stock
-  const isOutOfStock = erpPrice ? Number(erpPrice.availability) <= 0 : false;
+  // Out of stock when ERP/inline says <= 0 or there's no priceable data
+  // (on-request / draft) — both cases surface the reminder bell.
+  const isOutOfStock = erpPrice ? Number(erpPrice.availability) <= 0 : true;
 
   // Check if we have a valid price
   const anyPD = erpPrice as any;

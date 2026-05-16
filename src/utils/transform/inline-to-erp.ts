@@ -117,12 +117,9 @@ export function productToErpPriceData(
     price: netPrice,
     price_discount: netPrice,
     vat_percent: pricing.vatRate ?? 0,
-    /**
-     * Availability isn't in the inline payload yet. Default to a positive
-     * value so UI gates that check "> 0" don't flip products to
-     * out-of-stock by mistake. Once BE ships availability, swap this in.
-     */
-    availability: 1,
+    // PIM now ships stock as `quantity` on the transformed Product. Use it
+    // directly; 0 surfaces as "non disponibile" + the reminder bell on cards.
+    availability: Number(product.quantity ?? 0),
     discount: discountTiers,
     discount_extra: discountExtraTiers,
     packaging_option_default: defaultForSale,

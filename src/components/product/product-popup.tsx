@@ -103,7 +103,9 @@ export default function ProductPopup({ lang }: { lang: string }) {
   if (!product) return null;
 
   const canAdd = erpPrice?.product_label_action?.ADD_TO_CART ?? true;
-  const isOutOfStock = erpPrice ? Number(erpPrice.availability) <= 0 : false;
+  // Out of stock when ERP/inline says <= 0 or there's no priceable data
+  // (on-request / draft) — both cases surface the reminder bell.
+  const isOutOfStock = erpPrice ? Number(erpPrice.availability) <= 0 : true;
 
   // Check if we have a valid price
   const anyPD = erpPrice as any;
