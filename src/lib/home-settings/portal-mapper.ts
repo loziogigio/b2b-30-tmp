@@ -16,6 +16,7 @@ import type {
   HeaderConfig,
   HomeSettings,
   MetaTags,
+  ProductCardStyle,
 } from '@/lib/home-settings/types';
 
 /** Minimal shape of the `portal` object returned by the PIM public B2B home endpoint. */
@@ -28,6 +29,14 @@ export interface PortalPayload {
   footer?: PortalFooter;
   footer_draft?: PortalFooter;
   meta_tags?: PortalMetaTags;
+  /**
+   * Product card visual style + priceDecimals. Not currently shipped by the
+   * portal endpoint (see commerce-suite's `buildPortalFromHomeSettings`, which
+   * intentionally omits it). Declared here so the storefront automatically
+   * picks it up the moment BE adds it; until then `cardStyle` stays at
+   * `DEFAULT_HOME_SETTINGS.cardStyle`.
+   */
+  cardStyle?: Partial<ProductCardStyle>;
   /** present on the read-through fallback for unmigrated tenants */
   synthesized?: boolean;
 }
@@ -205,6 +214,13 @@ export function mapPortalToHomeSettings(
     }),
     meta_tags: mapMetaTags(portal.meta_tags),
     footer: footer ?? DEFAULT_HOME_SETTINGS.footer,
+    // Merge any portal-supplied cardStyle over the defaults so a partial
+    // payload (e.g. just `priceDecimals: 4`) keeps the rest of the defaults
+    // intact. When the portal doesn't ship cardStyle this is a no-op.
+    cardStyle: {
+      ...DEFAULT_HOME_SETTINGS.cardStyle,
+      ...(portal.cardStyle ?? {}),
+    },
     // Keep the legacy top-level fields populated for any straggler consumers.
     footerHtml: portal.footer?.footer_html,
     footerHtmlDraft: portal.footer?.footer_html_draft,

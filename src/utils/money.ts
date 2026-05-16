@@ -12,6 +12,8 @@ const priceFormatterCache = new Map<number, Intl.NumberFormat>();
 function getPriceFormatter(decimals: number): Intl.NumberFormat {
   let fmt = priceFormatterCache.get(decimals);
   if (!fmt) {
+    // it-IT: comma decimal separator, dot thousands separator
+    // (e.g. 1530 → "1.530,00").
     fmt = new Intl.NumberFormat('it-IT', {
       minimumFractionDigits: decimals,
       maximumFractionDigits: decimals,
@@ -21,7 +23,7 @@ function getPriceFormatter(decimals: number): Intl.NumberFormat {
   return fmt;
 }
 
-/** Italian-locale number formatter (e.g. 1530 → "1.530,00"). */
+/** Italian-locale formatter (e.g. 1530 → "1.530,00"). */
 export function formatPriceIt(
   value: unknown,
   decimals = 2,
