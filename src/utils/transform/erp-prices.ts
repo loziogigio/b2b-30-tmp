@@ -312,6 +312,19 @@ export function formatPromoDate(dateStr?: string): string {
   return dateStr;
 }
 
+/**
+ * Convert a "YYYY-MM-DD" string to Italian DD/MM/YYYY display format.
+ * Pass-through for anything that doesn't match the strict ISO date
+ * pattern, so callers can hand in either pre-normalized YMD or an
+ * already-formatted string. For full ISO timestamps the synth in
+ * inline-to-erp.ts already normalizes to YMD before this is called.
+ */
+export function formatYmdToItalian(iso?: string): string {
+  if (!iso) return '';
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : iso;
+}
+
 function pad(n: string | number): string {
   return String(n).padStart(2, '0');
 }

@@ -11,6 +11,7 @@ import { useUI } from '@contexts/ui.context';
 import { useHomeSettings } from '@/hooks/use-home-settings';
 import { formatPriceIt } from '@utils/money';
 import type { Product } from '@framework/types';
+import { productToErpPriceData } from '@utils/transform/inline-to-erp';
 
 export type PriceSlice = Pick<
   ErpPriceData,
@@ -40,33 +41,21 @@ type Props = {
 };
 
 /**
- * Build a PriceSlice from a Product's inline pricing block. For B2B the
- * only legit strikethrough is when retail/MSRP is genuinely higher than
- * the customer's list price — VAT-inflated values are not a markdown.
- * `is_promo` describes whether *this* price is a promo override, not
- * whether promos exist alongside it; we surface offers via the "+N" /
- * Promo badge instead so the headline price doesn't turn red.
+ * Build a PriceSlice from a Product's inline pricing block. Delegates
+ * to the canonical synth (productToErpPriceData) and picks the 5 slice
+ * fields, so headline rendering stays aligned with the offer-rows /
+ * cart pricing without duplicating the pricing-source cascade or the
+ * promo-counting logic.
  */
 function productToPriceSlice(product?: Product | null): PriceSlice | null {
-  const pricing = product?.pricing;
-  if (!pricing || pricing.status !== 'priced' || pricing.list == null) {
-    return null;
-  }
-
-  const packagingPromos = (product?.packagingOptions ?? []).flatMap(
-    (opt) => opt.promotions ?? [],
-  );
-  const rootPromos = Array.isArray(product?.promotions)
-    ? (product?.promotions as unknown[])
-    : [];
-  const count_promo = packagingPromos.length + rootPromos.length;
-
+  const full = productToErpPriceData(product ?? undefined);
+  if (!full) return null;
   return {
-    price_discount: pricing.list,
-    gross_price: pricing.retail ?? pricing.list,
-    discount_description: '',
-    is_promo: false,
-    count_promo,
+    price_discount: full.price_discount,
+    gross_price: full.gross_price,
+    discount_description: full.discount_description,
+    is_promo: full.is_promo,
+    count_promo: full.count_promo ?? 0,
   };
 }
 
@@ -128,7 +117,22 @@ export default function PriceAndPromo({
 
   const showPrev =
     gross_price != null && Number(gross_price) !== Number(price_discount);
-  const discountLines = splitDiscountLines(discount_description);
+  // Prefer the legacy pre-formatted `discount_description` string when
+  // provided; otherwise fall back to the raw tier numbers in `discount_extra`
+  // and format them with the same dynamic `decimals` as the price headline.
+  const discount_extra: unknown = anyPD.discount_extra;
+  // Render the raw % value with no trailing zeros: 1 → "-1%", 0.47 → "-0.47%".
+  // The price headline pads to `decimals` for visual alignment; the discount
+  // tier is a percentage and shouldn't sprout fake "0"s.
+  const fmtPct = (d: number) => `-${Math.abs(Number(d))}%`;
+  const discountLines =
+    splitDiscountLines(discount_description).length > 0
+      ? splitDiscountLines(discount_description)
+      : Array.isArray(discount_extra)
+        ? (discount_extra as number[])
+            .filter((v) => typeof v === 'number' && v !== 0)
+            .map(fmtPct)
+        : [];
   const Wrapper: React.ElementType = 'div';
 
   return (

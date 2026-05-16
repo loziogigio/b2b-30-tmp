@@ -3,10 +3,11 @@
 import React from 'react';
 import cn from 'classnames';
 import { HiOutlineCalendar } from 'react-icons/hi';
-import type {
-  ErpPriceData,
-  PackagingOption,
-  PromoOffer,
+import {
+  formatYmdToItalian,
+  type ErpPriceData,
+  type PackagingOption,
+  type PromoOffer,
 } from '@utils/transform/erp-prices';
 import { useTranslation } from 'src/app/i18n/client';
 import { useUI } from '@contexts/ui.context';
@@ -14,17 +15,12 @@ import { useHomeSettings } from '@/hooks/use-home-settings';
 import PackagingGrid from './packaging-grid';
 import AddToCart from './add-to-cart';
 import { formatPriceIt } from '@utils/money';
+import { isNetPricePromoType } from '@utils/promo';
 
 type Props = {
   lang: string;
   product: any;
   priceData?: ErpPriceData;
-};
-
-const fmtDate = (iso?: string) => {
-  if (!iso) return '';
-  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  return m ? `${m[3]}/${m[2]}/${m[1]}` : iso;
 };
 
 const cleanTitle = (raw?: string) => {
@@ -33,22 +29,6 @@ const cleanTitle = (raw?: string) => {
   const trimmed = raw.replace(/[-_\s]/g, '');
   return trimmed ? raw.trim() : '';
 };
-
-/**
- * Promo types that ship a flat NET price (no percentage stacking on
- * top of the listino). For these we suppress the strikethrough gross
- * AND drop discount_extra from the cart payload — the cart line is
- * recorded as a plain unit price equal to promo_net_price, not as
- * "list with N% off." Mirrors the legacy time-offer-rows set.
- */
-const NET_PRICE_PROMO_TYPES = new Set([
-  'RigaPrezzoNettoQuantitaMinima',
-  'RigaValoreMinimoSconto',
-  'RigaASommaQuantitàArticoli',
-]);
-
-const isNetPricePromoType = (type?: string) =>
-  Boolean(type && NET_PRICE_PROMO_TYPES.has(type));
 
 /**
  * Build a synthetic ErpPriceData for a single promo line so AddToCart
@@ -134,6 +114,10 @@ export function buildPromoPriceData(
     // cart payload's discount1..6 records a stacked percentage.
     discount_extra: netPriceOnly ? [] : offer.promo_extra_discounts,
     packaging_option_default: stepPackaging,
+    // Override the listino's smallest packaging too so the cart counter's
+    // snap-multiple matches the promo step — otherwise a typed "3" on a
+    // qty=2 promo line could pass through unchanged.
+    packaging_option_smallest: stepPackaging,
     // Show only the promo's sellable packaging in the grid for this row,
     // with its original catalog qty (not the promo step).
     packaging_options_all: [displayPackaging],
@@ -219,7 +203,7 @@ export default function B2BOfferRows({ lang, product, priceData }: Props) {
             label={t('text-promo', { defaultValue: 'PROMO' })}
             labelTone="promo"
             title={cleanTitle(offer.promo_title)}
-            endDate={fmtDate(offer.promo_end_date)}
+            endDate={formatYmdToItalian(offer.promo_end_date)}
           >
             <PackCol>
               {/* Promo first column shows MV (Minima Vendita) with the
@@ -362,10 +346,8 @@ function PriceCell({
   // mean no MSRP discount — don't render a misleading line-through.
   const showStrike = gross > 0 && Number(gross) > Number(net);
   const discounts = (extraDiscounts ?? []).filter((v) => v && v !== 0);
-  // Match the headline price's fraction-digit count (settings.priceDecimals):
-  // decimals=2 → "-1.86%", decimals=4 → "-1.8600%".
-  const fmtDiscount = (d: number) =>
-    `-${Math.abs(Number(d)).toFixed(decimals)}%`;
+  // Render the raw % with no trailing zeros: 1 → "-1%", 0.47 → "-0.47%".
+  const fmtDiscount = (d: number) => `-${Math.abs(Number(d))}%`;
   return (
     <div className="flex items-center justify-end gap-2 whitespace-nowrap">
       {showStrike && (

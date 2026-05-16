@@ -5,7 +5,11 @@ import cn from 'classnames';
 import { useRouter } from 'next/navigation';
 import { HiOutlineCalendar } from 'react-icons/hi';
 import { IoArrowForwardOutline } from 'react-icons/io5';
-import type { ErpPriceData, PromoOffer } from '@utils/transform/erp-prices';
+import {
+  formatYmdToItalian,
+  type ErpPriceData,
+  type PromoOffer,
+} from '@utils/transform/erp-prices';
 import { useTranslation } from 'src/app/i18n/client';
 import { useUI } from '@contexts/ui.context';
 import { useHomeSettings } from '@/hooks/use-home-settings';
@@ -17,6 +21,7 @@ import {
 import { buildPromoPriceData } from '@components/product/b2b-offer-rows';
 import AddToCart from '@components/product/add-to-cart';
 import { ROUTES } from '@utils/routes';
+import { NET_PRICE_PROMO_TYPES } from '@utils/promo';
 
 type Props = {
   lang: string;
@@ -32,13 +37,6 @@ type TFn = (key: string, opts?: { defaultValue?: string }) => string;
 const fmtNum = (v: unknown, decimals: number): string => {
   const n = Number(v);
   return Number.isFinite(n) ? n.toFixed(decimals) : '';
-};
-
-/** Convert "YYYY-MM-DD" to "DD/MM/YYYY"; pass through other formats. */
-const fmtDate = (iso?: string): string => {
-  if (!iso) return '';
-  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  return m ? `${m[3]}/${m[2]}/${m[1]}` : iso;
 };
 
 /** Drop placeholder titles ("---", "___", "   ") that ERP sometimes emits. */
@@ -177,7 +175,7 @@ export default function TimeOfferRows({ lang, product, priceData }: Props) {
             label={t('text-promo', { defaultValue: 'PROMO' })}
             labelTone="promo"
             title={cleanTitle(offer.promo_title)}
-            endDate={fmtDate(offer.promo_end_date)}
+            endDate={formatYmdToItalian(offer.promo_end_date)}
             priceData={promoPriceData}
             decimals={decimals}
             gross={promoGross}
@@ -406,18 +404,6 @@ const MIN_PIECES_PROMO_TYPES = new Set([
   'RigaCartoniNumeroArticoli',
   'RigaASommaQuantitàArticoli',
 ]);
-/**
- * Promo types where the offer is a flat net price (no percentage discount
- * stacking on top of the listino). Mirrors the legacy ProductPromoAction.vue
- * `priceInfoDiscountPromo()` suppress list — for these we hide the
- * strike-through gross and the discount-tier chip on the PROMO row.
- */
-const NET_PRICE_PROMO_TYPES = new Set([
-  'RigaPrezzoNettoQuantitaMinima',
-  'RigaValoreMinimoSconto',
-  'RigaASommaQuantitàArticoli',
-]);
-
 /**
  * Threshold-based promo requirement panel — shown when a promo requires a
  * minimum cart amount or piece count to qualify (e.g. €100 of items in the
