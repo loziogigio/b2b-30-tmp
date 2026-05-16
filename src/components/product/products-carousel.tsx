@@ -199,7 +199,7 @@ const ProductsCarousel: React.FC<ProductsCarouselProps> = ({
                     const isSingleVariation = variations.length === 1;
 
                     // Merge the single variation over the parent so we keep any missing fields (image, brand, etc.)
-                    const targetProduct = isSingleVariation
+                    let targetProduct = isSingleVariation
                       ? {
                           ...p,
                           ...variations[0],
@@ -213,6 +213,22 @@ const ProductsCarousel: React.FC<ProductsCarouselProps> = ({
                           variations: [], // flattened after normalization
                         }
                       : p;
+
+                    // Multi-variant parents: PIM groupByParent often ships the
+                    // parent without its own image/name (those live on the
+                    // variants). Fall back to the first variation for display
+                    // so the carousel doesn't render an empty card.
+                    if (!isSingleVariation && variations.length > 1) {
+                      const v0 = variations[0] ?? {};
+                      const parentImg = (p?.image?.thumbnail ?? '').trim();
+                      const parentName = (p?.name ?? '').trim();
+                      targetProduct = {
+                        ...p,
+                        image: parentImg ? p.image : (v0.image ?? p.image),
+                        name: parentName ? p.name : (v0.name ?? p.name),
+                        brand: p.brand ?? v0.brand,
+                      };
+                    }
 
                     const slideKey = String(targetProduct?.id ?? p?.id ?? '');
 

@@ -60,7 +60,11 @@ export default function UpdateCart({ lang, item, className, disabled }: Props) {
       : null) ?? item;
   const serverQty = Number(live?.quantity ?? 0);
 
-  // --- derive step & multiple from packaging_options_all on the cart item ---
+  // --- derive step & multiple ---
+  // Prefer the explicit `packaging_option_default` saved in __cartMeta — for
+  // promo lines this is the MV step (e.g. qty=2). `packaging_options_all`
+  // carries the *display* packagings only (the CFZ catalog size for promos),
+  // so searching it for the default would give the wrong step.
   const options = (live as any)?.packaging_options_all as
     | Array<{
         packaging_is_default?: boolean;
@@ -69,13 +73,14 @@ export default function UpdateCart({ lang, item, className, disabled }: Props) {
       }>
     | undefined;
 
+  const meta = (live as any)?.__cartMeta;
   const def =
-    options?.find((o) => o?.packaging_is_default) ??
-    (live as any)?.__cartMeta?.packaging_default;
+    meta?.packaging_option_default ??
+    options?.find((o) => o?.packaging_is_default);
 
   const sml =
-    options?.find((o) => o?.packaging_is_smallest) ??
-    (live as any)?.__cartMeta?.packaging_smallest;
+    meta?.packaging_option_smallest ??
+    options?.find((o) => o?.packaging_is_smallest);
 
   const stepQty = Number(def?.qty_x_packaging ?? 1) || 1; // increment size
   const multipleQty = Number(sml?.qty_x_packaging ?? stepQty) || 1; // snap multiple
