@@ -123,8 +123,6 @@ const buildAddPayload = (args: {
     qty_min_packing: Number(
       priceData?.packaging_option_default?.qty_x_packaging ?? 1,
     ),
-    listino_type: String((priceData as any)?.listino_type ?? '1'),
-    listino_code: String((priceData as any)?.listino_code ?? 'VEND'),
 
     // promo
     promo_code: promo_code ?? (priceData as any)?.promo_code ?? 0,
@@ -190,8 +188,6 @@ export default function AddToCart({
         packaging_options_all: effectivePriceData?.packaging_options_all,
         promo_code: (effectivePriceData as any)?.promo_code,
         promo_row: (effectivePriceData as any)?.promo_row,
-        listino_type: (effectivePriceData as any)?.listino_type,
-        listino_code: (effectivePriceData as any)?.listino_code,
       },
     }),
     [product, effectivePriceData],

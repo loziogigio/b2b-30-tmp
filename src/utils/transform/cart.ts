@@ -108,8 +108,6 @@ export type AddToCartInput = {
 
   // packaging / list
   qty_min_packing?: number; // NOTE: exact field name from your example
-  listino_type?: string | number; // e.g. "1"
-  listino_code?: string; // e.g. "VEND"
 
   // line note
   note?: string;

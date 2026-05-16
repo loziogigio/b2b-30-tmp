@@ -20,24 +20,16 @@ import { IoIosHeart, IoIosHeartEmpty } from 'react-icons/io';
 import { ReminderIcon, ReminderIconFilled } from '@components/icons/app-icons';
 import VariantsFilterBar from './variants-filter-bar';
 import { productToErpPriceData } from '@utils/transform/inline-to-erp';
+import { buildPromoPriceData, pickImprovingOffer } from '../b2b-offer-rows';
 import LastOrdered from '../last-ordered';
 
 const AddToCart = dynamic(() => import('@components/product/add-to-cart'), {
   ssr: false,
 });
 
-type GetPrice = (id: string | number) => ErpPriceData | undefined;
-
 interface Props {
   lang: string;
   product: Product & { variantCount?: number }; // parent with optional variant count from grouping
-  /**
-   * Optional. The list view used to thread an ERP price map from the parent
-   * search; with inline pricing we read variant.pricing directly, so callers
-   * can omit this and we fall back to a no-op getter.
-   */
-  getPrice?: GetPrice;
-  priceData?: ErpPriceData; // parent price (or single-variation)
   className?: string;
   // show Search + Model tags controls only if variant count >= this value
   filterThreshold?: number;
@@ -46,8 +38,6 @@ interface Props {
   /** Show reminder toggle even if product is in stock (e.g., on reminders page) */
   forceShowReminderToggle?: boolean;
 }
-
-const NO_PRICE: GetPrice = () => undefined;
 
 // Parent row: 3 columns (image | info | brand)
 const GRID_PARENT_3 =
@@ -73,8 +63,6 @@ const Dash = () => <span className="text-gray-300">—</span>;
 export default function ProductRowB2B({
   lang,
   product,
-  getPrice = NO_PRICE,
-  priceData,
   className,
   filterThreshold = 0,
   searchSortThreshold = 10,
@@ -147,12 +135,8 @@ export default function ProductRowB2B({
     return map;
   }, [variations]);
 
-  // Local variant pricing wins, with the optional parent getPrice as a fallback
-  // (legacy callers that still thread an ERP price map can override per-id).
-  const getVariantPrice = (id: string | number): ErpPriceData | undefined => {
-    const strId = String(id);
-    return variantPriceMap[strId] ?? getPrice(strId);
-  };
+  const getVariantPrice = (id: string | number): ErpPriceData | undefined =>
+    variantPriceMap[String(id)];
 
   // -------- Filters (Search + Model tags) --------
   const modelOptions = useMemo(() => {
@@ -271,8 +255,8 @@ export default function ProductRowB2B({
                 sizes="140px"
                 className="object-cover"
               />
-              {/* PROMO badge - show if priceData.is_promo OR product.has_active_promo */}
-              {(priceData?.is_promo || product.has_active_promo) && (
+              {/* PROMO badge — driven by the catalog flag on the product. */}
+              {product.has_active_promo && (
                 <span className="absolute top-0 right-0 text-[10px] md:text-xs font-bold text-white uppercase bg-red-600 px-2 py-1">
                   PROMO
                 </span>
@@ -385,28 +369,48 @@ export default function ProductRowB2B({
           {sortedVariants.map((v) => {
             const isPseudo = !!(v as any).__pseudo;
             // For pseudo rows (products without variations), the row IS
-            // the parent. Synthesize priceData from the parent's inline
-            // pricing when the caller didn't pass an ERP slice — the
-            // list-view search no longer threads priceData, so without
-            // this fallback the row would have no packaging grid, price
-            // or add-to-cart.
+            // the parent — synthesize priceData from the parent's inline
+            // pricing so the row gets a packaging grid, price column
+            // and add-to-cart counter.
             const vPrice: ErpPriceData | undefined = isPseudo
-              ? (priceData ?? productToErpPriceData(product) ?? undefined)
+              ? (productToErpPriceData(product) ?? undefined)
               : getVariantPrice(v.id);
+            // When the listino MV already triggers a promo
+            // (is_improving_promo), swap to the matching offer so packaging /
+            // price / add-to-cart all reflect the promo line. Mirrors the
+            // ProductCardB2B behaviour.
+            const matchingOffer = vPrice ? pickImprovingOffer(vPrice) : null;
+            const dPrice: ErpPriceData | undefined =
+              matchingOffer && vPrice
+                ? buildPromoPriceData(vPrice, matchingOffer)
+                : vPrice;
+            const promoVariation = matchingOffer
+              ? ({
+                  id: `promo-${matchingOffer.promo_code}-${matchingOffer.promo_row}`,
+                  title:
+                    matchingOffer.promo_title ||
+                    `Promo ${matchingOffer.promo_code}`,
+                  price: matchingOffer.promo_net_price,
+                  quantity: vPrice?.availability ?? 0,
+                } as any)
+              : undefined;
             const vImg = v.image?.thumbnail || productPlaceholder;
             const targetSku = String(v.sku ?? sku ?? '').trim();
+            // Out of stock when availability <= 0, OR when there's no
+            // priceable data at all (on-request / draft) — surfaces the
+            // reminder bell so buyers can subscribe to restocks.
             const isOutOfStock = vPrice
               ? Number(vPrice.availability) <= 0
-              : false;
+              : true;
             // Check if we have a valid price - same logic as ProductCardB2B
-            const anyPD = vPrice as any;
+            const anyPD = dPrice as any;
             const priceValue =
               anyPD?.price_discount ??
               anyPD?.net_price ??
               anyPD?.gross_price ??
               anyPD?.price_gross;
             const hasValidPrice =
-              vPrice && priceValue != null && Number(priceValue) > 0;
+              dPrice && priceValue != null && Number(priceValue) > 0;
             const reminderActive = targetSku
               ? reminders.hasReminder(targetSku)
               : false;
@@ -582,7 +586,7 @@ export default function ProductRowB2B({
 
                   {/* 3) Packaging */}
                   <Cell>
-                    <PackagingGrid pd={vPrice} />
+                    <PackagingGrid pd={dPrice} />
                   </Cell>
 
                   {/* 4) Ordered */}
@@ -602,13 +606,13 @@ export default function ProductRowB2B({
                       <div className="text-center sm:text-right text-gray-300"></div>
                     )}
                   </Cell>
-                  {/* 5) Ordered */}
+                  {/* 5) Price */}
                   <Cell>
-                    {vPrice && (
+                    {dPrice && (
                       <PriceAndPromo
                         name={name}
                         sku={sku}
-                        priceData={vPrice}
+                        priceData={dPrice}
                         currency="EUR"
                         withSchemaOrg={true}
                         // className="px-3 py-1 justify-start" // optional tweaks
@@ -653,7 +657,14 @@ export default function ProductRowB2B({
                           return (
                             <AddToCart
                               product={isPseudo ? (product as any) : v}
-                              priceData={vPrice}
+                              priceData={dPrice}
+                              variation={promoVariation}
+                              serverItemId={
+                                matchingOffer
+                                  ? (vPrice?.entity_code ??
+                                    (isPseudo ? product?.id : v.id))
+                                  : undefined
+                              }
                               variant="venus"
                               lang={lang}
                               className="justify-end"
