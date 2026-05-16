@@ -12,6 +12,7 @@ import dynamic from 'next/dynamic';
 import { useTranslation } from 'src/app/i18n/client';
 import Link from 'next/link';
 import { ErpPriceData } from '@utils/transform/erp-prices';
+import { productToErpPriceData } from '@utils/transform/inline-to-erp';
 import { formatAvailability } from '@utils/format-availability';
 import PackagingGrid from '../packaging-grid';
 import PriceAndPromo from '../price-and-promo';
@@ -52,6 +53,11 @@ function RenderPopupOrAddToCart({
   const iconSize = width! > 1024 ? '19' : '17';
   const outOfStock = isInCart(id) && !isInStock(id);
 
+  // Carousels don't thread an ERP slice after Phase 2.1; fall back to the
+  // synth so AddToCart still gets packaging / unit price from inline data.
+  const effectivePriceData: ErpPriceData | undefined =
+    priceData ?? productToErpPriceData(data) ?? undefined;
+
   function handlePopupView() {
     openModal('B2B_PRODUCT_VARIANTS_QUICK_VIEW', data);
   }
@@ -85,7 +91,7 @@ function RenderPopupOrAddToCart({
       product={data}
       variant="venus"
       lang={lang}
-      priceData={priceData}
+      priceData={effectivePriceData}
     />
   );
 }

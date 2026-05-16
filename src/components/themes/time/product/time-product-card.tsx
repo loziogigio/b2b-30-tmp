@@ -7,6 +7,7 @@ import { Product } from '@framework/types';
 import { useModalAction } from '@components/common/modal/modal.context';
 import { productPlaceholder } from '@assets/placeholders';
 import { ErpPriceData } from '@utils/transform/erp-prices';
+import { productToErpPriceData } from '@utils/transform/inline-to-erp';
 import { useUI } from '@contexts/ui.context';
 import { useTranslation } from 'src/app/i18n/client';
 import AddToCart from '@components/product/add-to-cart';
@@ -50,13 +51,20 @@ export default function TimeProductCard({
   const [likeLoading, setLikeLoading] = React.useState(false);
   const [reminderLoading, setReminderLoading] = React.useState(false);
 
+  // Carousels and home blocks no longer thread an ERP price slice
+  // (Phase 2.1). Synthesize from the product's inline pricing block
+  // so the card still renders price + counter without a roundtrip.
+  // Matches the product-card-b2b fallback in commit de9ae05.
+  const effectivePriceData: ErpPriceData | undefined =
+    priceData ?? productToErpPriceData(product) ?? undefined;
+
   const variations = Array.isArray(product?.variations)
     ? product.variations
     : [];
   const hasVariants =
     (product.variantCount && product.variantCount > 1) || variations.length > 1;
 
-  const anyPD = priceData as any;
+  const anyPD = effectivePriceData as any;
   const netPrice =
     anyPD?.price_discount ?? anyPD?.net_price ?? anyPD?.price_gross ?? null;
   const listPrice = anyPD?.price_gross ?? anyPD?.gross_price ?? null;
@@ -65,16 +73,18 @@ export default function TimeProductCard({
     listPrice != null &&
     Number(listPrice) > Number(netPrice) &&
     Number(netPrice) > 0;
-  const discountTiers = priceData?.discount_description || '';
+  const discountTiers = effectivePriceData?.discount_description || '';
   const discountPercent = hasDiscount
     ? Math.round((1 - Number(netPrice) / Number(listPrice)) * 100)
     : 0;
 
-  const isOutOfStock = priceData ? Number(priceData.availability) <= 0 : false;
+  const isOutOfStock = effectivePriceData
+    ? Number(effectivePriceData.availability) <= 0
+    : false;
   // Same legacy gating as TimeSearchRow: promo-gated items get the PROMO CTA
   // instead of the inline qty selector, with a cart-total readout next to it.
   const { hasMultiplePromos, isPromoGated, canInlineAdd, cartQty } =
-    usePromoGating(priceData, product);
+    usePromoGating(effectivePriceData, product);
 
   function handleClick() {
     if (hasVariants) {
@@ -129,7 +139,7 @@ export default function TimeProductCard({
             </span>
           )}
           {!hidePrices &&
-            hasActivePromo(product, priceData) &&
+            hasActivePromo(product, effectivePriceData) &&
             discountPercent === 0 && (
               <span className="bg-[var(--time-red)] text-white text-[10px] sm:text-[11px] font-bold px-[7px] py-[3px] rounded-[5px] font-[family-name:var(--font-body)]">
                 PROMO
@@ -148,7 +158,8 @@ export default function TimeProductCard({
         {isOutOfStock && (
           <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-[2]">
             <span className="bg-[var(--time-dark)] text-white text-[11px] sm:text-xs font-bold px-2.5 py-1 rounded-md whitespace-nowrap">
-              {priceData?.product_label_action?.LABEL || 'Non disponibile'}
+              {effectivePriceData?.product_label_action?.LABEL ||
+                'Non disponibile'}
             </span>
           </div>
         )}
@@ -275,7 +286,7 @@ export default function TimeProductCard({
         )}
 
         {/* Availability + status badges */}
-        {priceData && !hasVariants && (
+        {effectivePriceData && !hasVariants && (
           <div className="flex items-start gap-2 mt-1.5 flex-wrap">
             <div className="flex items-center gap-1.5">
               <span
@@ -295,13 +306,13 @@ export default function TimeProductCard({
                 }}
               >
                 {isOutOfStock
-                  ? priceData?.product_label_action?.LABEL ||
+                  ? effectivePriceData?.product_label_action?.LABEL ||
                     t('text-out-stock', { defaultValue: 'Non disponibile' })
                   : t('text-in-stock', { defaultValue: 'Disponibile' })}
               </span>
             </div>
             <TimeStatusBadges
-              priceData={priceData}
+              priceData={effectivePriceData}
               product={product}
               hasMultiplePromos={hasMultiplePromos}
               onPromoClick={handleClick}
@@ -326,7 +337,7 @@ export default function TimeProductCard({
               <AddToCart
                 lang={lang}
                 product={product}
-                priceData={priceData}
+                priceData={effectivePriceData}
                 showPlaceholder={false}
                 className="w-full"
               />
