@@ -255,9 +255,16 @@ if [[ "$IS_MULTI_TENANT" == "true" ]]; then
     echo "    -e SSO_API_URL=https://cs.vendereincloud.it \\"
     echo "    -e SSO_CLIENT_ID=vinc-b2b \\"
     echo "    -e SSO_CLIENT_SECRET=your-secret \\"
+    echo "    -e REDIS_HOST=redis \\"
+    echo "    -e REDIS_PORT=6379 \\"
     echo "    ${IMAGE_NAME}:${VERSION}"
     echo ""
 fi
+
+echo "Redis Cache (runtime-only, not baked into image):"
+echo "    REDIS_HOST=${REDIS_HOST:-<unset → push invalidation disabled>}"
+echo "    REDIS_PORT=${REDIS_PORT:-6379}"
+echo ""
 
 if [[ "$PUSH" != "--push" ]]; then
     echo "To push to registry:"
