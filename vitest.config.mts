@@ -36,6 +36,9 @@ export default defineConfig({
       '@assets': path.resolve(__dirname, './src/assets'),
       '@public': path.resolve(__dirname, './public'),
       '@lib': path.resolve(__dirname, './src/lib'),
+      // Bare paths that work via tsconfig baseUrl in Next.js but need
+      // explicit resolution in Vitest:
+      src: path.resolve(__dirname, './src'),
     },
   },
 });
