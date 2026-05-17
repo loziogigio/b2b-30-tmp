@@ -43,6 +43,10 @@ interface TenantDocument {
   builder_url?: string;
   b2b_theme?: string;
   support_contact?: string;
+  /** Per-tenant feature flags. snake_case as stored. */
+  features?: {
+    pricing_source?: 'inline' | 'erp' | 'hybrid';
+  };
   status: string;
 }
 
@@ -74,6 +78,9 @@ function fromDocument(doc: TenantDocument): TenantConfig {
     builderUrl: doc.builder_url,
     b2bTheme: doc.b2b_theme || 'default',
     supportContact: doc.support_contact,
+    features: doc.features
+      ? { pricingSource: doc.features.pricing_source }
+      : undefined,
     isActive: doc.status === 'active',
   };
 }

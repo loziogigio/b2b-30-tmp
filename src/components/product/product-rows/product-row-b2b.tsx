@@ -19,7 +19,7 @@ import { useUI } from '@contexts/ui.context';
 import { IoIosHeart, IoIosHeartEmpty } from 'react-icons/io';
 import { ReminderIcon, ReminderIconFilled } from '@components/icons/app-icons';
 import VariantsFilterBar from './variants-filter-bar';
-import { productToErpPriceData } from '@utils/transform/inline-to-erp';
+import { useProductsPriceMap } from '@framework/pricing';
 import { buildPromoPriceData, pickImprovingOffer } from '../b2b-offer-rows';
 import LastOrdered from '../last-ordered';
 
@@ -123,17 +123,12 @@ export default function ProductRowB2B({
 
   const [showVars, setShowVars] = useState<boolean>(shouldShowRows ?? false);
 
-  // Variant prices come from inline product.pricing on each variation. We
-  // synthesize the ErpPriceData shape so PackagingGrid / PriceAndPromo /
-  // AddToCart keep working unchanged, then index by variant id.
-  const variantPriceMap = useMemo<Record<string, ErpPriceData>>(() => {
-    const map: Record<string, ErpPriceData> = {};
-    variations.forEach((v: any) => {
-      const synth = productToErpPriceData(v);
-      if (synth) map[String(v?.id ?? '')] = synth;
-    });
-    return map;
-  }, [variations]);
+  // Variant prices flow through the unified batch hook so the active
+  // pricingSource (inline / erp / hybrid) drives the data origin. We
+  // feed it `variantRows` rather than `variations` so the pseudo row
+  // (parent acting as its own "variant" when no real variations exist)
+  // is keyed under product.id and reachable via getVariantPrice.
+  const variantPriceMap = useProductsPriceMap(variantRows);
 
   const getVariantPrice = (id: string | number): ErpPriceData | undefined =>
     variantPriceMap[String(id)];
@@ -368,13 +363,9 @@ export default function ProductRowB2B({
           ) : null}
           {sortedVariants.map((v) => {
             const isPseudo = !!(v as any).__pseudo;
-            // For pseudo rows (products without variations), the row IS
-            // the parent — synthesize priceData from the parent's inline
-            // pricing so the row gets a packaging grid, price column
-            // and add-to-cart counter.
-            const vPrice: ErpPriceData | undefined = isPseudo
-              ? (productToErpPriceData(product) ?? undefined)
-              : getVariantPrice(v.id);
+            // Pseudo rows inherit product.id, so the batched price map
+            // already covers them — no special case needed.
+            const vPrice: ErpPriceData | undefined = getVariantPrice(v.id);
             // When the listino MV already triggers a promo
             // (is_improving_promo), swap to the matching offer so packaging /
             // price / add-to-cart all reflect the promo line. Mirrors the

@@ -21,8 +21,7 @@ import {
 import { IoClose, IoChevronBack } from 'react-icons/io5';
 import { useTranslation } from 'src/app/i18n/client';
 
-import type { ErpPriceData } from '@utils/transform/erp-prices';
-import { productToErpPriceData } from '@utils/transform/inline-to-erp';
+import { useProductPriceData } from '@framework/pricing';
 import { useLikes } from '@contexts/likes/likes.context';
 import { useReminders } from '@contexts/reminders/reminders.context';
 import { useUI } from '@contexts/ui.context';
@@ -61,10 +60,11 @@ export default function ProductPopup({ lang }: { lang: string }) {
   const [shareButtonStatus, setShareButtonStatus] = useState(false);
   const toggleShare = () => setShareButtonStatus((s) => !s);
 
-  // Pricing now ships inline on the PIM product; synthesize the ErpPriceData
-  // shape so B2BOfferRows / B2BInfoBlock / AddToCart keep working unchanged.
-  const erpPrice: ErpPriceData | undefined =
-    productToErpPriceData(product) ?? undefined;
+  // Pricing flows through the unified hook — the active pricingSource
+  // (inline / erp / hybrid) decides whether the slice comes from PIM
+  // synth, a fresh ERP fetch, or a merge of the two. B2BOfferRows /
+  // B2BInfoBlock / AddToCart keep their ErpPriceData contract.
+  const erpPrice = useProductPriceData(product);
 
   const productUrl = `${process.env.NEXT_PUBLIC_WEBSITE_URL}/${lang}${ROUTES.PRODUCT}?sku=${encodeURIComponent(product?.sku ?? '')}`;
   const isInCompare = hasSku(sku);

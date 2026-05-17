@@ -11,7 +11,7 @@ import { useUI } from '@contexts/ui.context';
 import { useHomeSettings } from '@/hooks/use-home-settings';
 import { formatPriceIt } from '@utils/money';
 import type { Product } from '@framework/types';
-import { productToErpPriceData } from '@utils/transform/inline-to-erp';
+import { useProductPriceData } from '@framework/pricing';
 
 export type PriceSlice = Pick<
   ErpPriceData,
@@ -40,25 +40,6 @@ type Props = {
   invertColors?: boolean;
 };
 
-/**
- * Build a PriceSlice from a Product's inline pricing block. Delegates
- * to the canonical synth (productToErpPriceData) and picks the 5 slice
- * fields, so headline rendering stays aligned with the offer-rows /
- * cart pricing without duplicating the pricing-source cascade or the
- * promo-counting logic.
- */
-function productToPriceSlice(product?: Product | null): PriceSlice | null {
-  const full = productToErpPriceData(product ?? undefined);
-  if (!full) return null;
-  return {
-    price_discount: full.price_discount,
-    gross_price: full.gross_price,
-    discount_description: full.discount_description,
-    is_promo: full.is_promo,
-    count_promo: full.count_promo ?? 0,
-  };
-}
-
 const splitDiscountLines = (v: unknown): string[] => {
   if (!v && v !== 0) return [];
   if (Array.isArray(v)) return v.map(String).filter(Boolean);
@@ -83,13 +64,25 @@ export default function PriceAndPromo({
   const { settings } = useHomeSettings();
   const decimals = settings?.cardStyle?.priceDecimals ?? 2;
 
-  // Hide prices when toggle is active (like when not logged in)
-  if (hidePrices) return null;
-
-  // Inline product pricing wins over the ERP slice.
-  const productSlice = productToPriceSlice(product);
+  // Active pricingSource decides whether the headline reads from PIM
+  // inline pricing or from the ERP slice (or both, in hybrid). Caller-
+  // passed priceData wins as an explicit override. We cast through
+  // `as ErpPriceData` because the prop type accepts a Partial<PriceSlice>
+  // too — the hook just forwards the override unchanged, and the readers
+  // below already null-check every field.
+  const overrideAsErp =
+    priceData && typeof priceData === 'object'
+      ? (priceData as ErpPriceData)
+      : undefined;
+  const resolved = useProductPriceData(product ?? undefined, {
+    override: overrideAsErp,
+  });
   const effective: Partial<PriceSlice> | ErpPriceData | null =
-    productSlice ?? priceData ?? null;
+    resolved ?? priceData ?? null;
+
+  // Hide prices when toggle is active (like when not logged in). We do
+  // this AFTER the hook call so hook order stays stable across renders.
+  if (hidePrices) return null;
 
   if (!effective) {
     return null;

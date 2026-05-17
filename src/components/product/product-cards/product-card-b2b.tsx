@@ -23,7 +23,7 @@ import AddToCart from '../add-to-cart';
 import { Eye } from '@components/icons/eye-icon';
 import useWindowSize from '@utils/use-window-size';
 import { buildPromoPriceData, pickImprovingOffer } from '../b2b-offer-rows';
-import { productToErpPriceData } from '@utils/transform/inline-to-erp';
+import { useProductPriceData } from '@framework/pricing';
 import LastOrdered from '../last-ordered';
 
 interface RenderPopupOrAddToCartProps {
@@ -48,11 +48,13 @@ function RenderPopupOrAddToCart({
   const hasVariants =
     (data.variantCount && data.variantCount > 1) || variations.length > 1;
 
-  // Prefer the ERP slice (back-compat); otherwise synthesize from the
-  // inline product.pricing so the counter still renders on cards inside
-  // carousels / lists (which no longer fetch ERP).
-  const effectivePriceData: ErpPriceData | undefined =
-    priceData ?? productToErpPriceData(data) ?? undefined;
+  // Pricing source is decided by the active pricingSource flag (inline /
+  // erp / hybrid). The card still honors an externally-passed priceData
+  // (e.g. a grid that batched its own ERP fetch) by forwarding it as the
+  // override.
+  const effectivePriceData = useProductPriceData(data, {
+    override: priceData,
+  });
 
   // Check availability from ERP data
   const isOutOfStock = effectivePriceData
@@ -213,11 +215,12 @@ const ProductCardB2B: React.FC<ProductProps> = ({
   const [likeLoading, setLikeLoading] = React.useState<boolean>(false);
   const [reminderLoading, setReminderLoading] = React.useState<boolean>(false);
 
-  // List-view search no longer threads ERP priceData, so synthesize from the
-  // inline product.pricing as a fallback. Without this the availability strip
-  // shows '—' and the out-of-stock check would short-circuit on missing data.
-  const effectivePriceData =
-    priceData ?? productToErpPriceData(product) ?? undefined;
+  // Route through the unified pricing hook so the toggle (inline / erp /
+  // hybrid) drives the availability + price display the same way it does
+  // in the CTA region above.
+  const effectivePriceData = useProductPriceData(product, {
+    override: priceData,
+  });
 
   // Out of stock when ERP/inline says <= 0, OR when there's no priceable data
   // at all (on-request / draft products — we surface "non disponibile" + the

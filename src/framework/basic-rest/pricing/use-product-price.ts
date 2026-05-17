@@ -1,0 +1,195 @@
+'use client';
+
+import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+
+import type { Product } from '@framework/types';
+import { ERP_STATIC, hasValidErpContext } from '@framework/utils/static';
+import { fetchErpPrices } from '@framework/erp/prices';
+import type { ErpPriceData } from '@utils/transform/erp-prices';
+import { productToErpPriceData } from '@utils/transform/inline-to-erp';
+
+import { usePricingSource } from './use-pricing-source';
+import type { PricingSource } from './pricing-source';
+
+const STALE_MS = 5 * 60 * 1000;
+
+interface SingleOptions {
+  /** Caller-provided ERP slice. Wins over the active source. */
+  override?: ErpPriceData;
+  /** Disable the hook entirely (e.g. multi-variant parents). */
+  enabled?: boolean;
+  /** Qty hint when posting to the ERP endpoint. Defaults to 1. */
+  quantity?: number;
+}
+
+interface BatchOptions {
+  /** Map of entity_code → ERP slice provided by the caller (wins). */
+  overrideMap?: Record<string, ErpPriceData>;
+  enabled?: boolean;
+  /** Optional per-entity qty hint, aligned with the input order. */
+  quantities?: number[];
+}
+
+/**
+ * Single-product pricing hook. Returns the ErpPriceData that downstream
+ * UI (B2BOfferRows, AddToCart, PackagingGrid…) expects, regardless of
+ * whether the data came from inline PIM pricing or the ERP API.
+ *
+ * Modes (see ./pricing-source.ts):
+ *   - inline → synth from product.pricing, no network
+ *   - erp    → fetch /erp/get_multiple_prices, ignore inline
+ *   - hybrid → synth immediately; merge ERP overrides when available
+ */
+export function useProductPriceData(
+  product: Product | null | undefined,
+  options?: SingleOptions,
+): ErpPriceData | undefined {
+  const source = usePricingSource();
+  const override = options?.override;
+  const enabled = options?.enabled ?? true;
+  const quantity = options?.quantity ?? 1;
+
+  const entityCode = product?.id != null ? String(product.id) : '';
+  const wantsErp = source === 'erp' || source === 'hybrid';
+  const erpReady = enabled && wantsErp && !override && hasValidErpContext();
+
+  const erpQuery = useQuery({
+    queryKey: erpQueryKey([entityCode], quantity, ERP_STATIC),
+    queryFn: () =>
+      fetchErpPrices({
+        entity_codes: [entityCode],
+        quantity_list: [quantity],
+        id_cart: ERP_STATIC.id_cart,
+        customer_code: ERP_STATIC.customer_code,
+        address_code: ERP_STATIC.address_code,
+      }),
+    enabled: erpReady && Boolean(entityCode),
+    staleTime: STALE_MS,
+  });
+
+  return useMemo<ErpPriceData | undefined>(() => {
+    if (override) return override;
+    if (!product) return undefined;
+
+    const synth = productToErpPriceData(product) ?? undefined;
+    if (source === 'inline') return synth;
+
+    const erpSlice = entityCode ? erpQuery.data?.[entityCode] : undefined;
+    if (source === 'erp') return erpSlice ?? undefined;
+
+    // hybrid: synth as base, ERP overrides win for customer-specific
+    // fields (net_price, discount, availability, label action, …).
+    // Until ERP resolves we still render the synth so paint is instant;
+    // if ERP fails the synth simply stays the source of truth.
+    if (!erpSlice) return synth;
+    return synth ? { ...synth, ...erpSlice } : erpSlice;
+  }, [override, product, source, entityCode, erpQuery.data]);
+}
+
+/**
+ * Batch pricing hook for grid/list/carousel/compare surfaces. One ERP
+ * roundtrip per stable product set. Returns a stable map keyed by
+ * entity_code (string).
+ */
+export function useProductsPriceMap(
+  products: ReadonlyArray<Product> | null | undefined,
+  options?: BatchOptions,
+): Record<string, ErpPriceData> {
+  const source = usePricingSource();
+  const overrideMap = options?.overrideMap;
+  const enabled = options?.enabled ?? true;
+
+  const list = useMemo<ReadonlyArray<Product>>(
+    () => (Array.isArray(products) ? products : []),
+    [products],
+  );
+
+  // Stable, deduped entity_codes for the React Query key. Sorted so two
+  // grids with the same products in different orders share one cache.
+  const { entityCodes, quantities } = useMemo(() => {
+    const seen = new Set<string>();
+    const codes: string[] = [];
+    const qtys: number[] = [];
+    list.forEach((p, idx) => {
+      const code = p?.id != null ? String(p.id) : '';
+      if (!code || seen.has(code)) return;
+      seen.add(code);
+      codes.push(code);
+      qtys.push(options?.quantities?.[idx] ?? 1);
+    });
+    return { entityCodes: codes, quantities: qtys };
+  }, [list, options?.quantities]);
+
+  const wantsErp = source === 'erp' || source === 'hybrid';
+  const erpReady =
+    enabled && wantsErp && entityCodes.length > 0 && hasValidErpContext();
+
+  const erpQuery = useQuery({
+    queryKey: erpQueryKey(entityCodes, quantities, ERP_STATIC),
+    queryFn: () =>
+      fetchErpPrices({
+        entity_codes: entityCodes,
+        quantity_list: quantities,
+        id_cart: ERP_STATIC.id_cart,
+        customer_code: ERP_STATIC.customer_code,
+        address_code: ERP_STATIC.address_code,
+      }),
+    enabled: erpReady,
+    staleTime: STALE_MS,
+  });
+
+  return useMemo<Record<string, ErpPriceData>>(() => {
+    const out: Record<string, ErpPriceData> = {};
+
+    // Synth pass — always run unless mode is pure ERP. Provides the
+    // fast-paint baseline and the fallback when ERP is unavailable.
+    if (source !== 'erp') {
+      for (const p of list) {
+        const code = p?.id != null ? String(p.id) : '';
+        if (!code) continue;
+        const synth = productToErpPriceData(p);
+        if (synth) out[code] = synth;
+      }
+    }
+
+    // ERP pass — overlay when mode is erp/hybrid and data is available.
+    if (wantsErp && erpQuery.data) {
+      for (const [code, slice] of Object.entries(erpQuery.data)) {
+        const base = out[code];
+        out[code] = base ? { ...base, ...slice } : slice;
+      }
+    }
+
+    // Caller overrides win unconditionally.
+    if (overrideMap) {
+      for (const [code, slice] of Object.entries(overrideMap)) {
+        out[code] = slice;
+      }
+    }
+
+    return out;
+  }, [list, source, wantsErp, erpQuery.data, overrideMap]);
+}
+
+/**
+ * Stable React Query key. Includes the customer context so a tenant
+ * impersonating a different customer doesn't see cached prices for the
+ * previous one.
+ */
+function erpQueryKey(
+  entityCodes: ReadonlyArray<string>,
+  quantities: ReadonlyArray<number> | number,
+  ctx: { id_cart: string; customer_code: string; address_code: string },
+): unknown[] {
+  return [
+    'erp-prices',
+    ctx.customer_code,
+    ctx.address_code,
+    ctx.id_cart,
+    entityCodes.join(','),
+    Array.isArray(quantities) ? quantities.join(',') : String(quantities),
+  ];
+}
+
+export type { PricingSource };

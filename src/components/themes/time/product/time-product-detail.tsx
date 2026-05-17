@@ -12,7 +12,7 @@ import CopyableCode from '@components/themes/time/shared/copyable-code';
 import { useTranslation } from 'src/app/i18n/client';
 import { usePimProductListQuery } from '@framework/product/get-pim-product';
 import type { ErpPriceData } from '@utils/transform/erp-prices';
-import { productToErpPriceData } from '@utils/transform/inline-to-erp';
+import { useProductPriceData } from '@framework/pricing';
 import { useUI } from '@contexts/ui.context';
 import { useLikes } from '@contexts/likes/likes.context';
 import { useReminders } from '@contexts/reminders/reminders.context';
@@ -123,10 +123,10 @@ const TimeProductDetail: React.FC<{
   const decimals = settings?.cardStyle?.priceDecimals ?? 2;
 
   // Multi-variant parents render their variants grid; for everything else,
-  // synthesize ErpPriceData from inline product.pricing (no ERP roundtrip).
-  const erpPrice: ErpPriceData | undefined = isMultiVariantParent
-    ? undefined
-    : (productToErpPriceData(data) ?? undefined);
+  // the active pricingSource (inline / erp / hybrid) decides the slice.
+  const erpPrice = useProductPriceData(data, {
+    enabled: !isMultiVariantParent,
+  });
 
   /* ── Derived price info ── */
   const anyPD = erpPrice as any;

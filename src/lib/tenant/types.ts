@@ -42,6 +42,16 @@ export interface TenantDbConfig {
 }
 
 /**
+ * Per-tenant feature flags. Each field is optional; unset means "fall back
+ * to the env default". Keep this object small — it's serialized into the
+ * client-side TenantPublicInfo.
+ */
+export interface TenantFeatures {
+  /** Pricing data source. See `framework/basic-rest/pricing/pricing-source.ts`. */
+  pricingSource?: 'inline' | 'erp' | 'hybrid';
+}
+
+/**
  * Full tenant configuration as stored in MongoDB
  */
 export interface TenantConfig {
@@ -68,6 +78,8 @@ export interface TenantConfig {
   /** Support contact shown to users when their ERP/B2B profile is broken
    *  (email, phone, or URL). Optional. */
   supportContact?: string;
+  /** Per-tenant feature flags. Hot-swappable from the tenant doc. */
+  features?: TenantFeatures;
   /** Whether this tenant is active */
   isActive: boolean;
   /** Timestamps */
@@ -102,6 +114,8 @@ export interface TenantPublicInfo {
   builderUrl?: string;
   b2bTheme?: string;
   supportContact?: string;
+  /** Subset of feature flags safe to expose to the browser. */
+  features?: TenantFeatures;
 }
 
 /**
@@ -132,6 +146,7 @@ export function toPublicInfo(tenant: TenantConfig): TenantPublicInfo {
     builderUrl: tenant.builderUrl,
     b2bTheme: tenant.b2bTheme,
     supportContact: tenant.supportContact,
+    features: tenant.features,
   };
 }
 
@@ -173,6 +188,10 @@ export function buildTenantFromEnv(): TenantConfig {
     // tenant context stays the single source of truth.
     b2bTheme: process.env.B2B_THEME || 'default',
     supportContact: process.env.NEXT_PUBLIC_SUPPORT_CONTACT || undefined,
+    // Env doesn't drive features directly — the React hook reads
+    // NEXT_PUBLIC_PRICING_SOURCE itself. Leaving features undefined here
+    // means "no per-tenant override", so the env default applies.
+    features: undefined,
     isActive: true,
   };
 }

@@ -7,7 +7,7 @@ import { Product } from '@framework/types';
 import { useModalAction } from '@components/common/modal/modal.context';
 import { productPlaceholder } from '@assets/placeholders';
 import { ErpPriceData } from '@utils/transform/erp-prices';
-import { productToErpPriceData } from '@utils/transform/inline-to-erp';
+import { useProductPriceData } from '@framework/pricing';
 import { useUI } from '@contexts/ui.context';
 import { useTranslation } from 'src/app/i18n/client';
 import AddToCart from '@components/product/add-to-cart';
@@ -51,12 +51,13 @@ export default function TimeProductCard({
   const [likeLoading, setLikeLoading] = React.useState(false);
   const [reminderLoading, setReminderLoading] = React.useState(false);
 
-  // Carousels and home blocks no longer thread an ERP price slice
-  // (Phase 2.1). Synthesize from the product's inline pricing block
-  // so the card still renders price + counter without a roundtrip.
-  // Matches the product-card-b2b fallback in commit de9ae05.
-  const effectivePriceData: ErpPriceData | undefined =
-    priceData ?? productToErpPriceData(product) ?? undefined;
+  // Route through the unified pricing hook so the active source flag
+  // (inline / erp / hybrid) decides whether the slice is synthesized
+  // from PIM inline pricing or fetched from ERP. Caller-provided
+  // priceData still wins as an explicit override.
+  const effectivePriceData = useProductPriceData(product, {
+    override: priceData,
+  });
 
   const variations = Array.isArray(product?.variations)
     ? product.variations

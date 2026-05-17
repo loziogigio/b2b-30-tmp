@@ -26,7 +26,7 @@ import { productPlaceholder } from '@assets/placeholders';
 import cn from 'classnames';
 
 import type { ErpPriceData } from '@utils/transform/erp-prices';
-import { productToErpPriceData } from '@utils/transform/inline-to-erp';
+import { useProductPriceData } from '@framework/pricing';
 import { useLikes } from '@contexts/likes/likes.context';
 import { useReminders } from '@contexts/reminders/reminders.context';
 import { useUI } from '@contexts/ui.context';
@@ -150,12 +150,13 @@ const ProductB2BDetails: React.FC<{
   const decimals = settings?.cardStyle?.priceDecimals ?? 2;
 
   // Multi-variant parents have no price of their own; the variants grid
-  // renders each child with its own inline pricing. For everything else,
-  // synthesize ErpPriceData from product.pricing so B2BOfferRows /
-  // B2BInfoBlock / AddToCart keep working without an ERP roundtrip.
-  const erpPrice: ErpPriceData | undefined = isMultiVariantParent
-    ? undefined
-    : (productToErpPriceData(data) ?? undefined);
+  // renders each child with its own pricing. For everything else, the
+  // active pricingSource (inline / erp / hybrid) decides where the slice
+  // comes from. B2BOfferRows / B2BInfoBlock / AddToCart keep their
+  // ErpPriceData contract.
+  const erpPrice = useProductPriceData(data, {
+    enabled: !isMultiVariantParent,
+  });
 
   // Likes context
   const likes = useLikes();

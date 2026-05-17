@@ -14,7 +14,7 @@ import { HiOutlineExclamationCircle } from 'react-icons/hi';
 import { useUI } from '@contexts/ui.context';
 import { useHomeSettings } from '@/hooks/use-home-settings';
 import type { ErpPriceData } from '@utils/transform/erp-prices';
-import { productToErpPriceData } from '@utils/transform/inline-to-erp';
+import { useProductsPriceMap } from '@framework/pricing';
 import { usePimProductListQuery } from '@framework/product/get-pim-product';
 import { getAvailabilityDisplay } from '@utils/format-availability';
 import { exportToExcel, exportToPDF } from '@utils/export-comparison';
@@ -176,26 +176,27 @@ export default function ProductCompareClient({
     error: queryError,
   } = usePimProductListQuery(queryParams, { enabled: limitedSkus.length > 0 });
 
-  // Build the price map from inline pricing on each product / variant —
-  // no ERP roundtrip. The downstream comparison shape still expects the
-  // ErpPriceData layout, so we synthesize it.
-  const erpPricesMap = useMemo<Record<string, ErpPriceData>>(() => {
-    if (!Array.isArray(rawProducts)) return {};
-    const map: Record<string, ErpPriceData> = {};
+  // Flatten the list (children for variant parents, otherwise the parent
+  // itself) and hand it to the unified batch hook. The active
+  // pricingSource (inline / erp / hybrid) decides whether we synth from
+  // inline pricing, fire one batched ERP roundtrip, or merge both.
+  const flatProducts = useMemo(() => {
+    if (!Array.isArray(rawProducts)) return [] as Product[];
+    const out: Product[] = [];
     rawProducts.forEach((p: any) => {
       const variations = Array.isArray(p?.variations) ? p.variations : [];
       if (variations.length > 0) {
         variations.forEach((child: any) => {
-          const synth = productToErpPriceData(child);
-          if (synth) map[String(child?.id ?? '')] = synth;
+          if (child) out.push(child as Product);
         });
-      } else {
-        const synth = productToErpPriceData(p);
-        if (synth) map[String(p?.id ?? '')] = synth;
+      } else if (p) {
+        out.push(p as Product);
       }
     });
-    return map;
+    return out;
   }, [rawProducts]);
+
+  const erpPricesMap = useProductsPriceMap(flatProducts);
 
   // Map products to comparison format with ERP prices
   const products = useMemo(() => {
