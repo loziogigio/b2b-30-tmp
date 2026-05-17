@@ -15,6 +15,7 @@ export {
   getModel,
   getHomeTemplateModelForDb,
   getProductTemplateModelForDb,
+  getB2BPageModelForDb,
 } from './model-registry';
 
 // Default database name from .env

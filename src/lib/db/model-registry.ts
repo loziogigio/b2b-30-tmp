@@ -19,12 +19,14 @@ import {
   ProductTemplateSchema as ProductTemplateSimpleSchema,
   type ProductTemplateDocument as ProductTemplateSimpleDocument,
 } from './models/product-template-simple';
+import { B2BPageSchema, type B2BPageDocument } from './models/b2b-page';
 
 // Model name to schema mapping
 const MODEL_SCHEMAS: Record<string, mongoose.Schema> = {
   HomeTemplate: HomeTemplateSchema,
   ProductTemplate: ProductTemplateSchema,
   ProductTemplateSimple: ProductTemplateSimpleSchema,
+  B2BPage: B2BPageSchema,
 };
 
 /**
@@ -86,4 +88,12 @@ export async function getProductTemplateSimpleModelForDb(dbName: string) {
     dbName,
     'ProductTemplateSimple',
   );
+}
+
+/**
+ * Get B2BPage model for a specific tenant database (collection `b2bpages`).
+ * Used by sitemap and navigation surfaces to enumerate CMS page slugs.
+ */
+export async function getB2BPageModelForDb(dbName: string) {
+  return getModel<B2BPageDocument>(dbName, 'B2BPage');
 }

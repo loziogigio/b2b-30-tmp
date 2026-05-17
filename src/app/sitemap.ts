@@ -4,6 +4,7 @@ import {
   serverFetchPimMenu,
   serverFetchCollections,
 } from '@/lib/pim/server-fetch';
+import { getCachedCmsPageRegistry } from '@/lib/db/cms-pages';
 import { slugify } from '@/utils/slugify';
 
 const PRODUCTS_PER_SITEMAP = 10000;
@@ -17,19 +18,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const entries: MetadataRoute.Sitemap = [];
 
   // ===============================
-  // Static pages
+  // Built-in routes (typed segments under app/[lang]/(default)/*)
   // ===============================
-  const staticPages = [
+  const builtInRoutes = [
     { path: '', changeFrequency: 'daily' as const, priority: 1.0 },
     { path: '/search', changeFrequency: 'daily' as const, priority: 0.8 },
     { path: '/category', changeFrequency: 'weekly' as const, priority: 0.9 },
     { path: '/collections', changeFrequency: 'weekly' as const, priority: 0.8 },
-    { path: '/about-us', changeFrequency: 'monthly' as const, priority: 0.3 },
-    { path: '/faq', changeFrequency: 'monthly' as const, priority: 0.3 },
   ];
 
   for (const lang of LANGUAGES) {
-    for (const page of staticPages) {
+    for (const page of builtInRoutes) {
       entries.push({
         url: `${siteUrl}/${lang}${page.path}`,
         lastModified: now,
@@ -37,6 +36,26 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: page.priority,
       });
     }
+  }
+
+  // ===============================
+  // CMS pages authored in suite (b2bpages registry → /[lang]/[slug])
+  // Cached via `sitemap` tag — suite invalidates on every page publish.
+  // ===============================
+  try {
+    const cmsPages = await getCachedCmsPageRegistry();
+    for (const lang of LANGUAGES) {
+      for (const p of cmsPages) {
+        entries.push({
+          url: `${siteUrl}/${lang}/${p.slug}`,
+          lastModified: p.updated_at ?? now,
+          changeFrequency: 'monthly',
+          priority: 0.4,
+        });
+      }
+    }
+  } catch {
+    // Registry unreachable — skip rather than fail the whole sitemap.
   }
 
   // ===============================
