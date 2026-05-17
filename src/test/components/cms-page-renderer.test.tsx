@@ -93,15 +93,18 @@ describe('CmsPageRenderer', () => {
   it('silently skips unknown block in production', () => {
     const prev = process.env.NODE_ENV;
     process.env.NODE_ENV = 'production';
-    const { container } = render(
-      <CmsPageRenderer
-        pageSlug="faq"
-        lang="it"
-        blocks={[block({ type: 'mystery', config: {} })]}
-      />,
-    );
-    process.env.NODE_ENV = prev;
-    expect(container.textContent).toBe('');
+    try {
+      const { container } = render(
+        <CmsPageRenderer
+          pageSlug="faq"
+          lang="it"
+          blocks={[block({ type: 'mystery', config: {} })]}
+        />,
+      );
+      expect(container.textContent).toBe('');
+    } finally {
+      process.env.NODE_ENV = prev;
+    }
   });
 
   it('renders blocks in array order', () => {
