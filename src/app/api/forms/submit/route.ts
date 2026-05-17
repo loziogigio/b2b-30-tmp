@@ -64,6 +64,9 @@ export async function POST(req: Request): Promise<Response> {
   const text = await suiteRes.text();
   return new Response(text, {
     status: suiteRes.status,
-    headers: { 'content-type': 'application/json' },
+    headers: {
+      'content-type':
+        suiteRes.headers.get('content-type') ?? 'application/json',
+    },
   });
 }
