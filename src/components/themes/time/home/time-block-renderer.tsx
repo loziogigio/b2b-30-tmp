@@ -5,7 +5,10 @@ import { RichTextBlock } from '@components/blocks/RichTextBlock';
 import { CustomHTMLBlock } from '@components/blocks/CustomHTMLBlock';
 import { YouTubeBlock } from '@components/blocks/YouTubeBlock';
 import { MediaImageBlock } from '@components/blocks/MediaImageBlock';
-import { FormBlock } from '@components/blocks/FormBlock';
+import {
+  isFormContact,
+  renderFormContact,
+} from '@components/blocks/form-contact';
 import ProductGalleryBlock from '@components/home/ProductGalleryBlock';
 import LikedProductsProductsCarousel from '@components/product/feeds/liked-products-products-carousel';
 import TrendingProductsCarousel from '@components/product/feeds/trending-products-carousel';
@@ -532,17 +535,13 @@ const TimeBlockRenderer: React.FC<TimeBlockRendererProps> = ({
   }
 
   // Contact Form
-  if (block.type === 'form-contact') {
+  if (isFormContact(block)) {
     return (
       <BlockWrapper
         fullWidth={isFullWidth}
         className={block.config?.className || BLOCK_SPACING}
       >
-        <FormBlock
-          config={block.config as any}
-          blockId={block.id}
-          pageSlug="home"
-        />
+        {renderFormContact(block, 'home')}
       </BlockWrapper>
     );
   }

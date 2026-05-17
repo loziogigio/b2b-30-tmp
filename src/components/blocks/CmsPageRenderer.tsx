@@ -5,7 +5,7 @@ import { MediaImageBlock } from './MediaImageBlock';
 import { YouTubeEmbedBlock } from './YouTubeEmbedBlock';
 import { SpacerBlock } from './SpacerBlock';
 import { ProductDataTableBlock } from './ProductDataTableBlock';
-import { FormBlock } from './FormBlock';
+import { isFormContact, renderFormContact } from './form-contact';
 
 interface CmsBlock {
   id: string;
@@ -50,10 +50,8 @@ function renderOne(block: CmsBlock, pageSlug: string, lang: string) {
   ) {
     return <ProductDataTableBlock config={block.config} lang={lang} />;
   }
-  if (t === 'form-contact') {
-    return (
-      <FormBlock config={block.config} blockId={block.id} pageSlug={pageSlug} />
-    );
+  if (isFormContact(block)) {
+    return renderFormContact(block, pageSlug);
   }
 
   if (process.env.NODE_ENV === 'development') {
