@@ -9,6 +9,7 @@ import { RichTextBlock } from '@components/blocks/RichTextBlock';
 import { CustomHTMLBlock } from '@components/blocks/CustomHTMLBlock';
 import { YouTubeBlock } from '@components/blocks/YouTubeBlock';
 import { MediaImageBlock } from '@components/blocks/MediaImageBlock';
+import { FormBlock } from '@components/blocks/FormBlock';
 import HeroCarouselWithWidgets from '@components/home/HeroCarouselWithWidgets';
 import ProductGalleryBlock from '@components/home/ProductGalleryBlock';
 import { usePimProductListQuery } from '@framework/product/get-pim-product';
@@ -308,6 +309,19 @@ const DefaultBlockRenderer: React.FC<DefaultBlockRendererProps> = ({
           config={block.config}
           showTitle={block.showTitle !== false}
           titleAlignment={block.titleAlignment || 'left'}
+        />
+      </Container>
+    );
+  }
+
+  // Contact Form Block
+  if (block.type === 'form-contact') {
+    return (
+      <Container fullWidth={isFullWidth}>
+        <FormBlock
+          config={block.config as any}
+          blockId={block.id}
+          pageSlug="home"
         />
       </Container>
     );

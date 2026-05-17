@@ -10,6 +10,7 @@ import { RichTextBlock } from './RichTextBlock';
 import { CustomHTMLBlock } from './CustomHTMLBlock';
 import { YouTubeBlock } from './YouTubeBlock';
 import { MediaImageBlock } from './MediaImageBlock';
+import { FormBlock } from './FormBlock';
 import HeroCarouselWithWidgets from '@components/home/HeroCarouselWithWidgets';
 import ProductGalleryBlock from '@components/home/ProductGalleryBlock';
 import Carousel from '@components/ui/carousel/carousel';
@@ -496,6 +497,19 @@ const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({
         className={block.config?.className || 'mb-6 xl:mb-8 pt-1'}
       >
         <MediaImageBlock config={block.config} />
+      </Container>
+    );
+  }
+
+  // Contact Form Block
+  if (block.type === 'form-contact') {
+    return (
+      <Container fullWidth={isFullWidth}>
+        <FormBlock
+          config={block.config as any}
+          blockId={block.id}
+          pageSlug="home"
+        />
       </Container>
     );
   }

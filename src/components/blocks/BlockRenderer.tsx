@@ -7,6 +7,7 @@ import { SpacerBlock } from './SpacerBlock';
 import { YouTubeEmbedBlock } from './YouTubeEmbedBlock';
 import { MediaImageBlock } from './MediaImageBlock';
 import { ProductDataTableBlock } from './ProductDataTableBlock';
+import { FormBlock } from './FormBlock';
 
 interface BlockRendererProps {
   block: PageBlock;
@@ -76,6 +77,16 @@ export function BlockRenderer({ block, productData }: BlockRendererProps) {
 
   if (configVariant === 'richText') {
     return <RichTextBlock config={block.config as any} />;
+  }
+
+  if (blockType === 'form-contact') {
+    return (
+      <FormBlock
+        config={block.config as any}
+        blockId={block.id}
+        pageSlug={(productData?.pageSlug as string) || ''}
+      />
+    );
   }
 
   // Legacy/unknown block types - only show in development
