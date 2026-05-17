@@ -1,3 +1,4 @@
+// System fallback strings are English; admin content (title/labels/messages) is per-language via the CMS.
 'use client';
 
 import { useState } from 'react';
@@ -40,11 +41,6 @@ interface Props {
   blockId: string;
   pageSlug: string;
 }
-
-const inputType = (t: FormFieldType): string => {
-  if (t === 'textarea' || t === 'select' || t === 'checkbox') return 'text';
-  return t;
-};
 
 export default function FormBlockClient({ config, blockId, pageSlug }: Props) {
   const {
@@ -108,7 +104,8 @@ export default function FormBlockClient({ config, blockId, pageSlug }: Props) {
           required: field.required ? `${field.label} is required` : false,
         });
         const id = `field-${blockId}-${field.id}`;
-        const err = errors[field.id]?.message as string | undefined;
+        const rawErr = errors[field.id]?.message;
+        const errText = typeof rawErr === 'string' ? rawErr : undefined;
         return (
           <div key={field.id} className="space-y-1">
             <div className="flex items-baseline gap-1">
@@ -132,12 +129,18 @@ export default function FormBlockClient({ config, blockId, pageSlug }: Props) {
                 placeholder={field.placeholder}
                 className="w-full rounded-md border border-gray-300 px-3 py-2"
                 rows={4}
+                aria-required={field.required || undefined}
+                aria-invalid={errText ? true : undefined}
+                aria-describedby={errText ? `${id}-err` : undefined}
               />
             ) : field.type === 'select' ? (
               <select
                 id={id}
                 {...reg}
                 className="w-full rounded-md border border-gray-300 px-3 py-2"
+                aria-required={field.required || undefined}
+                aria-invalid={errText ? true : undefined}
+                aria-describedby={errText ? `${id}-err` : undefined}
               >
                 <option value="">--</option>
                 {(field.options ?? []).map((opt) => (
@@ -147,18 +150,33 @@ export default function FormBlockClient({ config, blockId, pageSlug }: Props) {
                 ))}
               </select>
             ) : field.type === 'checkbox' ? (
-              <input id={id} type="checkbox" {...reg} className="h-4 w-4" />
+              <input
+                id={id}
+                type="checkbox"
+                {...reg}
+                className="h-4 w-4"
+                aria-required={field.required || undefined}
+                aria-invalid={errText ? true : undefined}
+                aria-describedby={errText ? `${id}-err` : undefined}
+              />
             ) : (
               <input
                 id={id}
-                type={inputType(field.type)}
+                type={field.type}
                 {...reg}
                 placeholder={field.placeholder}
                 className="w-full rounded-md border border-gray-300 px-3 py-2"
+                aria-required={field.required || undefined}
+                aria-invalid={errText ? true : undefined}
+                aria-describedby={errText ? `${id}-err` : undefined}
               />
             )}
 
-            {err && <p className="text-xs text-red-600">{err}</p>}
+            {errText && (
+              <p id={`${id}-err`} className="text-xs text-red-600">
+                {errText}
+              </p>
+            )}
           </div>
         );
       })}
