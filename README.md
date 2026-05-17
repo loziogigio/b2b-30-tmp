@@ -797,6 +797,9 @@ Key variables (see `.env.example`):
 - `NEXT_PUBLIC_B2B_API_URL` - B2B API endpoint
 - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` - Stripe key
 - `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` - Google Maps key
+- `VINC_SUITE_API_BASE` - vinc-commerce-suite base URL (e.g. `https://suite.your-domain.com`); required for `/api/forms/submit`
+- `VINC_SUITE_API_KEY_ID` - API key id for the suite proxy
+- `VINC_SUITE_API_SECRET` - API secret for the suite proxy (without these three, `/api/forms/submit` returns 503)
 
 ## Contributing
 
