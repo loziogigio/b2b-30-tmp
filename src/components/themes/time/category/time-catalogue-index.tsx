@@ -22,12 +22,12 @@ function Highlight({ text, q }: { text: string; q: string }) {
   while (idx !== -1) {
     if (idx > from) parts.push(text.slice(from, idx));
     parts.push(
-      <span
+      <mark
         key={key++}
         className="rounded-[3px] bg-yellow-200 px-px text-inherit"
       >
         {text.slice(idx, idx + needle.length)}
-      </span>,
+      </mark>,
     );
     from = idx + needle.length;
     idx = lower.indexOf(needle, from);
