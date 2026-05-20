@@ -5,10 +5,10 @@ import React, { useMemo, useState } from 'react';
 import Container from '@components/ui/container';
 import CategoryBreadcrumb from '@components/ui/category-breadcrumb';
 import {
-  usePimMenuQuery,
   findNodeByPath,
   type MenuTreeNode,
 } from '@framework/product/get-pim-menu';
+import { usePimCategoriesQuery } from '@framework/product/get-pim-categories';
 import { useTranslation } from 'src/app/i18n/client';
 import ProductsCarousel from '@components/product/products-carousel';
 import { usePimProductListQuery } from '@framework/product/get-pim-product';
@@ -18,6 +18,8 @@ import CategorySubcategoriesGrid from './category-subcategories-grid';
 import { useHomeSettings } from '@/hooks/use-home-settings';
 import { isEmptyHtml } from '@/lib/html';
 import { extractSearchText } from '@/lib/category-search-text';
+import { useThemeId } from '@/contexts/tenant.context';
+import TimeCatalogueIndex from '@components/themes/time/category/time-catalogue-index';
 
 const NUM_ITEM = 6;
 const MAX_ROWS = 5;
@@ -159,6 +161,7 @@ export default function CategoryPage({
   disableLeafCarousel?: boolean;
 }) {
   const { t } = useTranslation(lang, 'common');
+  const themeId = useThemeId();
   const { settings } = useHomeSettings();
   const channel = useMemo(() => {
     const rows = settings?.headerConfig?.rows ?? [];
@@ -169,8 +172,7 @@ export default function CategoryPage({
     return w?.config?.channel || 'b2b';
   }, [settings]);
 
-  const { data, isLoading, isError } = usePimMenuQuery({
-    location: 'header',
+  const { data, isLoading, isError } = usePimCategoriesQuery({
     channel,
     staleTime: 5 * 60 * 1000,
   });
@@ -236,6 +238,18 @@ export default function CategoryPage({
     );
   }
 
+  // Time theme renders root + non-leaf group pages as the catalogue index.
+  // Leaf nodes fall through to the existing SSR product grid.
+  // At the root `current` is null (slug=[]) → not a leaf → the index shows.
+  // If a slug fails to resolve (null current with a non-empty slug, e.g. an
+  // empty tree), isLeaf is true and we safely fall through to the default render.
+  const isLeaf =
+    slug.length > 0 &&
+    !(current?.isGroup && (current.children?.length ?? 0) > 0);
+  if (themeId === 'time' && !isLeaf) {
+    return <TimeCatalogueIndex tree={tree} current={current} lang={lang} />;
+  }
+
   return (
     <div className="bg-white">
       {/* ⬇️ HERO on top (parent if available, else current) */}
@@ -248,10 +262,10 @@ export default function CategoryPage({
           categories={pathNodes}
           allLabel={t('all-categories', { defaultValue: 'All Groups' })}
           onAllCategoriesClick={() => {
-            window.location.href = `/${lang}/category`;
+            window.location.href = `/${lang}/categorie`;
           }}
           onCategorySelect={(node) => {
-            window.location.href = `/${lang}/category/${node.path.join('/')}`;
+            window.location.href = `/${lang}/categorie/${node.path.join('/')}`;
           }}
         />
       </Container>
@@ -360,11 +374,20 @@ function CategoryLeafCarousel({
   lang: string;
   node: MenuTreeNode;
 }) {
-  const searchQuery = extractSearchText(node.url ?? undefined, node.slug);
+  // Prefer the dedicated PIM category filter (category_ancestors) when the
+  // node was produced from the categories tree. Falls back to slug-as-text
+  // for legacy menu-sourced nodes.
+  const searchQuery = node.category_id
+    ? ''
+    : extractSearchText(node.url ?? undefined, node.slug);
+  const filters = node.category_id
+    ? { category_ancestors: node.category_id }
+    : undefined;
 
   const { data, isLoading, error } = usePimProductListQuery({
     limit: NUM_ITEM,
     q: searchQuery,
+    ...(filters ? { filters } : {}),
   });
 
   if (isLoading || error) return null;
