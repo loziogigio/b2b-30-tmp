@@ -87,9 +87,12 @@ export default function BottomNavigation({ lang }: { lang: string }) {
         )}
       </div>
 
-      {/* Categories Menu - controlled via UI context (no trigger, opened via bottom nav icon) */}
+      {/* Categories Menu - controlled via UI context (no trigger, opened via bottom nav icon).
+          channel mirrors the desktop CategoryMenuWidget default so the drawer queries the
+          same PIM menu the header uses; without it the menu API returns no items. */}
       <B2BHeaderMenu
         lang={lang}
+        channel="b2b"
         open={displayCategories}
         onOpenChange={(open) => (open ? openCategories() : closeCategories())}
         renderTrigger={() => null}

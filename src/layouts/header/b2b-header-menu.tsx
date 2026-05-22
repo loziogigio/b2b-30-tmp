@@ -55,7 +55,7 @@ function categoryHrefFromPath(
 ) {
   // Use the tail's pre-built path if available (already slugified)
   if (tail?.path?.length) {
-    return `/${lang}/category/${tail.path.join('/')}`;
+    return `/${lang}/categorie/${tail.path.join('/')}`;
   }
   // Fallback: build from branch + tail using slugified names
   const segments = [
@@ -64,7 +64,7 @@ function categoryHrefFromPath(
       ? [tail.slug || slugify(tail.name || tail.label || String(tail.id))]
       : []),
   ];
-  return `/${lang}/category/${segments.join('/')}`;
+  return `/${lang}/categorie/${segments.join('/')}`;
 }
 
 const B2BHeaderMenu: React.FC<MenuProps> = ({
@@ -214,7 +214,7 @@ const B2BHeaderMenu: React.FC<MenuProps> = ({
       {/* overlay */}
       {open && (
         <div
-          className="fixed inset-0 z-40 bg-black/20"
+          className="fixed inset-0 z-[105] bg-black/20"
           onClick={close}
           aria-hidden
         />
@@ -233,7 +233,7 @@ const B2BHeaderMenu: React.FC<MenuProps> = ({
       {/* overlay */}
       {open && (
         <div
-          className="fixed inset-0 z-40 bg-black/20"
+          className="fixed inset-0 z-[105] bg-black/20"
           onClick={close}
           aria-hidden
         />
@@ -251,7 +251,7 @@ const B2BHeaderMenu: React.FC<MenuProps> = ({
         role="dialog"
         aria-modal="true"
         className={cn(
-          'fixed z-50 top-0 left-0 h-full bg-white shadow-2xl transform transition-transform duration-200 ease-out',
+          'fixed z-[110] top-0 left-0 h-full bg-white shadow-2xl transform transition-transform duration-200 ease-out',
           DRAWER_W,
           open ? 'translate-x-0' : '-translate-x-full',
         )}
@@ -327,7 +327,7 @@ const B2BHeaderMenu: React.FC<MenuProps> = ({
             {path.length === 0 && (
               <li>
                 <Link
-                  href={`/${lang}/category`}
+                  href={`/${lang}/categorie`}
                   className="block px-4 h-11 leading-[44px] text-[14px] font-medium text-brand hover:bg-brand/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 truncate border-b border-gray-100"
                   title={t('see-all-categories', {
                     defaultValue: 'See all groups',

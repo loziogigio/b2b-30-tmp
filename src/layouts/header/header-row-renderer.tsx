@@ -1,13 +1,31 @@
 'use client';
 
-import type { HeaderRow, RowLayout } from '@/lib/home-settings/types';
+import type {
+  HeaderRow,
+  HeaderWidgetType,
+  RowLayout,
+} from '@/lib/home-settings/types';
 import { HeaderBlockRenderer } from './header-block-renderer';
 import { cn } from '@/lib/utils';
+
+// Widgets that only render on desktop (lg+). A row containing nothing but these
+// collapses to an empty padded strip with a stray border on mobile, so we hide
+// the whole row below lg. Categories are reachable via the bottom navigation there.
+const DESKTOP_ONLY_WIDGETS: ReadonlySet<HeaderWidgetType> = new Set([
+  'category-menu',
+  'company-info',
+]);
 
 interface HeaderRowRendererProps {
   row: HeaderRow;
   lang: string;
   isFirstRow?: boolean;
+  /** Sticky top offset (px) when the row is fixed; undefined for scroll rows. */
+  stickyTop?: number;
+  /** Whether this row should carry the scroll elevation shadow. */
+  elevated?: boolean;
+  /** Registers the row element so the header can measure fixed-row heights. */
+  registerRef?: (id: string, el: HTMLElement | null) => void;
 }
 
 // Responsive layout classes - uses lg breakpoint to match bottom navigation
@@ -24,7 +42,9 @@ const LAYOUT_CLASSES: Record<RowLayout, string> = {
 export function HeaderRowRenderer({
   row,
   lang,
-  isFirstRow,
+  stickyTop,
+  elevated,
+  registerRef,
 }: HeaderRowRendererProps) {
   if (!row.enabled) {
     return null;
@@ -33,20 +53,31 @@ export function HeaderRowRenderer({
   const layoutClass =
     LAYOUT_CLASSES[row.layout] || 'flex lg:grid lg:grid-cols-3';
 
-  // Calculate sticky top position: first row is top-0, subsequent rows stack below
-  // Primary row (first) is typically ~64px, secondary stacks at top-16
-  const stickyTop = isFirstRow ? 'lg:top-0' : 'lg:top-16';
+  const isFixed = !!row.fixed;
+
+  // Hide rows whose every widget is desktop-only, so they don't leave an empty
+  // bordered band on mobile. Evaluated across all widgets so empty side-blocks
+  // (e.g. a 20-60-20 layout with the menu in the middle) don't defeat it.
+  const rowWidgets = row.blocks.flatMap((b) => b.widgets);
+  const isDesktopOnlyRow =
+    rowWidgets.length > 0 &&
+    rowWidgets.every((w) => DESKTOP_ONLY_WIDGETS.has(w.type));
 
   return (
     <div
+      ref={(el) => registerRef?.(row.id, el)}
       className={cn(
         'w-full border-b border-gray-100',
-        row.fixed && `lg:sticky ${stickyTop} z-40`,
+        isDesktopOnlyRow && 'hidden lg:block',
+        // Fixed rows pin at their measured offset; scroll rows stay in flow.
+        isFixed && 'sticky z-40',
+        elevated && 'shadow-sm',
       )}
       style={{
         backgroundColor: row.backgroundColor || '#ffffff',
         color: row.textColor,
         height: row.height ? `${row.height}px` : undefined,
+        top: isFixed ? stickyTop ?? 0 : undefined,
       }}
     >
       <div

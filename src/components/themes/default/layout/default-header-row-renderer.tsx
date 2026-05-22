@@ -8,6 +8,12 @@ interface DefaultHeaderRowRendererProps {
   row: HeaderRow;
   lang: string;
   isFirstRow?: boolean;
+  /** Sticky top offset (px) when the row is fixed; undefined for scroll rows. */
+  stickyTop?: number;
+  /** Whether this row should carry the scroll elevation shadow. */
+  elevated?: boolean;
+  /** Registers the row element so the header can measure fixed-row heights. */
+  registerRef?: (id: string, el: HTMLElement | null) => void;
 }
 
 const LAYOUT_CLASSES: Record<RowLayout, string> = {
@@ -22,24 +28,31 @@ const LAYOUT_CLASSES: Record<RowLayout, string> = {
 export function DefaultHeaderRowRenderer({
   row,
   lang,
-  isFirstRow,
+  stickyTop,
+  elevated,
+  registerRef,
 }: DefaultHeaderRowRendererProps) {
   if (!row.enabled) return null;
 
   const layoutClass =
     LAYOUT_CLASSES[row.layout] || 'flex lg:grid lg:grid-cols-3';
-  const stickyTop = isFirstRow ? 'lg:top-0' : 'lg:top-16';
+
+  const isFixed = !!row.fixed;
 
   return (
     <div
+      ref={(el) => registerRef?.(row.id, el)}
       className={cn(
         'w-full border-b border-gray-100',
-        row.fixed && `lg:sticky ${stickyTop} z-40`,
+        // Fixed rows pin at their measured offset; scroll rows stay in flow.
+        isFixed && 'sticky z-40',
+        elevated && 'shadow-[0_1px_3px_rgba(0,0,0,0.04)]',
       )}
       style={{
         backgroundColor: row.backgroundColor || '#ffffff',
         color: row.textColor,
         height: row.height ? `${row.height}px` : undefined,
+        top: isFixed ? stickyTop ?? 0 : undefined,
       }}
     >
       <div

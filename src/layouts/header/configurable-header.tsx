@@ -3,10 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useHomeSettings } from '@/hooks/use-home-settings';
 import { DEFAULT_HEADER_CONFIG } from '@/lib/home-settings/defaults';
+import { useFixedRowOffsets } from '@/hooks/use-fixed-row-offsets';
 import { HeaderRowRenderer } from './header-row-renderer';
 import { useTranslation } from 'src/app/i18n/client';
 import { HiOutlineArrowUp } from 'react-icons/hi';
-import cn from 'classnames';
 
 interface ConfigurableHeaderProps {
   lang: string;
@@ -14,13 +14,21 @@ interface ConfigurableHeaderProps {
 
 export function ConfigurableHeader({ lang }: ConfigurableHeaderProps) {
   const { t } = useTranslation(lang, 'common');
-  const { settings, isLoading } = useHomeSettings();
+  const { settings } = useHomeSettings();
 
   // Use published headerConfig from settings, falling back to default
   const headerConfig = settings?.headerConfig || DEFAULT_HEADER_CONFIG;
+  const rows = headerConfig.rows;
+
+  const { offsets, setRowRef } = useFixedRowOffsets(rows);
 
   const [isElevated, setIsElevated] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
+
+  // Bottom-most pinned row carries the elevation shadow.
+  const lastFixedRowId = [...rows]
+    .reverse()
+    .find((r) => r.enabled && r.fixed)?.id;
 
   useEffect(() => {
     const handleScroll = () => {
@@ -41,18 +49,19 @@ export function ConfigurableHeader({ lang }: ConfigurableHeaderProps) {
 
   return (
     <>
-      <header
-        className={cn(
-          'w-full md:sticky md:top-0 z-40 transition-shadow',
-          isElevated && 'shadow-sm',
-        )}
-      >
-        {headerConfig.rows.map((row, index) => (
+      {/* `contents`: the <header> generates no box so each row's containing
+          block is the tall page column, letting fixed rows stay pinned for the
+          whole scroll while non-fixed rows scroll away. */}
+      <header className="contents">
+        {rows.map((row, index) => (
           <HeaderRowRenderer
             key={row.id}
             row={row}
             lang={lang}
             isFirstRow={index === 0}
+            stickyTop={row.fixed ? (offsets[row.id] ?? 0) : undefined}
+            elevated={isElevated && row.id === lastFixedRowId}
+            registerRef={setRowRef}
           />
         ))}
       </header>
