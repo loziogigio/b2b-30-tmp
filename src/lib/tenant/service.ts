@@ -31,6 +31,7 @@ interface TenantDocument {
   api?: {
     pim_api_url?: string;
     b2b_api_url?: string;
+    erp_url?: string;
     api_key_id?: string;
     api_secret?: string;
   };
@@ -66,6 +67,7 @@ function fromDocument(doc: TenantDocument): TenantConfig {
     api: {
       pimApiUrl: doc.api?.pim_api_url || process.env.PIM_API_URL || '',
       b2bApiUrl: doc.api?.b2b_api_url || process.env.B2B_API_URL || '',
+      erpUrl: doc.api?.erp_url || process.env.ERP_URL || undefined,
       apiKeyId: doc.api?.api_key_id || '',
       apiSecret: doc.api?.api_secret || '',
     },

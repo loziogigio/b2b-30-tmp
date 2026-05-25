@@ -25,6 +25,8 @@ export interface TenantApiConfig {
   pimApiUrl: string;
   /** B2B API base URL */
   b2bApiUrl: string;
+  /** Optional per-tenant ERP connection URL (user:pass@host:port/base). */
+  erpUrl?: string;
   /** API Key ID for authentication */
   apiKeyId: string;
   /** API Secret for authentication */
