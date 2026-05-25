@@ -31,6 +31,9 @@ export const fetchErpPrices = async (input: ErpPricesPayload) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(finalPayload),
     });
+    if (!res.ok) {
+      throw new Error(`ERP prices request failed: HTTP ${res.status}`);
+    }
     rawResponse = await res.json();
   } else {
     rawResponse = await post(API_ENDPOINTS_B2B.ERP_PRICES, finalPayload);
