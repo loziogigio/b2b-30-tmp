@@ -63,6 +63,7 @@
     "sharp": "^0.33.5",
     "swiper": "^11.1.15",
     "vinc-auth": "^1.0.0",
+    "vinc-erp": "file:/home/jire87/software/www-website/www-data/vendereincloud-app/packages/vinc-erp/vinc-erp-1.0.0.tgz",
     "vinc-mongo-db": "^1.0.0",
     "vinc-pim": "^1.0.0"
   },

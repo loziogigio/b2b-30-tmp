@@ -143,6 +143,9 @@ importers:
       vinc-auth:
         specifier: ^1.0.0
         version: 1.0.0(axios@1.7.9)(js-cookie@3.0.5)(next@16.1.6(@babel/core@7.28.6)(react-dom@19.0.0(react@19.0.0))(react@19.0.0))
+      vinc-erp:
+        specifier: file:/home/jire87/software/www-website/www-data/vendereincloud-app/packages/vinc-erp/vinc-erp-1.0.0.tgz
+        version: file:../packages/vinc-erp/vinc-erp-1.0.0.tgz
       vinc-mongo-db:
         specifier: ^1.0.0
         version: 1.0.0(lru-cache@11.2.4)(mongoose@8.19.1)
@@ -3675,6 +3678,10 @@ packages:
       axios: ^1.0.0
       js-cookie: ^3.0.0
       next: '>=14.0.0'
+
+  vinc-erp@file:../packages/vinc-erp/vinc-erp-1.0.0.tgz:
+    resolution: {integrity: sha512-xcIugOFi1sPLvRy4nodX4d5QX2OBTHzb3iKCobhm1Q6oXltrzDFeBTPDQ0KOS2d++c/OW/wfkgl2ihF8gacmXA==, tarball: file:../packages/vinc-erp/vinc-erp-1.0.0.tgz}
+    version: 1.0.0
 
   vinc-mongo-db@1.0.0:
     resolution: {integrity: sha512-M1GtycYkEAd+qFOWbAjPBbgq5w1s2BvK8kj3TI0oRsEBR0QuMp9BNnC95MhgffebxU98wYm3thUXeCnFYKACWQ==}
@@ -7592,6 +7599,8 @@ snapshots:
       axios: 1.7.9
       js-cookie: 3.0.5
       next: 16.1.6(@babel/core@7.28.6)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
+
+  vinc-erp@file:../packages/vinc-erp/vinc-erp-1.0.0.tgz: {}
 
   vinc-mongo-db@1.0.0(lru-cache@11.2.4)(mongoose@8.19.1):
     dependencies:
