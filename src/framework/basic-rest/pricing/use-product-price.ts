@@ -9,6 +9,7 @@ import { fetchErpPrices } from '@framework/erp/prices';
 import type { ErpPriceData } from '@utils/transform/erp-prices';
 import { productToErpPriceData } from '@utils/transform/inline-to-erp';
 
+import { useThemeId } from '@/contexts/tenant.context';
 import { usePricingSource } from './use-pricing-source';
 import type { PricingSource } from './pricing-source';
 
@@ -46,6 +47,7 @@ export function useProductPriceData(
   options?: SingleOptions,
 ): ErpPriceData | undefined {
   const source = usePricingSource();
+  const theme = useThemeId();
   const override = options?.override;
   const enabled = options?.enabled ?? true;
   const quantity = options?.quantity ?? 1;
@@ -63,6 +65,7 @@ export function useProductPriceData(
         id_cart: ERP_STATIC.id_cart,
         customer_code: ERP_STATIC.customer_code,
         address_code: ERP_STATIC.address_code,
+        theme,
       }),
     enabled: erpReady && Boolean(entityCode),
     staleTime: STALE_MS,
@@ -97,6 +100,7 @@ export function useProductsPriceMap(
   options?: BatchOptions,
 ): Record<string, ErpPriceData> {
   const source = usePricingSource();
+  const theme = useThemeId();
   const overrideMap = options?.overrideMap;
   const enabled = options?.enabled ?? true;
 
@@ -134,6 +138,7 @@ export function useProductsPriceMap(
         id_cart: ERP_STATIC.id_cart,
         customer_code: ERP_STATIC.customer_code,
         address_code: ERP_STATIC.address_code,
+        theme,
       }),
     enabled: erpReady,
     staleTime: STALE_MS,
