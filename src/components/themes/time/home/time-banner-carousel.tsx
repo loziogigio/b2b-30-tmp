@@ -30,7 +30,7 @@ interface TimeBannerCarouselProps {
   itemsPerView?: number;
 }
 
-function BannerSlide({ item }: { item: BannerItem }) {
+function BannerSlide({ item, sizes }: { item: BannerItem; sizes: string }) {
   const href = item.link;
   const linkProps: Record<string, string> = {};
   if (item.openInNewTab) {
@@ -56,7 +56,7 @@ function BannerSlide({ item }: { item: BannerItem }) {
           width={800}
           height={450}
           className="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-          sizes="(max-width: 640px) 90vw, (max-width: 1024px) 45vw, 30vw"
+          sizes={sizes}
         />
       ) : null}
 
@@ -118,6 +118,14 @@ export default function TimeBannerCarousel({
   const needsScroll = canScrollLeft || canScrollRight;
   const itemWidth = `calc(${100 / itemsPerView}% - ${((itemsPerView - 1) * 16) / itemsPerView}px)`;
 
+  // Tell the browser how wide each slide actually renders so it downloads a
+  // matching srcset candidate instead of upscaling a too-small one. Derived
+  // from itemsPerView: a 1-up hero spans the full row (~100vw), a 3-up grid
+  // ~33vw, etc. Mobile is always a single column.
+  const desktopVw = Math.max(1, Math.round(100 / itemsPerView));
+  const tabletVw = itemsPerView >= 2 ? 45 : 90;
+  const imageSizes = `(max-width: 640px) 90vw, (max-width: 1024px) ${tabletVw}vw, ${desktopVw}vw`;
+
   return (
     <div>
       {title && (
@@ -152,7 +160,7 @@ export default function TimeBannerCarousel({
                 animation: `time-fadeUp 0.4s ease ${0.05 * i}s both`,
               }}
             >
-              <BannerSlide item={item} />
+              <BannerSlide item={item} sizes={imageSizes} />
             </div>
           ))}
         </div>
