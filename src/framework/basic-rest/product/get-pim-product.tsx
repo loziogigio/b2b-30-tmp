@@ -464,13 +464,7 @@ export const usePimProductListInfiniteQuery = (
 
   const ctx = pimCustomerContext();
   return useInfiniteQuery({
-    queryKey: [
-      'pim-search-infinite',
-      ctx,
-      baseParams,
-      perPage,
-      groupByParent,
-    ],
+    queryKey: ['pim-search-infinite', ctx, baseParams, perPage, groupByParent],
     queryFn: async ({ pageParam = 0 }) => {
       const result = await fetchPimProductList({
         ...baseParams,

@@ -19,7 +19,7 @@ Result: rows marked **Scroll** never scroll away.
 
 - Non-fixed rows scroll away with the page.
 - Each fixed row stays pinned at the top, stacked in order.
-- A non-fixed row placed *between* two fixed rows scrolls **under** the upper
+- A non-fixed row placed _between_ two fixed rows scrolls **under** the upper
   fixed row; the lower fixed row pins directly beneath the upper one.
 
 ## Mechanism
@@ -32,13 +32,14 @@ would un-stick almost immediately. Two changes fix that:
    `time-header.tsx` and `configurable-header.tsx`. The `<header>` keeps its
    banner semantics but generates no box, so each row's containing block becomes
    the tall page column and sticky rows persist for the whole scroll.
+
    - The header box's background/elevation shadow is dropped (each row already
      paints its own background). The scroll-elevation shadow moves onto the
      bottom-most pinned (fixed) row.
 
 2. **Per-row sticky with measured offsets.** Non-fixed rows stay `static`. Each
    fixed row gets `position: sticky; top: <sum of heights of fixed rows pinned
-   above it>; z-index: 100`. Row heights are dynamic (builder `height` optional),
+above it>; z-index: 100`. Row heights are dynamic (builder `height` optional),
    so the header component measures the fixed rows and feeds each its cumulative
    top offset.
 

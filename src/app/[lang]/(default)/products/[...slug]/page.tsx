@@ -52,8 +52,12 @@ export async function generateMetadata({
     product.images?.[0]?.url ||
     '';
 
-  // Build canonical URL
-  const canonicalUrl = `${siteUrl}/${lang}/products/${sku}`;
+  // Canonical points to the flat product slug when available (spec D4),
+  // otherwise the SKU URL stays self-canonical.
+  const productSlug = product.slug as string | undefined;
+  const canonicalUrl = productSlug
+    ? `${siteUrl}/${lang}/${productSlug}`
+    : `${siteUrl}/${lang}/products/${sku}`;
 
   // Build keywords from brand, SKU, and product name
   const keywords = [
@@ -69,10 +73,15 @@ export async function generateMetadata({
     keywords: keywords.join(', '),
     alternates: {
       canonical: canonicalUrl,
-      languages: {
-        it: `${siteUrl}/it/products/${sku}`,
-        en: `${siteUrl}/en/products/${sku}`,
-      },
+      languages: productSlug
+        ? {
+            it: `${siteUrl}/it/${productSlug}`,
+            en: `${siteUrl}/en/${productSlug}`,
+          }
+        : {
+            it: `${siteUrl}/it/products/${sku}`,
+            en: `${siteUrl}/en/products/${sku}`,
+          },
     },
     openGraph: {
       title: `${productName} - ${sku}`,

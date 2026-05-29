@@ -1,7 +1,7 @@
 // components/category/CategoryPage.tsx
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Container from '@components/ui/container';
 import CategoryBreadcrumb from '@components/ui/category-breadcrumb';
 import {
@@ -153,12 +153,17 @@ export default function CategoryPage({
   lang,
   slug,
   disableLeafCarousel = false,
+  categoryRoot = 'categorie',
 }: {
   lang: string;
   slug: string[];
   /** When true, the leaf-category branch renders nothing — the page is showing
    *  the server-rendered, paginated SEO product grid instead. */
   disableLeafCarousel?: boolean;
+  /** Public per-tenant category-root segment (default `categorie`, spec D2/D3).
+   *  Used for all client-side category links so they land on the public URL
+   *  without the middleware's `categorie → root` 301 round-trip. */
+  categoryRoot?: string;
 }) {
   const { t } = useTranslation(lang, 'common');
   const themeId = useThemeId();
@@ -216,6 +221,26 @@ export default function CategoryPage({
   const totalRows = rows.length;
   const visibleRows = rows.slice(0, rowsToShow);
 
+  // Auto "show more": reveal the next batch of group rows as the sentinel
+  // scrolls into view, so the default template loads progressively without a
+  // manual button. `rootMargin` pre-loads slightly before it's fully visible.
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (typeof IntersectionObserver === 'undefined') return;
+    const el = loadMoreRef.current;
+    if (!el || totalRows <= rowsToShow) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setRowsToShow((n) => Math.min(n + MAX_ROWS, totalRows));
+        }
+      },
+      { rootMargin: '300px 0px' },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [totalRows, rowsToShow]);
+
   if (isLoading) return null;
   if (isError) {
     return (
@@ -247,7 +272,14 @@ export default function CategoryPage({
     slug.length > 0 &&
     !(current?.isGroup && (current.children?.length ?? 0) > 0);
   if (themeId === 'time' && !isLeaf) {
-    return <TimeCatalogueIndex tree={tree} current={current} lang={lang} />;
+    return (
+      <TimeCatalogueIndex
+        tree={tree}
+        current={current}
+        lang={lang}
+        categoryRoot={categoryRoot}
+      />
+    );
   }
 
   return (
@@ -262,10 +294,10 @@ export default function CategoryPage({
           categories={pathNodes}
           allLabel={t('all-categories', { defaultValue: 'All Groups' })}
           onAllCategoriesClick={() => {
-            window.location.href = `/${lang}/categorie`;
+            window.location.href = `/${lang}/${categoryRoot}`;
           }}
           onCategorySelect={(node) => {
-            window.location.href = `/${lang}/categorie/${node.path.join('/')}`;
+            window.location.href = `/${lang}/${categoryRoot}/${node.path.join('/')}`;
           }}
         />
       </Container>
@@ -343,16 +375,12 @@ export default function CategoryPage({
               {sections}
               {totalRows > rowsToShow && (
                 <Container>
-                  <div className="mt-2 flex justify-center">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setRowsToShow((n) => Math.min(n + MAX_ROWS, totalRows))
-                      }
-                      className="rounded-md border border-gray-200 px-4 py-2 text-sm hover:bg-gray-50"
-                    >
-                      {t('show-more', { defaultValue: 'Show more' })}
-                    </button>
+                  <div
+                    ref={loadMoreRef}
+                    className="mt-2 flex justify-center py-4 text-sm text-gray-400"
+                    aria-hidden="true"
+                  >
+                    {t('loading', { defaultValue: 'Loading…' })}
                   </div>
                 </Container>
               )}

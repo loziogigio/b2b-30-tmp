@@ -1,8 +1,4 @@
-import type {
-  ErpPriceData,
-  PackagingOption,
-  PromoOffer,
-} from './erp-prices';
+import type { ErpPriceData, PackagingOption, PromoOffer } from './erp-prices';
 import type { Product } from '@framework/types';
 import type {
   PimPackagingInfo,
@@ -85,10 +81,7 @@ export function productToErpPriceData(
   // packaging qty already covers a promo's min_quantity, buying at the
   // listino MV auto-applies the promo. B2BOfferRows uses this flag to
   // hide the LISTINO counter so the promo row is the only add path.
-  const listinoMv = Math.max(
-    Number(defaultForSale.qty_x_packaging ?? 1),
-    1,
-  );
+  const listinoMv = Math.max(Number(defaultForSale.qty_x_packaging ?? 1), 1);
   const isImprovingPromo = allPromoOffers.some(
     (o) => Math.max(Number(o.promo_qty_required ?? 0), 1) <= listinoMv,
   );

@@ -30,6 +30,9 @@ const CategoryPopup = dynamic(
   () => import('@components/category/category-popup'),
 );
 const B2BProductVariantsQuickView = getThemedComponent('VariantsQuickView');
+const TimePackagingModal = dynamic(
+  () => import('@components/themes/time/product/time-packaging-modal'),
+);
 const RadioPlayerModal = dynamic(
   () => import('@components/radio/radio-player-modal'),
 );
@@ -79,6 +82,7 @@ export default function ManagedModal({ lang }: { lang: string }) {
       {view === 'PAYMENT' && <PaymentPopup lang={lang} />}
       {view === 'PHONE_NUMBER' && <PhoneNumberPopup lang={lang} />}
       {view === 'DELIVERY_VIEW' && <DeliveryAddresses lang={lang} />}
+      {view === 'TIME_PACKAGING_VIEW' && <TimePackagingModal lang={lang} />}
     </Modal>
   );
 }

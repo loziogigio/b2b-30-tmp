@@ -79,6 +79,8 @@ export interface RadioStation {
   streamUrl: string;
 }
 
+export type MenuDisplayMode = 'inline' | 'drawer';
+
 export interface WidgetConfig {
   // Button widget
   label?: string;
@@ -95,6 +97,7 @@ export interface WidgetConfig {
   // Category menu widget
   menuId?: string;
   channel?: string;
+  displayMode?: MenuDisplayMode;
 
   // Icon widgets (cart, favorites, compare, profile)
   showLabel?: boolean;
@@ -229,6 +232,33 @@ export interface FooterConfig {
 }
 
 // ============================================================================
+// Custom Scripts Types
+//
+// Mirror of the admin (vinc-commerce-suite) `IB2CCustomScript` model,
+// camelCased to match this file's convention. Third-party snippets
+// (analytics, tag managers, cookie-consent, pixels) configured per portal
+// and injected into the storefront <head> or end of <body>.
+// ============================================================================
+
+export type ScriptPlacement = 'head' | 'body_end';
+export type ScriptLoadingStrategy = 'async' | 'defer' | 'blocking';
+
+export interface CustomScript {
+  /** Human-readable label (e.g. "Google Analytics") */
+  label: string;
+  /** External script URL */
+  src?: string;
+  /** Inline script content — can be combined with `src` */
+  inlineCode?: string;
+  /** Where to inject the script */
+  placement: ScriptPlacement;
+  /** Loading strategy for external scripts */
+  loadingStrategy: ScriptLoadingStrategy;
+  /** Toggle on/off without deleting */
+  enabled: boolean;
+}
+
+// ============================================================================
 // Home Settings Main Interface
 // ============================================================================
 
@@ -256,6 +286,12 @@ export interface HomeSettings {
 
   /** SEO meta tags configuration */
   meta_tags?: MetaTags;
+
+  /** Third-party scripts injected into the storefront (analytics, pixels, etc.) */
+  customScripts?: CustomScript[];
+
+  /** Custom CSS injected into the storefront <head> as a single <style> block */
+  customCss?: string;
 
   createdAt?: string | Date;
   updatedAt?: string | Date;

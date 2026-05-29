@@ -4,3 +4,8 @@ public
 .husky
 next-env.d.ts
 yarn.lock
+pnpm-lock.yaml
+vendor
+.playwright-mcp
+*.code-workspace
+dfl_catalog_restyle.jsx

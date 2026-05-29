@@ -7,14 +7,14 @@ pages stay dynamic.
 
 ## Layers
 
-| What | How |
-| --- | --- |
-| Portal config (branding / header / footer / meta / scripts) | `fetch(..., { next: { revalidate: 300, tags: ['home-settings-${tenant}'] } })` in `src/lib/home-settings/fetch-server.ts` (and the `/api/b2b/home-settings` bridge route, which is `no-store`) |
-| Home template (blocks + SEO) | direct MongoDB read wrapped in `unstable_cache(..., { revalidate: 300, tags: ['home-template-${tenant}'] })` — `getPublishedHomeTemplateCached` in `src/lib/db/home-templates.ts` (single-tenant only; multi-tenant reads live) |
-| Menu / collections / products / sitemap | tagged `fetch` in `src/lib/pim/server-fetch.ts` / `src/lib/seo/fetch-product.ts` — tags `menu-…`, `collections-…`, `products-…`, `sitemap-…` |
-| Tag names + tenant resolution | `src/lib/cache/tags.ts` — `CACHE_TAG_NAMES`, `cacheTag(name, tenantId, suffix?)`, `tagsForNames(names, tenantId)`, `currentTenantId()`, `SINGLE_TENANT_ID` |
-| Home page (`[lang]/(default)/page.tsx`) | stays **dynamic** — it reads `cookies()` for delivery-address / campaign / segment / region context that picks the home-template version. The *data* is cached (above); the *render* isn't. (b2c's `/` is ISR because it isn't cookie-personalised.) |
-| Category / search / product / cart | dynamic per request; their PIM data fetches still hit the tagged caches above |
+| What                                                        | How                                                                                                                                                                                                                                                  |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Portal config (branding / header / footer / meta / scripts) | `fetch(..., { next: { revalidate: 300, tags: ['home-settings-${tenant}'] } })` in `src/lib/home-settings/fetch-server.ts` (and the `/api/b2b/home-settings` bridge route, which is `no-store`)                                                       |
+| Home template (blocks + SEO)                                | direct MongoDB read wrapped in `unstable_cache(..., { revalidate: 300, tags: ['home-template-${tenant}'] })` — `getPublishedHomeTemplateCached` in `src/lib/db/home-templates.ts` (single-tenant only; multi-tenant reads live)                      |
+| Menu / collections / products / sitemap                     | tagged `fetch` in `src/lib/pim/server-fetch.ts` / `src/lib/seo/fetch-product.ts` — tags `menu-…`, `collections-…`, `products-…`, `sitemap-…`                                                                                                         |
+| Tag names + tenant resolution                               | `src/lib/cache/tags.ts` — `CACHE_TAG_NAMES`, `cacheTag(name, tenantId, suffix?)`, `tagsForNames(names, tenantId)`, `currentTenantId()`, `SINGLE_TENANT_ID`                                                                                           |
+| Home page (`[lang]/(default)/page.tsx`)                     | stays **dynamic** — it reads `cookies()` for delivery-address / campaign / segment / region context that picks the home-template version. The _data_ is cached (above); the _render_ isn't. (b2c's `/` is ISR because it isn't cookie-personalised.) |
+| Category / search / product / cart                          | dynamic per request; their PIM data fetches still hit the tagged caches above                                                                                                                                                                        |
 
 `SINGLE_TENANT_ID` is `process.env.VINC_TENANT_ID`, falling back to the tenant slug parsed
 from `API_KEY_ID` (`ak_{tenant}_{key}`), falling back to `"b2b"`.
@@ -36,6 +36,7 @@ vinc-b2b:  src/lib/cache/revalidation-subscriber.ts  (started once per Node proc
 The `revalidate: 300` TTL is a fallback; freshness is driven by the publish events.
 
 ### Manual / CI purges — `POST /api/revalidate`
+
 Shared secret in the `x-revalidate-secret` header (or `?secret=`); env `REVALIDATE_SECRET`.
 Body / query: `tags: string[]` (verbatim), `names: string[]` + optional `tenantId` (mapped via `tags.ts`),
 `paths: string[]`. Returns `{ revalidated, tags, paths }`.
@@ -50,6 +51,7 @@ REVALIDATE_SECRET=…    # required to use POST /api/revalidate
 ```
 
 ## Category pages (B-3.2)
+
 - `/category/[[...slug]]` emits `BreadcrumbList` + `CollectionPage` JSON-LD (`CategoryJsonLd`)
   and reads the menu via the tagged `serverFetchPimMenu`.
 - **Leaf** categories render a server-side, **paginated** product grid (`CategorySeoProducts`):
@@ -58,6 +60,7 @@ REVALIDATE_SECRET=…    # required to use POST /api/revalidate
   Pagination is plain `<a>` navigation. Per-page size: `CATEGORY_PRODUCTS_PER_PAGE` (24).
 
 ### Follow-ups (see docs/superpowers/specs/2026-05-11-caching-and-seo-listing.md)
+
 - Upgrade the leaf grid items to the full interactive product card / ERP prices, hydrated over
   the SSR markup (currently a lean image + name + link).
 - Optional: a root-level `[slug]` CMS-page catch-all (portal-managed content pages, like b2c's

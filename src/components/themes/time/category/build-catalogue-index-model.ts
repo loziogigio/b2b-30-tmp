@@ -1,5 +1,5 @@
 import type { MenuTreeNode } from '@framework/product/get-pim-menu';
-import { ROUTES } from '@utils/routes';
+import { DEFAULT_CATEGORY_ROOT } from '@/lib/seo/category-root';
 
 export interface CatalogueLeaf {
   label: string;
@@ -51,8 +51,8 @@ export function leafCount(node: MenuTreeNode): number {
   return node.children.reduce((sum, child) => sum + leafCount(child), 0);
 }
 
-function hrefFor(node: MenuTreeNode, lang: string): string {
-  return `/${lang}${ROUTES.CATEGORY}/${node.path.join('/')}`;
+function hrefFor(node: MenuTreeNode, lang: string, root: string): string {
+  return `/${lang}/${root}/${node.path.join('/')}`;
 }
 
 function stripHtml(html: string | null | undefined): string {
@@ -63,14 +63,15 @@ function stripHtml(html: string | null | undefined): string {
     .trim();
 }
 
-function toLeaf(node: MenuTreeNode, lang: string): CatalogueLeaf {
-  return { label: node.label || node.name, href: hrefFor(node, lang) };
+function toLeaf(node: MenuTreeNode, lang: string, root: string): CatalogueLeaf {
+  return { label: node.label || node.name, href: hrefFor(node, lang, root) };
 }
 
 /** Body groups of a macro section: direct leaves (unnamed) + each sub-group. */
 function buildGroups(
   sectionNode: MenuTreeNode,
   lang: string,
+  root: string,
 ): CatalogueGroup[] {
   const children = sectionNode.children ?? [];
   const directLeaves = children.filter((c) => !isGroupNode(c));
@@ -81,7 +82,7 @@ function buildGroups(
     groups.push({
       name: null,
       count: directLeaves.length,
-      items: directLeaves.map((l) => toLeaf(l, lang)),
+      items: directLeaves.map((l) => toLeaf(l, lang, root)),
     });
   }
   for (const sg of subGroups) {
@@ -92,7 +93,7 @@ function buildGroups(
       // (macro → sub-group → item). In trees deeper than that, an item may link
       // to a sub-group rather than a leaf; `count` still reflects total leaf
       // descendants, and deeper nesting is reached by following the link.
-      items: (sg.children ?? []).map((c) => toLeaf(c, lang)),
+      items: (sg.children ?? []).map((c) => toLeaf(c, lang, root)),
     });
   }
   return groups;
@@ -103,6 +104,13 @@ export function buildCatalogueIndexModel(
   current: MenuTreeNode | null,
   lang: string,
   rootLabel: string,
+  /**
+   * Public category-root segment (spec D2/D3) used to build links. Per-tenant,
+   * defaults to `categorie`. Passing the tenant's configured root (e.g.
+   * `prodotti`) keeps the catalogue's links on the public URL and avoids the
+   * middleware's `categorie → root` 301 round-trip.
+   */
+  categoryRoot: string = DEFAULT_CATEGORY_ROOT,
 ): CatalogueIndexModel {
   const baseChildren = current ? (current.children ?? []) : tree;
   const leafChildren = baseChildren.filter((n) => !isGroupNode(n));
@@ -115,7 +123,9 @@ export function buildCatalogueIndexModel(
     sections.push({
       id: current?.id ?? 'root',
       label: current?.label || current?.name || rootLabel,
-      href: current ? hrefFor(current, lang) : `/${lang}${ROUTES.CATEGORY}`,
+      href: current
+        ? hrefFor(current, lang, categoryRoot)
+        : `/${lang}/${categoryRoot}`,
       accent: CATALOGUE_ACCENT_PALETTE[0],
       iconUrl: current?.category_menu_image ?? null,
       subtitle: stripHtml(current?.description),
@@ -124,7 +134,7 @@ export function buildCatalogueIndexModel(
         {
           name: null,
           count: leafChildren.length,
-          items: leafChildren.map((l) => toLeaf(l, lang)),
+          items: leafChildren.map((l) => toLeaf(l, lang, categoryRoot)),
         },
       ],
     });
@@ -136,12 +146,12 @@ export function buildCatalogueIndexModel(
     sections.push({
       id: g.id,
       label: g.label || g.name,
-      href: hrefFor(g, lang),
+      href: hrefFor(g, lang, categoryRoot),
       accent: CATALOGUE_ACCENT_PALETTE[index % CATALOGUE_ACCENT_PALETTE.length],
       iconUrl: g.category_menu_image ?? null,
       subtitle: stripHtml(g.description),
       count: leafCount(g),
-      groups: buildGroups(g, lang),
+      groups: buildGroups(g, lang, categoryRoot),
     });
   }
 

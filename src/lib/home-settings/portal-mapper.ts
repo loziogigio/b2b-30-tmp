@@ -10,6 +10,7 @@
 import { DEFAULT_HOME_SETTINGS } from '@/lib/home-settings/defaults';
 import type {
   CompanyBranding,
+  CustomScript,
   FooterColumn,
   FooterColumnItem,
   FooterConfig,
@@ -17,6 +18,8 @@ import type {
   HomeSettings,
   MetaTags,
   ProductCardStyle,
+  ScriptLoadingStrategy,
+  ScriptPlacement,
 } from '@/lib/home-settings/types';
 
 /** Minimal shape of the `portal` object returned by the PIM public B2B home endpoint. */
@@ -29,6 +32,8 @@ export interface PortalPayload {
   footer?: PortalFooter;
   footer_draft?: PortalFooter;
   meta_tags?: PortalMetaTags;
+  custom_scripts?: PortalCustomScript[];
+  custom_css?: string;
   /**
    * Product card visual style + priceDecimals. Not currently shipped by the
    * portal endpoint (see commerce-suite's `buildPortalFromHomeSettings`, which
@@ -101,6 +106,56 @@ interface PortalMetaTags {
   theme_color?: string;
   google_site_verification?: string;
   bing_site_verification?: string;
+}
+
+interface PortalCustomScript {
+  label?: string;
+  src?: string;
+  inline_code?: string;
+  placement?: string;
+  loading_strategy?: string;
+  enabled?: boolean;
+}
+
+const SCRIPT_PLACEMENTS = new Set<ScriptPlacement>(['head', 'body_end']);
+const SCRIPT_LOADING_STRATEGIES = new Set<ScriptLoadingStrategy>([
+  'async',
+  'defer',
+  'blocking',
+]);
+
+/** Map the portal's snake_case custom scripts to camelCase, dropping empty/invalid entries. */
+export function mapCustomScripts(
+  src: PortalCustomScript[] | undefined,
+): CustomScript[] | undefined {
+  if (!src || src.length === 0) return undefined;
+  const out: CustomScript[] = [];
+  for (const s of src) {
+    const hasSrc = typeof s.src === 'string' && s.src.trim() !== '';
+    const hasInline =
+      typeof s.inline_code === 'string' && s.inline_code.trim() !== '';
+    if (!hasSrc && !hasInline) continue; // nothing to inject
+
+    const placement: ScriptPlacement = SCRIPT_PLACEMENTS.has(
+      s.placement as ScriptPlacement,
+    )
+      ? (s.placement as ScriptPlacement)
+      : 'head';
+    const loadingStrategy: ScriptLoadingStrategy =
+      SCRIPT_LOADING_STRATEGIES.has(s.loading_strategy as ScriptLoadingStrategy)
+        ? (s.loading_strategy as ScriptLoadingStrategy)
+        : 'async';
+
+    out.push({
+      label: s.label ?? '',
+      ...(hasSrc ? { src: s.src } : {}),
+      ...(hasInline ? { inlineCode: s.inline_code } : {}),
+      placement,
+      loadingStrategy,
+      enabled: s.enabled !== false, // default on
+    });
+  }
+  return out.length > 0 ? out : undefined;
 }
 
 function mapBranding(src: PortalBranding | undefined): CompanyBranding {
@@ -213,6 +268,8 @@ export function mapPortalToHomeSettings(
       headerConfigDraft: portal.header_config_draft,
     }),
     meta_tags: mapMetaTags(portal.meta_tags),
+    customScripts: mapCustomScripts(portal.custom_scripts),
+    ...(portal.custom_css?.trim() ? { customCss: portal.custom_css } : {}),
     footer: footer ?? DEFAULT_HOME_SETTINGS.footer,
     // Merge any portal-supplied cardStyle over the defaults so a partial
     // payload (e.g. just `priceDecimals: 4`) keeps the rest of the defaults

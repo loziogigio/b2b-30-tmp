@@ -2,7 +2,10 @@ import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('@/lib/cache/redis-cache', () => ({
   // Fake cachedJson: fresh-miss always produces (good enough for adapter contract).
-  cachedJson: vi.fn(async (_key: string, _opts: unknown, producer: () => Promise<unknown>) => producer()),
+  cachedJson: vi.fn(
+    async (_key: string, _opts: unknown, producer: () => Promise<unknown>) =>
+      producer(),
+  ),
 }));
 
 import { RedisCacheAdapter } from '@/lib/erp/redis-cache-adapter';

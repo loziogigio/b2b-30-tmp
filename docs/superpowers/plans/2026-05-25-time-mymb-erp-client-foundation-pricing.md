@@ -4,7 +4,7 @@
 
 **Goal:** Build the `vinc-erp` package (a server-side TypeScript port of `ErpClient.py`) and wire the time theme's product pricing to fetch from the MYMB ERP directly through it, end-to-end, with the default theme unchanged.
 
-**Architecture:** A standalone framework-free package `packages/vinc-erp` (mirrors `packages/vinc-pim`) exposes a provider-agnostic `ErpClient` interface with `MyMbErpClient` as the first implementation. vinc-b2b adds `/api/erp/[...path]` internal routes that resolve a client via a factory (connection from `MYMB_ERP_URL`, behavior config from the Commerce Suite `erp_settings` data-model, Redis via an injected `CacheAdapter`) and a theme-keyed `erpApiBase()` switch so only the time theme uses the new path.
+**Architecture:** A standalone framework-free package `packages/vinc-erp` (mirrors `packages/vinc-pim`) exposes a provider-agnostic `ErpClient` interface with `MyMbErpClient` as the first implementation. vinc-b2b adds `/api/erp/[...path]` internal routes that resolve a client via a factory (connection from `ERP_URL`, behavior config from the Commerce Suite `erp_settings` data-model, Redis via an injected `CacheAdapter`) and a theme-keyed `erpApiBase()` switch so only the time theme uses the new path.
 
 **Tech Stack:** TypeScript (NodeNext modules), Vitest, native `fetch`, Next.js App Router route handlers, Axios (existing `httpB2B`), ioredis (existing `redis-cache`).
 
@@ -17,6 +17,7 @@
 ## File Structure
 
 **New package — `packages/vinc-erp/`:**
+
 - `package.json`, `tsconfig.json`, `vitest.config.ts`, `README.md` — build/test config (mirrors vinc-pim)
 - `src/index.ts` — barrel exports
 - `src/erp-client.ts` — `ErpClient` interface (pricing slice) + `ErpError` + shared query types
@@ -29,6 +30,7 @@
 - `src/__tests__/*.test.ts` — unit tests
 
 **Modified/created in `vinc-b2b/`:**
+
 - `src/lib/erp/redis-cache-adapter.ts` — `CacheAdapter` over `cachedJson` (Create)
 - `src/lib/erp/data-model-config.ts` — fetch `erp_settings` → `MyMbErpSettings` (Create)
 - `src/lib/erp/factory.ts` — `getMyMbErpClient(req)` (Create)
@@ -42,6 +44,7 @@
 ## Task 1: Scaffold the `vinc-erp` package
 
 **Files:**
+
 - Create: `packages/vinc-erp/package.json`
 - Create: `packages/vinc-erp/tsconfig.json`
 - Create: `packages/vinc-erp/vitest.config.ts`
@@ -136,7 +139,7 @@ Caching and configuration are **injected** (see `CacheAdapter` and `MyMbErpSetti
 1. Add canonical DTOs to `src/types/` if the provider needs new shapes.
 2. Create `src/<provider>/<provider>-erp-client.ts` implementing `ErpClient`.
 3. Export it from `src/index.ts`.
-Consumers select an implementation; routes and DTOs stay unchanged.
+   Consumers select an implementation; routes and DTOs stay unchanged.
 ```
 
 - [ ] **Step 5: Create a placeholder barrel `src/index.ts`** (filled in later tasks)
@@ -165,6 +168,7 @@ git commit -m "chore(vinc-erp): scaffold package (mirrors vinc-pim)"
 Parses a single URL with embedded credentials (`http://user:pass@host:port/base`) into a base URL (no userinfo) and an HTTP Basic `Authorization` header.
 
 **Files:**
+
 - Create: `packages/vinc-erp/src/mymb/auth.ts`
 - Test: `packages/vinc-erp/src/__tests__/auth.test.ts`
 
@@ -176,9 +180,13 @@ import { parseMyMbConnection } from '../mymb/auth.js';
 
 describe('parseMyMbConnection', () => {
   it('splits embedded credentials into base URL + Basic auth header', () => {
-    const c = parseMyMbConnection('http://USER1:PASS1@10.0.0.5:8896/MyMB/Service/web');
+    const c = parseMyMbConnection(
+      'http://USER1:PASS1@10.0.0.5:8896/MyMB/Service/web',
+    );
     expect(c.baseUrl).toBe('http://10.0.0.5:8896/MyMB/Service/web');
-    expect(c.authHeader).toBe(`Basic ${Buffer.from('USER1:PASS1').toString('base64')}`);
+    expect(c.authHeader).toBe(
+      `Basic ${Buffer.from('USER1:PASS1').toString('base64')}`,
+    );
   });
 
   it('strips a trailing slash from the base URL', () => {
@@ -187,7 +195,9 @@ describe('parseMyMbConnection', () => {
   });
 
   it('throws when credentials are missing', () => {
-    expect(() => parseMyMbConnection('http://h:1/MyMB/web')).toThrow(/credentials/i);
+    expect(() => parseMyMbConnection('http://h:1/MyMB/web')).toThrow(
+      /credentials/i,
+    );
   });
 
   it('throws on an unparseable URL', () => {
@@ -250,6 +260,7 @@ git commit -m "feat(vinc-erp): MYMB connection URL parser (base URL + Basic auth
 ## Task 3: Endpoint constants + `ErpError` + shared types
 
 **Files:**
+
 - Create: `packages/vinc-erp/src/endpoints.ts`
 - Create: `packages/vinc-erp/src/types/pricing.ts`
 - Create: `packages/vinc-erp/src/erp-client.ts`
@@ -264,8 +275,7 @@ export const MYMB_ENDPOINTS = {
   GET_LISTA_ARTICOLI_ALTERNATIVI: 'GetListaArticoliAlternativi',
 } as const;
 
-export type MyMbEndpoint =
-  (typeof MYMB_ENDPOINTS)[keyof typeof MYMB_ENDPOINTS];
+export type MyMbEndpoint = (typeof MYMB_ENDPOINTS)[keyof typeof MYMB_ENDPOINTS];
 ```
 
 - [ ] **Step 2: Create `src/types/pricing.ts`**
@@ -329,8 +339,8 @@ export interface MyMbPriceEntry {
   entity_code: string;
   vat_percent: unknown;
   availability: unknown;
-  all_promo: unknown;        // raw RighePromo ({ ListaPromo: [...] }) or {}
-  improving_promo: unknown;  // raw RigaPromozioneMigliorativa or {}
+  all_promo: unknown; // raw RighePromo ({ ListaPromo: [...] }) or {}
+  improving_promo: unknown; // raw RigaPromozioneMigliorativa or {}
   net_price: unknown;
   gross_price: unknown;
   count_promo: number;
@@ -374,7 +384,11 @@ import { ErpError } from '../erp-client.js';
 
 describe('ErpError', () => {
   it('carries endpoint, status, returnCode and message', () => {
-    const e = new ErpError('boom', { endpoint: 'GetX', status: 502, returnCode: 3 });
+    const e = new ErpError('boom', {
+      endpoint: 'GetX',
+      status: 502,
+      returnCode: 3,
+    });
     expect(e).toBeInstanceOf(Error);
     expect(e.name).toBe('ErpError');
     expect(e.message).toBe('boom');
@@ -450,6 +464,7 @@ git commit -m "feat(vinc-erp): endpoints, pricing types, ErpClient interface + E
 The package never imports Redis. It declares a tiny adapter; vinc-b2b implements it (Task 9). The pricing slice does not cache, but the client constructor accepts an adapter so later plans (promos) use it without a constructor change.
 
 **Files:**
+
 - Create: `packages/vinc-erp/src/cache.ts`
 - Test: `packages/vinc-erp/src/__tests__/cache.test.ts`
 
@@ -463,7 +478,10 @@ describe('NoopCacheAdapter', () => {
   it('always calls the producer and returns its value', async () => {
     const cache = new NoopCacheAdapter();
     let calls = 0;
-    const producer = async () => { calls++; return 42; };
+    const producer = async () => {
+      calls++;
+      return 42;
+    };
     expect(await cache.getOrProduce('k', 60, producer)).toBe(42);
     expect(await cache.getOrProduce('k', 60, producer)).toBe(42);
     expect(calls).toBe(2); // no caching
@@ -524,6 +542,7 @@ git commit -m "feat(vinc-erp): CacheAdapter interface + NoopCacheAdapter"
 Port of the Python `get_packaging_options`: filter the article's packaging list to the configured IDs, in configured order, enriching each with `id`/`label`/`amount`.
 
 **Files:**
+
 - Create: `packages/vinc-erp/src/mymb/transform.ts`
 - Test: `packages/vinc-erp/src/__tests__/transform-packaging.test.ts`
 
@@ -578,7 +597,9 @@ export function getPackagingOptions(
   orderIds: number[],
 ): Array<RawPackaging & { id: number; label: unknown; amount: unknown }> {
   if (!Array.isArray(list) || list.length === 0) return [];
-  const out: Array<RawPackaging & { id: number; label: unknown; amount: unknown }> = [];
+  const out: Array<
+    RawPackaging & { id: number; label: unknown; amount: unknown }
+  > = [];
   for (const id of orderIds) {
     const item = list.find((it) => it.IdImballo === id);
     if (item) {
@@ -614,6 +635,7 @@ git commit -m "feat(vinc-erp): getPackagingOptions transform (port of Python hel
 Port of Python `get_label_and_cart_status`: pick a case (0–5) from availability + managed flags + supplied data, then look up label/add-to-cart from `cases`. Config is passed in (not `os.getenv`).
 
 **Files:**
+
 - Modify: `packages/vinc-erp/src/mymb/transform.ts`
 - Test: `packages/vinc-erp/src/__tests__/transform-label.test.ts`
 
@@ -633,7 +655,9 @@ const cases = {
 describe('getLabelAndCartStatus', () => {
   it('case 0 when quantity available', () => {
     const r = getLabelAndCartStatus(5, [], [], {
-      isManagedSubstitutes: true, isManagedSupplierOrder: true, cases,
+      isManagedSubstitutes: true,
+      isManagedSupplierOrder: true,
+      cases,
     });
     expect(r.case).toBe(0);
     expect(r.LABEL).toBe('Available');
@@ -643,7 +667,9 @@ describe('getLabelAndCartStatus', () => {
 
   it('case 1: no stock, managed subs+supplier, both present', () => {
     const r = getLabelAndCartStatus(0, [{ x: 1 }], [{ y: 1 }], {
-      isManagedSubstitutes: true, isManagedSupplierOrder: true, cases,
+      isManagedSubstitutes: true,
+      isManagedSupplierOrder: true,
+      cases,
     });
     expect(r.case).toBe(1);
     expect(r.LABEL).toBe('Sub+Arrival');
@@ -651,7 +677,9 @@ describe('getLabelAndCartStatus', () => {
 
   it('case 5: no stock, nothing managed', () => {
     const r = getLabelAndCartStatus(0, [], [], {
-      isManagedSubstitutes: false, isManagedSupplierOrder: false, cases,
+      isManagedSubstitutes: false,
+      isManagedSupplierOrder: false,
+      cases,
     });
     expect(r.case).toBe(5);
     expect(r.ADD_TO_CART).toBe(false);
@@ -659,7 +687,9 @@ describe('getLabelAndCartStatus', () => {
 
   it('UNKNOWN fallback when matched case has no config entry', () => {
     const r = getLabelAndCartStatus(0, [], [{ y: 1 }], {
-      isManagedSubstitutes: true, isManagedSupplierOrder: true, cases,
+      isManagedSubstitutes: true,
+      isManagedSupplierOrder: true,
+      cases,
     }); // → case 3, not in `cases`
     expect(r.case).toBe(3);
     expect(r.LABEL).toBe('UNKNOWN');
@@ -696,8 +726,10 @@ export function getLabelAndCartStatus(
 ): ProductLabelAction {
   const subs = config.isManagedSubstitutes;
   const supplier = config.isManagedSupplierOrder;
-  const hasSub = Array.isArray(substituteAvailable) && substituteAvailable.length > 0;
-  const hasArr = Array.isArray(orderSupplierAvailable) && orderSupplierAvailable.length > 0;
+  const hasSub =
+    Array.isArray(substituteAvailable) && substituteAvailable.length > 0;
+  const hasArr =
+    Array.isArray(orderSupplierAvailable) && orderSupplierAvailable.length > 0;
 
   let c: number | null = null;
   if (quantityAvailable > 0) {
@@ -714,8 +746,7 @@ export function getLabelAndCartStatus(
     c = 5;
   }
 
-  const entry =
-    c !== null ? config.cases[String(c)] : undefined;
+  const entry = c !== null ? config.cases[String(c)] : undefined;
 
   return {
     LABEL: entry?.label ?? 'UNKNOWN',
@@ -750,6 +781,7 @@ git commit -m "feat(vinc-erp): getLabelAndCartStatus transform (port of Python h
 Port of the per-`price` body of Python `get_multiple_prices`: maps one MYMB `ListaPrezzatura` row to a `MyMbPriceEntry`. The substitute fallback (which needs a network call) stays in the client (Task 8); `buildPriceEntry` is pure.
 
 **Files:**
+
 - Modify: `packages/vinc-erp/src/mymb/transform.ts`
 - Test: `packages/vinc-erp/src/__tests__/transform-price-entry.test.ts`
 
@@ -764,7 +796,10 @@ const settings: MyMbErpSettings = {
   packagingOptionsId: [1],
   isManagedSubstitutes: false,
   isManagedSupplierOrder: false,
-  cases: { '0': { label: 'OK', addToCart: true }, '5': { label: 'NO', addToCart: false } },
+  cases: {
+    '0': { label: 'OK', addToCart: true },
+    '5': { label: 'NO', addToCart: false },
+  },
   updatePromoSeconds: 21600,
   updateAvailableAgainSeconds: 21600,
 };
@@ -778,10 +813,19 @@ function rawPrice(overrides: Record<string, unknown> = {}) {
     PrezzoNettoXVisualizzazione: 90,
     TipoListinoUtilizzato: 'L1',
     CodiceListinoUtilizzato: 'C1',
-    ImballiArticolo: { ListaImballoXArticolo: [
-      { IdImballo: 1, CodiceImballo1: 'PZ', QtaXImballo: 1, UM: 'PZ', DescrizioneUM: 'Pezzo',
-        IsImballoDiDefaultXVendita: true, IsImballoPiuPiccolo: true },
-    ]},
+    ImballiArticolo: {
+      ListaImballoXArticolo: [
+        {
+          IdImballo: 1,
+          CodiceImballo1: 'PZ',
+          QtaXImballo: 1,
+          UM: 'PZ',
+          DescrizioneUM: 'Pezzo',
+          IsImballoDiDefaultXVendita: true,
+          IsImballoPiuPiccolo: true,
+        },
+      ],
+    },
     ...overrides,
   };
 }
@@ -808,19 +852,24 @@ describe('buildPriceEntry', () => {
   });
 
   it('applies the improving-promo branch when RigaPromozioneMigliorativa has a code', () => {
-    const e = buildPriceEntry(rawPrice({
-      RigaPromozioneMigliorativa: {
-        CodicePromozione: 'P1',
-        TipoPromozione: 'RigaPrezzoNettoQuantitaMinima',
-        PrezzoNettoListinoDiRiferimento: 80,
-        PrezzoNettoConPromo: 70,
-        RigaPromozione: 2,
-        TitoloPromozione: 'Deal',
-        DataInizioValitita: '01/15/2026 12:00:00 AM',
-        DataFineValidita: '02/15/2026 12:00:00 AM',
-        ScontoExtra1: 5, ScontoExtra2: 0, ScontoExtra3: 0,
-      },
-    }), settings);
+    const e = buildPriceEntry(
+      rawPrice({
+        RigaPromozioneMigliorativa: {
+          CodicePromozione: 'P1',
+          TipoPromozione: 'RigaPrezzoNettoQuantitaMinima',
+          PrezzoNettoListinoDiRiferimento: 80,
+          PrezzoNettoConPromo: 70,
+          RigaPromozione: 2,
+          TitoloPromozione: 'Deal',
+          DataInizioValitita: '01/15/2026 12:00:00 AM',
+          DataFineValidita: '02/15/2026 12:00:00 AM',
+          ScontoExtra1: 5,
+          ScontoExtra2: 0,
+          ScontoExtra3: 0,
+        },
+      }),
+      settings,
+    );
     expect(e.is_promo).toBe(true);
     expect(e.is_improving_promo).toBe(true);
     expect(e.is_improving_promo_net_price).toBe(true);
@@ -834,7 +883,10 @@ describe('buildPriceEntry', () => {
   });
 
   it('passes through raw RighePromo as all_promo and counts it', () => {
-    const e = buildPriceEntry(rawPrice({ RighePromo: { ListaPromo: [{ a: 1 }, { b: 2 }] } }), settings);
+    const e = buildPriceEntry(
+      rawPrice({ RighePromo: { ListaPromo: [{ a: 1 }, { b: 2 }] } }),
+      settings,
+    );
     expect(e.all_promo).toEqual({ ListaPromo: [{ a: 1 }, { b: 2 }] });
     expect(e.count_promo).toBe(0); // count_promo only counts when all_promo is itself a list (Python parity)
   });
@@ -849,6 +901,7 @@ Expected: FAIL — `buildPriceEntry` is not exported.
 - [ ] **Step 3: Add the implementation to `src/mymb/transform.ts`**
 
 Notes on fidelity to the Python:
+
 - `all_promo = price.RighePromo ?? {}` (raw passthrough; `count_promo` is `length` only when it is an array — matches the Python `isinstance(list)` guard).
 - `improving_promo = price.RigaPromozioneMigliorativa ?? {}` (raw passthrough).
 - Date format: Python parses `"%m/%d/%Y %H:%M:%S %p"` then formats `"%d/%m/%y"`.
@@ -923,15 +976,22 @@ export function buildPriceEntry(
     num_promo: price.NrPromozioniPotenzialmenteApplicabili ?? 0,
     num_promo_canvas: price.NumeroPromozioniCanvas ?? 0,
     discount: [
-      price.ScontoORicarica1, price.ScontoORicarica2, price.ScontoORicarica3,
-      price.ScontoORicarica4, price.ScontoORicarica5, price.ScontoORicarica6,
+      price.ScontoORicarica1,
+      price.ScontoORicarica2,
+      price.ScontoORicarica3,
+      price.ScontoORicarica4,
+      price.ScontoORicarica5,
+      price.ScontoORicarica6,
     ],
     pricelist_type: price.TipoListinoUtilizzato,
     pricelist_code: price.CodiceListinoUtilizzato,
     packaging_option_smallest: smallest,
     packaging_option_default: dflt,
     packaging_options_all: packagingAll,
-    packaging_options: getPackagingOptions(packagingList, settings.packagingOptionsId),
+    packaging_options: getPackagingOptions(
+      packagingList,
+      settings.packagingOptionsId,
+    ),
     order_suplier_available: supplierArrivals,
     prod_substitution: [],
     product_label_action: getLabelAndCartStatus(
@@ -943,11 +1003,14 @@ export function buildPriceEntry(
   };
 
   const hasImproving =
-    improving && typeof improving === 'object' && (improving as any).CodicePromozione != null;
+    improving &&
+    typeof improving === 'object' &&
+    (improving as any).CodicePromozione != null;
 
   if (hasImproving) {
     const imp = improving as Record<string, any>;
-    entry.is_improving_promo_net_price = imp.TipoPromozione === 'RigaPrezzoNettoQuantitaMinima';
+    entry.is_improving_promo_net_price =
+      imp.TipoPromozione === 'RigaPrezzoNettoQuantitaMinima';
     entry.price = imp.PrezzoNettoListinoDiRiferimento;
     entry.price_discount = imp.PrezzoNettoConPromo;
     entry.promo_price = imp.PrezzoNettoConPromo;
@@ -958,7 +1021,11 @@ export function buildPriceEntry(
     entry.promo_title = imp.TitoloPromozione;
     entry.start_promo_date = formatPromoValidity(imp.DataInizioValitita);
     entry.end_promo_date = formatPromoValidity(imp.DataFineValidita);
-    entry.discount_extra = [imp.ScontoExtra1, imp.ScontoExtra2, imp.ScontoExtra3];
+    entry.discount_extra = [
+      imp.ScontoExtra1,
+      imp.ScontoExtra2,
+      imp.ScontoExtra3,
+    ];
   } else {
     entry.price = price.Prezzo;
     entry.price_discount = price.PrezzoNettoXVisualizzazione;
@@ -988,6 +1055,7 @@ git commit -m "feat(vinc-erp): buildPriceEntry transform (port of get_multiple_p
 ## Task 8: `MyMbErpClient` (`request`, `getSubstituteItems`, `getMultiplePrices`)
 
 **Files:**
+
 - Create: `packages/vinc-erp/src/mymb/mymb-erp-client.ts`
 - Test: `packages/vinc-erp/src/__tests__/mymb-erp-client.test.ts`
 
@@ -1011,7 +1079,8 @@ const settings: MyMbErpSettings = {
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
-    status, headers: { 'content-type': 'application/json' },
+    status,
+    headers: { 'content-type': 'application/json' },
   });
 }
 
@@ -1029,25 +1098,42 @@ describe('MyMbErpClient.getMultiplePrices', () => {
   it('returns {} for empty entityCodes without calling fetch', async () => {
     const f = vi.fn();
     const client = makeClient(f as unknown as typeof fetch);
-    expect(await client.getMultiplePrices({ customerCode: 'C', addressCode: 'A', entityCodes: [] })).toEqual({});
+    expect(
+      await client.getMultiplePrices({
+        customerCode: 'C',
+        addressCode: 'A',
+        entityCodes: [],
+      }),
+    ).toEqual({});
     expect(f).not.toHaveBeenCalled();
   });
 
   it('maps GetPrezzaturaMultipla rows into an entity-keyed map', async () => {
-    const f = vi.fn().mockResolvedValue(jsonResponse({
-      GetPrezzaturaMultiplaResult: {
-        ReturnCode: 0,
-        ListaPrezzatura: [
-          { CodiceInternoArticolo: 'ART1', IVAPercentuale: 22, QtaDisponibile: 5,
-            Prezzo: 100, PrezzoNettoXVisualizzazione: 90,
-            TipoListinoUtilizzato: 'L', CodiceListinoUtilizzato: 'C',
-            ImballiArticolo: { ListaImballoXArticolo: [] } },
-        ],
-      },
-    }));
+    const f = vi.fn().mockResolvedValue(
+      jsonResponse({
+        GetPrezzaturaMultiplaResult: {
+          ReturnCode: 0,
+          ListaPrezzatura: [
+            {
+              CodiceInternoArticolo: 'ART1',
+              IVAPercentuale: 22,
+              QtaDisponibile: 5,
+              Prezzo: 100,
+              PrezzoNettoXVisualizzazione: 90,
+              TipoListinoUtilizzato: 'L',
+              CodiceListinoUtilizzato: 'C',
+              ImballiArticolo: { ListaImballoXArticolo: [] },
+            },
+          ],
+        },
+      }),
+    );
     const client = makeClient(f as unknown as typeof fetch);
     const out = await client.getMultiplePrices({
-      customerCode: 'C', addressCode: 'A', entityCodes: ['ART1'], quantityList: [1],
+      customerCode: 'C',
+      addressCode: 'A',
+      entityCodes: ['ART1'],
+      quantityList: [1],
     });
     expect(Object.keys(out)).toEqual(['ART1']);
     expect(out.ART1.net_price).toBe(90);
@@ -1059,21 +1145,31 @@ describe('MyMbErpClient.getMultiplePrices', () => {
   });
 
   it('throws ErpError when ReturnCode != 0', async () => {
-    const f = vi.fn().mockResolvedValue(jsonResponse({
-      GetPrezzaturaMultiplaResult: { ReturnCode: 3, Message: 'bad' },
-    }));
+    const f = vi.fn().mockResolvedValue(
+      jsonResponse({
+        GetPrezzaturaMultiplaResult: { ReturnCode: 3, Message: 'bad' },
+      }),
+    );
     const client = makeClient(f as unknown as typeof fetch);
-    await expect(client.getMultiplePrices({
-      customerCode: 'C', addressCode: 'A', entityCodes: ['ART1'],
-    })).rejects.toBeInstanceOf(ErpError);
+    await expect(
+      client.getMultiplePrices({
+        customerCode: 'C',
+        addressCode: 'A',
+        entityCodes: ['ART1'],
+      }),
+    ).rejects.toBeInstanceOf(ErpError);
   });
 
   it('throws ErpError on a non-2xx HTTP status', async () => {
     const f = vi.fn().mockResolvedValue(jsonResponse({}, 500));
     const client = makeClient(f as unknown as typeof fetch);
-    await expect(client.getMultiplePrices({
-      customerCode: 'C', addressCode: 'A', entityCodes: ['ART1'],
-    })).rejects.toBeInstanceOf(ErpError);
+    await expect(
+      client.getMultiplePrices({
+        customerCode: 'C',
+        addressCode: 'A',
+        entityCodes: ['ART1'],
+      }),
+    ).rejects.toBeInstanceOf(ErpError);
   });
 });
 ```
@@ -1091,7 +1187,11 @@ import { NoopCacheAdapter } from '../cache.js';
 import type { ErpClient } from '../erp-client.js';
 import { ErpError } from '../erp-client.js';
 import { MYMB_ENDPOINTS } from '../endpoints.js';
-import type { MyMbErpSettings, MyMbPriceEntry, PriceQuery } from '../types/pricing.js';
+import type {
+  MyMbErpSettings,
+  MyMbPriceEntry,
+  PriceQuery,
+} from '../types/pricing.js';
 import { buildPriceEntry } from './transform.js';
 
 export interface MyMbErpClientConfig {
@@ -1128,7 +1228,11 @@ export class MyMbErpClient implements ErpClient {
   /** Mirrors Python ErpClient.request: Basic auth, ReturnCode handling, errors. */
   private async request<T = any>(
     endpoint: string,
-    opts: { method?: 'GET' | 'POST'; params?: Record<string, unknown>; body?: unknown } = {},
+    opts: {
+      method?: 'GET' | 'POST';
+      params?: Record<string, unknown>;
+      body?: unknown;
+    } = {},
   ): Promise<T> {
     const method = opts.method ?? 'POST';
     const url = new URL(`${this.baseUrl}/${endpoint}`);
@@ -1146,13 +1250,21 @@ export class MyMbErpClient implements ErpClient {
           'Content-Type': 'application/json',
           Accept: 'application/json',
         },
-        body: method === 'POST' && opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+        body:
+          method === 'POST' && opts.body !== undefined
+            ? JSON.stringify(opts.body)
+            : undefined,
       });
     } catch (err) {
-      throw new ErpError(`ERP request failed: ${(err as Error).message}`, { endpoint });
+      throw new ErpError(`ERP request failed: ${(err as Error).message}`, {
+        endpoint,
+      });
     }
     if (!res.ok) {
-      throw new ErpError(`ERP request failed: HTTP ${res.status}`, { endpoint, status: res.status });
+      throw new ErpError(`ERP request failed: HTTP ${res.status}`, {
+        endpoint,
+        status: res.status,
+      });
     }
     return (await res.json()) as T;
   }
@@ -1162,15 +1274,26 @@ export class MyMbErpClient implements ErpClient {
     idCart = 0,
     pricingDate: string = ddmmyyyy(),
   ): Promise<string[]> {
-    const data = await this.request<any>(MYMB_ENDPOINTS.GET_LISTA_ARTICOLI_ALTERNATIVI, {
-      method: 'GET',
-      params: { CodiceInternoArticolo: entityCode, IdElaborazione: idCart, DataPrezzatura: pricingDate },
-    });
+    const data = await this.request<any>(
+      MYMB_ENDPOINTS.GET_LISTA_ARTICOLI_ALTERNATIVI,
+      {
+        method: 'GET',
+        params: {
+          CodiceInternoArticolo: entityCode,
+          IdElaborazione: idCart,
+          DataPrezzatura: pricingDate,
+        },
+      },
+    );
     const list = data?.GetListaArticoliAlternativiResult?.ListaPrezzatura ?? [];
-    return Array.isArray(list) ? list.map((it: any) => it?.CodiceInternoArticolo) : [];
+    return Array.isArray(list)
+      ? list.map((it: any) => it?.CodiceInternoArticolo)
+      : [];
   }
 
-  async getMultiplePrices(input: PriceQuery): Promise<Record<string, MyMbPriceEntry>> {
+  async getMultiplePrices(
+    input: PriceQuery,
+  ): Promise<Record<string, MyMbPriceEntry>> {
     const entityCodes = input.entityCodes ?? [];
     if (entityCodes.length === 0) return {};
 
@@ -1185,16 +1308,23 @@ export class MyMbErpClient implements ErpClient {
       isCalcolaArrivi: input.calculateArrivals ?? true,
       isCalcolaOrdinatoInPrecedenza: input.calculatePreviousOrders ?? true,
       IdElaborazione: input.idCart ?? '0',
-      ListaQuantita: input.quantityList ?? new Array(entityCodes.length).fill(1),
+      ListaQuantita:
+        input.quantityList ?? new Array(entityCodes.length).fill(1),
     };
 
-    const data = await this.request<any>(MYMB_ENDPOINTS.GET_PREZZATURA_MULTIPLA, { method: 'POST', body });
+    const data = await this.request<any>(
+      MYMB_ENDPOINTS.GET_PREZZATURA_MULTIPLA,
+      { method: 'POST', body },
+    );
     const result = data?.GetPrezzaturaMultiplaResult;
     if (!result || result.ReturnCode !== 0) {
-      throw new ErpError(`GetPrezzaturaMultipla error: ${result?.Message ?? 'unknown'}`, {
-        endpoint: MYMB_ENDPOINTS.GET_PREZZATURA_MULTIPLA,
-        returnCode: result?.ReturnCode,
-      });
+      throw new ErpError(
+        `GetPrezzaturaMultipla error: ${result?.Message ?? 'unknown'}`,
+        {
+          endpoint: MYMB_ENDPOINTS.GET_PREZZATURA_MULTIPLA,
+          returnCode: result?.ReturnCode,
+        },
+      );
     }
 
     const out: Record<string, MyMbPriceEntry> = {};
@@ -1202,7 +1332,10 @@ export class MyMbErpClient implements ErpClient {
       const entry = buildPriceEntry(price, this.settings);
       const label = entry.product_label_action;
       // Substitute fallback — Python: when nothing available and subs are managed.
-      if ((label.quantity_available ?? 0) <= 0 && label.is_managed_substitutes) {
+      if (
+        (label.quantity_available ?? 0) <= 0 &&
+        label.is_managed_substitutes
+      ) {
         const subs = await this.getSubstituteItems(entry.entity_code);
         label.prod_substitution = subs;
         entry.prod_substitution = subs;
@@ -1232,6 +1365,7 @@ git commit -m "feat(vinc-erp): MyMbErpClient request + getMultiplePrices + subst
 ## Task 9: Barrel exports, full build, pack tgz
 
 **Files:**
+
 - Modify: `packages/vinc-erp/src/index.ts`
 
 - [ ] **Step 1: Replace `src/index.ts` with the real barrel**
@@ -1293,6 +1427,7 @@ git commit -m "feat(vinc-erp): barrel exports + build artifacts + packed tgz"
 ## Task 10: Add `vinc-erp` dependency to vinc-b2b
 
 **Files:**
+
 - Modify: `vinc-b2b/package.json`
 
 - [ ] **Step 1: Add the dependency** in `vinc-b2b/package.json` next to `"vinc-pim"`
@@ -1326,6 +1461,7 @@ git commit -m "chore: add vinc-erp dependency"
 ## Task 11: Redis-backed `CacheAdapter` in vinc-b2b
 
 **Files:**
+
 - Create: `vinc-b2b/src/lib/erp/redis-cache-adapter.ts`
 - Test: `vinc-b2b/src/test/unit/redis-cache-adapter.test.ts`
 
@@ -1336,7 +1472,10 @@ import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('@/lib/cache/redis-cache', () => ({
   // Fake cachedJson: fresh-miss always produces (good enough for adapter contract).
-  cachedJson: vi.fn(async (_key: string, _opts: unknown, producer: () => Promise<unknown>) => producer()),
+  cachedJson: vi.fn(
+    async (_key: string, _opts: unknown, producer: () => Promise<unknown>) =>
+      producer(),
+  ),
 }));
 
 import { RedisCacheAdapter } from '@/lib/erp/redis-cache-adapter';
@@ -1380,7 +1519,10 @@ export class RedisCacheAdapter implements CacheAdapter {
   ): Promise<T> {
     return cachedJson<T>(
       `erp:${key}`,
-      { softTtlMs: ttlSeconds * 1000, hardTtlSeconds: Math.max(ttlSeconds, ttlSeconds * 4) },
+      {
+        softTtlMs: ttlSeconds * 1000,
+        hardTtlSeconds: Math.max(ttlSeconds, ttlSeconds * 4),
+      },
       producer,
     );
   }
@@ -1405,6 +1547,7 @@ git commit -m "feat(erp): Redis-backed CacheAdapter for vinc-erp"
 ## Task 12: Fetch `erp_settings` data-model → `MyMbErpSettings`
 
 **Files:**
+
 - Create: `vinc-b2b/src/lib/erp/data-model-config.ts`
 - Test: `vinc-b2b/src/test/unit/erp-data-model-config.test.ts`
 
@@ -1412,7 +1555,10 @@ git commit -m "feat(erp): Redis-backed CacheAdapter for vinc-erp"
 
 ```ts
 import { describe, it, expect } from 'vitest';
-import { mapErpSettingsRecord, DEFAULT_ERP_SETTINGS } from '@/lib/erp/data-model-config';
+import {
+  mapErpSettingsRecord,
+  DEFAULT_ERP_SETTINGS,
+} from '@/lib/erp/data-model-config';
 
 describe('mapErpSettingsRecord', () => {
   it('maps a stored data object to typed MyMbErpSettings', () => {
@@ -1439,12 +1585,17 @@ describe('mapErpSettingsRecord', () => {
   it('falls back to defaults for missing/blank fields', () => {
     const settings = mapErpSettingsRecord({});
     expect(settings.packagingOptionsId).toEqual([]);
-    expect(settings.updatePromoSeconds).toBe(DEFAULT_ERP_SETTINGS.updatePromoSeconds);
+    expect(settings.updatePromoSeconds).toBe(
+      DEFAULT_ERP_SETTINGS.updatePromoSeconds,
+    );
     expect(settings.cases).toEqual({});
   });
 
   it('ignores empty segments when parsing packaging_options_id', () => {
-    expect(mapErpSettingsRecord({ packaging_options_id: '3, ,1,' }).packagingOptionsId).toEqual([3, 1]);
+    expect(
+      mapErpSettingsRecord({ packaging_options_id: '3, ,1,' })
+        .packagingOptionsId,
+    ).toEqual([3, 1]);
   });
 });
 ```
@@ -1471,7 +1622,9 @@ export const DEFAULT_ERP_SETTINGS: MyMbErpSettings = {
 type StoredCase = { case?: number; label?: string; add_to_cart?: boolean };
 
 /** Map a raw `erp_settings` record `data` object to typed settings. Pure. */
-export function mapErpSettingsRecord(data: Record<string, unknown>): MyMbErpSettings {
+export function mapErpSettingsRecord(
+  data: Record<string, unknown>,
+): MyMbErpSettings {
   const packagingOptionsId = String(data.packaging_options_id ?? '')
     .split(',')
     .map((s) => s.trim())
@@ -1483,7 +1636,10 @@ export function mapErpSettingsRecord(data: Record<string, unknown>): MyMbErpSett
   if (Array.isArray(data.cases)) {
     for (const c of data.cases as StoredCase[]) {
       if (c && c.case != null) {
-        cases[String(c.case)] = { label: c.label ?? '', addToCart: Boolean(c.add_to_cart) };
+        cases[String(c.case)] = {
+          label: c.label ?? '',
+          addToCart: Boolean(c.add_to_cart),
+        };
       }
     }
   }
@@ -1493,9 +1649,12 @@ export function mapErpSettingsRecord(data: Record<string, unknown>): MyMbErpSett
     isManagedSubstitutes: Boolean(data.is_managed_substitutes),
     isManagedSupplierOrder: Boolean(data.is_managed_supplier_order),
     cases,
-    updatePromoSeconds: Number(data.update_promo_seconds ?? DEFAULT_ERP_SETTINGS.updatePromoSeconds),
+    updatePromoSeconds: Number(
+      data.update_promo_seconds ?? DEFAULT_ERP_SETTINGS.updatePromoSeconds,
+    ),
     updateAvailableAgainSeconds: Number(
-      data.update_available_again_seconds ?? DEFAULT_ERP_SETTINGS.updateAvailableAgainSeconds,
+      data.update_available_again_seconds ??
+        DEFAULT_ERP_SETTINGS.updateAvailableAgainSeconds,
     ),
   };
 }
@@ -1512,7 +1671,9 @@ interface FetchArgs {
  * (relation_id=_global, channel=b2b) and map it to typed settings. Returns
  * DEFAULT_ERP_SETTINGS if the record is absent.
  */
-export async function fetchErpSettings(args: FetchArgs): Promise<MyMbErpSettings> {
+export async function fetchErpSettings(
+  args: FetchArgs,
+): Promise<MyMbErpSettings> {
   const url = new URL(
     `${args.csBaseUrl.replace(/\/+$/, '')}/api/b2b/data-models/erp_settings/records`,
   );
@@ -1556,6 +1717,7 @@ git commit -m "feat(erp): fetch + map erp_settings data-model to MyMbErpSettings
 Resolves connection URL (override → tenant → env), settings (data-model, cached), and the Redis cache adapter, then constructs `MyMbErpClient`.
 
 **Files:**
+
 - Create: `vinc-b2b/src/lib/erp/factory.ts`
 - Test: `vinc-b2b/src/test/unit/erp-factory.test.ts`
 
@@ -1563,29 +1725,33 @@ Resolves connection URL (override → tenant → env), settings (data-model, cac
 
 ```ts
 import { describe, it, expect, afterEach } from 'vitest';
-import { resolveMyMbUrl } from '@/lib/erp/factory';
+import { resolveErpUrl } from '@/lib/erp/factory';
 
 const ORIGINAL = { ...process.env };
-afterEach(() => { process.env = { ...ORIGINAL }; });
+afterEach(() => {
+  process.env = { ...ORIGINAL };
+});
 
-describe('resolveMyMbUrl', () => {
+describe('resolveErpUrl', () => {
   it('prefers the override env var', () => {
-    process.env.MYMB_ERP_URL_OVERRIDE = 'http://u:p@local:1/x';
-    process.env.MYMB_ERP_URL = 'http://u:p@prod:1/x';
-    expect(resolveMyMbUrl(undefined)).toBe('http://u:p@local:1/x');
+    process.env.ERP_URL_OVERRIDE = 'http://u:p@local:1/x';
+    process.env.ERP_URL = 'http://u:p@prod:1/x';
+    expect(resolveErpUrl(undefined)).toBe('http://u:p@local:1/x');
   });
 
   it('falls back to tenant URL, then base env', () => {
-    delete process.env.MYMB_ERP_URL_OVERRIDE;
-    process.env.MYMB_ERP_URL = 'http://u:p@prod:1/x';
-    expect(resolveMyMbUrl('http://u:p@tenant:1/x')).toBe('http://u:p@tenant:1/x');
-    expect(resolveMyMbUrl(undefined)).toBe('http://u:p@prod:1/x');
+    delete process.env.ERP_URL_OVERRIDE;
+    process.env.ERP_URL = 'http://u:p@prod:1/x';
+    expect(resolveErpUrl('http://u:p@tenant:1/x')).toBe(
+      'http://u:p@tenant:1/x',
+    );
+    expect(resolveErpUrl(undefined)).toBe('http://u:p@prod:1/x');
   });
 
   it('throws when no URL is configured', () => {
-    delete process.env.MYMB_ERP_URL_OVERRIDE;
-    delete process.env.MYMB_ERP_URL;
-    expect(() => resolveMyMbUrl(undefined)).toThrow(/MYMB_ERP_URL/);
+    delete process.env.ERP_URL_OVERRIDE;
+    delete process.env.ERP_URL;
+    expect(() => resolveErpUrl(undefined)).toThrow(/ERP_URL/);
   });
 });
 ```
@@ -1606,10 +1772,10 @@ import { RedisCacheAdapter } from './redis-cache-adapter';
 import { fetchErpSettings, DEFAULT_ERP_SETTINGS } from './data-model-config';
 
 /** Connection URL resolution: override env → tenant config → base env. */
-export function resolveMyMbUrl(tenantUrl: string | undefined): string {
-  const url = process.env.MYMB_ERP_URL_OVERRIDE || tenantUrl || process.env.MYMB_ERP_URL;
+export function resolveErpUrl(tenantUrl: string | undefined): string {
+  const url = process.env.ERP_URL_OVERRIDE || tenantUrl || process.env.ERP_URL;
   if (!url) {
-    throw new Error('No MYMB ERP URL configured (set MYMB_ERP_URL or MYMB_ERP_URL_OVERRIDE).');
+    throw new Error('No ERP URL configured (set ERP_URL or ERP_URL_OVERRIDE).');
   }
   return url;
 }
@@ -1617,17 +1783,19 @@ export function resolveMyMbUrl(tenantUrl: string | undefined): string {
 async function getTenantBits(req: NextRequest) {
   if (isSingleTenant) {
     return {
-      mymbUrl: undefined as string | undefined,
+      erpUrl: undefined as string | undefined,
       csBaseUrl: process.env.PIM_API_URL || '',
       apiKeyId: process.env.PIM_API_KEY_ID || '',
       apiSecret: process.env.PIM_API_SECRET || '',
     };
   }
   const hostname =
-    req.headers.get('x-tenant-hostname') || req.headers.get('host') || 'localhost';
+    req.headers.get('x-tenant-hostname') ||
+    req.headers.get('host') ||
+    'localhost';
   const tenant = await resolveTenant(hostname);
   return {
-    mymbUrl: tenant?.api.mymbErpUrl,
+    erpUrl: tenant?.api.erpUrl,
     csBaseUrl: tenant?.api.pimApiUrl || process.env.PIM_API_URL || '',
     apiKeyId: tenant?.api.apiKeyId || '',
     apiSecret: tenant?.api.apiSecret || '',
@@ -1636,12 +1804,16 @@ async function getTenantBits(req: NextRequest) {
 
 /**
  * Build a MyMbErpClient for the current request: connection from
- * resolveMyMbUrl, behavior from the cached erp_settings data-model, Redis cache
+ * resolveErpUrl, behavior from the cached erp_settings data-model, Redis cache
  * for the client's own read-through caching.
  */
-export async function getMyMbErpClient(req: NextRequest): Promise<MyMbErpClient> {
+export async function getMyMbErpClient(
+  req: NextRequest,
+): Promise<MyMbErpClient> {
   const bits = await getTenantBits(req);
-  const { baseUrl, authHeader } = parseMyMbConnection(resolveMyMbUrl(bits.mymbUrl));
+  const { baseUrl, authHeader } = parseMyMbConnection(
+    resolveErpUrl(bits.erpUrl),
+  );
 
   const settings = await cachedJson(
     `erp:settings:${bits.csBaseUrl}`,
@@ -1656,26 +1828,31 @@ export async function getMyMbErpClient(req: NextRequest): Promise<MyMbErpClient>
     },
   );
 
-  return new MyMbErpClient({ baseUrl, authHeader, settings, cache: new RedisCacheAdapter() });
+  return new MyMbErpClient({
+    baseUrl,
+    authHeader,
+    settings,
+    cache: new RedisCacheAdapter(),
+  });
 }
 ```
 
-- [ ] **Step 4: Add `mymbErpUrl` to the tenant API type**
+- [ ] **Step 4: Add `erpUrl` to the tenant API type**
 
 In `vinc-b2b/src/lib/tenant/types.ts`, add to `TenantApiConfig` (the interface starting at line 23):
 
 ```ts
   /** Optional per-tenant MYMB ERP connection URL (user:pass@host:port/base). */
-  mymbErpUrl?: string;
+  erpUrl?: string;
 ```
 
 And in `vinc-b2b/src/lib/tenant/service.ts`, in `fromDocument`'s `api: { ... }` block (around line 67), add:
 
 ```ts
-      mymbErpUrl: doc.api?.mymb_erp_url || process.env.MYMB_ERP_URL || undefined,
+      erpUrl: doc.api?.erp_url || process.env.ERP_URL || undefined,
 ```
 
-Add `mymb_erp_url?: string;` to the `api?` shape of `TenantDocument` (near `b2b_api_url`, around line 40 in service.ts).
+Add `erp_url?: string;` to the `api?` shape of `TenantDocument` (near `b2b_api_url`, around line 40 in service.ts).
 
 - [ ] **Step 5: Run test + type-check**
 
@@ -1687,7 +1864,7 @@ Expected: tests PASS (3); `tsc` reports no errors for the file.
 ```bash
 cd /home/jire87/software/www-website/www-data/vendereincloud-app/vinc-b2b
 git add src/lib/erp/factory.ts src/lib/tenant/types.ts src/lib/tenant/service.ts src/test/unit/erp-factory.test.ts
-git commit -m "feat(erp): MyMbErpClient factory + mymbErpUrl tenant config"
+git commit -m "feat(erp): MyMbErpClient factory + erpUrl tenant config"
 ```
 
 ---
@@ -1697,6 +1874,7 @@ git commit -m "feat(erp): MyMbErpClient factory + mymbErpUrl tenant config"
 Maps the snake_case path to the client method, returning the `{ status:'success', data }` envelope the existing `transformErpPricesResponse` expects.
 
 **Files:**
+
 - Create: `vinc-b2b/src/app/api/erp/[...path]/route.ts`
 - Test: `vinc-b2b/src/test/api/erp-route.test.ts`
 
@@ -1723,29 +1901,51 @@ function req(path: string, body: unknown) {
 
 describe('POST /api/erp/[...path]', () => {
   it('dispatches get_multiple_prices and wraps the result in a success envelope', async () => {
-    getMultiplePrices.mockResolvedValue({ ART1: { entity_code: 'ART1', net_price: 9 } });
-    const res = await POST(req('get_multiple_prices', {
-      entity_codes: ['ART1'], quantity_list: [1], id_cart: '0',
-      customer_code: 'C', address_code: 'A',
-    }), { params: Promise.resolve({ path: ['get_multiple_prices'] }) });
+    getMultiplePrices.mockResolvedValue({
+      ART1: { entity_code: 'ART1', net_price: 9 },
+    });
+    const res = await POST(
+      req('get_multiple_prices', {
+        entity_codes: ['ART1'],
+        quantity_list: [1],
+        id_cart: '0',
+        customer_code: 'C',
+        address_code: 'A',
+      }),
+      { params: Promise.resolve({ path: ['get_multiple_prices'] }) },
+    );
     expect(res.status).toBe(200);
     const json = await res.json();
     expect(json.status).toBe('success');
     expect(json.data.ART1.net_price).toBe(9);
-    expect(getMultiplePrices).toHaveBeenCalledWith(expect.objectContaining({
-      customerCode: 'C', addressCode: 'A', entityCodes: ['ART1'], quantityList: [1], idCart: '0',
-    }));
+    expect(getMultiplePrices).toHaveBeenCalledWith(
+      expect.objectContaining({
+        customerCode: 'C',
+        addressCode: 'A',
+        entityCodes: ['ART1'],
+        quantityList: [1],
+        idCart: '0',
+      }),
+    );
   });
 
   it('returns 404 for an unknown endpoint', async () => {
-    const res = await POST(req('nope', {}), { params: Promise.resolve({ path: ['nope'] }) });
+    const res = await POST(req('nope', {}), {
+      params: Promise.resolve({ path: ['nope'] }),
+    });
     expect(res.status).toBe(404);
   });
 
   it('returns 502 when the client throws', async () => {
     getMultiplePrices.mockRejectedValue(new Error('erp down'));
-    const res = await POST(req('get_multiple_prices', { entity_codes: ['X'], customer_code: 'C', address_code: 'A' }),
-      { params: Promise.resolve({ path: ['get_multiple_prices'] }) });
+    const res = await POST(
+      req('get_multiple_prices', {
+        entity_codes: ['X'],
+        customer_code: 'C',
+        address_code: 'A',
+      }),
+      { params: Promise.resolve({ path: ['get_multiple_prices'] }) },
+    );
     expect(res.status).toBe(502);
   });
 });
@@ -1823,6 +2023,7 @@ git commit -m "feat(erp): /api/erp/[...path] route dispatching get_multiple_pric
 ## Task 15: Theme-keyed `erpApiBase()` + wire into `fetchErpPrices`
 
 **Files:**
+
 - Create: `vinc-b2b/src/framework/basic-rest/utils/erp-api-base.ts`
 - Test: `vinc-b2b/src/test/unit/erp-api-base.test.ts`
 - Modify: `vinc-b2b/src/framework/basic-rest/erp/prices.tsx`
@@ -1835,12 +2036,18 @@ import { erpApiPath } from '@/framework/basic-rest/utils/erp-api-base';
 
 describe('erpApiPath', () => {
   it('routes the time theme to the direct ERP path', () => {
-    expect(erpApiPath('time', '/erp/get_multiple_prices')).toBe('/api/erp/get_multiple_prices');
+    expect(erpApiPath('time', '/erp/get_multiple_prices')).toBe(
+      '/api/erp/get_multiple_prices',
+    );
   });
 
   it('routes other themes to the legacy proxy-relative endpoint (unchanged)', () => {
-    expect(erpApiPath('default', '/erp/get_multiple_prices')).toBe('/erp/get_multiple_prices');
-    expect(erpApiPath(undefined, '/erp/get_multiple_prices')).toBe('/erp/get_multiple_prices');
+    expect(erpApiPath('default', '/erp/get_multiple_prices')).toBe(
+      '/erp/get_multiple_prices',
+    );
+    expect(erpApiPath(undefined, '/erp/get_multiple_prices')).toBe(
+      '/erp/get_multiple_prices',
+    );
   });
 });
 ```
@@ -1903,7 +2110,14 @@ interface ErpPricesPayload {
 }
 
 export const fetchErpPrices = async (input: ErpPricesPayload) => {
-  const { entity_codes, quantity_list, id_cart, customer_code, address_code, theme } = input;
+  const {
+    entity_codes,
+    quantity_list,
+    id_cart,
+    customer_code,
+    address_code,
+    theme,
+  } = input;
 
   const finalPayload = {
     entity_codes,
@@ -1977,8 +2191,9 @@ Expected: `redis-cache-adapter`, `erp-data-model-config`, `erp-factory`, `erp-ro
 - [ ] **Step 3: Manual smoke (dev server)** — confirm the default theme is untouched and the time theme hits `/api/erp`
 
 Run: `cd vinc-b2b && pnpm dev` (per CLAUDE.md, dev server only — never `pnpm build`).
+
 - With a default-theme tenant, load a product list → Network shows requests to `/api/proxy/b2b/erp/get_multiple_prices` (unchanged).
-- With `NEXT_PUBLIC_THEME=time` (and `MYMB_ERP_URL` set), load a product list → Network shows `POST /api/erp/get_multiple_prices` returning `{ status:'success', data:{...} }`, and prices/availability render identically.
+- With `NEXT_PUBLIC_THEME=time` (and `ERP_URL` set), load a product list → Network shows `POST /api/erp/get_multiple_prices` returning `{ status:'success', data:{...} }`, and prices/availability render identically.
 
 Expected: time theme uses the new route; default theme unchanged.
 

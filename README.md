@@ -797,9 +797,7 @@ Key variables (see `.env.example`):
 - `NEXT_PUBLIC_B2B_API_URL` - B2B API endpoint
 - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` - Stripe key
 - `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` - Google Maps key
-- `VINC_SUITE_API_BASE` - vinc-commerce-suite base URL (e.g. `https://suite.your-domain.com`); required for `/api/forms/submit`
-- `VINC_SUITE_API_KEY_ID` - API key id for the suite proxy
-- `VINC_SUITE_API_SECRET` - API secret for the suite proxy (without these three, `/api/forms/submit` returns 503)
+- `/api/forms/submit` reuses the tenant's existing `pimApiUrl` + `apiKeyId` + `apiSecret` (from MongoDB in multi-tenant mode, or `PIM_API_PRIVATE_URL` / `API_KEY_ID` / `API_SECRET` env vars in single-tenant mode). No dedicated `VINC_SUITE_*` env vars needed; without credentials the route returns 503.
 
 ## Contributing
 

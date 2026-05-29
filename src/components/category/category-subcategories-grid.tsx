@@ -16,7 +16,7 @@ interface ViewAllCardProps {
 
 function ViewAllCard({ lang, parentHref }: ViewAllCardProps) {
   const { t } = useTranslation(lang, 'common');
-  const href = parentHref || `/${lang}/category`;
+  const href = parentHref || `/${lang}/categorie`;
 
   return (
     <Link
@@ -63,8 +63,8 @@ export default function CategorySubcategoriesGrid({
       ? parentNode.url.startsWith('/')
         ? `/${lang}${parentNode.url}`
         : `/${lang}/${parentNode.url}`
-      : `/${lang}/category/${parentNode.path.join('/')}`
-    : `/${lang}/category`;
+      : `/${lang}/categorie/${parentNode.path.join('/')}`
+    : `/${lang}/categorie`;
 
   if (!subcategories.length) return null;
 

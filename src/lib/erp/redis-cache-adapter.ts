@@ -14,7 +14,10 @@ export class RedisCacheAdapter implements CacheAdapter {
   ): Promise<T> {
     return cachedJson<T>(
       `erp:${key}`,
-      { softTtlMs: ttlSeconds * 1000, hardTtlSeconds: Math.max(ttlSeconds, ttlSeconds * 4) },
+      {
+        softTtlMs: ttlSeconds * 1000,
+        hardTtlSeconds: Math.max(ttlSeconds, ttlSeconds * 4),
+      },
       producer,
     );
   }

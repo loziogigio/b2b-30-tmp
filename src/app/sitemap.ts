@@ -1,16 +1,27 @@
 import type { MetadataRoute } from 'next';
 import {
   fetchProductSkusForSitemap,
-  serverFetchPimMenu,
+  serverFetchPimCategories,
   serverFetchCollections,
 } from '@/lib/pim/server-fetch';
 import { getCachedCmsPageRegistry } from '@/lib/db/cms-pages';
 import { slugify } from '@/utils/slugify';
+import { getSitemapData, sitemapDataToRoutes } from '@/lib/vcs/seo';
 
 const PRODUCTS_PER_SITEMAP = 10000;
 const LANGUAGES = ['it', 'en'];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  // vcs is authoritative for the sitemap (spec D5). Consume its per-tenant
+  // entries; fall back to local generation only if vcs is unreachable.
+  const vcsData = await getSitemapData();
+  if (vcsData && vcsData.entries.length > 0) {
+    return sitemapDataToRoutes(vcsData);
+  }
+  return localSitemap();
+}
+
+async function localSitemap(): Promise<MetadataRoute.Sitemap> {
   const siteUrl = process.env.NEXT_PUBLIC_WEBSITE_URL || '';
   if (!siteUrl) return [];
 
@@ -23,7 +34,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const builtInRoutes = [
     { path: '', changeFrequency: 'daily' as const, priority: 1.0 },
     { path: '/search', changeFrequency: 'daily' as const, priority: 0.8 },
-    { path: '/category', changeFrequency: 'weekly' as const, priority: 0.9 },
+    { path: '/categorie', changeFrequency: 'weekly' as const, priority: 0.9 },
     { path: '/collections', changeFrequency: 'weekly' as const, priority: 0.8 },
   ];
 
@@ -59,10 +70,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   // ===============================
-  // Category pages from PIM menu
+  // Category pages from PIM categories tree
+  //
+  // Mirrors `transformPimCategoriesTree` in vinc-b2b: the synthetic L0 root
+  // (e.g. "categorie") is dropped so sitemap URLs match the rendered routes
+  // — `/it/categorie/<L1-slug>` rather than `/it/categorie/categorie/<L1>`.
   // ===============================
   try {
-    const menuItems = await serverFetchPimMenu('header');
+    const roots = await serverFetchPimCategories('b2b');
 
     function extractCategoryPaths(
       items: any[],
@@ -70,7 +85,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ): string[][] {
       const paths: string[][] = [];
       for (const item of items) {
-        const slug = slugify(item.reference_id || item.label || item.id);
+        const slug = slugify(item.slug || item.name || item.category_id);
         const currentPath = [...parentPath, slug];
         paths.push(currentPath);
         if (item.children?.length) {
@@ -80,11 +95,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       return paths;
     }
 
-    const categoryPaths = extractCategoryPaths(menuItems);
+    // Flatten the synthetic root: its children become the top-level entries.
+    // Roots with no children are emitted as themselves.
+    const topLevel = roots.flatMap((root: any) =>
+      root.children && root.children.length ? root.children : [root],
+    );
+    const categoryPaths = extractCategoryPaths(topLevel);
+
     for (const lang of LANGUAGES) {
       for (const path of categoryPaths) {
         entries.push({
-          url: `${siteUrl}/${lang}/category/${path.join('/')}`,
+          url: `${siteUrl}/${lang}/categorie/${path.join('/')}`,
           lastModified: now,
           changeFrequency: 'weekly',
           priority: 0.7,

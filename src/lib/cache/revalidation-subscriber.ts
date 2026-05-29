@@ -13,6 +13,9 @@ import Redis from 'ioredis';
 import { revalidateTag } from 'next/cache';
 import { isSingleTenant } from '@/lib/tenant';
 import { tagsForNames, SINGLE_TENANT_ID } from '@/lib/cache/tags';
+import { delByPrefix } from '@/lib/cache/redis-cache';
+import { homeTemplateCachePrefix } from '@/lib/db/home-templates';
+import { cmsPageCachePrefix, cmsRegistryCacheKey } from '@/lib/db/cms-pages';
 
 const CHANNEL_PATTERN = 'vinc-b2b:cache-invalidate:*';
 
@@ -51,6 +54,9 @@ export function startRevalidationSubscriber(): void {
   sub.on('pmessage', (_pattern, channel, message) => {
     try {
       const tenantId = channel.slice(channel.lastIndexOf(':') + 1);
+      console.info(
+        `[revalidate] received "${message}" on ${channel} (tenant ${tenantId})`,
+      );
       // Single-tenant deployments only care about their own tenant's events.
       if (isSingleTenant && tenantId !== SINGLE_TENANT_ID) return;
 
@@ -67,6 +73,26 @@ export function startRevalidationSubscriber(): void {
             `[revalidate] revalidateTag(${tag}) failed:`,
             (e as Error).message,
           );
+        }
+      }
+
+      // Also flush Redis-backed read caches (home template, CMS pages) — these
+      // live in Redis rather than Next's Data Cache, so revalidateTag alone
+      // doesn't clear them. `names` are the raw published cache-tag names
+      // (e.g. "home-template", "page:chi-siamo", "sitemap").
+      for (const name of names) {
+        const [base, suffix] = name.split(':', 2);
+        if (base === 'home-template' || base === 'home-config') {
+          void delByPrefix(homeTemplateCachePrefix(tenantId)).catch(() => {});
+        } else if (base === 'page') {
+          // Specific slug → delete just that key; bare "page" → flush all pages.
+          void delByPrefix(
+            `${cmsPageCachePrefix(tenantId)}${suffix ?? ''}`,
+          ).catch(() => {});
+          // A page change also affects the nav/sitemap registry.
+          void delByPrefix(cmsRegistryCacheKey(tenantId)).catch(() => {});
+        } else if (base === 'sitemap') {
+          void delByPrefix(cmsRegistryCacheKey(tenantId)).catch(() => {});
         }
       }
       if (tags.length) {

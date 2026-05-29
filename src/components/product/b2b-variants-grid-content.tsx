@@ -136,7 +136,22 @@ export default function B2BVariantsGridContent({
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const parentSku = parent_sku ?? sku;
-  const title = name || parentSku || '';
+  // Parent groups often lack their own image/name/brand/description — fall back
+  // to a representative variant so the modal header isn't blank / NO IMAGE.
+  const rep: any =
+    variants.find(
+      (v: any) => v?.name || v?.image?.thumbnail?.trim() || v?.brand?.name,
+    ) ??
+    variants[0] ??
+    null;
+  const title = name || rep?.name || parentSku || '';
+  const displayImage =
+    (productImage?.thumbnail?.trim()
+      ? productImage.thumbnail
+      : rep?.image?.thumbnail) || productPlaceholder;
+  const displayDescription = description || rep?.description || '';
+  const displayBrand: any =
+    brand?.name && brand?.id !== '0' ? brand : (rep?.brand ?? brand);
 
   const gridContent = (
     <div
@@ -151,6 +166,7 @@ export default function B2BVariantsGridContent({
           product={v as any}
           lang={lang}
           className="w-full"
+          hideDescription
         />
       ))}
     </div>
@@ -168,7 +184,7 @@ export default function B2BVariantsGridContent({
         <div className="flex items-start gap-3 sm:gap-4 pr-12 sm:pr-0">
           <div className="relative shrink-0 w-[56px] h-[56px] sm:w-[80px] sm:h-[80px] rounded overflow-hidden">
             <Image
-              src={productImage?.thumbnail || productPlaceholder}
+              src={displayImage}
               alt={title || 'Product Image'}
               fill
               quality={90}
@@ -181,20 +197,20 @@ export default function B2BVariantsGridContent({
             <div className="flex items-center text-xs text-gray-500 whitespace-nowrap gap-1.5 min-w-0">
               <span className="uppercase">{sku}</span>
 
-              {brand?.name && brand?.id !== '0' && (
+              {displayBrand?.name && displayBrand?.id !== '0' && (
                 <>
                   <span className="text-gray-300">&bull;</span>
                   <Link
-                    href={`/${lang}/search?filters-brand_id=${brand.id}`}
+                    href={`/${lang}/search?filters-brand_id=${displayBrand.id}`}
                     className="text-brand hover:underline uppercase truncate max-w-[55%] sm:max-w-[60%]"
-                    title={brand.name}
+                    title={displayBrand.name}
                     onClick={
                       onBrandClick
                         ? () => setTimeout(() => onBrandClick(), 0)
                         : undefined
                     }
                   >
-                    {brand.name}
+                    {displayBrand.name}
                   </Link>
                 </>
               )}
@@ -204,9 +220,9 @@ export default function B2BVariantsGridContent({
               {title}
             </h3>
 
-            {description ? (
+            {displayDescription ? (
               <p className="mt-0.5 text-xs sm:text-sm text-gray-600 line-clamp-2">
-                {description}
+                {displayDescription}
               </p>
             ) : null}
           </div>

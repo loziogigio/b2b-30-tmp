@@ -126,6 +126,13 @@ function TimeCartRow({
       ? ((item as any).listing_type_discounts as string).trim()
       : '';
   const discountLabel = discountTiers || (discount > 0 ? `-${discount}%` : '');
+  // Promo code (e.g. "PET/25") distinguishes lines of the same SKU bought
+  // under different promos. 0 / "0" means no promo.
+  const promoCodeRaw = (item as any).promo_code;
+  const promoCode =
+    promoCodeRaw && promoCodeRaw !== 0 && String(promoCodeRaw) !== '0'
+      ? String(promoCodeRaw)
+      : '';
   const isAvailable = (item as any).stock !== 0;
 
   const [showNote, setShowNote] = useState(false);
@@ -291,7 +298,7 @@ function TimeCartRow({
         </div>
 
         {/* Promo */}
-        <div className="flex justify-center">
+        <div className="flex flex-col items-center gap-0.5">
           {discountLabel ? (
             <span
               className={cn(
@@ -306,13 +313,23 @@ function TimeCartRow({
               {discountLabel}
             </span>
           ) : (
-            <span className="text-[var(--time-gray-300)] text-[10px]">—</span>
+            !promoCode && (
+              <span className="text-[var(--time-gray-300)] text-[10px]">—</span>
+            )
+          )}
+          {promoCode && (
+            <span
+              className="text-[9px] font-semibold text-[var(--time-gray-400)] font-mono uppercase tracking-wide whitespace-nowrap"
+              title={promoCode}
+            >
+              {promoCode}
+            </span>
           )}
         </div>
 
         {/* Quantity */}
         <div className="flex justify-center">
-          <UpdateCart item={item} lang={lang} className="justify-center" />
+          <UpdateCart item={item} lang={lang} className="time-stepper" />
         </div>
 
         {/* Line total */}
@@ -376,6 +393,14 @@ function TimeCartRow({
                   {discountLabel}
                 </span>
               )}
+              {promoCode && (
+                <span
+                  className="text-[9px] font-semibold text-[var(--time-gray-400)] font-mono uppercase tracking-wide whitespace-nowrap"
+                  title={promoCode}
+                >
+                  {promoCode}
+                </span>
+              )}
             </div>
             <button
               type="button"
@@ -400,7 +425,7 @@ function TimeCartRow({
           </button>
         </div>
         <div className="mt-2 pl-[64px]">
-          <UpdateCart item={item} lang={lang} className="justify-start" />
+          <UpdateCart item={item} lang={lang} className="time-stepper" />
         </div>
         <div className="mt-2 pl-[64px]">
           {showNote ? (

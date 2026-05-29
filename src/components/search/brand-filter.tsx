@@ -65,7 +65,7 @@ export const BrandFilter = ({ lang }: { lang: string }) => {
               lang={lang}
             />
           ))}
-        {items!.length > 3 && (
+        {(items?.length ?? 0) > 3 && (
           <div className="w-full">
             <Disclosure>
               {({ open }) => (

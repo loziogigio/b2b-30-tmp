@@ -5,6 +5,8 @@ import { USFlag } from '@components/icons/language/USFlag';
 import { DEFlag } from '@components/icons/language/DEFlag';
 import { ESFlag } from '@components/icons/language/ESFlag';
 import { ITFlag } from '@components/icons/language/ITFlag';
+import { PTFlag } from '@components/icons/language/PTFlag';
+import { FRFlag } from '@components/icons/language/FRFlag';
 
 // Default logo - override via home-settings from backend
 const siteLogo = '/assets/images/logo-placeholder.svg';
@@ -35,6 +37,36 @@ export const siteSettings = {
         value: 'it',
         icon: <ITFlag />,
       },
+      {
+        id: 'es',
+        name: 'Español - ES',
+        value: 'es',
+        icon: <ESFlag />,
+      },
+      {
+        id: 'pt',
+        name: 'Português - PT',
+        value: 'pt',
+        icon: <PTFlag />,
+      },
+      {
+        id: 'en',
+        name: 'English - EN',
+        value: 'en',
+        icon: <USFlag />,
+      },
+      {
+        id: 'fr',
+        name: 'Français - FR',
+        value: 'fr',
+        icon: <FRFlag />,
+      },
+      // {
+      //   id: 'de',
+      //   name: 'Deutsch - DE',
+      //   value: 'de',
+      //   icon: <DEFlag />,
+      // },
       // {
       //   id: 'ar',
       //   name: 'عربى - AR',
@@ -47,30 +79,12 @@ export const siteSettings = {
       //   value: 'zh',
       //   icon: <CNFlag />,
       // },
-      {
-        id: 'en',
-        name: 'English - EN',
-        value: 'en',
-        icon: <USFlag />,
-      },
-      {
-        id: 'de',
-        name: 'Deutsch - DE',
-        value: 'de',
-        icon: <DEFlag />,
-      },
       // {
       //   id: 'he',
       //   name: 'rעברית - HE',
       //   value: 'he',
       //   icon: <ILFlag />,
       // },
-      {
-        id: 'es',
-        name: 'Español - ES',
-        value: 'es',
-        icon: <ESFlag />,
-      },
     ],
   },
 };

@@ -6,6 +6,7 @@ import { YouTubeEmbedBlock } from './YouTubeEmbedBlock';
 import { SpacerBlock } from './SpacerBlock';
 import { ProductDataTableBlock } from './ProductDataTableBlock';
 import { isFormContact, renderFormContact } from './form-contact';
+import ThemedHomeBlock from './ThemedHomeBlock';
 
 interface CmsBlock {
   id: string;
@@ -54,14 +55,12 @@ function renderOne(block: CmsBlock, pageSlug: string, lang: string) {
     return renderFormContact(block, pageSlug);
   }
 
-  if (process.env.NODE_ENV === 'development') {
-    return (
-      <div className="border border-yellow-300 bg-yellow-50 p-4 text-sm text-yellow-800">
-        Unknown CMS block type: {t}
-      </div>
-    );
-  }
-  return null;
+  // Anything not explicitly handled above (hero-with-widgets, all carousel-*
+  // blocks incl. carousel-gallery/products/hero/promo/brand/flyer, etc.) is
+  // delegated to the active theme's block renderer — the same one the home
+  // page uses — so CMS pages render the full block catalog instead of dropping
+  // unsupported blocks. It returns null for genuinely unknown types.
+  return <ThemedHomeBlock block={block} lang={lang} />;
 }
 
 export function CmsPageRenderer({ blocks, pageSlug, lang }: Props) {

@@ -1,10 +1,24 @@
 import type { MyMbErpSettings } from 'vinc-erp';
 
+/**
+ * Fallback used when no `erp_settings` data-model record exists for the tenant.
+ * Mirrors the values every legacy `dfl-api` env shipped (PACKAGING_OPTIONS_ID=1,2,
+ * managed substitutes/supplier on, and the DISPONIBILE/NON DISPONIBILE/IN ARRIVO
+ * case labels), so the time-theme ERP path behaves like the Python backend
+ * out-of-the-box. Override per-tenant via the `erp_settings` record.
+ */
 export const DEFAULT_ERP_SETTINGS: MyMbErpSettings = {
-  packagingOptionsId: [],
-  isManagedSubstitutes: false,
-  isManagedSupplierOrder: false,
-  cases: {},
+  packagingOptionsId: [1, 2],
+  isManagedSubstitutes: true,
+  isManagedSupplierOrder: true,
+  cases: {
+    '0': { label: 'DISPONIBILE', addToCart: true },
+    '1': { label: 'NON DISPONIBILE', addToCart: false },
+    '2': { label: 'NON DISPONIBILE', addToCart: false },
+    '3': { label: 'IN ARRIVO', addToCart: true },
+    '4': { label: 'NON DISPONIBILE', addToCart: false },
+    '5': { label: 'NON DISPONIBILE', addToCart: false },
+  },
   updatePromoSeconds: 21600,
   updateAvailableAgainSeconds: 21600,
 };
@@ -12,7 +26,9 @@ export const DEFAULT_ERP_SETTINGS: MyMbErpSettings = {
 type StoredCase = { case?: number; label?: string; add_to_cart?: boolean };
 
 /** Map a raw `erp_settings` record `data` object to typed settings. Pure. */
-export function mapErpSettingsRecord(data: Record<string, unknown>): MyMbErpSettings {
+export function mapErpSettingsRecord(
+  data: Record<string, unknown>,
+): MyMbErpSettings {
   const packagingOptionsId = String(data.packaging_options_id ?? '')
     .split(',')
     .map((s) => s.trim())
@@ -24,7 +40,10 @@ export function mapErpSettingsRecord(data: Record<string, unknown>): MyMbErpSett
   if (Array.isArray(data.cases)) {
     for (const c of data.cases as StoredCase[]) {
       if (c && c.case != null) {
-        cases[String(c.case)] = { label: c.label ?? '', addToCart: Boolean(c.add_to_cart) };
+        cases[String(c.case)] = {
+          label: c.label ?? '',
+          addToCart: Boolean(c.add_to_cart),
+        };
       }
     }
   }
@@ -34,9 +53,12 @@ export function mapErpSettingsRecord(data: Record<string, unknown>): MyMbErpSett
     isManagedSubstitutes: Boolean(data.is_managed_substitutes),
     isManagedSupplierOrder: Boolean(data.is_managed_supplier_order),
     cases,
-    updatePromoSeconds: Number(data.update_promo_seconds ?? DEFAULT_ERP_SETTINGS.updatePromoSeconds),
+    updatePromoSeconds: Number(
+      data.update_promo_seconds ?? DEFAULT_ERP_SETTINGS.updatePromoSeconds,
+    ),
     updateAvailableAgainSeconds: Number(
-      data.update_available_again_seconds ?? DEFAULT_ERP_SETTINGS.updateAvailableAgainSeconds,
+      data.update_available_again_seconds ??
+        DEFAULT_ERP_SETTINGS.updateAvailableAgainSeconds,
     ),
   };
 }
@@ -53,7 +75,9 @@ interface FetchArgs {
  * (relation_id=_global, channel=b2b) and map it to typed settings. Returns
  * DEFAULT_ERP_SETTINGS if the record is absent.
  */
-export async function fetchErpSettings(args: FetchArgs): Promise<MyMbErpSettings> {
+export async function fetchErpSettings(
+  args: FetchArgs,
+): Promise<MyMbErpSettings> {
   const url = new URL(
     `${args.csBaseUrl.replace(/\/+$/, '')}/api/b2b/data-models/erp_settings/records`,
   );

@@ -5,7 +5,7 @@ import cn from 'classnames';
 import { useTranslation } from 'src/app/i18n/client';
 import { useRouter } from 'next/navigation';
 
-type SearchProps = {
+export type SearchProps = {
   lang: string;
   className?: string;
   searchId?: string;
@@ -18,6 +18,19 @@ type SearchProps = {
   value: string;
   variant?: 'border' | 'fill';
 };
+
+// Shared search navigation so every box (default + themed) builds the same URL.
+// Returns true when navigation happened (non-empty query).
+export function pushSearch(
+  router: ReturnType<typeof useRouter>,
+  lang: string,
+  value: string,
+): boolean {
+  const q = value.trim();
+  if (!q) return false;
+  router.push(`/${lang}/search?text=${encodeURIComponent(q)}`);
+  return true;
+}
 
 const SearchBoxB2B = React.forwardRef<HTMLInputElement, SearchProps>(
   (
@@ -37,13 +50,8 @@ const SearchBoxB2B = React.forwardRef<HTMLInputElement, SearchProps>(
     const { t } = useTranslation(lang, 'forms');
     const router = useRouter();
     const handleSubmit = (e: React.SyntheticEvent) => {
-      e.preventDefault(); // ✅ prevent normal form reload
-      if (!value.trim()) return; // ✅ ignore empty search
-
-      // ✅ Redirect to /lang/search?text=value
-      router.push(`/${lang}/search?text=${encodeURIComponent(value.trim())}`);
-      // ✅ Tell parent to close overlay (but NOT clear input)
-      onSubmitSuccess?.();
+      e.preventDefault();
+      if (pushSearch(router, lang, value)) onSubmitSuccess?.();
     };
     return (
       <form

@@ -260,26 +260,29 @@ function pickPricingSource(
   packagings: PimPackagingOption[],
   parent?: PimPricing,
 ): PimPricing | null {
-  if (top?.list != null) return top;
+  // Headline price is always `list_unit` — the per-single-unit price.
+  // No fallback to `list` (that's the package total, not the unit price).
+  if (top?.list_unit != null && Number.isFinite(Number(top.list_unit))) {
+    return {
+      ...top,
+      list: Number(top.list_unit),
+      retail:
+        top.retail_unit != null && Number.isFinite(Number(top.retail_unit))
+          ? Number(top.retail_unit)
+          : undefined,
+    };
+  }
 
   for (const opt of packagings) {
     if (opt.is_sellable === false) continue;
     const p = opt.pricing;
-    if (!p) continue;
-    const qty = Number(opt.qty ?? 1) || 1;
-    const perUnit =
-      p.list_unit != null
-        ? Number(p.list_unit)
-        : p.list != null
-          ? Number(p.list) / qty
-          : null;
-    if (perUnit == null || !Number.isFinite(perUnit)) continue;
+    if (!p || p.list_unit == null) continue;
+    const perUnit = Number(p.list_unit);
+    if (!Number.isFinite(perUnit)) continue;
     const retailPerUnit =
-      p.retail_unit != null
+      p.retail_unit != null && Number.isFinite(Number(p.retail_unit))
         ? Number(p.retail_unit)
-        : p.retail != null
-          ? Number(p.retail) / qty
-          : undefined;
+        : undefined;
     return {
       ...p,
       list: perUnit,

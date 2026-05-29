@@ -51,7 +51,7 @@ packages/vinc-erp/                 ← NEW standalone package (mirrors packages/
   src/endpoints.ts                 MYMB endpoint path constants (GetPrezzaturaMultipla, …)
   src/mymb/mymb-erp-client.ts      MyMbErpClient implements ErpClient (the TS port)
   src/mymb/transform.ts            raw MYMB JSON → canonical DTOs
-  src/mymb/auth.ts                 parse MYMB_ERP_URL → base URL + Basic-auth header
+  src/mymb/auth.ts                 parse ERP_URL → base URL + Basic-auth header
   src/__tests__/                   vitest unit tests
   vitest.config.ts, tsconfig.json, package.json, README.md
 
@@ -75,18 +75,40 @@ what the time theme already consumes (e.g. `ErpPriceData` as defined today in
 interface ErpClient {
   // Pricing (core)
   getMultiplePrices(input: PriceQuery): Promise<Record<string, ErpPriceData>>;
-  getPackagingListByArticle(entityCode: string, manageDefault?: boolean): Promise<PackagingOption[]>;
+  getPackagingListByArticle(
+    entityCode: string,
+    manageDefault?: boolean,
+  ): Promise<PackagingOption[]>;
 
   // Promos & related items
-  getPromoByCustomer(customerCode: string, addressCode: string, promoType?: string): Promise<PromoData>;
-  getAvailableAgainItems(customerCode: string, addressCode: string, monthsBack?: number): Promise<string[]>;
-  getAccessoryItems(entityCode: string, idCart?: number, pricingDate?: string): Promise<string[]>;
-  getSubstituteItems(entityCode: string, idCart?: number, pricingDate?: string): Promise<string[]>;
-  getAlternativeItems(itemCode: string, opts?: { idElaborazione?: string; pricingDate?: string }): Promise<AlternativeItems | null>;
+  getPromoByCustomer(
+    customerCode: string,
+    addressCode: string,
+    promoType?: string,
+  ): Promise<PromoData>;
+  getAvailableAgainItems(
+    customerCode: string,
+    addressCode: string,
+    monthsBack?: number,
+  ): Promise<string[]>;
+  getAccessoryItems(
+    entityCode: string,
+    idCart?: number,
+    pricingDate?: string,
+  ): Promise<string[]>;
+  getSubstituteItems(
+    entityCode: string,
+    idCart?: number,
+    pricingDate?: string,
+  ): Promise<string[]>;
+  getAlternativeItems(
+    itemCode: string,
+    opts?: { idElaborazione?: string; pricingDate?: string },
+  ): Promise<AlternativeItems | null>;
 
   // Account documents
   getOrders(q: DocQuery): Promise<OrderDoc[]>;
-  getInvoices(q: DocQuery): Promise<InvoiceDoc[]>;     // includes the Python's field-mapping
+  getInvoices(q: DocQuery): Promise<InvoiceDoc[]>; // includes the Python's field-mapping
   getDdt(q: DocQuery): Promise<DdtDoc[]>;
   getCustomer(customerCode: string): Promise<CustomerInfo>;
   getAddresses(customerCode: string): Promise<AddressInfo[]>;
@@ -94,19 +116,40 @@ interface ErpClient {
   getUpdatedExposition(customerCode: string): Promise<Exposition>;
   getPaymentDeadlines(customerCode: string): Promise<PaymentDeadline[]>;
   getUpdatedDeadlines(customerCode: string): Promise<PaymentDeadline[]>;
-  getLatestOrderByItem(customerCode: string, itemId: string): Promise<LatestOrderByItem>;
+  getLatestOrderByItem(
+    customerCode: string,
+    itemId: string,
+  ): Promise<LatestOrderByItem>;
   getLatestOrderByPeriod(q: LatestOrderQuery): Promise<LatestOrderByPeriod>;
   getCommercialActivityCategories(): Promise<CategoryList>;
   getCustomerCategoryTypes(): Promise<CategoryTypeList>;
-  getClienteByVatOrTaxCode(q: { vat?: string; taxCode?: string }): Promise<ClienteLookup>;
+  getClienteByVatOrTaxCode(q: {
+    vat?: string;
+    taxCode?: string;
+  }): Promise<ClienteLookup>;
   createClienteFromRegistration(form: RegistrationForm): Promise<string | null>;
 
   // Cart / ATP / payment
-  checkCartAnomalies(q: { idCart: string; keepIssueFlag?: boolean }): Promise<CartAnomalies>;
-  getInfoPromotionInCart(q: { idCart: string; rowId: string; promoCode: string; promoRow: string }): Promise<CartPromoInfo | null>;
+  checkCartAnomalies(q: {
+    idCart: string;
+    keepIssueFlag?: boolean;
+  }): Promise<CartAnomalies>;
+  getInfoPromotionInCart(q: {
+    idCart: string;
+    rowId: string;
+    promoCode: string;
+    promoRow: string;
+  }): Promise<CartPromoInfo | null>;
   infoAvailabilityForItem(q: { itemList: ATPItem[] }): Promise<ATPResult>;
-  updateCartRowWithDate(q: { itemList: ATPItem[]; idCart: string }): Promise<ATPResult>;
-  setCmpagPaymentStatus(q: { idElaborazione: string; isPaymentExecuted: boolean; paymentMethodCode: string }): Promise<CmpagResult>;
+  updateCartRowWithDate(q: {
+    itemList: ATPItem[];
+    idCart: string;
+  }): Promise<ATPResult>;
+  setCmpagPaymentStatus(q: {
+    idElaborazione: string;
+    isPaymentExecuted: boolean;
+    paymentMethodCode: string;
+  }): Promise<CmpagResult>;
 }
 ```
 
@@ -139,9 +182,9 @@ which keeps it the reusable standard.
 A **single URL with embedded credentials** (not separate user/pass vars):
 
 ```
-MYMB_ERP_URL=http://<user>:<pass>@<erp-host>:<port>/MyMB/Service/web
+ERP_URL=http://<user>:<pass>@<erp-host>:<port>/MyMB/Service/web
              └─user─┘ └pwd┘ └──────host:port───────┘└──base path──┘
-MYMB_ERP_URL_OVERRIDE=...        # local/dev override (same format)
+ERP_URL_OVERRIDE=...        # local/dev override (same format)
 ```
 
 (real credentials/host live only in the deployment env/secret, never in the repo)
@@ -149,8 +192,8 @@ MYMB_ERP_URL_OVERRIDE=...        # local/dev override (same format)
 `src/mymb/auth.ts` parses the URL once: strips `user:pass@` → `Authorization: Basic
 base64(user:pass)`; request base = `scheme://host:port/path`.
 
-**Resolution order** (in `factory.ts`): `MYMB_ERP_URL_OVERRIDE` → `tenant.api.mymbErpUrl`
-→ `MYMB_ERP_URL`. Follows the existing `*_URL_OVERRIDE` convention already in `.env`
+**Resolution order** (in `factory.ts`): `ERP_URL_OVERRIDE` → `tenant.api.erpUrl`
+→ `ERP_URL`. Follows the existing `*_URL_OVERRIDE` convention already in `.env`
 (`PIM_API_URL_OVERRIDE`, `SSO_API_URL_OVERRIDE`). None are `NEXT_PUBLIC_*`.
 
 ### 4b. Behavior — Commerce Suite data-model `erp_settings`
@@ -161,44 +204,45 @@ admin (`.../b2b/admin/data-models`) and fetched by vinc-b2b at runtime (Redis-ca
 
 **Data-model definition (create in vinc-commerce-suite):**
 
-| Attribute | Value |
-|---|---|
-| `name` | `ERP Settings (MyMB)` |
-| `slug` | `erp_settings` (must match `^[a-z][a-z0-9_]*$`) |
-| `relation` | `customer` |
-| `cardinality` | `single` |
-| `channel` | `b2b` |
+| Attribute              | Value                                                 |
+| ---------------------- | ----------------------------------------------------- |
+| `name`                 | `ERP Settings (MyMB)`                                 |
+| `slug`                 | `erp_settings` (must match `^[a-z][a-z0-9_]*$`)       |
+| `relation`             | `customer`                                            |
+| `cardinality`          | `single`                                              |
+| `channel`              | `b2b`                                                 |
 | `readable_by_end_user` | `false` (server-side only — never exposed to browser) |
-| `enabled` | `true` |
-| sentinel `relation_id` | `_global` |
+| `enabled`              | `true`                                                |
+| sentinel `relation_id` | `_global`                                             |
 
 **Fields:**
 
-| field `slug` | `type` | notes |
-|---|---|---|
-| `packaging_options_id` | `text` | comma-separated packaging IDs in display order, e.g. `3,1,2` |
-| `is_managed_substitutes` | `checkbox` | boolean |
-| `is_managed_supplier_order` | `checkbox` | boolean |
-| `cases` | `array_of_objects` | sub-fields: `case` (`number`, 0–5), `label` (`text`), `add_to_cart` (`checkbox`) |
-| `update_promo_seconds` | `number` | default `21600` (6h) |
-| `update_available_again_seconds` | `number` | default `21600` (6h) |
+| field `slug`                     | `type`             | notes                                                                            |
+| -------------------------------- | ------------------ | -------------------------------------------------------------------------------- |
+| `packaging_options_id`           | `text`             | comma-separated packaging IDs in display order, e.g. `3,1,2`                     |
+| `is_managed_substitutes`         | `checkbox`         | boolean                                                                          |
+| `is_managed_supplier_order`      | `checkbox`         | boolean                                                                          |
+| `cases`                          | `array_of_objects` | sub-fields: `case` (`number`, 0–5), `label` (`text`), `add_to_cart` (`checkbox`) |
+| `update_promo_seconds`           | `number`           | default `21600` (6h)                                                             |
+| `update_available_again_seconds` | `number`           | default `21600` (6h)                                                             |
 
 **Fetch:** `GET {CS}/api/b2b/data-models/erp_settings/records?relation_id=_global&channel=b2b`
 with the tenant API key/secret vinc-b2b already holds for Commerce Suite calls.
 
 **Stored `data` shape:**
+
 ```json
 {
   "packaging_options_id": "3,1,2",
   "is_managed_substitutes": true,
   "is_managed_supplier_order": false,
   "cases": [
-    { "case": 0, "label": "Disponibile",      "add_to_cart": true  },
-    { "case": 1, "label": "Sostituto+Arrivo", "add_to_cart": true  },
-    { "case": 2, "label": "Sostituto",        "add_to_cart": true  },
-    { "case": 3, "label": "In arrivo",        "add_to_cart": true  },
-    { "case": 4, "label": "Non disponibile",  "add_to_cart": false },
-    { "case": 5, "label": "Non gestito",      "add_to_cart": false }
+    { "case": 0, "label": "Disponibile", "add_to_cart": true },
+    { "case": 1, "label": "Sostituto+Arrivo", "add_to_cart": true },
+    { "case": 2, "label": "Sostituto", "add_to_cart": true },
+    { "case": 3, "label": "In arrivo", "add_to_cart": true },
+    { "case": 4, "label": "Non disponibile", "add_to_cart": false },
+    { "case": 5, "label": "Non gestito", "add_to_cart": false }
   ],
   "update_promo_seconds": 21600,
   "update_available_again_seconds": 21600
@@ -207,12 +251,13 @@ with the tenant API key/secret vinc-b2b already holds for Commerce Suite calls.
 
 **Typed config the package consumes** (`data-model-config.ts` maps stored → this; `cases`
 array → record keyed by case string, matching the Python `get_label_and_cart_status` lookup):
+
 ```ts
 interface MyMbErpSettings {
-  packagingOptionsId: number[];                 // "3,1,2" → [3,1,2]
+  packagingOptionsId: number[]; // "3,1,2" → [3,1,2]
   isManagedSubstitutes: boolean;
   isManagedSupplierOrder: boolean;
-  cases: Record<string, { label: string; addToCart: boolean }>;  // "0".."5"
+  cases: Record<string, { label: string; addToCart: boolean }>; // "0".."5"
   updatePromoSeconds: number;
   updateAvailableAgainSeconds: number;
 }
@@ -244,9 +289,11 @@ JSON. Forwards the user's JWT/customer context exactly like the current proxy.
 ### The switch (only consumer-side change)
 
 A tiny base resolver in the B2B framework:
+
 ```ts
 erpApiBase() → theme === 'time' ? '/api/erp' : '/api/proxy/b2b'
 ```
+
 Existing fetchers (`fetchErpPrices`, orders, invoices, …) call
 `post(erpApiBase() + endpoint, …)`. Because responses are already drop-in normalized,
 **time-theme components need no changes**, and the default theme resolves to the unchanged
@@ -298,7 +345,7 @@ Mirrors `vinc-pim`'s vitest setup (package ships its own `vitest.config.ts`).
   resolver (or a tenant flag) reverts time-theme traffic to the old proxy without code changes
   elsewhere.
 - **Docs:** package `README.md` (interface + how to add a new ERP provider); a vinc-b2b note
-  on the `erp_settings` data-model + `MYMB_ERP_URL`.
+  on the `erp_settings` data-model + `ERP_URL`.
 
 ## 9. Out of scope
 

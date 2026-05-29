@@ -78,11 +78,16 @@ module.exports = {
           '0%, 100%': { transform: 'rotate(-3deg)' },
           '50%': { transform: 'rotate(3deg)' },
         },
+        megadrop: {
+          from: { opacity: '0', transform: 'translateY(-8px)' },
+          to: { opacity: '1', transform: 'none' },
+        },
       },
       animation: {
         shine: 'shine 0.8s ease-in',
         ping: 'ping 3s linear infinite',
         wiggle: 'wiggle 1s ease-in-out infinite',
+        megadrop: 'megadrop 0.18s ease',
       },
       fontFamily: {
         body: [

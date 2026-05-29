@@ -77,7 +77,7 @@ export function HeaderRowRenderer({
         backgroundColor: row.backgroundColor || '#ffffff',
         color: row.textColor,
         height: row.height ? `${row.height}px` : undefined,
-        top: isFixed ? stickyTop ?? 0 : undefined,
+        top: isFixed ? (stickyTop ?? 0) : undefined,
       }}
     >
       <div

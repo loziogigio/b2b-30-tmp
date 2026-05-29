@@ -22,7 +22,7 @@ export const ROUTES = {
   PRODUCTS: '/products',
   PRODUCT_COMPARE: '/product-compare',
   BUNDLE: '/bundles',
-  CATEGORY: '/category',
+  CATEGORY: '/categorie',
   ORDER: '/complete-order',
   WISHLIST: '/my-account/wishlist',
 };

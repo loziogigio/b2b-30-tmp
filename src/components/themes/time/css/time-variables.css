@@ -157,3 +157,51 @@
   top: -6px;
   right: -6px;
 }
+
+/* ------------------------------------------------------------------ *
+ * Catalog list-row quantity stepper (DFL restyle).
+ * Restyles the shared <Counter> (passed className="time-stepper") into a
+ * single connected, rounded box: − | input | + with a red plus accent.
+ * Scoped to .time-stepper so the default theme's counter is untouched.
+ * ------------------------------------------------------------------ */
+.time-stepper {
+  gap: 0 !important;
+  border: 1px solid #eaeaee;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+  width: fit-content !important;
+  height: 32px !important;
+}
+.time-stepper > button {
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  width: 30px !important;
+  height: 30px !important;
+}
+.time-stepper > button:last-of-type {
+  color: var(--time-red, #e4002b) !important;
+}
+/* Neutral input so the box looks identical idle / in-cart (no loud
+ * green/red fill); the red plus + qty number carry the state. */
+.time-stepper > input {
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  width: 40px !important;
+  height: 30px !important;
+  background: #fff !important;
+  color: var(--time-dark, #16161a) !important;
+}
+
+/* Full-width variant (product card): box spans its container, input grows to
+ * fill so the − / number / + are centered across the whole width. */
+.time-stepper-full {
+  width: 100% !important;
+  flex: 1 1 auto !important;
+}
+.time-stepper-full > input {
+  width: auto !important;
+  flex: 1 1 auto !important;
+}

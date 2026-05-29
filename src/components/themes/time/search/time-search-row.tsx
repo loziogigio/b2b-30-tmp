@@ -6,6 +6,8 @@ import { Product } from '@framework/types';
 import { useModalAction } from '@components/common/modal/modal.context';
 import { productPlaceholder } from '@assets/placeholders';
 import { ErpPriceData } from '@utils/transform/erp-prices';
+import { buildPackagingParts } from '@utils/packaging';
+import { useProductPriceData } from '@framework/pricing';
 import AddToCart from '@components/product/add-to-cart';
 import { useTranslation } from 'src/app/i18n/client';
 import { useUI } from '@contexts/ui.context';
@@ -32,11 +34,16 @@ interface TimeSearchRowProps {
 export default function TimeSearchRow({
   product,
   lang,
-  priceData,
+  priceData: priceDataProp,
   index = 0,
 }: TimeSearchRowProps) {
-  const { name, image, sku, brand, parent_sku, description, model, unit } =
+  const { name, image, sku, brand, parent_sku, description, model } =
     product ?? {};
+  // Phase 2.1: list surfaces no longer fetch ERP prices. Route through the
+  // unified pricing hook so the slice is synthesized from PIM inline pricing
+  // (or fetched per the active source flag). A caller-provided priceData
+  // still wins as an explicit override.
+  const priceData = useProductPriceData(product, { override: priceDataProp });
   const { openModal } = useModalAction();
   const { t } = useTranslation(lang, 'common');
   const { isAuthorized, hidePrices } = useUI();
@@ -77,9 +84,9 @@ export default function TimeSearchRow({
   const { hasMultiplePromos, isPromoGated, canInlineAdd, cartQty } =
     usePromoGating(priceData, product);
   const variantCount = product.variantCount ?? variations.length;
-  const um = priceData?.packaging_option_default?.packaging_uom || unit || null;
-  const mv = priceData?.packaging_option_smallest?.qty_x_packaging ?? null;
-  const cf = priceData?.packaging_option_default?.qty_x_packaging ?? null;
+  // Packaging info from ERP — filtered set (packaging_options_id), shared with
+  // the offer rows. Renders "UM: <unit> · <code>: <qty> · …".
+  const packagingParts = priceData ? buildPackagingParts(priceData) : [];
 
   function handleClick() {
     if (hasVariants) {
@@ -139,7 +146,15 @@ export default function TimeSearchRow({
       <div className="flex-1 px-5 py-4 flex flex-col gap-1.5 min-w-0">
         <div className="flex items-start justify-between gap-3">
           <div className="flex flex-col gap-1.5 min-w-0">
-            <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs sm:text-[13px] font-bold text-[var(--time-dark)] font-mono">
+                {sku || parent_sku || ''}
+              </span>
+              {(sku || parent_sku) && brand?.name && (
+                <span className="text-[11px] sm:text-xs text-[var(--time-gray-300)]">
+                  ·
+                </span>
+              )}
               {brand?.name && (brand as any)?.brand_id ? (
                 <Link
                   href={`/${lang}/search?filters-brand_id=${(brand as any).brand_id}`}
@@ -147,14 +162,11 @@ export default function TimeSearchRow({
                 >
                   {brand.name}
                 </Link>
-              ) : (
+              ) : brand?.name ? (
                 <span className="text-xs sm:text-[13px] font-bold text-[var(--time-red)] font-[family-name:var(--font-body)] uppercase tracking-[0.06em]">
-                  {brand?.name || ''}
+                  {brand.name}
                 </span>
-              )}
-              <span className="text-[11px] sm:text-xs text-[var(--time-gray-400)] font-mono">
-                SKU {sku || parent_sku || ''}
-              </span>
+              ) : null}
               {hasVariants && variantCount > 1 && (
                 <span className="bg-[var(--time-gray-100)] text-[var(--time-gray-600)] text-[11px] sm:text-xs font-semibold px-2 py-[2px] rounded font-[family-name:var(--font-body)]">
                   {variantCount} varianti
@@ -249,11 +261,9 @@ export default function TimeSearchRow({
           </p>
         )}
 
-        {um && (
+        {packagingParts.length > 0 && (
           <div className="flex gap-2.5 text-[11px] sm:text-xs text-[var(--time-gray-400)] font-mono">
-            <span>UM: {um}</span>
-            {mv != null && <span>MV: {mv}</span>}
-            {cf != null && <span>CF: {cf}</span>}
+            <span>{packagingParts.join(' · ')}</span>
           </div>
         )}
       </div>

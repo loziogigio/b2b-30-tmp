@@ -28,6 +28,49 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         });
         return NextResponse.json({ status: 'success', data });
       }
+      case 'get_orders': {
+        const data = await client.getOrders({
+          customerCode: body.customer_code,
+          addressCode: body.address_code,
+          type: body.type,
+          dateFrom: body.date_from,
+          dateTo: body.date_to,
+          customerRef: body.cust_rif ?? body.customer_ref,
+        });
+        return NextResponse.json({ status: 'success', data });
+      }
+      case 'get_customer': {
+        const data = await client.getCustomer(body.customer_code);
+        return NextResponse.json({ status: 'success', data });
+      }
+      case 'exposition': {
+        const data = await client.getExposition(body.customer_code);
+        return NextResponse.json({ status: 'success', data });
+      }
+      case 'payment_deadline': {
+        const data = await client.getPaymentDeadline(body.customer_code);
+        return NextResponse.json({ status: 'success', data });
+      }
+      case 'get_invoices': {
+        const data = await client.getInvoices({
+          customerCode: body.customer_code,
+          addressCode: body.address_code,
+          type: body.type,
+          dateFrom: body.date_from,
+          dateTo: body.date_to,
+        });
+        return NextResponse.json({ status: 'success', data });
+      }
+      case 'get_ddt': {
+        const data = await client.getDdt({
+          customerCode: body.customer_code,
+          addressCode: body.address_code,
+          type: body.type,
+          dateFrom: body.date_from,
+          dateTo: body.date_to,
+        });
+        return NextResponse.json({ status: 'success', data });
+      }
       default:
         return NextResponse.json(
           { status: 'error', message: `Unknown ERP endpoint: ${endpoint}` },

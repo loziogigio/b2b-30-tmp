@@ -14,7 +14,14 @@ interface ErpPricesPayload {
 }
 
 export const fetchErpPrices = async (input: ErpPricesPayload) => {
-  const { entity_codes, quantity_list, id_cart, customer_code, address_code, theme } = input;
+  const {
+    entity_codes,
+    quantity_list,
+    id_cart,
+    customer_code,
+    address_code,
+    theme,
+  } = input;
 
   const finalPayload = {
     entity_codes,

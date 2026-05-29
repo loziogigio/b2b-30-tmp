@@ -1,7 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { post } from '@framework/utils/httpB2B';
+import { erpApiPath } from '@framework/utils/erp-api-base';
 import { API_ENDPOINTS_B2B } from '@framework/utils/api-endpoints-b2b';
 import { ERP_STATIC } from '@framework/utils/static';
+import { useThemeId } from '@/contexts/tenant.context';
 
 import { transformPaymentDeadline } from '@utils/transform/b2b-payment-deadline';
 import { transformExposition } from '@utils/transform/b2b-exposition';
@@ -22,12 +24,35 @@ import { transformCustomer } from '@utils/transform/b2b-customer';
 // common payload
 const buildPayload = () => ({ ...ERP_STATIC });
 
+// time theme → in-app direct-ERP route (/api/erp/<endpoint>), mirroring prices
+// and orders. `erpEndpoint` is the legacy `/erp/<name>` form; the route returns
+// { status, data: <MyMB *Result> }, which we unwrap to the bare Result so the
+// existing direct-format handling below applies unchanged.
+async function erpPost<T>(erpEndpoint: string, payload: unknown): Promise<T> {
+  const res = await fetch(erpApiPath('time', erpEndpoint), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    throw new Error(`ERP request failed: HTTP ${res.status}`);
+  }
+  const json = await res.json();
+  return (json?.data ?? json) as T;
+}
+
 // ===== Exposition (OBJECT) =====
-export async function fetchExposition(): Promise<Exposition> {
-  const raw = await post<{ message?: RawExposition } | RawExposition>(
-    API_ENDPOINTS_B2B.GET_EXPOSITION,
-    buildPayload(),
-  );
+export async function fetchExposition(theme?: string): Promise<Exposition> {
+  const raw =
+    theme === 'time'
+      ? await erpPost<{ message?: RawExposition } | RawExposition>(
+          '/erp/exposition',
+          buildPayload(),
+        )
+      : await post<{ message?: RawExposition } | RawExposition>(
+          API_ENDPOINTS_B2B.GET_EXPOSITION,
+          buildPayload(),
+        );
   if (!raw || typeof raw !== 'object') {
     throw new Error('Unexpected ERP response for exposition.');
   }
@@ -48,21 +73,30 @@ export async function fetchExposition(): Promise<Exposition> {
   }
   return transformExposition(res);
 }
-export const useExpositionQuery = (enabled = true) =>
-  useQuery<Exposition, Error>({
+export const useExpositionQuery = (enabled = true) => {
+  const theme = useThemeId();
+  return useQuery<Exposition, Error>({
     queryKey: [API_ENDPOINTS_B2B.GET_EXPOSITION],
-    queryFn: fetchExposition,
+    queryFn: () => fetchExposition(theme),
     enabled,
     staleTime: 1000 * 60 * 5, // 5 minutes
     gcTime: 1000 * 60 * 10, // 10 minutes
     refetchOnWindowFocus: false,
   });
+};
 
 // ===== Payment Deadline (OBJECT -> {items:[]}) =====
-export async function fetchPaymentDeadline(): Promise<PaymentDeadlineSummary> {
-  const raw = await post<
-    { message?: RawPaymentDeadlineResponse } | RawPaymentDeadlineResponse
-  >(API_ENDPOINTS_B2B.GET_PAYMENT_DEADLINE, buildPayload());
+export async function fetchPaymentDeadline(
+  theme?: string,
+): Promise<PaymentDeadlineSummary> {
+  const raw =
+    theme === 'time'
+      ? await erpPost<
+          { message?: RawPaymentDeadlineResponse } | RawPaymentDeadlineResponse
+        >('/erp/payment_deadline', buildPayload())
+      : await post<
+          { message?: RawPaymentDeadlineResponse } | RawPaymentDeadlineResponse
+        >(API_ENDPOINTS_B2B.GET_PAYMENT_DEADLINE, buildPayload());
   if (!raw || typeof raw !== 'object') {
     throw new Error('Unexpected ERP response for payment deadline.');
   }
@@ -80,15 +114,17 @@ export async function fetchPaymentDeadline(): Promise<PaymentDeadlineSummary> {
   }
   return transformPaymentDeadline(res);
 }
-export const usePaymentDeadlineQuery = (enabled = true) =>
-  useQuery<PaymentDeadlineSummary, Error>({
+export const usePaymentDeadlineQuery = (enabled = true) => {
+  const theme = useThemeId();
+  return useQuery<PaymentDeadlineSummary, Error>({
     queryKey: [API_ENDPOINTS_B2B.GET_PAYMENT_DEADLINE],
-    queryFn: fetchPaymentDeadline,
+    queryFn: () => fetchPaymentDeadline(theme),
     enabled,
     staleTime: 1000 * 60 * 5, // 5 minutes - don't refetch if data is fresh
     gcTime: 1000 * 60 * 10, // 10 minutes - keep in cache
     refetchOnWindowFocus: false, // don't refetch when user returns to tab
   });
+};
 
 export async function fetchAddresses(): Promise<AddressB2B[]> {
   const vincCustomerId = ERP_STATIC.vinc_customer_id;
@@ -126,10 +162,17 @@ export const useAddressQuery = (enabled = true) =>
   });
 
 // ===== Customer (OBJECT) =====
-export async function fetchCustomer(): Promise<CustomerProfile> {
-  const raw = await post<
-    { message?: RawCustomerResponse } | RawCustomerResponse
-  >(API_ENDPOINTS_B2B.GET_CUSTOMER, buildPayload());
+export async function fetchCustomer(theme?: string): Promise<CustomerProfile> {
+  const raw =
+    theme === 'time'
+      ? await erpPost<{ message?: RawCustomerResponse } | RawCustomerResponse>(
+          '/erp/get_customer',
+          buildPayload(),
+        )
+      : await post<{ message?: RawCustomerResponse } | RawCustomerResponse>(
+          API_ENDPOINTS_B2B.GET_CUSTOMER,
+          buildPayload(),
+        );
   if (!raw || typeof raw !== 'object') {
     throw new Error('Unexpected ERP response for customer.');
   }
@@ -150,12 +193,14 @@ export async function fetchCustomer(): Promise<CustomerProfile> {
   return transformCustomer(res);
 }
 
-export const useCustomerQuery = (enabled = true) =>
-  useQuery<CustomerProfile, Error>({
+export const useCustomerQuery = (enabled = true) => {
+  const theme = useThemeId();
+  return useQuery<CustomerProfile, Error>({
     queryKey: [API_ENDPOINTS_B2B.GET_CUSTOMER],
-    queryFn: fetchCustomer,
+    queryFn: () => fetchCustomer(theme),
     enabled,
     staleTime: 1000 * 60 * 5, // 5 minutes
     gcTime: 1000 * 60 * 10, // 10 minutes
     refetchOnWindowFocus: false,
   });
+};

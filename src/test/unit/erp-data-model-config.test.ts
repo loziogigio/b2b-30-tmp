@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { mapErpSettingsRecord, DEFAULT_ERP_SETTINGS } from '@/lib/erp/data-model-config';
+import {
+  mapErpSettingsRecord,
+  DEFAULT_ERP_SETTINGS,
+} from '@/lib/erp/data-model-config';
 
 describe('mapErpSettingsRecord', () => {
   it('maps a stored data object to typed MyMbErpSettings', () => {
@@ -26,11 +29,16 @@ describe('mapErpSettingsRecord', () => {
   it('falls back to defaults for missing/blank fields', () => {
     const settings = mapErpSettingsRecord({});
     expect(settings.packagingOptionsId).toEqual([]);
-    expect(settings.updatePromoSeconds).toBe(DEFAULT_ERP_SETTINGS.updatePromoSeconds);
+    expect(settings.updatePromoSeconds).toBe(
+      DEFAULT_ERP_SETTINGS.updatePromoSeconds,
+    );
     expect(settings.cases).toEqual({});
   });
 
   it('ignores empty segments when parsing packaging_options_id', () => {
-    expect(mapErpSettingsRecord({ packaging_options_id: '3, ,1,' }).packagingOptionsId).toEqual([3, 1]);
+    expect(
+      mapErpSettingsRecord({ packaging_options_id: '3, ,1,' })
+        .packagingOptionsId,
+    ).toEqual([3, 1]);
   });
 });

@@ -1,6 +1,7 @@
 import { Connection } from 'mongoose';
 import { headers } from 'next/headers';
 import { resolveTenant, isSingleTenant } from '@/lib/tenant';
+import { SINGLE_TENANT_ID } from '@/lib/cache/tags';
 import {
   getPooledConnection,
   closeAllConnections,
@@ -59,4 +60,40 @@ export const connectToDatabase = async (): Promise<Connection> => {
 
   console.log(`[DB] Tenant ${tenant.id} resolved, using database: ${mongoDb}`);
   return getPooledConnection(mongoDb);
+};
+
+/**
+ * Resolve the target tenant database NAME (+ tenant id) without opening a
+ * connection. Used as a stable cache key so request-scoped data (e.g. the home
+ * template) can be cached per-tenant via `unstable_cache` — whose callback
+ * cannot itself call `headers()` to resolve the tenant.
+ */
+export const resolveTenantDbTarget = async (): Promise<{
+  dbName: string;
+  tenantId: string;
+}> => {
+  if (isSingleTenant) {
+    return { dbName: defaultMongoDb, tenantId: SINGLE_TENANT_ID };
+  }
+
+  let hostname = 'localhost';
+  try {
+    const headersList = await headers();
+    hostname =
+      headersList.get('x-tenant-hostname') ||
+      headersList.get('host') ||
+      'localhost';
+  } catch {
+    return { dbName: defaultMongoDb, tenantId: SINGLE_TENANT_ID };
+  }
+
+  const tenant = await resolveTenant(hostname);
+  if (!tenant) {
+    return { dbName: defaultMongoDb, tenantId: 'unknown' };
+  }
+
+  return {
+    dbName: tenant.database.mongoDb || defaultMongoDb,
+    tenantId: tenant.id,
+  };
 };

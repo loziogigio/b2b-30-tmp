@@ -17,17 +17,23 @@ export function resolveErpUrl(tenantUrl: string | undefined): string {
 async function getTenantBits(req: NextRequest) {
   if (isSingleTenant) {
     return {
-      erpUrl: undefined as string | undefined,
+      // No dedicated erp_url field: the MyMB connection lives in the B2B API
+      // URL (credentials are stripped by parseMyMbConnection).
+      erpUrl: (process.env.B2B_API_URL || undefined) as string | undefined,
       csBaseUrl: process.env.PIM_API_URL || '',
       apiKeyId: process.env.PIM_API_KEY_ID || '',
       apiSecret: process.env.PIM_API_SECRET || '',
     };
   }
   const hostname =
-    req.headers.get('x-tenant-hostname') || req.headers.get('host') || 'localhost';
+    req.headers.get('x-tenant-hostname') ||
+    req.headers.get('host') ||
+    'localhost';
   const tenant = await resolveTenant(hostname);
   return {
-    erpUrl: tenant?.api.erpUrl,
+    // Prefer an explicit erp_url if ever configured; otherwise use the B2B API
+    // URL, which holds the MyMB connection string (with embedded credentials).
+    erpUrl: tenant?.api.erpUrl || tenant?.api.b2bApiUrl,
     csBaseUrl: tenant?.api.pimApiUrl || process.env.PIM_API_URL || '',
     apiKeyId: tenant?.api.apiKeyId || '',
     apiSecret: tenant?.api.apiSecret || '',
@@ -39,9 +45,26 @@ async function getTenantBits(req: NextRequest) {
  * resolveErpUrl, behavior from the cached erp_settings data-model, Redis cache
  * for the client's own read-through caching.
  */
-export async function getMyMbErpClient(req: NextRequest): Promise<MyMbErpClient> {
+export async function getMyMbErpClient(
+  req: NextRequest,
+): Promise<MyMbErpClient> {
   const bits = await getTenantBits(req);
-  const { baseUrl, authHeader } = parseMyMbConnection(resolveErpUrl(bits.erpUrl));
+  const resolvedUrl = resolveErpUrl(bits.erpUrl);
+  const { baseUrl, authHeader } = parseMyMbConnection(resolvedUrl);
+
+  // TEMP DIAGNOSTIC — which ERP host is actually used (creds stripped) + source.
+  const erpUrlSource = process.env.ERP_URL_OVERRIDE
+    ? 'ERP_URL_OVERRIDE'
+    : bits.erpUrl
+      ? 'tenant.erpUrl'
+      : 'ERP_URL';
+  try {
+    console.log(
+      `[ERP factory] source=${erpUrlSource} host=${new URL(baseUrl).host}`,
+    );
+  } catch {
+    /* ignore */
+  }
 
   const settings = await cachedJson(
     `erp:settings:${bits.csBaseUrl}`,
@@ -56,5 +79,10 @@ export async function getMyMbErpClient(req: NextRequest): Promise<MyMbErpClient>
     },
   );
 
-  return new MyMbErpClient({ baseUrl, authHeader, settings, cache: new RedisCacheAdapter() });
+  return new MyMbErpClient({
+    baseUrl,
+    authHeader,
+    settings,
+    cache: new RedisCacheAdapter(),
+  });
 }

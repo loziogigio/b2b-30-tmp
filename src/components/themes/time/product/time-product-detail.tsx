@@ -370,16 +370,11 @@ const TimeProductDetail: React.FC<{
 
         {/* ── RIGHT: Product Details ── */}
         <div className="flex flex-col">
-          {/* Brand + SKU + Fig */}
-          <div className="flex items-center gap-2.5 flex-wrap mb-4">
-            {data.brand?.name && (
-              <span className="bg-[var(--time-red)] text-white text-xs sm:text-[13px] font-extrabold px-3 py-[5px] rounded-[7px] font-[family-name:var(--font-body)] uppercase">
-                {data.brand.name}
-              </span>
-            )}
+          {/* SKU (primary) · Brand (secondary) */}
+          <div className="flex items-center gap-2 flex-wrap mb-4">
             <button
               onClick={copySkuToClipboard}
-              className="flex items-center gap-1.5 bg-[var(--time-gray-50)] border border-[var(--time-gray-200)] text-[11px] sm:text-xs font-semibold text-[var(--time-dark)] px-2.5 py-1 rounded-md cursor-pointer hover:border-[var(--time-gray-400)] transition-colors font-mono"
+              className="flex items-center gap-1.5 text-sm sm:text-base font-bold text-[var(--time-dark)] cursor-pointer hover:text-[var(--time-red)] transition-colors font-mono shrink-0"
               title={copied ? 'Copiato!' : 'Copia SKU'}
             >
               {sku}
@@ -398,9 +393,14 @@ const TimeProductDetail: React.FC<{
                 <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
               </svg>
             </button>
-            {data.figure_code && (
-              <span className="text-[11px] sm:text-xs text-[var(--time-gray-400)] font-mono">
-                Fig: {data.figure_code}
+            {sku && data.brand?.name && (
+              <span className="text-sm sm:text-base text-[var(--time-gray-300)]">
+                ·
+              </span>
+            )}
+            {data.brand?.name && (
+              <span className="text-xs sm:text-sm font-bold text-[var(--time-red)] uppercase tracking-wider font-[family-name:var(--font-body)] truncate">
+                {data.brand.name}
               </span>
             )}
           </div>

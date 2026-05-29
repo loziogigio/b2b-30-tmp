@@ -64,10 +64,13 @@ export default function TimeCatalogueIndex({
   tree,
   current,
   lang,
+  categoryRoot,
 }: {
   tree: MenuTreeNode[];
   current: MenuTreeNode | null;
   lang: string;
+  /** Public per-tenant category-root segment (default `categorie`, spec D2/D3). */
+  categoryRoot?: string;
 }) {
   const { t } = useTranslation(lang, 'common');
   const rootLabel = t('all-categories', {
@@ -75,8 +78,9 @@ export default function TimeCatalogueIndex({
   });
 
   const model = useMemo(
-    () => buildCatalogueIndexModel(tree, current, lang, rootLabel),
-    [tree, current, lang, rootLabel],
+    () =>
+      buildCatalogueIndexModel(tree, current, lang, rootLabel, categoryRoot),
+    [tree, current, lang, rootLabel, categoryRoot],
   );
 
   const [query, setQuery] = useState('');
@@ -128,7 +132,7 @@ export default function TimeCatalogueIndex({
 
   return (
     <div className="bg-[var(--time-gray-50)] font-[family-name:var(--font-body)] text-[var(--time-gray-900)]">
-      <div className="mx-auto max-w-[1440px] px-5 pb-16 pt-6 lg:px-7">
+      <div className="mx-auto max-w-[1600px] px-5 pb-16 pt-6">
         {/* Substrip */}
         <div className="mb-5 flex flex-wrap items-end justify-between gap-5">
           <div>

@@ -28,6 +28,11 @@ type Props = {
   onChange?: (e: React.FormEvent<HTMLInputElement>) => void;
   onClear?: (e: React.SyntheticEvent) => void;
   onSubmitSuccess?: () => void;
+  /** Presentational search box. Defaults to SearchBoxB2B; themes may inject a
+   *  styled replacement (same props) so the overlay matches the header box. */
+  SearchBoxComponent?: React.ComponentType<
+    React.ComponentProps<typeof SearchBoxB2B>
+  >;
 };
 
 const RECENT_KEY = 'b2b-recent-searches';
@@ -68,6 +73,7 @@ export default function SearchOverlayB2B({
   onChange,
   onClear,
   onSubmitSuccess,
+  SearchBoxComponent = SearchBoxB2B,
 }: Props) {
   const { t } = useTranslation(lang, 'common');
   const router = useRouter();
@@ -303,7 +309,7 @@ export default function SearchOverlayB2B({
               {/* Search box - centered */}
               <div className="flex-1 flex justify-center">
                 <div className="w-full max-w-[700px]">
-                  <SearchBoxB2B
+                  <SearchBoxComponent
                     searchId="overlay-search"
                     lang={lang}
                     name="overlay-search"
@@ -446,6 +452,16 @@ export default function SearchOverlayB2B({
                     totalResults={totalResults}
                     bleedRight={false}
                   />
+                </div>
+              )}
+              {/* Empty state: before a query is typed, keep the panel open at
+                  the same height as the autocomplete view and invite the user
+                  to start searching. */}
+              {!showAutocomplete && (
+                <div className="flex min-h-[340px] items-center justify-center px-4 text-center">
+                  <p className="max-w-md text-sm text-gray-500">
+                    {t('text-search-hint')}
+                  </p>
                 </div>
               )}
               {open && (

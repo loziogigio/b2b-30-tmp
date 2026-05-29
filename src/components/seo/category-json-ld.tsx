@@ -19,7 +19,7 @@ function categoryUrl(
 ): string {
   const suffix =
     path && path.length ? `/${path.map(encodeURIComponent).join('/')}` : '';
-  return `${siteUrl}/${lang}/category${suffix}`;
+  return `${siteUrl}/${lang}/categorie${suffix}`;
 }
 
 /**
@@ -53,6 +53,11 @@ export default function CategoryJsonLd({
       .trim()
       .slice(0, 200) || undefined;
 
+  const image =
+    category?.category_banner_image ||
+    category?.category_menu_image ||
+    undefined;
+
   const crumbs: { name: string; url: string }[] = [
     { name: 'Home', url: homeUrl },
   ];
@@ -67,6 +72,19 @@ export default function CategoryJsonLd({
   } else {
     crumbs.push({ name: rootLabel, url: rootUrl });
   }
+
+  // Non-leaf categories surface their subcategories via `hasPart`. This lets
+  // Google understand the taxonomy of a parent page even before crawling its
+  // children, and is how knowledge-panel-style category hierarchies get built.
+  const subcategories = category?.children ?? [];
+  const hasPart =
+    subcategories.length > 0
+      ? subcategories.map((child) => ({
+          '@type': 'CollectionPage',
+          name: child.label || child.name,
+          url: categoryUrl(siteUrl, lang, child.path),
+        }))
+      : undefined;
 
   const data = [
     {
@@ -85,7 +103,14 @@ export default function CategoryJsonLd({
       name,
       url,
       ...(description ? { description } : {}),
-      isPartOf: { '@type': 'WebSite', url: homeUrl },
+      ...(image ? { image } : {}),
+      ...(hasPart ? { hasPart } : {}),
+      isPartOf: {
+        '@type': 'WebSite',
+        url: homeUrl,
+        name: siteName || rootLabel,
+      },
+      inLanguage: lang === 'it' ? 'it-IT' : 'en-US',
     },
   ];
 

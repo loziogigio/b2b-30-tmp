@@ -187,6 +187,7 @@ docker build \
   --build-arg VINC_INTERNAL_API_KEY="${VINC_INTERNAL_API_KEY:-}" \
   --build-arg NEXT_PUBLIC_GOOGLE_API_KEY="${NEXT_PUBLIC_GOOGLE_API_KEY:-}" \
   --build-arg NEXT_PUBLIC_STRIPE_PUBLIC_KEY="${NEXT_PUBLIC_STRIPE_PUBLIC_KEY:-}" \
+  --build-arg NEXT_PUBLIC_PRICING_SOURCE="${NEXT_PUBLIC_PRICING_SOURCE:-inline}" \
   --label "tenant-mode=$([ "$IS_MULTI_TENANT" == "true" ] && echo "multi" || echo "single")" \
   --label "tenant=${TENANT}" \
   --label "version=${VERSION}" \

@@ -36,7 +36,7 @@ const CategoryBreadcrumb: React.FC<BreadcrumbNavProps> = ({
   const isRoot = categories.length === 0;
 
   const toCategoryHref = (node?: MenuTreeNode) =>
-    node ? `/${lang}/category/${node.path.join('/')}` : `/${lang}/category`;
+    node ? `/${lang}/categorie/${node.path.join('/')}` : `/${lang}/categorie`;
 
   return (
     <nav aria-label="Breadcrumb" className="flex items-center mb-3">

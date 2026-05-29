@@ -2,7 +2,7 @@
 
 import React from 'react';
 import cn from 'classnames';
-import { IoArrowForwardOutline } from 'react-icons/io5';
+import { IoArrowForwardOutline, IoTimeOutline } from 'react-icons/io5';
 import type { ErpPriceData } from '@utils/transform/erp-prices';
 import { useCart } from '@contexts/cart/cart.context';
 
@@ -86,20 +86,83 @@ export function TimeAlreadyPurchasedBadge({
   priceData,
   t,
   size = 'md',
+  align = 'start',
+  inline = false,
+  full = false,
 }: {
   priceData?: ErpPriceData;
   t: TFn;
   size?: 'sm' | 'md';
+  align?: 'start' | 'end';
+  /** Render the label + date on a single line instead of stacked. */
+  inline?: boolean;
+  /** Full one-line block: clock + label + date + quantity. */
+  full?: boolean;
 }) {
   if (!priceData?.buy_did) return null;
   const date = priceData?.buy_did_last_date;
   const isSm = size === 'sm';
-  return (
-    <div className="inline-flex flex-col items-start gap-0.5 leading-tight">
+  const uom = priceData?.packaging_option_default?.packaging_uom;
+  const amount = (priceData as any)?.buy_did_amount;
+  const qty =
+    amount != null && Number(amount) > 0
+      ? `${amount}${uom ? ` ${uom}` : ''}`
+      : '';
+
+  // Full (product detail): one block — clock + label + date + qty.
+  if (full) {
+    return (
+      <span className="inline-flex items-center gap-1.5 bg-[#16a34a] text-white font-bold rounded-[5px] uppercase tracking-wide font-[family-name:var(--font-body)] whitespace-nowrap text-[11px] sm:text-xs px-2.5 py-1">
+        <IoTimeOutline size={13} />
+        {t('text-already-ordered', { defaultValue: 'Già ordinato' })}
+        {date && (
+          <span className="font-mono tabular-nums normal-case">{date}</span>
+        )}
+        {qty && <span className="normal-case opacity-90">· {qty}</span>}
+      </span>
+    );
+  }
+
+  // Inline (grid): compact — clock + date + qty, no "Ordinato" label. The full
+  // wording lives in the hover tooltip.
+  if (inline) {
+    return (
       <span
         className={cn(
-          'bg-[#16a34a] text-white font-extrabold px-2 py-[3px] rounded-[5px] uppercase tracking-wide font-[family-name:var(--font-body)] whitespace-nowrap',
-          isSm ? 'text-[10px]' : 'text-[10px] sm:text-[11px]',
+          'inline-flex items-center gap-1 bg-[#16a34a] text-white font-bold rounded-[5px] font-[family-name:var(--font-body)] whitespace-nowrap',
+          isSm
+            ? 'text-[10px] px-1.5 py-[2px]'
+            : 'text-[10px] sm:text-[11px] px-2 py-[3px]',
+        )}
+        title={
+          date
+            ? t('text-ordered-on', {
+                defaultValue: `Già ordinato il ${date}`,
+              })
+            : t('text-already-ordered', { defaultValue: 'Già ordinato' })
+        }
+      >
+        <IoTimeOutline size={isSm ? 11 : 12} />
+        {date && <span className="font-mono tabular-nums">{date}</span>}
+        {qty && <span className="opacity-90">· {qty}</span>}
+      </span>
+    );
+  }
+
+  // Stacked: green label pill above the date.
+  return (
+    <div
+      className={cn(
+        'inline-flex flex-col gap-0.5 leading-tight',
+        align === 'end' ? 'items-end' : 'items-start',
+      )}
+    >
+      <span
+        className={cn(
+          'bg-[#16a34a] text-white font-extrabold rounded-[5px] uppercase tracking-wide font-[family-name:var(--font-body)] whitespace-nowrap',
+          isSm
+            ? 'text-[10px] px-1.5 py-[2px]'
+            : 'text-[10px] sm:text-[11px] px-2 py-[3px]',
         )}
       >
         {t('text-already-ordered', { defaultValue: 'Già ordinato' })}
@@ -190,7 +253,12 @@ export function TimeStatusBadges({
         />
       )}
       {showOrdered && (
-        <TimeAlreadyPurchasedBadge priceData={priceData} t={t} size={size} />
+        <TimeAlreadyPurchasedBadge
+          priceData={priceData}
+          t={t}
+          size={size}
+          full
+        />
       )}
     </div>
   );

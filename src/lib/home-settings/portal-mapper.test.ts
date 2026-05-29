@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   mapPortalToHomeSettings,
   mapFooter,
+  mapCustomScripts,
 } from '@/lib/home-settings/portal-mapper';
 import { DEFAULT_HOME_SETTINGS } from '@/lib/home-settings/defaults';
 
@@ -123,6 +124,94 @@ describe('mapPortalToHomeSettings', () => {
     });
     expect(hs.footerHtml).toBe('<footer>raw</footer>');
     expect(hs.footer!.footerHtml).toBe('<footer>raw</footer>');
+  });
+});
+
+describe('mapCustomScripts', () => {
+  it('returns undefined for missing/empty input', () => {
+    expect(mapCustomScripts(undefined)).toBeUndefined();
+    expect(mapCustomScripts([])).toBeUndefined();
+  });
+
+  it('maps snake_case → camelCase and defaults placement/strategy/enabled', () => {
+    const scripts = mapCustomScripts([
+      {
+        label: 'GA',
+        src: 'https://www.googletagmanager.com/gtag/js?id=G-X',
+        inline_code: "gtag('config','G-X')",
+        placement: 'head',
+        loading_strategy: 'async',
+        enabled: true,
+      },
+      // No placement/strategy/enabled → defaults to head / async / enabled
+      { label: 'Bare', inline_code: 'console.log(1)' },
+    ]);
+    expect(scripts).toHaveLength(2);
+    expect(scripts![0]).toEqual({
+      label: 'GA',
+      src: 'https://www.googletagmanager.com/gtag/js?id=G-X',
+      inlineCode: "gtag('config','G-X')",
+      placement: 'head',
+      loadingStrategy: 'async',
+      enabled: true,
+    });
+    expect(scripts![1]).toMatchObject({
+      label: 'Bare',
+      inlineCode: 'console.log(1)',
+      placement: 'head',
+      loadingStrategy: 'async',
+      enabled: true,
+    });
+    expect(scripts![1].src).toBeUndefined();
+  });
+
+  it('drops entries with neither src nor inline_code, and normalizes bad enums', () => {
+    const scripts = mapCustomScripts([
+      { label: 'Empty' }, // dropped — nothing to inject
+      { label: 'Blank', src: '   ', inline_code: '  ' }, // dropped — whitespace only
+      {
+        label: 'Body',
+        src: 'https://cdn/x.js',
+        placement: 'bogus',
+        loading_strategy: 'weird',
+        enabled: false,
+      },
+    ]);
+    expect(scripts).toHaveLength(1);
+    expect(scripts![0]).toMatchObject({
+      label: 'Body',
+      placement: 'head', // invalid → default
+      loadingStrategy: 'async', // invalid → default
+      enabled: false, // explicit false preserved
+    });
+  });
+
+  it('is wired into mapPortalToHomeSettings', () => {
+    const hs = mapPortalToHomeSettings({
+      custom_scripts: [
+        { label: 'Pixel', src: 'https://cdn/p.js', enabled: true },
+      ],
+    });
+    expect(hs.customScripts).toHaveLength(1);
+    expect(hs.customScripts![0].src).toBe('https://cdn/p.js');
+  });
+});
+
+describe('custom CSS mapping', () => {
+  it('maps non-empty custom_css onto customCss', () => {
+    const hs = mapPortalToHomeSettings({
+      custom_css: '.cookie-bar{display:none}',
+    });
+    expect(hs.customCss).toBe('.cookie-bar{display:none}');
+  });
+
+  it('omits customCss when portal CSS is empty/whitespace', () => {
+    expect(
+      mapPortalToHomeSettings({ custom_css: '   ' }).customCss,
+    ).toBeUndefined();
+    expect(
+      mapPortalToHomeSettings({ branding: { title: 'X' } }).customCss,
+    ).toBeUndefined();
   });
 });
 

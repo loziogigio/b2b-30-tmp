@@ -16,8 +16,8 @@ import {
 } from '@framework/likes';
 import { getUserReminders as apiGetUserReminders } from '@framework/reminders';
 import React from 'react';
-import TimeSearchCard from './time-search-card';
-import TimeSearchRow from './time-search-row';
+import TimeProductCard from '@components/themes/time/product/time-product-card';
+import TimeProductRow from './time-product-row';
 import { IoGridOutline, IoListOutline } from 'react-icons/io5';
 import { IoChevronDown } from 'react-icons/io5';
 
@@ -447,9 +447,8 @@ export const TimeProductSearch: FC<TimeProductSearchProps> = ({
               </div>
             ))
           ) : (
-            data?.pages?.map((page: any, pageIdx: number) => {
-              let pageItemIndex = 0;
-              return page?.items?.map((p: any) => {
+            data?.pages?.map((page: any) =>
+              page?.items?.map((p: any) => {
                 const vars = Array.isArray(p.variations) ? p.variations : [];
                 const isSingleVariant =
                   vars.length === 1 &&
@@ -457,31 +456,23 @@ export const TimeProductSearch: FC<TimeProductSearchProps> = ({
                 const target = isSingleVariant
                   ? { ...vars[0], variantCount: 1 }
                   : p;
-                // Only stagger animation on first page; subsequent pages appear instantly
-                const animIndex = pageIdx === 0 ? pageItemIndex : 0;
-                pageItemIndex++;
 
-                if (isList) {
-                  return (
-                    <TimeSearchRow
-                      key={`row-${target.id}`}
-                      product={target}
-                      lang={lang}
-                      index={animIndex}
-                    />
-                  );
-                }
-
-                return (
-                  <TimeSearchCard
-                    key={`card-${target.id}`}
-                    product={target}
+                return isList ? (
+                  <TimeProductRow
+                    key={`row-${target.id}`}
                     lang={lang}
-                    index={animIndex}
+                    product={target}
+                  />
+                ) : (
+                  <TimeProductCard
+                    key={`card-${target.id}`}
+                    lang={lang}
+                    product={target}
+                    className="w-full h-full flex flex-col"
                   />
                 );
-              });
-            })
+              }),
+            )
           )}
         </div>
       )}

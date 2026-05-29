@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { parseMyMbConnection } from 'vinc-erp';
 import { resolveTenant, isSingleTenant } from '@/lib/tenant';
 
 // Default values from .env (used in single-tenant mode)
@@ -57,10 +58,24 @@ async function proxyRequest(
   // Get tenant-specific configuration
   const config = await getTenantConfig(req);
 
+  // If the configured B2B API URL embeds credentials (e.g. a MyMB connection
+  // string `http://user:pass@host/...`), Node's fetch() rejects the URL. Strip
+  // the credentials into an `Authorization: Basic` header and use the clean
+  // base URL — same handling as the ERP client (parseMyMbConnection).
+  let apiUrl = config.b2bApiUrl;
+  let basicAuthHeader: string | undefined;
+  try {
+    if (new URL(config.b2bApiUrl).username) {
+      const conn = parseMyMbConnection(config.b2bApiUrl);
+      apiUrl = conn.baseUrl;
+      basicAuthHeader = conn.authHeader;
+    }
+  } catch {
+    // Not a parseable URL with credentials — use it as-is.
+  }
+
   // Ensure base URL ends with /
-  const baseUrl = config.b2bApiUrl.endsWith('/')
-    ? config.b2bApiUrl
-    : `${config.b2bApiUrl}/`;
+  const baseUrl = apiUrl.endsWith('/') ? apiUrl : `${apiUrl}/`;
   const targetUrl = new URL(pathString, baseUrl);
 
   // Forward query params
@@ -73,10 +88,15 @@ async function proxyRequest(
     Accept: 'application/json',
   };
 
-  // Forward user's JWT for authentication
-  const authHeader = req.headers.get('Authorization');
-  if (authHeader) {
-    headers['Authorization'] = authHeader;
+  // Basic auth derived from a credentialed B2B URL takes precedence; otherwise
+  // forward the user's JWT for authentication.
+  if (basicAuthHeader) {
+    headers['Authorization'] = basicAuthHeader;
+  } else {
+    const authHeader = req.headers.get('Authorization');
+    if (authHeader) {
+      headers['Authorization'] = authHeader;
+    }
   }
 
   const fetchOptions: RequestInit = {

@@ -5,7 +5,7 @@ import type {
   HeaderWidgetType,
   RowLayout,
 } from '@/lib/home-settings/types';
-import { HeaderBlockRenderer } from '@/layouts/header/header-block-renderer';
+import { TimeHeaderBlockRenderer } from './time-header-block-renderer';
 import cn from 'classnames';
 
 // Widgets that only render on desktop (lg+). A row containing nothing but these
@@ -28,13 +28,16 @@ interface TimeHeaderRowRendererProps {
   registerRef?: (id: string, el: HTMLElement | null) => void;
 }
 
+// Use fr units (not %) so the column gap is absorbed by the tracks instead of
+// being added on top — percentages + gap overflow the container and push the
+// right-hand block (e.g. the Accedi button) past the edge.
 const LAYOUT_CLASSES: Record<RowLayout, string> = {
   full: 'flex flex-wrap lg:grid lg:grid-cols-1',
-  '50-50': 'flex flex-wrap lg:grid lg:grid-cols-[50%_50%]',
+  '50-50': 'flex flex-wrap lg:grid lg:grid-cols-[1fr_1fr]',
   '33-33-33': 'flex flex-wrap lg:grid lg:grid-cols-3',
-  '20-60-20': 'flex justify-between lg:grid lg:grid-cols-[20%_60%_20%]',
-  '25-50-25': 'flex justify-between lg:grid lg:grid-cols-[25%_50%_25%]',
-  '30-40-30': 'flex justify-between lg:grid lg:grid-cols-[30%_40%_30%]',
+  '20-60-20': 'flex justify-between lg:grid lg:grid-cols-[1fr_3fr_1fr]',
+  '25-50-25': 'flex justify-between lg:grid lg:grid-cols-[1fr_2fr_1fr]',
+  '30-40-30': 'flex justify-between lg:grid lg:grid-cols-[3fr_4fr_3fr]',
 };
 
 export function TimeHeaderRowRenderer({
@@ -59,6 +62,13 @@ export function TimeHeaderRowRenderer({
     rowWidgets.length > 0 &&
     rowWidgets.every((w) => DESKTOP_ONLY_WIDGETS.has(w.type));
 
+  // DFL La Mura: the category-nav row is a flat white strip (the items carry the
+  // red active underline themselves), so force white here even if the tenant
+  // config tints the row — the reference design wants the bar to disappear.
+  const hasCategoryMenu = rowWidgets.some(
+    (w) => w.type === 'category-menu' || w.type === 'categories',
+  );
+
   return (
     <div
       ref={(el) => registerRef?.(row.id, el)}
@@ -70,20 +80,26 @@ export function TimeHeaderRowRenderer({
         elevated && 'shadow-[0_1px_3px_rgba(0,0,0,0.06)]',
       )}
       style={{
-        backgroundColor: row.backgroundColor || '#ffffff',
+        backgroundColor: hasCategoryMenu
+          ? '#ffffff'
+          : row.backgroundColor || '#ffffff',
         color: row.textColor,
         height: row.height ? `${row.height}px` : undefined,
-        top: isFixed ? stickyTop ?? 0 : undefined,
+        top: isFixed ? (stickyTop ?? 0) : undefined,
       }}
     >
       <div
         className={cn(
-          'mx-auto max-w-[1600px] items-center px-5 py-2 gap-2 lg:gap-4',
+          'mx-auto max-w-[1600px] items-center px-5 gap-2 lg:gap-4',
+          // Category-nav row: drop the bottom padding so each item's red
+          // hover/active underline (border-b) lands exactly on the row's bottom
+          // edge — i.e. flush with the red line of the mega-dropdown below it.
+          hasCategoryMenu ? 'pt-2 pb-0' : 'py-2',
           layoutClass,
         )}
       >
         {row.blocks.map((block) => (
-          <HeaderBlockRenderer key={block.id} block={block} lang={lang} />
+          <TimeHeaderBlockRenderer key={block.id} block={block} lang={lang} />
         ))}
       </div>
     </div>

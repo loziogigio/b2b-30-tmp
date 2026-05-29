@@ -380,22 +380,21 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
 
           {/* ── RIGHT: Product Info ── */}
           <div className="flex flex-col">
-            {/* Brand + SKU + Parent SKU (codice figura) */}
-            <div className="flex items-center gap-2.5 flex-wrap mb-3">
+            {/* SKU (primary) · Brand (secondary) */}
+            <div className="flex items-center gap-2 flex-wrap mb-3">
+              <span className="text-sm sm:text-base font-bold text-[var(--time-dark)] font-mono shrink-0">
+                {sku}
+              </span>
+              {sku && product.brand?.name && (
+                <span className="text-sm sm:text-base text-[var(--time-gray-300)]">
+                  ·
+                </span>
+              )}
               {product.brand?.name && (
-                <span className="bg-[var(--time-red)] text-white text-xs sm:text-[13px] font-extrabold px-2.5 py-[4px] rounded-[6px] font-[family-name:var(--font-body)] uppercase">
+                <span className="text-xs sm:text-sm font-bold text-[var(--time-red)] uppercase tracking-wider font-[family-name:var(--font-body)] truncate">
                   {product.brand.name as string}
                 </span>
               )}
-              <span className="text-xs sm:text-[13px] font-semibold text-[var(--time-gray-500)] font-mono">
-                {sku}
-              </span>
-              {product.parent_sku &&
-                String(product.parent_sku) !== String(sku) && (
-                  <span className="bg-[var(--time-gray-100)] text-[var(--time-gray-500)] text-[11px] sm:text-xs font-bold px-2 py-[3px] rounded-md font-mono uppercase tracking-wider">
-                    Fig: {product.parent_sku as string}
-                  </span>
-                )}
             </div>
 
             {/* Title */}

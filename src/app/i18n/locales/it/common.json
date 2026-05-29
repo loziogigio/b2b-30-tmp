@@ -535,6 +535,7 @@
   "text-try-different-filters": "Prova a modificare i filtri di ricerca",
   "text-recent-searches": "Ultime ricerche:",
   "text-no-recent-searches": "Nessuna ricerca recente",
+  "text-search-hint": "Inizia a digitare per cercare: i suggerimenti appariranno qui.",
   "text-filters": "Filtri",
   "text-popular-searches": "Ricerche popolari",
   "text-see-all-results-for": "CLICCA QUI, per vedere tutti i risultati per \"{{query}}\"",

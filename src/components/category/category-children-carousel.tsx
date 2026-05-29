@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { IoChevronForward, IoChevronBack } from 'react-icons/io5';
 import { useTranslation } from 'src/app/i18n/client';
 import type { MenuTreeNode } from '@framework/product/get-pim-menu';
+import { ROUTES } from '@utils/routes';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation } from 'swiper/modules';
 import 'swiper/css';
@@ -30,9 +31,9 @@ const carouselBreakpoints = {
 function buildCategoryHref(lang: string, node: MenuTreeNode): string {
   if (node.path?.length) {
     // node.path is already slugified from the PIM transformation
-    return `/${lang}/category/${node.path.join('/')}`;
+    return `/${lang}/categorie/${node.path.join('/')}`;
   }
-  return `/${lang}/category`;
+  return `/${lang}/categorie`;
 }
 
 /* =========================
@@ -64,11 +65,23 @@ export function CategoryCard({
 
   if (!isTopLevel) {
     const isLeaf = !node.children || node.children.length === 0;
-    if (isLeaf && node.url) {
-      href = node.url.startsWith('/')
-        ? `/${lang}${node.url}`
-        : `/${lang}/${node.url}`;
-      isGoingToSearch = true;
+    if (isLeaf) {
+      if (node.url) {
+        // CMS-authored leaf link (e.g. menu nodes carry a /shop?... search URL).
+        href = node.url.startsWith('/')
+          ? `/${lang}${node.url}`
+          : `/${lang}/${node.url}`;
+        isGoingToSearch = true;
+      } else if (node.external_code) {
+        // Categories-tree leaves have no CMS url — send the last leaf to the
+        // faceted search page filtered by its ERP group code. Products are
+        // indexed with their erp-group hierarchy in `attribute_erp_groups_ss`,
+        // so this lands on the product results instead of a category page.
+        href = `/${lang}${ROUTES.SEARCH}?filters-attribute_erp_groups_ss=${encodeURIComponent(
+          node.external_code,
+        )}`;
+        isGoingToSearch = true;
+      }
     }
   }
 

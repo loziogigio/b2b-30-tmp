@@ -10,6 +10,16 @@ import {
   mergeContexts,
   parseContextCookie,
 } from '@/lib/page-context';
+import {
+  decideCategoryRouting,
+  parseCategoryRootEnv,
+} from '@/lib/seo/category-root';
+
+// Per-locale category root segment (spec D2/D3). Read once at module load so the
+// Edge middleware stays sync; SSR pages read the authoritative value from vcs.
+const CATEGORY_ROOT_MAP = parseCategoryRootEnv(
+  process.env.NEXT_PUBLIC_CATEGORY_ROOT,
+);
 
 acceptLanguage.languages(languages);
 
@@ -218,6 +228,26 @@ export function middleware(req: NextRequest) {
       sameSite: 'lax',
     });
     return applyCampaignPersistence(req, response);
+  }
+
+  // Dynamic category root (spec D2/D3): map the per-tenant public root segment
+  // onto the internal `/categorie` route, and 301 the legacy `/categorie` URL
+  // to the configured root. No-op when the tenant uses the default `categorie`.
+  const { rewriteTo, redirectTo } = decideCategoryRouting(
+    req.nextUrl.pathname,
+    CATEGORY_ROOT_MAP,
+  );
+  if (redirectTo) {
+    const redirectUrl = new URL(`${redirectTo}${req.nextUrl.search}`, req.url);
+    return applyCampaignPersistence(
+      req,
+      NextResponse.redirect(redirectUrl, { status: 301 }),
+    );
+  }
+  if (rewriteTo) {
+    const rewriteUrl = new URL(req.nextUrl);
+    rewriteUrl.pathname = rewriteTo;
+    return applyCampaignPersistence(req, NextResponse.rewrite(rewriteUrl));
   }
 
   const response = NextResponse.next();

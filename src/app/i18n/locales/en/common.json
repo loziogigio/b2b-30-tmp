@@ -408,6 +408,7 @@
   "text-try-different-filters": "Try adjusting your search filters",
   "text-recent-searches": "Recent searches:",
   "text-no-recent-searches": "No recent searches",
+  "text-search-hint": "Start typing to search — suggestions will appear here.",
   "text-filters": "Filters",
   "text-popular-searches": "Popular searches",
   "text-see-all-results-for": "See all results for \"{{query}}\"",

@@ -61,7 +61,7 @@ const registry: Record<ThemeId, Record<ComponentSlot, () => Promise<any>>> = {
       import('@/components/themes/time/product/time-variants-quick-view'),
     Cart: () => import('@/components/themes/time/cart/time-cart'),
     SearchOverlay: () =>
-      import('@/components/themes/default/search/default-search-overlay'),
+      import('@/components/themes/time/search/time-search-overlay'),
   },
 };
 

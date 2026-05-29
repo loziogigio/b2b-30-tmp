@@ -10,6 +10,7 @@ import {
   type ErpPriceData,
   type PromoOffer,
 } from '@utils/transform/erp-prices';
+import { buildDisplayPackaging, buildPackagingParts } from '@utils/packaging';
 import { useTranslation } from 'src/app/i18n/client';
 import { useUI } from '@contexts/ui.context';
 import { useHomeSettings } from '@/hooks/use-home-settings';
@@ -58,16 +59,6 @@ const splitLabelLines = (label: string): string[] => {
   return [words.slice(0, mid).join(' '), words.slice(mid).join(' ')];
 };
 
-/** Compose UM / MV / CF packaging info into "UM: kg · MV: 12 · CF: 144". */
-const buildPackagingParts = (priceData: ErpPriceData): string[] => {
-  const um = priceData.packaging_option_default?.packaging_uom || '';
-  const options = priceData.packaging_options_all ?? [];
-  return [
-    um ? `UM: ${um}` : '',
-    ...options.map((o) => `${o.packaging_code}: ${o.qty_x_packaging ?? '1'}`),
-  ].filter(Boolean);
-};
-
 /**
  * Renders the product's pricing as a stack of rows: a base "LISTINO" row
  * plus one row per active promo offer. Each promo row also shows a
@@ -111,6 +102,7 @@ export default function TimeOfferRows({ lang, product, priceData }: Props) {
       <Row
         label={t('text-listino', { defaultValue: 'LISTINO' })}
         labelTone="neutral"
+        product={product}
         priceData={priceData}
         decimals={decimals}
         gross={baseGross}
@@ -176,6 +168,7 @@ export default function TimeOfferRows({ lang, product, priceData }: Props) {
             labelTone="promo"
             title={cleanTitle(offer.promo_title)}
             endDate={formatYmdToItalian(offer.promo_end_date)}
+            product={product}
             priceData={promoPriceData}
             decimals={decimals}
             gross={promoGross}
@@ -215,6 +208,7 @@ type RowProps = {
   labelTone: 'neutral' | 'promo';
   title?: string;
   endDate?: string;
+  product: any;
   priceData: ErpPriceData;
   decimals: number;
   gross: number;
@@ -231,6 +225,7 @@ function Row({
   labelTone,
   title,
   endDate,
+  product,
   priceData,
   decimals,
   gross,
@@ -241,6 +236,7 @@ function Row({
   cart,
   footer,
 }: RowProps) {
+  const { openModal } = useModalAction();
   const isPromo = labelTone === 'promo';
   // Only strike when there's a real markdown (retail > list). Equal values
   // mean no MSRP discount — don't render a misleading line-through.
@@ -249,6 +245,10 @@ function Row({
     ? (Number(gross) - Number(net)).toFixed(decimals)
     : null;
   const packagingParts = buildPackagingParts(priceData);
+  // From three options up the inline "CRT: 20 · Epal 120: 640 · …" list gets
+  // unwieldy — surface a compact trigger that opens the packaging modal.
+  const packagingOptions = buildDisplayPackaging(priceData);
+  const showPackagingModal = packagingOptions.length >= 3;
 
   return (
     <div
@@ -298,10 +298,36 @@ function Row({
           </span>
         )}
 
-        {packagingParts.length > 0 && (
-          <span className="ml-auto text-[11px] sm:text-xs text-[var(--time-gray-400)] font-mono shrink-0 whitespace-nowrap">
-            {packagingParts.join(' · ')}
-          </span>
+        {showPackagingModal ? (
+          // Three or more packaging options: keep the first two inline and
+          // offer a clickable arrow that opens the full breakdown.
+          <button
+            type="button"
+            onClick={() =>
+              openModal('TIME_PACKAGING_VIEW', {
+                sku: product?.sku,
+                name: product?.name,
+                options: packagingOptions,
+              })
+            }
+            title={t('text-packaging-items', {
+              defaultValue: 'Imballi articoli',
+            })}
+            className="ml-auto inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap cursor-pointer group"
+          >
+            <span className="text-[11px] sm:text-xs text-[var(--time-gray-400)] font-mono">
+              {packagingParts.slice(0, 3).join(' · ')} …
+            </span>
+            <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-[var(--time-red)] text-white transition-colors group-hover:bg-[var(--time-dark)]">
+              <IoArrowForwardOutline className="h-3 w-3 -rotate-45 transition-transform group-hover:-translate-y-px" />
+            </span>
+          </button>
+        ) : (
+          packagingParts.length > 0 && (
+            <span className="ml-auto text-[11px] sm:text-xs text-[var(--time-gray-400)] font-mono shrink-0 whitespace-nowrap">
+              {packagingParts.join(' · ')}
+            </span>
+          )
         )}
       </div>
 

@@ -102,10 +102,21 @@ function getCachedTenant(hostname: string): TenantConfig | null {
   const entry = tenantCache.get(hostname);
   if (!entry) return null;
   if (Date.now() > entry.expiresAt) {
-    tenantCache.delete(hostname);
+    // Expired — caller should refresh from DB. We deliberately keep the entry
+    // around (don't delete) so `getStaleTenant` can serve it if the refresh
+    // fails (stale-if-error), avoiding a fallback to the empty default DB.
     return null;
   }
   return entry.tenant;
+}
+
+/**
+ * Last-known tenant for a hostname, regardless of TTL. Used as a stale-if-error
+ * fallback: a transient registry blip should not drop a previously-resolved
+ * tenant to `vinc-default` (which yields empty home templates / "No Content").
+ */
+function getStaleTenant(hostname: string): TenantConfig | null {
+  return tenantCache.get(hostname)?.tenant ?? null;
 }
 
 function setCachedTenant(hostname: string, tenant: TenantConfig): void {
@@ -135,15 +146,40 @@ async function getRegistryDb(): Promise<Db> {
 
   const dbName = process.env.TENANTS_DB || 'vinc-admin';
 
-  registryClient = new MongoClient(mongoUrl, {
+  const client = new MongoClient(mongoUrl, {
     minPoolSize: 1,
     maxPoolSize: 5,
+    serverSelectionTimeoutMS: 5000,
   });
 
-  await registryClient.connect();
-  registryDb = registryClient.db(dbName);
+  // The first request after a cold start has to open this connection across
+  // the network to the registry Mongo. A single slow/flaky attempt would
+  // otherwise bubble up as a null tenant → fallback to the empty default DB →
+  // "No Content Available". Retry a couple of times with short backoff so a
+  // transient hiccup on the *first* visit doesn't surface as an empty page.
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      await client.connect();
+      registryClient = client;
+      registryDb = client.db(dbName);
+      return registryDb;
+    } catch (err) {
+      lastErr = err;
+      console.warn(
+        `[TenantService] Registry connect attempt ${attempt}/3 failed:`,
+        (err as Error)?.message,
+      );
+      if (attempt < 3) {
+        await new Promise((r) => setTimeout(r, attempt * 250));
+      }
+    }
+  }
 
-  return registryDb;
+  // Don't cache a half-open client — closing it lets the next call retry
+  // cleanly instead of reusing a dead connection.
+  await client.close().catch(() => {});
+  throw lastErr;
 }
 
 // =============================================================================
@@ -255,6 +291,22 @@ async function resolveTenantFromDb(
     return null;
   } catch (error) {
     console.error('[TenantService] Error resolving tenant:', error);
+    // Registry lookup failed (e.g. transient network blip to the registry
+    // Mongo). If we resolved this hostname before, serve the stale config
+    // rather than null — null sends `connectToDatabase` to the empty default
+    // DB and renders "No Content Available" for an otherwise-healthy tenant.
+    const stale = getStaleTenant(hostname);
+    if (stale) {
+      console.warn(
+        `[TenantService] Serving stale tenant for ${hostname} after registry error`,
+      );
+      // Reset the broken registry handle so the next call reconnects.
+      registryDb = null;
+      registryClient = null;
+      return stale;
+    }
+    registryDb = null;
+    registryClient = null;
     return null;
   }
 }

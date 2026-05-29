@@ -1,5 +1,9 @@
-import { unstable_cache } from 'next/cache';
-import { connectToDatabase, getHomeTemplateModelForDb } from './connection';
+import {
+  connectToDatabase,
+  getPooledConnection,
+  getHomeTemplateModelForDb,
+  resolveTenantDbTarget,
+} from './connection';
 import type {
   HomeTemplateDocument,
   HomeTemplateVersion,
@@ -9,8 +13,7 @@ import {
   normalizeTagsInput,
   resolveVersion,
 } from '@/lib/page-version-resolver';
-import { isSingleTenant } from '@/lib/tenant';
-import { cacheTag, SINGLE_TENANT_ID } from '@/lib/cache/tags';
+import { cachedJson } from '@/lib/cache/redis-cache';
 
 const HOME_TEMPLATE_ID = 'home-page';
 
@@ -32,23 +35,39 @@ const buildReturnPayload = (
   matchedBy,
 });
 
-/**
- * Get published home template for vinc-b2b
- * New structure: Queries for all documents with same templateId, uses version resolver
- */
-export async function getPublishedHomeTemplate(options?: {
-  tags?: PageVersionTags | null;
-}): Promise<any | null> {
-  console.log('[getPublishedHomeTemplate] Starting...');
-
-  let connection;
-  try {
-    connection = await connectToDatabase();
-    console.log('[getPublishedHomeTemplate] DB connected to:', connection.name);
-  } catch (err) {
-    console.error('[getPublishedHomeTemplate] DB connection failed:', err);
-    return null;
+/** Open the pooled connection for `dbName`, retrying a few times so a cold
+ *  start or a transient remote-Mongo blip doesn't surface as a null template
+ *  (→ "No Content Available"). Throws after the final attempt so the caller's
+ *  cache does NOT store an empty result for a connection failure. */
+async function connectForDbWithRetry(dbName: string, attempts = 3) {
+  let lastErr: unknown;
+  for (let i = 1; i <= attempts; i++) {
+    try {
+      return await getPooledConnection(dbName);
+    } catch (err) {
+      lastErr = err;
+      console.warn(
+        `[getPublishedHomeTemplate] DB connect attempt ${i}/${attempts} for ${dbName} failed:`,
+        (err as Error)?.message,
+      );
+      if (i < attempts) await new Promise((r) => setTimeout(r, i * 200));
+    }
   }
+  throw lastErr;
+}
+
+/**
+ * Core fetch for an explicit database name (no `headers()` / tenant resolution
+ * inside — so it is safe to wrap in `unstable_cache`). On a connection failure
+ * it throws (rather than returning null) so the caller's cache treats it as an
+ * error and serves stale instead of caching an empty page.
+ */
+async function fetchPublishedHomeTemplateForDb(
+  dbName: string,
+  options?: { tags?: PageVersionTags | null },
+): Promise<any | null> {
+  const connection = await connectForDbWithRetry(dbName);
+  console.log('[getPublishedHomeTemplate] DB connected to:', connection.name);
 
   // Get model for this specific connection using model registry
   const HomeTemplateModel = await getHomeTemplateModelForDb(connection.name);
@@ -119,24 +138,61 @@ export async function getPublishedHomeTemplate(options?: {
 }
 
 /**
- * Cached wrapper around getPublishedHomeTemplate (per `revalidate: 300` + the
- * `home-template-${tenant}` tag, so the PIM publish-event subscriber can flush it).
- *
- * Only used in single-tenant mode: in multi-tenant, connectToDatabase resolves
- * the tenant DB from request headers, which `unstable_cache` callbacks can't read.
+ * Resolve the tenant DB + published home template (uncached).
+ * Used by the preview path and as the producer behind the cached variant.
  */
-const cachedPublishedHomeTemplate = unstable_cache(
-  (options?: { tags?: PageVersionTags | null }) =>
-    getPublishedHomeTemplate(options),
-  ['home-template', SINGLE_TENANT_ID],
-  { revalidate: 300, tags: [cacheTag('home-template', SINGLE_TENANT_ID)] },
-);
+export async function getPublishedHomeTemplate(options?: {
+  tags?: PageVersionTags | null;
+}): Promise<any | null> {
+  const { dbName } = await resolveTenantDbTarget();
+  return fetchPublishedHomeTemplateForDb(dbName, options);
+}
 
+/** Stable cache-key fragment for the version/context tags. Values may be
+ *  nested objects (e.g. `attributes`), so serialize with sorted-key JSON to
+ *  keep the key deterministic and collision-free. */
+function stableStringify(value: unknown): string {
+  if (value === null || typeof value !== 'object') return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
+  const obj = value as Record<string, unknown>;
+  return `{${Object.keys(obj)
+    .sort()
+    .map((k) => `${JSON.stringify(k)}:${stableStringify(obj[k])}`)
+    .join(',')}}`;
+}
+
+function tagsKey(tags?: PageVersionTags | null): string {
+  const norm = normalizeTagsInput(tags);
+  if (!norm || Object.keys(norm).length === 0) return 'default';
+  return Object.keys(norm)
+    .sort()
+    .map((k) => `${k}=${stableStringify((norm as Record<string, unknown>)[k])}`)
+    .join('&');
+}
+
+/** Redis cache key prefix for a tenant's home template (used for invalidation too). */
+export function homeTemplateCachePrefix(tenantId: string): string {
+  return `home-template:${tenantId}:`;
+}
+
+/**
+ * Published home template, cached in Redis per (tenant, version-tags).
+ *
+ * Redis is the store so the value survives restarts and is shared across
+ * processes; stale-while-revalidate + stale-if-error mean a transient
+ * remote-Mongo blip serves the last-good template instead of an empty page.
+ * The PIM publish-event subscriber deletes these keys on content changes.
+ *
+ * Falls back to a direct (uncached) fetch when Redis is unavailable.
+ */
 export async function getPublishedHomeTemplateCached(options?: {
   tags?: PageVersionTags | null;
 }): Promise<any | null> {
-  if (!isSingleTenant) return getPublishedHomeTemplate(options);
-  return cachedPublishedHomeTemplate(options);
+  const { dbName, tenantId } = await resolveTenantDbTarget();
+  const key = `${homeTemplateCachePrefix(tenantId)}${tagsKey(options?.tags)}`;
+  return cachedJson(key, { softTtlMs: 300_000, hardTtlSeconds: 3600 }, () =>
+    fetchPublishedHomeTemplateForDb(dbName, options),
+  );
 }
 
 /**

@@ -95,10 +95,10 @@ export default function CategoryPage({
           categories={pathNodes}
           allLabel={t('all-categories', { defaultValue: 'All Categories' })}
           onAllCategoriesClick={() => {
-            /* navigate to /[lang]/category */ window.location.href = `/${lang}/category`;
+            /* navigate to /[lang]/category */ window.location.href = `/${lang}/categorie`;
           }}
           onCategorySelect={(node) => {
-            window.location.href = `/${lang}/category/${node.path.join('/')}`;
+            window.location.href = `/${lang}/categorie/${node.path.join('/')}`;
           }}
         />
 
@@ -156,7 +156,7 @@ function CategoryChildCarousel({
     <Container className="mb-6">
       <ProductsCarousel
         sectionHeading={child.label}
-        categorySlug={`/${lang}/category/${child.path.join('/')}`}
+        categorySlug={`/${lang}/categorie/${child.path.join('/')}`}
         products={data}
         loading={isLoading}
         limit={10}
@@ -167,7 +167,7 @@ function CategoryChildCarousel({
       {/* CTA to full child page */}
       <div className="mt-2">
         <Link
-          href={`/${lang}/category/${child.path.join('/')}`}
+          href={`/${lang}/categorie/${child.path.join('/')}`}
           className="text-sm text-blue-600 hover:underline"
         >
           {`See all in ${child.label}`}
@@ -201,7 +201,7 @@ function LeafFallback({ lang, node }: { lang: string; node: MenuTreeNode }) {
     <Container className="mb-6">
       <ProductsCarousel
         sectionHeading={node.label}
-        categorySlug={`/${lang}/category/${node.path.join('/')}`}
+        categorySlug={`/${lang}/categorie/${node.path.join('/')}`}
         products={data}
         loading={isLoading}
         limit={10}

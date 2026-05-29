@@ -18,6 +18,11 @@ const DEFAULT_API_KEY_ID =
 const DEFAULT_API_SECRET =
   process.env.API_SECRET || process.env.NEXT_PUBLIC_API_SECRET;
 
+// Local dev override — when set, ignores the tenant's `pimApiUrl` from the DB
+// and points all server-side PIM calls at this URL. Mirrors the same override
+// in the b2b PIM proxy so local dev can hit a local commerce-suite.
+const PIM_API_URL_OVERRIDE = process.env.PIM_API_URL_OVERRIDE;
+
 interface ApiConfig {
   pimApiUrl: string;
   apiKeyId?: string;
@@ -46,7 +51,7 @@ async function getApiConfig(): Promise<ApiConfig | null> {
   if (!tenant) return null;
 
   return {
-    pimApiUrl: tenant.api.pimApiUrl,
+    pimApiUrl: PIM_API_URL_OVERRIDE || tenant.api.pimApiUrl,
     apiKeyId: tenant.api.apiKeyId,
     apiSecret: tenant.api.apiSecret,
     tenantId: tenant.id,
@@ -75,10 +80,19 @@ export interface ServerSearchParams {
   facet_fields?: string[];
 }
 
+export interface ServerSearchFacetValue {
+  value: string;
+  label?: string;
+  count: number;
+}
+
 export interface ServerSearchResult {
   results: any[];
   total: number;
   numFound?: number;
+  /** Facet results keyed by field name (only populated when `facet_fields` is
+   *  passed). Each entry is the list of {value, label, count} buckets. */
+  facets?: Record<string, ServerSearchFacetValue[]>;
 }
 
 export const serverFetchPimProducts = cache(
@@ -121,10 +135,28 @@ export const serverFetchPimProducts = cache(
       const data = await response.json();
       if (!data.success) return { results: [], total: 0 };
 
+      // PIM returns facets under `facet_results` keyed by field name. Each
+      // bucket is `{ value, count, label?, id? }`. We normalize to
+      // `{ value, label, count }` so the renderer is agnostic.
+      const rawFacets: Record<string, any[]> =
+        data.data.facet_results || data.facet_results || {};
+      const facets: Record<string, ServerSearchFacetValue[]> = {};
+      for (const [field, buckets] of Object.entries(rawFacets)) {
+        if (!Array.isArray(buckets)) continue;
+        facets[field] = buckets
+          .map((b: any) => ({
+            value: String(b.value ?? b.id ?? b.code ?? ''),
+            label: b.label || b.name || b.title || undefined,
+            count: Number(b.count ?? b.numFound ?? 0),
+          }))
+          .filter((b) => b.value);
+      }
+
       return {
         results: data.data.results || [],
         total: data.data.numFound ?? data.data.total ?? 0,
         numFound: data.data.numFound,
+        ...(Object.keys(facets).length ? { facets } : {}),
       };
     } catch {
       return { results: [], total: 0 };
@@ -156,6 +188,40 @@ export const serverFetchPimMenu = cache(
       if (!data.success) return [];
 
       return data.menuItems || [];
+    } catch {
+      return [];
+    }
+  },
+);
+
+// ===============================
+// Categories (PIM category tree)
+// ===============================
+
+export const serverFetchPimCategories = cache(
+  async (channel?: string): Promise<any[]> => {
+    const config = await getApiConfig();
+    if (!config) return [];
+
+    const qs = channel ? `?channel=${encodeURIComponent(channel)}` : '';
+    const url = `${config.pimApiUrl}/api/public/categories${qs}`;
+
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: buildHeaders(config),
+        next: {
+          revalidate: 300,
+          tags: [cacheTag('categories', config.tenantId)],
+        },
+      });
+
+      if (!response.ok) return [];
+
+      const data = await response.json();
+      if (!data.success) return [];
+
+      return data.categories || [];
     } catch {
       return [];
     }

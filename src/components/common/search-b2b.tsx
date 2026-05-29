@@ -14,11 +14,38 @@ import { getThemedComponent } from '@/lib/theme/registry';
 
 const SearchOverlayB2B = getThemedComponent('SearchOverlay');
 
+/**
+ * Build a key that identifies the *navigation target*, ignoring the search
+ * overlay's own URL state (`text` + `filters-*`). Those params drive live
+ * filtering inside the open overlay and must NOT be read as navigation. Any
+ * other change — most importantly `sku` on the `/products` page — means we
+ * navigated elsewhere and the overlay should close.
+ */
+export function buildNavKey(
+  pathname: string | null,
+  searchParams: URLSearchParams | null,
+): string {
+  const params = new URLSearchParams();
+  searchParams?.forEach((v, k) => {
+    if (k === 'text' || k.startsWith('filters-')) return;
+    params.set(k, v);
+  });
+  params.sort(); // order-independent: a param reorder isn't a navigation
+  const qs = params.toString();
+  const path = pathname ?? '';
+  return qs ? `${path}?${qs}` : path;
+}
+
 type Props = {
   lang: string;
   className?: string;
   searchId?: string;
   variant?: 'border' | 'fill';
+  /** Presentational search box. Defaults to SearchBoxB2B; themes may inject a
+   *  styled replacement (same props) without forking the overlay logic here. */
+  SearchBoxComponent?: React.ComponentType<
+    React.ComponentProps<typeof SearchBoxB2B>
+  >;
 };
 
 const SearchB2B = forwardRef<HTMLDivElement, Props>(
@@ -28,6 +55,7 @@ const SearchB2B = forwardRef<HTMLDivElement, Props>(
       searchId = 'search',
       variant = 'border',
       lang,
+      SearchBoxComponent = SearchBoxB2B,
     },
     ref,
   ) => {
@@ -94,7 +122,14 @@ const SearchB2B = forwardRef<HTMLDivElement, Props>(
         router.push(pathname);
       }
     }
+    // When focus is restored to the search input *programmatically* — e.g.
+    // Headless UI returning focus after the product popup closes — we must NOT
+    // treat it as a user opening the overlay. Set while a real navigation is in
+    // flight so the focus-restoration that follows can't reopen the overlay.
+    const suppressFocusOpenRef = useRef(false);
+
     function enableInputFocus() {
+      if (suppressFocusOpenRef.current) return; // ignore programmatic refocus
       setInputFocus(true);
     }
     function disableInputFocus() {
@@ -102,6 +137,27 @@ const SearchB2B = forwardRef<HTMLDivElement, Props>(
       closeMobileSearch(); // ✅ closes mobile overlay if open
       closeSearch(); // ✅ closes desktop overlay if open
     }
+
+    // Close the overlay on real navigation. `usePathname()` alone misses
+    // product → product moves (same `/products` path, only `?sku=` changes), so
+    // we build a key from the path plus every query param EXCEPT the overlay's
+    // own state (`text` + `filters-*`). Those drive live filtering and must keep
+    // the overlay open; any other change means we navigated elsewhere.
+    const navKey = buildNavKey(pathname, searchParams);
+    const prevNavKeyRef = useRef(navKey);
+    useEffect(() => {
+      if (prevNavKeyRef.current === navKey) return;
+      prevNavKeyRef.current = navKey;
+      // Navigated away — force the overlay shut and ignore the focus
+      // restoration that fires when the product popup unmounts.
+      disableInputFocus();
+      suppressFocusOpenRef.current = true;
+      const id = setTimeout(() => {
+        suppressFocusOpenRef.current = false;
+      }, 500);
+      return () => clearTimeout(id);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [navKey]);
 
     // Sync input with URL param `text` ONLY when the URL's `text` itself
     // actually changes (page navigation, Clear All, etc.). Other URL changes
@@ -146,7 +202,7 @@ const SearchB2B = forwardRef<HTMLDivElement, Props>(
 
         <div className="relative flex flex-col justify-center w-full shrink-0">
           <div className="flex flex-col w-full mx-auto">
-            <SearchBoxB2B
+            <SearchBoxComponent
               searchId={searchId}
               name="search"
               value={searchText}

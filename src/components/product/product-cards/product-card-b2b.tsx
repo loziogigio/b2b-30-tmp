@@ -66,8 +66,7 @@ function RenderPopupOrAddToCart({
   // Promo gate: if there are promos but the buyer can't trigger them with the
   // default MV (or there are multiple promos to choose from), surface the
   // detail modal instead of an ambiguous counter.
-  const promoCount =
-    (effectivePriceData as any)?.all_promo_offers?.length ?? 0;
+  const promoCount = (effectivePriceData as any)?.all_promo_offers?.length ?? 0;
   const hasPromo =
     promoCount > 0 ||
     Boolean((effectivePriceData as any)?.promo) ||
@@ -89,8 +88,7 @@ function RenderPopupOrAddToCart({
   if (isOutOfStock && !canAddToCart) {
     return (
       <span className="text-[11px] md:text-xs font-bold text-brand-light uppercase inline-block bg-brand-danger rounded-full px-2.5 pt-1 pb-[3px]">
-        {effectivePriceData?.product_label_action?.LABEL ||
-          t('text-out-stock')}
+        {effectivePriceData?.product_label_action?.LABEL || t('text-out-stock')}
       </span>
     );
   }

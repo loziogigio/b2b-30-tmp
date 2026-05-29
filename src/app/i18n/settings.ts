@@ -1,5 +1,15 @@
 export const fallbackLng = 'it';
-export const languages = [fallbackLng, 'en', 'de', 'es', 'ar', 'he', 'zh'];
+export const languages = [
+  fallbackLng,
+  'en',
+  'de',
+  'es',
+  'pt',
+  'fr',
+  'ar',
+  'he',
+  'zh',
+];
 export const defaultNS = 'common';
 
 export function resolveSupportedLang(lang: string | undefined | null): string {

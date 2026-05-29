@@ -1,7 +1,9 @@
 // src/framework/documents/fetch-documents-list.ts
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { post } from '@framework/utils/httpB2B';
+import { erpApiPath } from '@framework/utils/erp-api-base';
 import { API_ENDPOINTS_B2B } from '@framework/utils/api-endpoints-b2b';
+import { useThemeId } from '@/contexts/tenant.context';
 import {
   RawDocumentItem,
   DocumentRow,
@@ -25,15 +27,39 @@ function pickListEndpoint(type?: DocumentsListParams['type']) {
     : API_ENDPOINTS_B2B.GET_INVOICES;
 }
 
+// time theme → in-app direct-ERP route, mirroring prices/orders.
+function pickErpEndpoint(type?: DocumentsListParams['type']) {
+  return type === 'DDT' ? '/erp/get_ddt' : '/erp/get_invoices';
+}
+
 export async function fetchDocumentsList(
   params: DocumentsListParams,
+  theme?: string,
 ): Promise<DocumentRow[]> {
   const payload = toErpPayload(params);
-  const endpoint = pickListEndpoint(params.type);
-  const raw = await post<{ message?: RawDocumentItem[] } | RawDocumentItem[]>(
-    endpoint,
-    payload,
-  );
+
+  let raw: { message?: RawDocumentItem[] } | RawDocumentItem[];
+  if (theme === 'time') {
+    const httpRes = await fetch(
+      erpApiPath('time', pickErpEndpoint(params.type)),
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      },
+    );
+    if (!httpRes.ok) {
+      throw new Error(`ERP documents request failed: HTTP ${httpRes.status}`);
+    }
+    const json = await httpRes.json();
+    // Route shape: { status: 'success', data: RawDocumentItem[] }
+    raw = json?.data ?? json;
+  } else {
+    raw = await post<{ message?: RawDocumentItem[] } | RawDocumentItem[]>(
+      pickListEndpoint(params.type),
+      payload,
+    );
+  }
 
   // Handle both wrapped (message: [...]) and direct ([...]) response formats
   const res: RawDocumentItem[] | undefined = Array.isArray(raw)
@@ -50,20 +76,22 @@ export async function fetchDocumentsList(
 export const useDocumentsListQuery = (
   params: DocumentsListParams,
   enabled = true,
-) =>
-  useQuery<DocumentRow[], Error>({
+) => {
+  const theme = useThemeId();
+  return useQuery<DocumentRow[], Error>({
     queryKey: [
       pickListEndpoint(params.type),
       params.type,
       params.date_from,
       params.date_to,
     ],
-    queryFn: () => fetchDocumentsList(params),
+    queryFn: () => fetchDocumentsList(params, theme),
     enabled,
     staleTime: 1000 * 60 * 5, // 5 minutes - don't refetch if data is fresh
     gcTime: 1000 * 60 * 10, // 10 minutes - keep in cache
     refetchOnWindowFocus: false, // don't refetch when user returns to tab
   });
+};
 
 // ---------- AZIONI SUI DOCUMENTI (PDF / BARCODE / CSV) ----------
 export type DocumentActionKind = 'pdf' | 'barcode' | 'csv';

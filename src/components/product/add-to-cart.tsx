@@ -106,9 +106,7 @@ const buildAddPayload = (args: {
     // was a no-op fallback that yielded 0, which made cart lines hit the
     // BE with vat_rate=0 even though the cart total UI computed 22% locally.
     vat_perc: String(
-      (priceData as any)?.vat_percent ??
-        (priceData as any)?.vat_perc ??
-        0,
+      (priceData as any)?.vat_percent ?? (priceData as any)?.vat_perc ?? 0,
     ),
 
     // discounts (from array)
@@ -285,9 +283,7 @@ export default function AddToCart({
     // the BE rejects sub-step quantities with "Minimum order quantity is N".
     const stepU = toUnits(step);
     const snappedU =
-      targetU > 0 && stepU > 0
-        ? Math.ceil(targetU / stepU) * stepU
-        : targetU;
+      targetU > 0 && stepU > 0 ? Math.ceil(targetU / stepU) * stepU : targetU;
 
     setItemQuantity(lookupItem, fromUnits(snappedU));
     if (snappedU !== targetU) {
@@ -315,7 +311,7 @@ export default function AddToCart({
           err?.response?.data?.error ||
           err?.response?.data?.message ||
           err?.message ||
-          'Errore durante l\'aggiunta al carrello';
+          "Errore durante l'aggiunta al carrello";
         toast.error(beMessage);
         // Roll back the optimistic update so the input reflects the
         // server-side state, not the rejected qty.
