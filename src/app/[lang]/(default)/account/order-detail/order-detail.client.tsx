@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useMemo, useState, useCallback } from 'react';
 import { useOrderDetailsQuery } from '@framework/order/fetch-order';
+import { useEnrichedOrderItems } from '@framework/order/use-enriched-order-items';
 import AddressCard from '@components/orders/address-card';
 import OrderItemsTable from '@components/orders/order-items-table';
 import { useTranslation } from 'src/app/i18n/client';
@@ -86,6 +87,8 @@ export default function OrderDetailClient({ lang, initialParams }: Props) {
     isError,
     error,
   } = useOrderDetailsQuery(params as any);
+
+  const enrichedItems = useEnrichedOrderItems(order?.items ?? []);
 
   const handlePrint = useCallback(() => {
     if (!order || isPrinting) return;
@@ -333,7 +336,7 @@ export default function OrderDetailClient({ lang, initialParams }: Props) {
       {/* Items table with internal scroll */}
       <div className="px-6 pb-6">
         <OrderItemsTable
-          items={order.items ?? []}
+          items={enrichedItems}
           height={360}
           lang={lang}
         />
