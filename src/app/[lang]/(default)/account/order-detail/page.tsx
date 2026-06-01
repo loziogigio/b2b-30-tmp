@@ -28,8 +28,10 @@ export default async function OrderDetailsPage({
   const cause = asString(sp.cause);
   const doc_year = asString(sp.doc_year);
   const doc_number = asString(sp.doc_number);
+  const vincId = asString(sp.id); // VINC record _id (default theme)
 
-  const missing = !cause || !doc_year || !doc_number;
+  // VINC orders identify by _id; ERP orders need cause+doc_year+doc_number.
+  const missing = vincId ? false : !cause || !doc_year || !doc_number;
 
   return (
     <main
@@ -61,7 +63,7 @@ export default async function OrderDetailsPage({
           ) : (
             <OrderDetailClient
               lang={lang}
-              initialParams={{ cause, doc_year, doc_number }}
+              initialParams={{ cause, doc_year, doc_number, vincId }}
             />
           )}
         </section>

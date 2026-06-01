@@ -67,6 +67,7 @@ type Props = {
     cause: string;
     doc_year: string;
     doc_number: string;
+    vincId?: string;
   };
 };
 
@@ -77,7 +78,8 @@ export default function OrderDetailClient({ lang, initialParams }: Props) {
   const [isPrinting, setIsPrinting] = useState(false);
 
   const params = useMemo(() => {
-    const { cause, doc_year, doc_number } = initialParams;
+    const { cause, doc_year, doc_number, vincId } = initialParams;
+    if (vincId) return { vincId };
     if (!cause || !doc_year || !doc_number) return null;
     return { cause, doc_year, doc_number };
   }, [initialParams]);
@@ -94,7 +96,9 @@ export default function OrderDetailClient({ lang, initialParams }: Props) {
     setIsPrinting(true);
 
     try {
-      const orderNumber = `${initialParams.cause}/${initialParams.doc_number}/${initialParams.doc_year}`;
+      const orderNumber = initialParams.vincId
+        ? (order as any).tracking_number || initialParams.vincId
+        : `${initialParams.cause}/${initialParams.doc_number}/${initialParams.doc_year}`;
       const items = ((order as any).items ?? []).map((it: any) => ({
         sku: it.sku ?? '',
         name: it.name ?? '',
