@@ -42,10 +42,11 @@ export async function fetchOrdersList(
 ): Promise<OrderSummary[]> {
   // default theme → VINC data-model (empty state if unavailable; no proxy fallback)
   if (sourcePolicy(theme).account === 'vinc') {
-    const vincStatus = typeToVincStatus(params.type);
+    // Pass the plain `status` param; the BFF route adds the `filter[status]`
+    // bracket via buildRecordsQuery. `undefined` is dropped by the client.
     const result = await fetchProfileRecords('historical_order', {
       relation_id: params.customer_code,
-      ...(vincStatus ? { 'filter[status]': vincStatus } : {}),
+      status: typeToVincStatus(params.type),
       date_from: ddmmyyyyToIso(params.date_from),
       date_to: ddmmyyyyToIso(params.date_to),
       limit: 50,

@@ -36,7 +36,7 @@ describe('fetchOrdersList — default (VINC) branch', () => {
 
     expect(calls[0]).toContain('/api/profile/historical_order');
     expect(calls[0]).toContain('relation_id=015892');
-    expect(calls[0]).toContain('filter%5Bstatus%5D=fulfilled'); // status=fulfilled (E)
+    expect(calls[0]).toContain('status=fulfilled'); // plain status param (E); route adds filter[status]
     expect(calls[0]).toContain('2026-05-01'); // date_from translated to ISO
     expect(res).toHaveLength(1);
     expect(res[0].source).toBe('vinc');
