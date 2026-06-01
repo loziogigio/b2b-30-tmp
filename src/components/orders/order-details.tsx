@@ -8,6 +8,7 @@ import {
   TransformedOrderItem,
 } from '@utils/transform/b2b-order';
 import AddressCard from './address-card';
+import { useEnrichedOrderItems } from '@framework/order/use-enriched-order-items';
 import { useTranslation } from 'src/app/i18n/client';
 import { useHomeSettings } from '@/hooks/use-home-settings';
 
@@ -21,17 +22,9 @@ export default function OrderDetails({ order, lang }: Props) {
   const { settings } = useHomeSettings();
   const decimals = settings?.cardStyle?.priceDecimals ?? 2;
 
-  if (!order) {
-    return (
-      <section className="rounded-2xl bg-white shadow-sm p-8 text-center text-sm text-gray-500">
-        {t('orders-select-order')}
-      </section>
-    );
-  }
-
-  const items: TransformedOrderItem[] =
-    (order as any).items ??
-    (order as any).products?.map((p: any) => ({
+  const rawItems: TransformedOrderItem[] =
+    (order as any)?.items ??
+    (order as any)?.products?.map((p: any) => ({
       id: p.id,
       name: p.name,
       image: p.image?.thumbnail || p.image?.original,
@@ -41,6 +34,15 @@ export default function OrderDetails({ order, lang }: Props) {
       reviewUrl: '#',
     })) ??
     [];
+  const items = useEnrichedOrderItems(rawItems);
+
+  if (!order) {
+    return (
+      <section className="rounded-2xl bg-white shadow-sm p-8 text-center text-sm text-gray-500">
+        {t('orders-select-order')}
+      </section>
+    );
+  }
 
   return (
     <section className="rounded-2xl bg-white shadow-sm">
