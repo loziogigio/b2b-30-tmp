@@ -261,7 +261,11 @@ export default function OrderDetailClient({ lang, initialParams }: Props) {
       <div className="grid gap-4 border-b px-6 py-4 md:grid-cols-3">
         <StatCard
           label={t('order-detail-number')}
-          value={`${initialParams.cause}/${initialParams.doc_number}/${initialParams.doc_year}`}
+          value={
+            initialParams.vincId
+              ? order.tracking_number || initialParams.vincId
+              : `${initialParams.cause}/${initialParams.doc_number}/${initialParams.doc_year}`
+          }
         />
         <StatCard
           label={t('order-detail-date')}

@@ -51,4 +51,30 @@ describe('fetchOrdersList — default (VINC) branch', () => {
     const res = await fetchOrdersList(params as any, 'default');
     expect(res).toEqual([]);
   });
+
+  it('drops a malformed/empty date instead of emitting a broken filter', async () => {
+    const calls: string[] = [];
+    global.fetch = vi.fn(async (url: any) => {
+      calls.push(String(url));
+      return { ok: true, json: async () => ({ available: true, items: [] }) } as any;
+    });
+    await fetchOrdersList(
+      { ...params, date_from: '', date_to: 'not-a-date' } as any,
+      'default',
+    );
+    expect(calls[0]).not.toContain('date_from');
+    expect(calls[0]).not.toContain('date_to');
+  });
+
+  it('does NOT hit /api/profile on the time theme (uses the ERP path)', async () => {
+    const calls: string[] = [];
+    global.fetch = vi.fn(async (url: any) => {
+      calls.push(String(url));
+      // time theme posts to /api/erp/get_orders and expects { data: [...] }
+      return { ok: true, json: async () => ({ data: [] }) } as any;
+    });
+    await fetchOrdersList(params as any, 'time');
+    expect(calls.some((u) => u.includes('/api/profile/'))).toBe(false);
+    expect(calls.some((u) => u.includes('/api/erp/'))).toBe(true);
+  });
 });

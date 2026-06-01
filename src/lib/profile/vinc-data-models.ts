@@ -68,7 +68,7 @@ export async function probeModelAvailable(
 ): Promise<boolean> {
   if (!creds.csBaseUrl || !creds.apiKeyId) return false;
   return cachedJson<boolean>(
-    `vinc:profile:available:${creds.csBaseUrl}:${model}`,
+    `vinc:profile:available:${creds.csBaseUrl}:${creds.apiKeyId}:${model}`,
     { softTtlMs: 5 * 60_000, hardTtlSeconds: 3600 },
     async () => {
       try {

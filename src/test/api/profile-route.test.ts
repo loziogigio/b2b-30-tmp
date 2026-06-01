@@ -84,6 +84,25 @@ describe('GET /api/profile/[model]', () => {
     });
     expect(res.status).toBe(502);
   });
+
+  it('translates search params into the upstream bracket-filter query', async () => {
+    probeModelAvailable.mockResolvedValue(true);
+    fetchModelRecords.mockResolvedValue({ items: [], pagination: undefined });
+    await listGET(
+      listReq(
+        'historical_order',
+        'relation_id=015892&status=fulfilled&date_from=2026-05-01&date_to=2026-05-31&page=2',
+      ),
+      { params: Promise.resolve({ model: 'historical_order' }) },
+    );
+    const query = fetchModelRecords.mock.calls[0][2] as URLSearchParams;
+    expect(query.get('relation_id')).toBe('015892');
+    expect(query.get('filter[status]')).toBe('fulfilled');
+    expect(query.get('filter[document_date][gte]')).toBe('2026-05-01');
+    expect(query.get('filter[document_date][lte]')).toBe('2026-05-31');
+    expect(query.get('page')).toBe('2');
+    expect(query.get('external_ref')).toBeNull();
+  });
 });
 
 describe('GET /api/profile/[model]/[id]', () => {

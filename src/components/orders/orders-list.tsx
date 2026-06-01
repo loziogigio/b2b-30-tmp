@@ -51,9 +51,12 @@ export default function OrdersList({
             >
               <div>
                 <p className="text-sm text-gray-500">
-                  {t('orders-order-number')} {o.id}
+                  {t('orders-order-number')}{' '}
+                  {o.source === 'vinc' ? o.document || o.id : o.id}
                 </p>
-                <p className="text-sm font-medium text-gray-900">{o.id}</p>
+                <p className="text-sm font-medium text-gray-900">
+                  {o.source === 'vinc' ? o.document || o.id : o.id}
+                </p>
                 <p className="text-xs text-gray-500">
                   {new Date(o.date_label).toLocaleDateString()}
                 </p>

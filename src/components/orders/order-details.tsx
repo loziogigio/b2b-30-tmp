@@ -48,7 +48,9 @@ export default function OrderDetails({ order, lang }: Props) {
         <div>
           <h2 className="text-lg font-semibold">{t('orders-details')}</h2>
           <p className="text-xs text-gray-500">
-            {order.cause}/{order.doc_number}/{order.doc_year}
+            {order.doc_year
+              ? `${order.cause}/${order.doc_number}/${order.doc_year}`
+              : order.tracking_number || `${order.cause}/${order.doc_number}`}
           </p>
         </div>
 
