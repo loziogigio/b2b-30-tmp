@@ -11,13 +11,9 @@ import {
   renderOrderPrintHtml,
   OrderExportSnapshot,
 } from '@components/orders/export/order-export';
-import { formatPriceIt } from '@utils/money';
+import { formatPriceIt, money } from '@utils/money';
 
 // ---- tiny helpers ---------------------------------------------------------
-function money(v: any) {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : 0;
-}
 function toDisplayDate(iso?: string, lang?: string) {
   if (!iso) return '—';
   try {
@@ -97,9 +93,9 @@ export default function OrderDetailClient({ lang, initialParams }: Props) {
 
     try {
       const orderNumber = initialParams.vincId
-        ? (order as any).tracking_number || initialParams.vincId
+        ? order.tracking_number || initialParams.vincId
         : `${initialParams.cause}/${initialParams.doc_number}/${initialParams.doc_year}`;
-      const items = ((order as any).items ?? []).map((it: any) => ({
+      const items = (order.items ?? []).map((it) => ({
         sku: it.sku ?? '',
         name: it.name ?? '',
         image: it.image,
@@ -111,10 +107,10 @@ export default function OrderDetailClient({ lang, initialParams }: Props) {
         note: it.note,
       }));
 
-      const shippingAddress = (order as any).shipping_address ?? {};
+      const shippingAddress = order.shipping_address;
       const snapshot: OrderExportSnapshot = {
         orderNumber,
-        orderDate: toDisplayDate((order as any).created_at, lang),
+        orderDate: toDisplayDate(order.created_at, lang),
         status:
           getStatusFromOrder(order) === 'completed'
             ? t('order-status-completed')
@@ -126,15 +122,12 @@ export default function OrderDetailClient({ lang, initialParams }: Props) {
                   ? t('order-status-processing')
                   : t('order-status-pending'),
         shippingAddress: {
-          line1:
-            shippingAddress.street_address ??
-            shippingAddress.address ??
-            shippingAddress.line1,
+          line1: shippingAddress.street_address,
           city: shippingAddress.city,
           country: shippingAddress.country,
         },
         items,
-        total: money((order as any).total),
+        total: money(order.total),
         exportDateLabel: new Intl.DateTimeFormat('it-IT', {
           dateStyle: 'medium',
           timeStyle: 'short',
@@ -272,55 +265,55 @@ export default function OrderDetailClient({ lang, initialParams }: Props) {
         />
         <StatCard
           label={t('order-detail-date')}
-          value={toDisplayDate((order as any).created_at, lang)}
+          value={toDisplayDate(order.created_at, lang)}
         />
         <StatCard
           label={t('orders-total')}
-          value={`€${formatPriceIt(money((order as any).total), decimals)}`}
+          value={`€${formatPriceIt(money(order.total), decimals)}`}
         />
       </div>
 
       {/* Enriched breakdown (VINC only — fields are undefined on the ERP path) */}
-      {((order as any).vatTotal != null ||
-        (order as any).discountTotal != null ||
-        (order as any).paymentMethod ||
-        (order as any).statusLabel) && (
+      {(order.vatTotal != null ||
+        order.discountTotal != null ||
+        order.paymentMethod ||
+        order.statusLabel) && (
         <div className="grid gap-2 border-b px-6 py-4 text-sm md:grid-cols-2">
-          {(order as any).statusLabel && (
-            <Row label={t('order-detail-status')} value={(order as any).statusLabel} />
+          {order.statusLabel && (
+            <Row label={t('order-detail-status')} value={order.statusLabel} />
           )}
-          {(order as any).subtotal != null && (
+          {order.subtotal != null && (
             <Row
               label={t('orders-subtotal') || 'Imponibile'}
-              value={`€${formatPriceIt(money((order as any).subtotal), decimals)}`}
+              value={`€${formatPriceIt(money(order.subtotal), decimals)}`}
             />
           )}
-          {(order as any).discountTotal != null && (order as any).discountTotal > 0 && (
+          {order.discountTotal != null && order.discountTotal > 0 && (
             <Row
               label={t('orders-discount') || 'Sconto'}
-              value={`€${formatPriceIt(money((order as any).discountTotal), decimals)}`}
+              value={`€${formatPriceIt(money(order.discountTotal), decimals)}`}
             />
           )}
-          {(order as any).vatTotal != null && (
+          {order.vatTotal != null && (
             <Row
               label={t('orders-vat') || 'IVA'}
-              value={`€${formatPriceIt(money((order as any).vatTotal), decimals)}`}
+              value={`€${formatPriceIt(money(order.vatTotal), decimals)}`}
             />
           )}
-          {(order as any).shippingCost != null && (order as any).shippingCost > 0 && (
+          {order.shippingCost != null && order.shippingCost > 0 && (
             <Row
               label={t('orders-shipping') || 'Spedizione'}
-              value={`€${formatPriceIt(money((order as any).shippingCost), decimals)}`}
+              value={`€${formatPriceIt(money(order.shippingCost), decimals)}`}
             />
           )}
-          {(order as any).paymentMethod && (
-            <Row label={t('orders-payment') || 'Pagamento'} value={(order as any).paymentMethod} />
+          {order.paymentMethod && (
+            <Row label={t('orders-payment') || 'Pagamento'} value={order.paymentMethod} />
           )}
-          {(order as any).agentCode && (
-            <Row label={t('orders-agent') || 'Agente'} value={(order as any).agentCode} />
+          {order.agentCode && (
+            <Row label={t('orders-agent') || 'Agente'} value={order.agentCode} />
           )}
-          {(order as any).notes && (
-            <Row label={t('orders-notes') || 'Note'} value={(order as any).notes} />
+          {order.notes && (
+            <Row label={t('orders-notes') || 'Note'} value={order.notes} />
           )}
         </div>
       )}
@@ -329,14 +322,14 @@ export default function OrderDetailClient({ lang, initialParams }: Props) {
       <div className="px-6 py-6">
         <AddressCard
           title={t('orders-shipping-address')}
-          a={(order as any).shipping_address}
+          a={order.shipping_address}
         />
       </div>
 
       {/* Items table with internal scroll */}
       <div className="px-6 pb-6">
         <OrderItemsTable
-          items={(order as any).items ?? []}
+          items={order.items ?? []}
           height={360}
           lang={lang}
         />

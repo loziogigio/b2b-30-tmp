@@ -54,7 +54,7 @@ export default function OrderDetails({ order, lang }: Props) {
 
         <Link
           href={
-            (order as any).doc_year
+            order.doc_year
               ? `/${lang}/account/order-detail?cause=${order.cause}&doc_year=${order.doc_year}&doc_number=${order.doc_number}`
               : `/${lang}/account/order-detail?id=${encodeURIComponent(order.id)}`
           }
@@ -69,7 +69,7 @@ export default function OrderDetails({ order, lang }: Props) {
       <div className="px-6 py-6">
         <AddressCard
           title={t('orders-shipping-address')}
-          a={(order as any).shipping_address}
+          a={order.shipping_address}
         />
       </div>
 
@@ -78,7 +78,7 @@ export default function OrderDetails({ order, lang }: Props) {
         <div className="flex items-center justify-between text-base">
           <span className="font-medium">{t('orders-total')}</span>
           <span className="font-semibold">
-            €{formatPriceIt(money((order as any).total), decimals)}
+            €{formatPriceIt(money(order.total), decimals)}
           </span>
         </div>
       </div>
