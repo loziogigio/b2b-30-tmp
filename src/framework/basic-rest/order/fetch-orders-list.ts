@@ -10,6 +10,13 @@ import {
   RawOrderListItem,
 } from '@framework/order/types-b2b-orders-list';
 import { transformOrdersList } from '@utils/transform/b2b-orders-list';
+import { sourcePolicy } from '@framework/profile/source-policy';
+import { fetchProfileRecords } from '@framework/profile/vinc-profile-client';
+import {
+  typeToVincStatus,
+  vincOrderToSummary,
+  type VincOrderRecord,
+} from '@utils/transform/vinc-historical-order';
 
 // If you want to keep the friendly names as-is, just pass them straight through.
 // Otherwise, map them here if your ERP expects different keys (it looks like it already matches).
@@ -23,10 +30,30 @@ function toErpPayload(params: OrdersListParams) {
   };
 }
 
+// DDMMYYYY (ERP) → YYYY-MM-DD (VINC). Returns undefined for malformed input.
+function ddmmyyyyToIso(s?: string): string | undefined {
+  if (!s || !/^\d{8}$/.test(s)) return undefined;
+  return `${s.slice(4)}-${s.slice(2, 4)}-${s.slice(0, 2)}`;
+}
+
 export async function fetchOrdersList(
   params: OrdersListParams,
   theme?: string,
 ): Promise<OrderSummary[]> {
+  // default theme → VINC data-model (empty state if unavailable; no proxy fallback)
+  if (sourcePolicy(theme).account === 'vinc') {
+    const vincStatus = typeToVincStatus(params.type);
+    const result = await fetchProfileRecords('historical_order', {
+      relation_id: params.customer_code,
+      ...(vincStatus ? { 'filter[status]': vincStatus } : {}),
+      date_from: ddmmyyyyToIso(params.date_from),
+      date_to: ddmmyyyyToIso(params.date_to),
+      limit: 50,
+    });
+    if (!result.available) return [];
+    return (result.items as VincOrderRecord[]).map(vincOrderToSummary);
+  }
+
   const payload = toErpPayload(params);
 
   // time theme → in-app direct-ERP route (/api/erp/get_orders), mirroring
@@ -72,9 +99,11 @@ export const useOrdersListQuery = (
   return useQuery<OrderSummary[], Error>({
     queryKey: [
       API_ENDPOINTS_B2B.GET_ORDERS,
+      theme,
       params.date_from,
       params.date_to,
       params.customer_code,
+      params.type,
     ],
     queryFn: () => fetchOrdersList(params, theme),
     enabled,
