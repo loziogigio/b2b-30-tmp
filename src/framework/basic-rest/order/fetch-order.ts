@@ -8,12 +8,18 @@ import {
   TransformedOrder,
   RawOrderResponse,
 } from '@utils/transform/b2b-order';
+import { fetchProfileRecord } from '@framework/profile/vinc-profile-client';
+import {
+  vincOrderDetailToTransformed,
+  type VincOrderRecord,
+} from '@utils/transform/vinc-historical-order';
 
 // map your friendly params to ERP keys
 export type OrderParams = {
-  doc_number: string; // NumeroDocDefinitivo
-  cause: string; // CausaleDocDefinitivo
-  doc_year: string; // AnnoDocDefinitivo
+  doc_number?: string; // NumeroDocDefinitivo (ERP)
+  cause?: string; // CausaleDocDefinitivo (ERP)
+  doc_year?: string; // AnnoDocDefinitivo (ERP)
+  vincId?: string; // VINC record _id (default theme)
 };
 
 function toErpPayload(params: OrderParams) {
@@ -28,6 +34,18 @@ function toErpPayload(params: OrderParams) {
 export async function fetchOrderDetails(
   params: OrderParams,
 ): Promise<TransformedOrder> {
+  // VINC detail by _id (default theme)
+  if (params.vincId) {
+    const { available, item } = await fetchProfileRecord(
+      'historical_order',
+      params.vincId,
+    );
+    if (!available || !item) {
+      throw new Error('Order not found.');
+    }
+    return vincOrderDetailToTransformed(item as VincOrderRecord);
+  }
+
   const payload = toErpPayload(params);
   const res = await post<RawOrderResponse>(
     API_ENDPOINTS_B2B.GET_ORDER_DETAIL,
