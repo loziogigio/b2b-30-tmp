@@ -280,6 +280,51 @@ export default function OrderDetailClient({ lang, initialParams }: Props) {
         />
       </div>
 
+      {/* Enriched breakdown (VINC only — fields are undefined on the ERP path) */}
+      {((order as any).vatTotal != null ||
+        (order as any).discountTotal != null ||
+        (order as any).paymentMethod ||
+        (order as any).statusLabel) && (
+        <div className="grid gap-2 border-b px-6 py-4 text-sm md:grid-cols-2">
+          {(order as any).statusLabel && (
+            <Row label={t('order-detail-status')} value={(order as any).statusLabel} />
+          )}
+          {(order as any).subtotal != null && (
+            <Row
+              label={t('orders-subtotal') || 'Imponibile'}
+              value={`€${formatPriceIt(money((order as any).subtotal), decimals)}`}
+            />
+          )}
+          {(order as any).discountTotal != null && (order as any).discountTotal > 0 && (
+            <Row
+              label={t('orders-discount') || 'Sconto'}
+              value={`€${formatPriceIt(money((order as any).discountTotal), decimals)}`}
+            />
+          )}
+          {(order as any).vatTotal != null && (
+            <Row
+              label={t('orders-vat') || 'IVA'}
+              value={`€${formatPriceIt(money((order as any).vatTotal), decimals)}`}
+            />
+          )}
+          {(order as any).shippingCost != null && (order as any).shippingCost > 0 && (
+            <Row
+              label={t('orders-shipping') || 'Spedizione'}
+              value={`€${formatPriceIt(money((order as any).shippingCost), decimals)}`}
+            />
+          )}
+          {(order as any).paymentMethod && (
+            <Row label={t('orders-payment') || 'Pagamento'} value={(order as any).paymentMethod} />
+          )}
+          {(order as any).agentCode && (
+            <Row label={t('orders-agent') || 'Agente'} value={(order as any).agentCode} />
+          )}
+          {(order as any).notes && (
+            <Row label={t('orders-notes') || 'Note'} value={(order as any).notes} />
+          )}
+        </div>
+      )}
+
       {/* Shipping Address */}
       <div className="px-6 py-6">
         <AddressCard
@@ -317,6 +362,15 @@ function StatCard({ label, value }: { label: string; value: string }) {
     <div className="rounded-xl border border-gray-200 px-4 py-3">
       <p className="mb-1 text-xs font-semibold text-gray-500">{label}</p>
       <p className="truncate text-sm font-semibold text-gray-900">{value}</p>
+    </div>
+  );
+}
+
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <span className="text-gray-500">{label}</span>
+      <span className="font-medium text-gray-900">{value}</span>
     </div>
   );
 }

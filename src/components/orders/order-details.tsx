@@ -53,7 +53,11 @@ export default function OrderDetails({ order, lang }: Props) {
         </div>
 
         <Link
-          href={`/${lang}/account/order-detail?cause=${order.cause}&doc_year=${order.doc_year}&doc_number=${order.doc_number}`}
+          href={
+            (order as any).doc_year
+              ? `/${lang}/account/order-detail?cause=${order.cause}&doc_year=${order.doc_year}&doc_number=${order.doc_number}`
+              : `/${lang}/account/order-detail?id=${encodeURIComponent(order.id)}`
+          }
           className="text-sm text-teal-600 hover:underline"
           aria-label={t('orders-view-details')}
         >
