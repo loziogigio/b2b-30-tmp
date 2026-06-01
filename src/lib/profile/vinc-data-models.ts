@@ -1,3 +1,6 @@
+import { cachedJson } from '@/lib/cache/redis-cache';
+import type { CsCreds } from '@/lib/profile/cs-creds';
+
 /** Models the browser is allowed to request through the profile BFF route. */
 export const PROFILE_MODELS = [
   'historical_order',
@@ -40,4 +43,77 @@ export function buildRecordsQuery(p: ProfileQuery): URLSearchParams {
   if (p.date_to) q.set('filter[document_date][lte]', p.date_to);
   if (p.document_number) q.set('filter[document_number]', p.document_number);
   return q;
+}
+
+function authHeaders(creds: CsCreds): HeadersInit {
+  return {
+    Accept: 'application/json',
+    'x-auth-method': 'api-key',
+    'x-api-key-id': creds.apiKeyId,
+    'x-api-secret': creds.apiSecret,
+  };
+}
+
+function modelBase(creds: CsCreds, model: ProfileModel): string {
+  return `${creds.csBaseUrl.replace(/\/+$/, '')}/api/b2b/data-models/${model}`;
+}
+
+/**
+ * Is the data-model available for this tenant? Probes the model/schema endpoint
+ * (200 = available). Verdict cached per (csBaseUrl, model): 5 min soft / 1 h hard.
+ */
+export async function probeModelAvailable(
+  creds: CsCreds,
+  model: ProfileModel,
+): Promise<boolean> {
+  if (!creds.csBaseUrl || !creds.apiKeyId) return false;
+  return cachedJson<boolean>(
+    `vinc:profile:available:${creds.csBaseUrl}:${model}`,
+    { softTtlMs: 5 * 60_000, hardTtlSeconds: 3600 },
+    async () => {
+      try {
+        const res = await fetch(modelBase(creds, model), {
+          headers: authHeaders(creds),
+        });
+        return res.ok;
+      } catch {
+        return false;
+      }
+    },
+  );
+}
+
+export interface RecordsPage {
+  items: any[];
+  pagination?: { page: number; limit: number; total: number; totalPages: number };
+}
+
+/** Fetch a page of records. Throws on non-OK (caller maps to 502). */
+export async function fetchModelRecords(
+  creds: CsCreds,
+  model: ProfileModel,
+  query: URLSearchParams,
+): Promise<RecordsPage> {
+  const res = await fetch(`${modelBase(creds, model)}/records?${query}`, {
+    headers: authHeaders(creds),
+  });
+  if (!res.ok) throw new Error(`data-model ${model} records HTTP ${res.status}`);
+  const body: any = await res.json();
+  return { items: body?.data?.items ?? [], pagination: body?.data?.pagination };
+}
+
+/** Fetch one record by VINC `_id`. Returns null on 404. Throws on other non-OK. */
+export async function fetchModelRecord(
+  creds: CsCreds,
+  model: ProfileModel,
+  id: string,
+): Promise<any | null> {
+  const res = await fetch(
+    `${modelBase(creds, model)}/records/${encodeURIComponent(id)}`,
+    { headers: authHeaders(creds) },
+  );
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`data-model ${model} record HTTP ${res.status}`);
+  const body: any = await res.json();
+  return body?.data ?? null;
 }
