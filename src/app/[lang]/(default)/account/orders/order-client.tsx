@@ -96,9 +96,12 @@ export default function OrderPageClient() {
     [orders, selectedId],
   );
 
-  // detail params
+  // detail params: VINC orders → by _id; ERP orders → NumeroDoc/Causale/Anno
   const detailParams = useMemo(() => {
     if (!selected) return null;
+    if (selected.source === 'vinc' && selected.vincId) {
+      return { vincId: selected.vincId };
+    }
     const doc_number = (selected as any).doc_number;
     const cause = (selected as any).cause;
     const doc_year = (selected as any).doc_year;
