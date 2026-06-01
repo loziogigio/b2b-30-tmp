@@ -37,3 +37,10 @@ sw.js
 # ts
 tsconfig.tsbuildinfo
 .vercel
+
+# local scratch / editor / tooling artifacts (not part of the project)
+.playwright-mcp/
+*.code-workspace
+/altro-mega-integrated.png
+/verify-store-orders-light.png
+/dfl_catalog_restyle.jsx
