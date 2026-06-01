@@ -67,6 +67,14 @@ export type TransformedOrderItem = {
   ordered_in_quantity: number;
   delivered_in_price: number;
   ordered_in_price: number;
+
+  // VINC enrichment (optional; ERP path leaves unset)
+  uom?: string;
+  vatRate?: number;
+  discounts?: number[]; // decoded from discounts_json
+  lineTotal?: number;
+  entityCode?: string;
+  lineNumber?: number;
 };
 
 export type TransformedOrder = {
@@ -80,8 +88,23 @@ export type TransformedOrder = {
   delivery_fee: number; // 0 for now (no field in payload)
   tax: number; // 0 for now (no field in payload)
   total: number; // = sub_total (+fees -discount +tax) => same as sub_total
+
+  // VINC enrichment (optional; ERP path leaves unset)
+  currency?: string;
+  status?: string;
+  statusLabel?: string;
+  subtotal?: number;
+  vatTotal?: number;
+  discountTotal?: number;
+  shippingCost?: number;
+  paymentMethod?: string;
+  agentCode?: string;
+  notes?: string;
+  erpMeta?: Record<string, unknown>;
+
   created_at: string; // ISO date from data_registrazione
   shipping_address: {
+    label?: string;
     street_address: string;
     city: string;
     state?: string;
@@ -89,6 +112,7 @@ export type TransformedOrder = {
     country: string;
   };
   billing_address: {
+    label?: string;
     street_address: string;
     city: string;
     state?: string;

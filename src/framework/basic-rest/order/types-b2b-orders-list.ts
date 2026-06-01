@@ -32,4 +32,8 @@ export type OrderSummary = {
   doc_number: number; // "${Numero}"
   cause: string; // "${Causale}"
   doc_year: number; // "${Anno}"
+
+  // Source discriminator + VINC detail key (VINC branch only; ERP leaves unset)
+  source?: 'erp' | 'vinc';
+  vincId?: string; // VINC record _id, used for detail-by-id
 };
