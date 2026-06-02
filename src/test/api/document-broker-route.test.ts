@@ -60,7 +60,7 @@ describe('GET /api/profile/document/[model]/[id]', () => {
   });
 
   it('streams the file (via the internal overlay) when the session owns the record', async () => {
-    process.env.DOCUMENTI_CLIENTI_BASE = 'http://vinc-tunnelgw:28000';
+    delete process.env.DOCUMENTI_CLIENTI_BASE; // rely on the in-code default overlay base
     sessionOwnedCustomerCodes.mockResolvedValue(new Set(['015892']));
     fetchModelRecord.mockResolvedValue({
       _id: 'i1',

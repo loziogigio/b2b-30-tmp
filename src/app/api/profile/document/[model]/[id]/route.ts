@@ -15,16 +15,22 @@ function isHttpUrl(u: unknown): u is string {
   return typeof u === 'string' && /^https?:\/\//i.test(u);
 }
 
+// Internal overlay that serves the documenti-clienti files (the public route is
+// closed). Defaults so prod works with no extra config; override with
+// DOCUMENTI_CLIENTI_BASE for other environments (e.g. a local SSH tunnel →
+// http://localhost:28000).
+const DEFAULT_DOCUMENTI_CLIENTI_BASE = 'http://vinc-tunnelgw:28000';
+
 /**
- * The public /documenti-clienti route is closed (403). Fetch via the internal
- * overlay (DOCUMENTI_CLIENTI_BASE, e.g. http://vinc-tunnelgw:28000) which serves
- * from the file ROOT — so the /documenti-clienti prefix must be STRIPPED.
- * URL.pathname normalizes encoding (spaces → %20). Falls back to the original
- * URL when no base is configured.
+ * Build the server-side fetch URL. We always go through the overlay base and
+ * keep ONLY the record's path after `/documenti-clienti` (the overlay serves
+ * from the file root) — so the record's host is never fetched, and the
+ * `/documenti-clienti` prefix is stripped. URL.pathname normalizes encoding
+ * (spaces → %20).
  */
 function resolveFetchUrl(u: string): string {
-  const base = process.env.DOCUMENTI_CLIENTI_BASE;
-  if (!base) return u;
+  const base =
+    process.env.DOCUMENTI_CLIENTI_BASE || DEFAULT_DOCUMENTI_CLIENTI_BASE;
   const { pathname } = new URL(u);
   const marker = '/documenti-clienti';
   const i = pathname.indexOf(marker);
