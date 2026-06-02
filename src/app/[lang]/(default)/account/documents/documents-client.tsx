@@ -6,11 +6,7 @@ import cn from 'classnames';
 import type { DocumentRow } from '@framework/documents/types-b2b-documents';
 import { ERP_STATIC } from '@framework/utils/static';
 import { lastMonthRange, toErpNumericDate } from '@utils/date-to-erp';
-import {
-  useDocumentsListQuery,
-  useOpenDocumentAction,
-  type DocumentActionKind,
-} from '@framework/documents/fetch-documents-list';
+import { useDocumentsListQuery } from '@framework/documents/fetch-documents-list';
 
 type Tab = 'F' | 'DDT';
 type SortKey = 'destination' | 'date' | 'document' | 'number';
@@ -37,17 +33,23 @@ export default function DocumentsClient({ lang }: { lang: string }) {
     true,
   );
 
-  const {
-    mutate: openDoc,
-    isPending,
-    variables,
-    error: actionError,
-  } = useOpenDocumentAction();
-  const keyFor = (r: DocumentRow, kind: DocumentActionKind) =>
-    `${r.document}:${kind}`;
-  const loadingKey = variables ? keyFor(variables.row, variables.kind) : null;
-
   const isDDT = tab === 'DDT';
+
+  // Default-theme documents come from VINC and carry direct document URLs
+  // (r.pdf / r.barcodePdf / r.csv). Render each as a link only when present.
+  const docLink = (href: string | undefined, label: string) =>
+    href ? (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="rounded px-2 py-1 text-red-600 hover:bg-red-50"
+      >
+        {label}
+      </a>
+    ) : (
+      <span className="text-gray-300">—</span>
+    );
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -177,11 +179,6 @@ export default function DocumentsClient({ lang }: { lang: string }) {
             Errore: {error?.message}
           </div>
         )}
-        {actionError && (
-          <div className="mb-2 rounded-md border bg-red-50 px-4 py-3 text-sm text-red-700">
-            {(actionError as Error).message}
-          </div>
-        )}
 
         {/* ===== Desktop/Tablet: Tabella ===== */}
         <div className="hidden sm:block overflow-x-auto rounded-md border border-gray-200 bg-white overflow-hidden">
@@ -212,11 +209,9 @@ export default function DocumentsClient({ lang }: { lang: string }) {
                     'Numero',
                     'w-28 px-4 py-3 text-right font-semibold border-l border-gray-300',
                   )}
-                  {!isDDT && (
-                    <th className="w-24 px-4 py-3 text-center font-semibold border-l border-gray-300">
-                      PDF
-                    </th>
-                  )}
+                  <th className="w-24 px-4 py-3 text-center font-semibold border-l border-gray-300">
+                    PDF
+                  </th>
                   <th className="w-40 px-4 py-3 text-center font-semibold border-l border-gray-300">
                     Codice a barre PDF
                   </th>
@@ -228,85 +223,45 @@ export default function DocumentsClient({ lang }: { lang: string }) {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((r) => {
-                  const pdfLoading =
-                    loadingKey === keyFor(r, 'pdf') && isPending;
-                  const bcLoading =
-                    loadingKey === keyFor(r, 'barcode') && isPending;
-                  const csvLoading =
-                    loadingKey === keyFor(r, 'csv') && isPending;
+                {rows.map((r) => (
+                  <tr
+                    key={r.document}
+                    className="hover:bg-gray-50 border-b border-gray-100"
+                  >
+                    <td className="px-4 py-3 text-gray-900">{r.destination}</td>
+                    <td className="px-4 py-3 text-gray-900 border-l border-gray-100">
+                      {r.date_label}
+                    </td>
+                    <td className="px-4 py-3 font-medium text-gray-900 border-l border-gray-100">
+                      {r.document}
+                    </td>
+                    <td className="px-4 py-3 text-gray-700 border-l border-gray-100">
+                      {r.doc_type}
+                    </td>
+                    <td className="px-4 py-3 text-right text-gray-700 border-l border-gray-100">
+                      {r.number}
+                    </td>
 
-                  return (
-                    <tr
-                      key={r.document}
-                      className="hover:bg-gray-50 border-b border-gray-100"
-                    >
-                      <td className="px-4 py-3 text-gray-900">
-                        {r.destination}
-                      </td>
-                      <td className="px-4 py-3 text-gray-900 border-l border-gray-100">
-                        {r.date_label}
-                      </td>
-                      <td className="px-4 py-3 font-medium text-gray-900 border-l border-gray-100">
-                        {r.document}
-                      </td>
-                      <td className="px-4 py-3 text-gray-700 border-l border-gray-100">
-                        {r.doc_type}
-                      </td>
-                      <td className="px-4 py-3 text-right text-gray-700 border-l border-gray-100">
-                        {r.number}
-                      </td>
+                    <td className="px-4 py-3 text-center border-l border-gray-100">
+                      {docLink(r.pdf, 'PDF')}
+                    </td>
 
-                      {!isDDT && (
-                        <td className="px-4 py-3 text-center border-l border-gray-100">
-                          <button
-                            onClick={() => openDoc({ kind: 'pdf', row: r })}
-                            disabled={pdfLoading}
-                            className={cn(
-                              'rounded px-2 py-1 text-red-600 hover:bg-red-50',
-                              pdfLoading && 'opacity-60 cursor-not-allowed',
-                            )}
-                          >
-                            {pdfLoading ? '...' : 'PDF'}
-                          </button>
-                        </td>
-                      )}
+                    <td className="px-4 py-3 text-center border-l border-gray-100">
+                      {docLink(r.barcodePdf, 'PDF▮▮')}
+                    </td>
 
+                    {!isDDT && (
                       <td className="px-4 py-3 text-center border-l border-gray-100">
-                        <button
-                          onClick={() => openDoc({ kind: 'barcode', row: r })}
-                          disabled={bcLoading}
-                          className={cn(
-                            'rounded px-2 py-1 text-red-600 hover:bg-red-50',
-                            bcLoading && 'opacity-60 cursor-not-allowed',
-                          )}
-                        >
-                          {bcLoading ? '...' : 'PDF▮▮'}
-                        </button>
+                        {docLink(r.csv, 'CSV')}
                       </td>
-
-                      {!isDDT && (
-                        <td className="px-4 py-3 text-center border-l border-gray-100">
-                          <button
-                            onClick={() => openDoc({ kind: 'csv', row: r })}
-                            disabled={csvLoading}
-                            className={cn(
-                              'rounded px-2 py-1 text-red-600 hover:bg-red-50',
-                              csvLoading && 'opacity-60 cursor-not-allowed',
-                            )}
-                          >
-                            {csvLoading ? '...' : 'CSV'}
-                          </button>
-                        </td>
-                      )}
-                    </tr>
-                  );
-                })}
+                    )}
+                  </tr>
+                ))}
 
                 {!isLoading && !rows.length && (
                   <tr>
                     <td
-                      colSpan={isDDT ? 6 : 8}
+                      colSpan={isDDT ? 7 : 8}
                       className="px-4 py-6 text-center text-sm text-gray-500"
                     >
                       Nessun documento trovato.
@@ -321,9 +276,17 @@ export default function DocumentsClient({ lang }: { lang: string }) {
         {/* ===== Mobile: Cards ===== */}
         <div className="sm:hidden space-y-2">
           {rows.map((r) => {
-            const pdfLoading = loadingKey === keyFor(r, 'pdf') && isPending;
-            const bcLoading = loadingKey === keyFor(r, 'barcode') && isPending;
-            const csvLoading = loadingKey === keyFor(r, 'csv') && isPending;
+            const mLink = (href: string | undefined, label: string) =>
+              href ? (
+                <a
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-md border px-3 py-1.5 text-sm text-red-600"
+                >
+                  {label}
+                </a>
+              ) : null;
 
             return (
               <div
@@ -345,45 +308,9 @@ export default function DocumentsClient({ lang }: { lang: string }) {
                 </div>
 
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {/* Solo Fatture: PDF */}
-                  {!isDDT && (
-                    <button
-                      onClick={() => openDoc({ kind: 'pdf', row: r })}
-                      disabled={pdfLoading}
-                      className={cn(
-                        'rounded-md border px-3 py-1.5 text-sm text-red-600',
-                        pdfLoading && 'opacity-60 cursor-not-allowed',
-                      )}
-                    >
-                      {pdfLoading ? 'PDF…' : 'PDF'}
-                    </button>
-                  )}
-
-                  {/* Sempre: Barcode */}
-                  <button
-                    onClick={() => openDoc({ kind: 'barcode', row: r })}
-                    disabled={bcLoading}
-                    className={cn(
-                      'rounded-md border px-3 py-1.5 text-sm text-red-600',
-                      bcLoading && 'opacity-60 cursor-not-allowed',
-                    )}
-                  >
-                    {bcLoading ? 'Barcode…' : 'PDF▮▮'}
-                  </button>
-
-                  {/* Solo Fatture: CSV */}
-                  {!isDDT && (
-                    <button
-                      onClick={() => openDoc({ kind: 'csv', row: r })}
-                      disabled={csvLoading}
-                      className={cn(
-                        'rounded-md border px-3 py-1.5 text-sm text-red-600',
-                        csvLoading && 'opacity-60 cursor-not-allowed',
-                      )}
-                    >
-                      {csvLoading ? 'CSV…' : 'CSV'}
-                    </button>
-                  )}
+                  {mLink(r.pdf, 'PDF')}
+                  {mLink(r.barcodePdf, 'PDF▮▮')}
+                  {!isDDT && mLink(r.csv, 'CSV')}
                 </div>
               </div>
             );
