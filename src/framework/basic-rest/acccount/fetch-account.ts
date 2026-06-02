@@ -20,6 +20,12 @@ import type {
 } from './types-b2b-account';
 import { transformAddresses } from '@utils/transform/b2b-addresses';
 import { transformCustomer } from '@utils/transform/b2b-customer';
+import { sourcePolicy } from '@framework/profile/source-policy';
+import { fetchProfileRecords } from '@framework/profile/vinc-profile-client';
+import {
+  vincCreditExposureToExposition,
+  type VincCreditExposureRecord,
+} from '@utils/transform/vinc-credit-exposure';
 
 // common payload
 const buildPayload = () => ({ ...ERP_STATIC });
@@ -43,6 +49,21 @@ async function erpPost<T>(erpEndpoint: string, payload: unknown): Promise<T> {
 
 // ===== Exposition (OBJECT) =====
 export async function fetchExposition(theme?: string): Promise<Exposition> {
+  // default theme → VINC credit_exposure latest snapshot (zeroed if unavailable;
+  // no proxy fallback). Default route sort is -data.snapshot_date, so limit:1
+  // returns the most recent snapshot.
+  if (sourcePolicy(theme).account === 'vinc') {
+    const result = await fetchProfileRecords('credit_exposure', {
+      relation_id: ERP_STATIC.customer_code,
+      limit: 1,
+    });
+    const rec = result.items?.[0] as VincCreditExposureRecord | undefined;
+    if (!result.available || !rec) {
+      return vincCreditExposureToExposition({ _id: '', data: {} });
+    }
+    return vincCreditExposureToExposition(rec);
+  }
+
   const raw =
     theme === 'time'
       ? await erpPost<{ message?: RawExposition } | RawExposition>(
@@ -76,7 +97,7 @@ export async function fetchExposition(theme?: string): Promise<Exposition> {
 export const useExpositionQuery = (enabled = true) => {
   const theme = useThemeId();
   return useQuery<Exposition, Error>({
-    queryKey: [API_ENDPOINTS_B2B.GET_EXPOSITION],
+    queryKey: [API_ENDPOINTS_B2B.GET_EXPOSITION, theme],
     queryFn: () => fetchExposition(theme),
     enabled,
     staleTime: 1000 * 60 * 5, // 5 minutes
