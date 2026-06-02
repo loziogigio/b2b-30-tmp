@@ -53,6 +53,14 @@ describe('vincDeliveryNoteToRow', () => {
     });
     expect(r.destination).toBe('VIA X - ROMA');
   });
+  it('hides legacy non-http fallback strings (no broken link)', () => {
+    const r = vincDeliveryNoteToRow({
+      ...rec,
+      data: { ...rec.data, pdf_url: 'BC/2026/9345/D', pdf_barcode_url: '' },
+    });
+    expect(r.pdf).toBeUndefined();
+    expect(r.barcodePdf).toBeUndefined();
+  });
 });
 
 describe('vincInvoiceToRow', () => {

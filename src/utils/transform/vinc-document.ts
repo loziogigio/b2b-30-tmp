@@ -61,6 +61,15 @@ function destinationOf(a?: VincDest): string {
   return [a.street, a.city].filter(Boolean).join(' - ');
 }
 
+/**
+ * Return the value only if it's a real http(s) URL; otherwise undefined.
+ * Hides legacy non-URL fallback strings (e.g. "BC/2026/9345/D") so they never
+ * render as a broken link. (Default-theme VINC documents only.)
+ */
+function httpUrl(u?: string): string | undefined {
+  return u && /^https?:\/\//i.test(u) ? u : undefined;
+}
+
 export function vincDeliveryNoteToRow(rec: VincDeliveryNoteRecord): DocumentRow {
   const d = rec.data ?? {};
   return {
@@ -74,8 +83,8 @@ export function vincDeliveryNoteToRow(rec: VincDeliveryNoteRecord): DocumentRow 
     year: 0,
     number_raw: 0,
     type_bar_code: '',
-    pdf: d.pdf_url || undefined,
-    barcodePdf: d.pdf_barcode_url || undefined,
+    pdf: httpUrl(d.pdf_url),
+    barcodePdf: httpUrl(d.pdf_barcode_url),
   };
 }
 
@@ -92,9 +101,9 @@ export function vincInvoiceToRow(rec: VincInvoiceRecord): DocumentRow {
     year: 0,
     number_raw: 0,
     type_bar_code: '',
-    pdf: d.pdf_url || undefined,
-    barcodePdf: d.pdf_barcode_url || undefined,
-    csv: d.csv_url || undefined,
+    pdf: httpUrl(d.pdf_url),
+    barcodePdf: httpUrl(d.pdf_barcode_url),
+    csv: httpUrl(d.csv_url),
   };
 }
 
