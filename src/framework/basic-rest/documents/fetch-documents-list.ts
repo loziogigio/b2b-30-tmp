@@ -11,6 +11,16 @@ import {
 } from '@framework/documents/types-b2b-documents';
 import { transformDocumentsList } from '@utils/transform/b2b-documents-list';
 import { ERP_STATIC } from '@framework/utils/static';
+import { sourcePolicy } from '@framework/profile/source-policy';
+import { fetchProfileRecords } from '@framework/profile/vinc-profile-client';
+import {
+  ddmmyyyyToIso,
+  pickDirectUrl,
+  vincDeliveryNoteToRow,
+  vincInvoiceToRow,
+  type VincDeliveryNoteRecord,
+  type VincInvoiceRecord,
+} from '@utils/transform/vinc-document';
 
 // ---------- LISTA (invariato con switch F/DDT) ----------
 function toErpPayload(p: DocumentsListParams) {
@@ -36,6 +46,21 @@ export async function fetchDocumentsList(
   params: DocumentsListParams,
   theme?: string,
 ): Promise<DocumentRow[]> {
+  // default theme → VINC data-model (empty state if unavailable; no proxy fallback)
+  if (sourcePolicy(theme).account === 'vinc') {
+    const model = params.type === 'DDT' ? 'delivery_note' : 'invoice';
+    const result = await fetchProfileRecords(model, {
+      relation_id: params.customer_code,
+      date_from: ddmmyyyyToIso(params.date_from),
+      date_to: ddmmyyyyToIso(params.date_to),
+      limit: 50,
+    });
+    if (!result.available) return [];
+    return params.type === 'DDT'
+      ? (result.items as VincDeliveryNoteRecord[]).map(vincDeliveryNoteToRow)
+      : (result.items as VincInvoiceRecord[]).map(vincInvoiceToRow);
+  }
+
   const payload = toErpPayload(params);
 
   let raw: { message?: RawDocumentItem[] } | RawDocumentItem[];
@@ -81,6 +106,7 @@ export const useDocumentsListQuery = (
   return useQuery<DocumentRow[], Error>({
     queryKey: [
       pickListEndpoint(params.type),
+      theme,
       params.type,
       params.date_from,
       params.date_to,
@@ -144,15 +170,16 @@ export async function openDocument(
   kind: DocumentActionKind,
   row: DocumentRow,
 ): Promise<void> {
-  // Guardrail: DDT → solo barcode
+  // Guardrail: DDT → only barcode
   if (row.doc_type === 'DDT' && kind !== 'barcode') {
     throw new Error('Per i DDT è disponibile solo il PDF con codice a barre.');
   }
 
-  const url = await fetchDocumentUrl(kind, row);
+  // VINC rows carry the document URL directly; otherwise use the ERP wrapper.
+  const direct = pickDirectUrl(kind, row);
+  const url = direct || (await fetchDocumentUrl(kind, row));
 
   if (typeof window !== 'undefined' && url) {
-    // 👇 apre sempre in una nuova tab
     window.open(url, '_blank', 'noopener,noreferrer');
   }
 }
