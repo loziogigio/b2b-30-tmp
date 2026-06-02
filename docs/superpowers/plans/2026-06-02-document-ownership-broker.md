@@ -222,13 +222,21 @@ function isHttpUrl(u: unknown): u is string {
   return typeof u === 'string' && /^https?:\/\//i.test(u);
 }
 
-/** Optionally rewrite the public /documenti-clienti origin to an internal base. */
+/**
+ * Resolve the server-side fetch URL. The public /documenti-clienti route is
+ * closed (403); fetch via the internal overlay (DOCUMENTI_CLIENTI_BASE, e.g.
+ * http://vinc-tunnelgw:28000) which serves from the file ROOT — so the
+ * /documenti-clienti prefix must be STRIPPED. Using URL.pathname normalizes
+ * encoding (spaces → %20). Falls back to the original URL when no base is set.
+ */
 function resolveFetchUrl(u: string): string {
-  const internal = process.env.DOCUMENTI_CLIENTI_INTERNAL_BASE;
-  if (!internal) return u;
-  const marker = '/documenti-clienti/';
-  const i = u.indexOf(marker);
-  return i >= 0 ? `${internal.replace(/\/+$/, '')}${u.slice(i)}` : u;
+  const base = process.env.DOCUMENTI_CLIENTI_BASE;
+  if (!base) return u;
+  const { pathname } = new URL(u);
+  const marker = '/documenti-clienti';
+  const i = pathname.indexOf(marker);
+  const rel = i >= 0 ? pathname.slice(i + marker.length) : pathname; // /D.D.T/2026/…PDF
+  return `${base.replace(/\/+$/, '')}${rel}`;
 }
 
 export async function GET(req: NextRequest, { params }: RouteParams) {
@@ -272,24 +280,27 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'document not available' }, { status: 404 });
   }
 
-  // 5) stream the file back
+  // 5) stream the file back (pass through type/length; propagate 404)
   try {
     const upstream = await fetch(resolveFetchUrl(fileUrl));
+    if (upstream.status === 404) {
+      return NextResponse.json({ error: 'document not found' }, { status: 404 });
+    }
     if (!upstream.ok || !upstream.body) {
       console.error(`[document broker] upstream ${upstream.status} for ${model}/${id}`);
       return NextResponse.json({ error: 'document unavailable' }, { status: 502 });
     }
-    const filename = fileUrl.split('/').pop() || `${model}-${id}`;
-    return new NextResponse(upstream.body, {
-      status: 200,
-      headers: {
-        'content-type':
-          upstream.headers.get('content-type') ??
-          (field === 'csv_url' ? 'text/csv' : 'application/pdf'),
-        'content-disposition': `inline; filename="${filename}"`,
-        'cache-control': 'private, no-store',
-      },
-    });
+    const filename = (fileUrl.split('/').pop() || `${model}-${id}`).split('?')[0];
+    const headers: Record<string, string> = {
+      'content-type':
+        upstream.headers.get('content-type') ??
+        (field === 'csv_url' ? 'text/csv' : 'application/pdf'),
+      'content-disposition': `inline; filename="${decodeURIComponent(filename)}"`,
+      'cache-control': 'private, no-store',
+    };
+    const len = upstream.headers.get('content-length');
+    if (len) headers['content-length'] = len;
+    return new NextResponse(upstream.body, { status: 200, headers });
   } catch (error) {
     console.error(`[document broker] stream failed for ${model}/${id}:`, error);
     return NextResponse.json({ error: 'document unavailable' }, { status: 502 });
