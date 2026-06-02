@@ -90,4 +90,18 @@ describe('openDocument — VINC direct urls', () => {
     );
     expect(post).not.toHaveBeenCalled();
   });
+
+  it('opens a DDT barcode direct url without the ERP wrapper', async () => {
+    const openSpy = vi.spyOn(window, 'open').mockReturnValue(null as any);
+    await openDocument('barcode', {
+      doc_type: 'DDT',
+      barcodePdf: 'https://cs/bc.pdf',
+    } as any);
+    expect(openSpy).toHaveBeenCalledWith(
+      'https://cs/bc.pdf',
+      '_blank',
+      'noopener,noreferrer',
+    );
+    expect(post).not.toHaveBeenCalled();
+  });
 });
