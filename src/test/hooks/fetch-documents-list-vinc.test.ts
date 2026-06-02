@@ -34,6 +34,7 @@ describe('fetchDocumentsList — default (VINC) branch', () => {
                 numero_documento: 'DDT/2026/111',
                 data: '2026-05-10',
                 destinazione: { label: 'SEDE' },
+                pdf_url: 'https://cs/d.pdf',
                 pdf_barcode_url: 'https://cs/bc.pdf',
               },
             },
@@ -48,7 +49,7 @@ describe('fetchDocumentsList — default (VINC) branch', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].doc_type).toBe('DDT');
     expect(rows[0].document).toBe('DDT/2026/111');
-    expect(rows[0].barcodePdf).toBe('https://cs/bc.pdf');
+    expect(rows[0].pdf).toBe('/api/profile/document/delivery_note/d1?kind=pdf');
   });
 
   it('F → /api/profile/invoice, maps to F rows', async () => {
@@ -63,7 +64,7 @@ describe('fetchDocumentsList — default (VINC) branch', () => {
     })) as any;
     const rows = await fetchDocumentsList({ ...base, type: 'F' } as any, 'default');
     expect(rows[0].doc_type).toBe('F');
-    expect(rows[0].csv).toBe('https://cs/x.csv');
+    expect(rows[0].csv).toBe('/api/profile/document/invoice/i1?kind=csv');
   });
 
   it('returns [] when the model is unavailable', async () => {

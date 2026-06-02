@@ -70,6 +70,17 @@ function httpUrl(u?: string): string | undefined {
   return u && /^https?:\/\//i.test(u) ? u : undefined;
 }
 
+/** Same-origin broker link for a document; gated on the real file existing. */
+function brokerDocUrl(
+  model: 'delivery_note' | 'invoice',
+  id: string,
+  kind: 'pdf' | 'barcode' | 'csv',
+  realFileUrl?: string,
+): string | undefined {
+  if (!httpUrl(realFileUrl) || !id) return undefined;
+  return `/api/profile/document/${model}/${encodeURIComponent(id)}?kind=${kind}`;
+}
+
 export function vincDeliveryNoteToRow(rec: VincDeliveryNoteRecord): DocumentRow {
   const d = rec.data ?? {};
   return {
@@ -83,8 +94,8 @@ export function vincDeliveryNoteToRow(rec: VincDeliveryNoteRecord): DocumentRow 
     year: 0,
     number_raw: 0,
     type_bar_code: '',
-    pdf: httpUrl(d.pdf_url),
-    barcodePdf: httpUrl(d.pdf_barcode_url),
+    pdf: brokerDocUrl('delivery_note', rec._id, 'pdf', d.pdf_url),
+    barcodePdf: brokerDocUrl('delivery_note', rec._id, 'barcode', d.pdf_barcode_url),
   };
 }
 
@@ -101,9 +112,9 @@ export function vincInvoiceToRow(rec: VincInvoiceRecord): DocumentRow {
     year: 0,
     number_raw: 0,
     type_bar_code: '',
-    pdf: httpUrl(d.pdf_url),
-    barcodePdf: httpUrl(d.pdf_barcode_url),
-    csv: httpUrl(d.csv_url),
+    pdf: brokerDocUrl('invoice', rec._id, 'pdf', d.pdf_url),
+    barcodePdf: brokerDocUrl('invoice', rec._id, 'barcode', d.pdf_barcode_url),
+    csv: brokerDocUrl('invoice', rec._id, 'csv', d.csv_url),
   };
 }
 

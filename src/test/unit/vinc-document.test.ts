@@ -43,8 +43,8 @@ describe('vincDeliveryNoteToRow', () => {
     expect(r.destination).toBe('SEDE');
     expect(r.dateISO).toBe('2026-05-28');
     expect(r.date_label).toBe('28/05/2026');
-    expect(r.barcodePdf).toBe('https://cs/ddt-bc.pdf');
-    expect(r.pdf).toBe('https://cs/ddt.pdf');
+    expect(r.pdf).toBe('/api/profile/document/delivery_note/d1?kind=pdf');
+    expect(r.barcodePdf).toBe('/api/profile/document/delivery_note/d1?kind=barcode');
   });
   it('falls back to street+city when destinazione.label missing', () => {
     const r = vincDeliveryNoteToRow({
@@ -82,9 +82,9 @@ describe('vincInvoiceToRow', () => {
     expect(r.doc_type).toBe('F');
     expect(r.document).toBe('F/2026/90540');
     expect(r.number).toBe('90540');
-    expect(r.pdf).toBe('https://cs/inv.pdf');
-    expect(r.barcodePdf).toBe('https://cs/inv-bc.pdf');
-    expect(r.csv).toBe('https://cs/inv.csv');
+    expect(r.pdf).toBe('/api/profile/document/invoice/i1?kind=pdf');
+    expect(r.barcodePdf).toBe('/api/profile/document/invoice/i1?kind=barcode');
+    expect(r.csv).toBe('/api/profile/document/invoice/i1?kind=csv');
   });
 });
 
