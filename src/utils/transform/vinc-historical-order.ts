@@ -9,12 +9,20 @@ export interface VincOrderItem {
   sku?: string;
   entity_code?: string;
   name?: string;
-  quantity?: number;
+  quantity?: number; // ordered qty
+  qty_consegnata?: number; // delivered qty
+  qty_saldata?: number;
+  qty_residua?: number;
+  qty_evadibile?: number;
   uom?: string;
   unit_price?: number;
   discounts_json?: string;
   vat_rate?: number;
-  line_total?: number;
+  line_total?: number; // ordered value
+  val_consegnato?: number; // delivered value
+  val_saldato?: number;
+  val_residuo?: number;
+  val_evadibile?: number;
 }
 
 export interface VincOrderData {
@@ -140,9 +148,9 @@ function transformVincItem(row: VincOrderItem): TransformedOrderItem {
     sku: row.sku ?? '',
     reviewUrl: row.entity_code ? `/prodotto/${row.entity_code}` : undefined,
     note: undefined,
-    delivered_in_quantity: 0,
+    delivered_in_quantity: num(row.qty_consegnata),
     ordered_in_quantity: qty,
-    delivered_in_price: 0,
+    delivered_in_price: num(row.val_consegnato),
     ordered_in_price: num(row.line_total),
     // enrichment
     uom: row.uom || undefined,

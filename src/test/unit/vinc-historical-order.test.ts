@@ -40,11 +40,13 @@ const rec = {
         entity_code: '529836',
         name: 'Widget',
         quantity: 2,
+        qty_consegnata: 2,
         uom: 'PZ',
         unit_price: 125,
         discounts_json: '[10,5]',
         vat_rate: 22,
         line_total: 250,
+        val_consegnato: 250,
       },
     ],
   },
@@ -110,6 +112,10 @@ describe('vincOrderDetailToTransformed', () => {
     expect(it.discounts).toEqual([10, 5]);
     expect(it.vatRate).toBe(22);
     expect(it.lineTotal).toBe(250);
+    // delivered (consegnato) breakdown
+    expect(it.ordered_in_quantity).toBe(2);
+    expect(it.delivered_in_quantity).toBe(2);
+    expect(it.delivered_in_price).toBe(250);
   });
 
   it('parses discounts_json safely (bad JSON → [])', () => {
