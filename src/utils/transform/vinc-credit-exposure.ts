@@ -1,4 +1,4 @@
-import type { Exposition } from '@framework/basic-rest/acccount/types-b2b-account';
+import type { Exposition } from '@framework/acccount/types-b2b-account';
 
 export interface VincCreditExposureLine {
   code?: string;
