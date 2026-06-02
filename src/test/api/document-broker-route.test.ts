@@ -47,7 +47,7 @@ describe('GET /api/profile/document/[model]/[id]', () => {
 
   it('403s when the record is owned by another customer', async () => {
     sessionOwnedCustomerCodes.mockResolvedValue(new Set(['015892']));
-    fetchModelRecord.mockResolvedValue({ _id: 'i1', relation_id: '999999', data: { pdf_url: 'https://b2b/x.pdf' } });
+    fetchModelRecord.mockResolvedValue({ _id: 'i1', relation_id: '999999', data: { pdf_url: 'https://b2b.hidros.com/documenti-clienti/x.pdf' } });
     const res = await GET(req('invoice', 'i1'), ctx('invoice', 'i1'));
     expect(res.status).toBe(403);
   });
@@ -90,7 +90,7 @@ describe('GET /api/profile/document/[model]/[id]', () => {
 
   it('propagates a 404 from the upstream file server', async () => {
     sessionOwnedCustomerCodes.mockResolvedValue(new Set(['015892']));
-    fetchModelRecord.mockResolvedValue({ _id: 'i1', relation_id: '015892', data: { pdf_url: 'https://b2b/x.pdf' } });
+    fetchModelRecord.mockResolvedValue({ _id: 'i1', relation_id: '015892', data: { pdf_url: 'https://b2b.hidros.com/documenti-clienti/x.pdf' } });
     global.fetch = vi.fn(async () => ({ ok: false, status: 404, body: null })) as any;
     const res = await GET(req('invoice', 'i1'), ctx('invoice', 'i1'));
     expect(res.status).toBe(404);
@@ -98,9 +98,23 @@ describe('GET /api/profile/document/[model]/[id]', () => {
 
   it('502s on other upstream failures', async () => {
     sessionOwnedCustomerCodes.mockResolvedValue(new Set(['015892']));
-    fetchModelRecord.mockResolvedValue({ _id: 'i1', relation_id: '015892', data: { pdf_url: 'https://b2b/x.pdf' } });
+    fetchModelRecord.mockResolvedValue({ _id: 'i1', relation_id: '015892', data: { pdf_url: 'https://b2b.hidros.com/documenti-clienti/x.pdf' } });
     global.fetch = vi.fn(async () => ({ ok: false, status: 500, body: null })) as any;
     const res = await GET(req('invoice', 'i1'), ctx('invoice', 'i1'));
     expect(res.status).toBe(502);
+  });
+
+  it('refuses to proxy a non documenti-clienti URL (never fetches it)', async () => {
+    sessionOwnedCustomerCodes.mockResolvedValue(new Set(['015892']));
+    fetchModelRecord.mockResolvedValue({
+      _id: 'i1',
+      relation_id: '015892',
+      data: { pdf_url: 'https://evil.example/secret' },
+    });
+    const f = vi.fn();
+    global.fetch = f as any;
+    const res = await GET(req('invoice', 'i1'), ctx('invoice', 'i1'));
+    expect(res.status).toBe(404);
+    expect(f).not.toHaveBeenCalled();
   });
 });

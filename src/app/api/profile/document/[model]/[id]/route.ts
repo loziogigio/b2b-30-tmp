@@ -32,22 +32,70 @@ function resolveFetchUrl(u: string): string {
   return `${base.replace(/\/+$/, '')}${rel}`;
 }
 
+/**
+ * This route is opened in a browser tab (the documents page links to it), so
+ * errors render as a small friendly HTML page rather than raw JSON. The success
+ * case streams the PDF inline.
+ */
+function errorPage(status: number, icon: string, title: string, message: string) {
+  const html = `<!doctype html><html lang="it"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>${title}</title><style>
+:root{color-scheme:light}
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:#f3f4f6;color:#111827;display:flex;min-height:100vh;align-items:center;justify-content:center;padding:24px}
+.card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:36px 30px;max-width:400px;width:100%;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.ic{font-size:44px;line-height:1;margin-bottom:14px}
+h1{font-size:18px;margin:0 0 8px;font-weight:600}
+p{font-size:14px;color:#6b7280;margin:0;line-height:1.5}
+</style></head><body><div class="card"><div class="ic">${icon}</div><h1>${title}</h1><p>${message}</p></div></body></html>`;
+  return new NextResponse(html, {
+    status,
+    headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
+  });
+}
+
+const PAGES = {
+  unauthenticated: () =>
+    errorPage(
+      401,
+      '🔒',
+      'Accesso richiesto',
+      'La tua sessione è scaduta. Effettua di nuovo l’accesso per visualizzare il documento.',
+    ),
+  forbidden: () =>
+    errorPage(
+      403,
+      '🔒',
+      'Accesso negato',
+      'Non sei autorizzato a visualizzare questo documento.',
+    ),
+  notAvailable: () =>
+    errorPage(
+      404,
+      '📄',
+      'Documento non disponibile',
+      'Il documento richiesto non è disponibile.',
+    ),
+  unavailable: () =>
+    errorPage(
+      502,
+      '📄',
+      'Documento non disponibile',
+      'Il documento non è momentaneamente raggiungibile. Riprova più tardi.',
+    ),
+};
+
 export async function GET(req: NextRequest, { params }: RouteParams) {
   const { model, id } = await params;
-  if (!isProfileModel(model)) {
-    return NextResponse.json({ error: `Unknown model: ${model}` }, { status: 404 });
-  }
+  if (!isProfileModel(model)) return PAGES.notAvailable();
 
   const field = FILE_FIELD[req.nextUrl.searchParams.get('kind') ?? 'pdf'];
-  if (!field) {
-    return NextResponse.json({ error: 'invalid kind' }, { status: 400 });
-  }
+  if (!field) return PAGES.notAvailable();
 
   // 1) session → owned customer codes (server-derived; never trusts the client)
   const owned = await sessionOwnedCustomerCodes(req);
-  if (!owned) {
-    return NextResponse.json({ error: 'not authenticated' }, { status: 401 });
-  }
+  if (!owned) return PAGES.unauthenticated();
 
   // 2) load the record (server-side api-key)
   const creds = await resolveCsCreds(req);
@@ -56,34 +104,32 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     rec = await fetchModelRecord(creds, model, id);
   } catch (error) {
     console.error(`[document broker] ${model}/${id} record fetch failed:`, error);
-    return NextResponse.json({ error: 'record fetch failed' }, { status: 502 });
+    return PAGES.unavailable();
   }
-  if (!rec) {
-    return NextResponse.json({ error: 'not found' }, { status: 404 });
-  }
+  if (!rec) return PAGES.notAvailable();
 
   // 3) ownership gate
   if (!rec.relation_id || !owned.has(String(rec.relation_id))) {
-    return NextResponse.json({ error: 'forbidden' }, { status: 403 });
+    return PAGES.forbidden();
   }
 
-  // 4) resolve + validate the file url
+  // 4) resolve + validate the file url (must be an http(s) documenti-clienti file)
   const fileUrl = rec.data?.[field];
-  if (!isHttpUrl(fileUrl)) {
-    return NextResponse.json({ error: 'document not available' }, { status: 404 });
+  if (!isHttpUrl(fileUrl) || !fileUrl.includes('/documenti-clienti/')) {
+    return PAGES.notAvailable();
   }
 
   // 5) stream the file back (pass through type/length; propagate 404)
   try {
     const upstream = await fetch(resolveFetchUrl(fileUrl));
-    if (upstream.status === 404) {
-      return NextResponse.json({ error: 'document not found' }, { status: 404 });
-    }
+    if (upstream.status === 404) return PAGES.notAvailable();
     if (!upstream.ok || !upstream.body) {
       console.error(`[document broker] upstream ${upstream.status} for ${model}/${id}`);
-      return NextResponse.json({ error: 'document unavailable' }, { status: 502 });
+      return PAGES.unavailable();
     }
-    const filename = (fileUrl.split('/').pop() || `${model}-${id}`).split('?')[0];
+    const filename = (fileUrl.split('/').pop() || `${model}-${id}`)
+      .split('?')[0]
+      .replace(/[\r\n"]/g, '');
     const headers: Record<string, string> = {
       'content-type':
         upstream.headers.get('content-type') ??
@@ -96,6 +142,6 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     return new NextResponse(upstream.body, { status: 200, headers });
   } catch (error) {
     console.error(`[document broker] stream failed for ${model}/${id}:`, error);
-    return NextResponse.json({ error: 'document unavailable' }, { status: 502 });
+    return PAGES.unavailable();
   }
 }
