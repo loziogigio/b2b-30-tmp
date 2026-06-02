@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  imagelessSkus,
+  imagelessEntityCodes,
   mergeItemImages,
 } from '@framework/order/use-enriched-order-items';
 import type { TransformedOrderItem } from '@utils/transform/b2b-order';
@@ -20,39 +20,42 @@ const item = (over: Partial<TransformedOrderItem>): TransformedOrderItem =>
     ...over,
   }) as TransformedOrderItem;
 
-describe('imagelessSkus', () => {
-  it('returns unique skus of items that lack an image and have a sku', () => {
+describe('imagelessEntityCodes', () => {
+  it('returns unique entity_codes of items that lack an image and have one', () => {
     expect(
-      imagelessSkus([
-        item({ sku: 'A' }),
-        item({ sku: 'B', image: 'u' }), // already has image → excluded
-        item({ sku: 'A' }), // duplicate → deduped
-        item({ sku: '' }), // no sku → excluded
+      imagelessEntityCodes([
+        item({ entityCode: '104131' }),
+        item({ entityCode: '005318', image: 'u' }), // already has image → excluded
+        item({ entityCode: '104131' }), // duplicate → deduped
+        item({ entityCode: undefined }), // no entityCode → excluded
       ]),
-    ).toEqual(['A']);
+    ).toEqual(['104131']);
   });
 
   it('returns [] when every item has an image (ERP case)', () => {
     expect(
-      imagelessSkus([item({ sku: 'A', image: 'a' }), item({ sku: 'B', image: 'b' })]),
+      imagelessEntityCodes([
+        item({ entityCode: '1', image: 'a' }),
+        item({ entityCode: '2', image: 'b' }),
+      ]),
     ).toEqual([]);
   });
 });
 
 describe('mergeItemImages', () => {
-  const bySku = new Map([
-    ['A', 'imgA'],
-    ['C', 'imgC'],
+  const byCode = new Map([
+    ['104131', 'imgA'],
+    ['999', 'imgC'],
   ]);
 
-  it('fills image only on matching image-less items', () => {
+  it('fills image only on matching image-less items (by entityCode)', () => {
     const out = mergeItemImages(
       [
-        item({ sku: 'A' }), // match → filled
-        item({ sku: 'B' }), // no match → untouched
-        item({ sku: 'A', image: 'keep' }), // already has image → not overwritten
+        item({ entityCode: '104131' }), // match → filled
+        item({ entityCode: '222' }), // no match → untouched
+        item({ entityCode: '104131', image: 'keep' }), // already has image → not overwritten
       ],
-      bySku,
+      byCode,
     );
     expect(out[0].image).toBe('imgA');
     expect(out[1].image).toBeUndefined();
@@ -60,8 +63,8 @@ describe('mergeItemImages', () => {
   });
 
   it('returns a new array and does not mutate inputs', () => {
-    const input = [item({ sku: 'A' })];
-    const out = mergeItemImages(input, bySku);
+    const input = [item({ entityCode: '104131' })];
+    const out = mergeItemImages(input, byCode);
     expect(out).not.toBe(input);
     expect(input[0].image).toBeUndefined();
   });
