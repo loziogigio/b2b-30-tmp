@@ -26,6 +26,10 @@ import {
   vincCreditExposureToExposition,
   type VincCreditExposureRecord,
 } from '@utils/transform/vinc-credit-exposure';
+import {
+  vincPaymentScheduleToSummary,
+  type VincScadenzaRecord,
+} from '@utils/transform/vinc-payment-schedule';
 
 // common payload
 const buildPayload = () => ({ ...ERP_STATIC });
@@ -110,6 +114,24 @@ export const useExpositionQuery = (enabled = true) => {
 export async function fetchPaymentDeadline(
   theme?: string,
 ): Promise<PaymentDeadlineSummary> {
+  // default theme → VINC payment_schedule (Scadenziario); empty summary if
+  // unavailable, no proxy fallback. Oldest-due first.
+  if (sourcePolicy(theme).account === 'vinc') {
+    const result = await fetchProfileRecords('payment_schedule', {
+      relation_id: ERP_STATIC.customer_code,
+      sort: 'data.data_scadenza',
+      limit: 200,
+    });
+    const todayISO = new Date().toISOString().slice(0, 10);
+    if (!result.available) {
+      return vincPaymentScheduleToSummary([], todayISO);
+    }
+    return vincPaymentScheduleToSummary(
+      result.items as VincScadenzaRecord[],
+      todayISO,
+    );
+  }
+
   const raw =
     theme === 'time'
       ? await erpPost<
@@ -138,7 +160,7 @@ export async function fetchPaymentDeadline(
 export const usePaymentDeadlineQuery = (enabled = true) => {
   const theme = useThemeId();
   return useQuery<PaymentDeadlineSummary, Error>({
-    queryKey: [API_ENDPOINTS_B2B.GET_PAYMENT_DEADLINE],
+    queryKey: [API_ENDPOINTS_B2B.GET_PAYMENT_DEADLINE, theme],
     queryFn: () => fetchPaymentDeadline(theme),
     enabled,
     staleTime: 1000 * 60 * 5, // 5 minutes - don't refetch if data is fresh
