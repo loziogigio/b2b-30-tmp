@@ -13,10 +13,12 @@ describe('PROFILE_MODELS allow-list', () => {
       'credit_exposure',
       'invoice',
       'delivery_note',
+      'payment_schedule',
     ]);
   });
   it('isProfileModel rejects anything else', () => {
     expect(isProfileModel('historical_order')).toBe(true);
+    expect(isProfileModel('payment_schedule')).toBe(true);
     expect(isProfileModel('erp_settings')).toBe(false);
     expect(isProfileModel('../secrets')).toBe(false);
   });
@@ -74,6 +76,7 @@ describe('PROFILE_MODEL_DATE_FIELD', () => {
       delivery_note: 'data',
       invoice: 'data',
       credit_exposure: 'snapshot_date',
+      payment_schedule: 'data_scadenza',
     });
   });
 });

@@ -7,6 +7,7 @@ export const PROFILE_MODELS = [
   'credit_exposure',
   'invoice',
   'delivery_note',
+  'payment_schedule',
 ] as const;
 
 export type ProfileModel = (typeof PROFILE_MODELS)[number];
@@ -21,6 +22,7 @@ export const PROFILE_MODEL_DATE_FIELD: Record<ProfileModel, string> = {
   delivery_note: 'data',
   invoice: 'data',
   credit_exposure: 'snapshot_date',
+  payment_schedule: 'data_scadenza',
 };
 
 export interface ProfileQuery {
