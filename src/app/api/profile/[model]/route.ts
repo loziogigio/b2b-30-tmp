@@ -5,6 +5,7 @@ import {
   buildRecordsQuery,
   probeModelAvailable,
   fetchModelRecords,
+  PROFILE_MODEL_DATE_FIELD,
 } from '@/lib/profile/vinc-data-models';
 
 type RouteParams = { params: Promise<{ model: string }> };
@@ -34,16 +35,19 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ available: false, items: [] });
   }
 
-  const query = buildRecordsQuery({
-    relation_id: relationId,
-    status: sp.get('status') ?? undefined,
-    date_from: sp.get('date_from') ?? undefined,
-    date_to: sp.get('date_to') ?? undefined,
-    document_number: sp.get('document_number') ?? undefined,
-    page: sp.get('page') ? Number(sp.get('page')) : undefined,
-    limit: sp.get('limit') ? Number(sp.get('limit')) : undefined,
-    sort: sp.get('sort') ?? undefined,
-  });
+  const query = buildRecordsQuery(
+    {
+      relation_id: relationId,
+      status: sp.get('status') ?? undefined,
+      date_from: sp.get('date_from') ?? undefined,
+      date_to: sp.get('date_to') ?? undefined,
+      document_number: sp.get('document_number') ?? undefined,
+      page: sp.get('page') ? Number(sp.get('page')) : undefined,
+      limit: sp.get('limit') ? Number(sp.get('limit')) : undefined,
+      sort: sp.get('sort') ?? undefined,
+    },
+    PROFILE_MODEL_DATE_FIELD[model],
+  );
 
   try {
     const { items, pagination } = await fetchModelRecords(creds, model, query);

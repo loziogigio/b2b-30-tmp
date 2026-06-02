@@ -3,6 +3,7 @@ import {
   PROFILE_MODELS,
   isProfileModel,
   buildRecordsQuery,
+  PROFILE_MODEL_DATE_FIELD,
 } from '@/lib/profile/vinc-data-models';
 
 describe('PROFILE_MODELS allow-list', () => {
@@ -52,5 +53,27 @@ describe('buildRecordsQuery', () => {
     });
     expect(q.get('filter[document_number]')).toBe('OC/9345');
     expect(q.get('external_ref')).toBeNull();
+  });
+
+  it('uses a custom date field for filters and default sort', () => {
+    const q = buildRecordsQuery(
+      { relation_id: '015892', date_from: '2026-05-01', date_to: '2026-05-31' },
+      'data',
+    );
+    expect(q.get('filter[data][gte]')).toBe('2026-05-01');
+    expect(q.get('filter[data][lte]')).toBe('2026-05-31');
+    expect(q.get('sort')).toBe('-data.data');
+    expect(q.get('filter[document_date][gte]')).toBeNull();
+  });
+});
+
+describe('PROFILE_MODEL_DATE_FIELD', () => {
+  it('maps each model to its date field', () => {
+    expect(PROFILE_MODEL_DATE_FIELD).toEqual({
+      historical_order: 'document_date',
+      delivery_note: 'data',
+      invoice: 'data',
+      credit_exposure: 'snapshot_date',
+    });
   });
 });

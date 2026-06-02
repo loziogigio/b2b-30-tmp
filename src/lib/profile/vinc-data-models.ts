@@ -15,6 +15,14 @@ export function isProfileModel(value: string): value is ProfileModel {
   return (PROFILE_MODELS as readonly string[]).includes(value);
 }
 
+/** Top-level data.* date field each model filters & sorts on. */
+export const PROFILE_MODEL_DATE_FIELD: Record<ProfileModel, string> = {
+  historical_order: 'document_date',
+  delivery_note: 'data',
+  invoice: 'data',
+  credit_exposure: 'snapshot_date',
+};
+
 export interface ProfileQuery {
   relation_id: string; // the customer scope (= ERP customer_code)
   status?: string;
@@ -32,15 +40,18 @@ export interface ProfileQuery {
  * `external_ref` are intentionally never emitted (external_ref bypasses tenant
  * scoping). Pure — no network.
  */
-export function buildRecordsQuery(p: ProfileQuery): URLSearchParams {
+export function buildRecordsQuery(
+  p: ProfileQuery,
+  dateField = 'document_date',
+): URLSearchParams {
   const q = new URLSearchParams();
   q.set('relation_id', p.relation_id);
   q.set('limit', String(p.limit ?? 50));
   if (p.page != null) q.set('page', String(p.page));
-  q.set('sort', p.sort ?? '-data.document_date');
+  q.set('sort', p.sort ?? `-data.${dateField}`);
   if (p.status) q.set('filter[status]', p.status);
-  if (p.date_from) q.set('filter[document_date][gte]', p.date_from);
-  if (p.date_to) q.set('filter[document_date][lte]', p.date_to);
+  if (p.date_from) q.set(`filter[${dateField}][gte]`, p.date_from);
+  if (p.date_to) q.set(`filter[${dateField}][lte]`, p.date_to);
   if (p.document_number) q.set('filter[document_number]', p.document_number);
   return q;
 }
