@@ -184,6 +184,28 @@ export const useAddressQuery = (enabled = true) =>
 
 // ===== Customer (OBJECT) =====
 export async function fetchCustomer(theme?: string): Promise<CustomerProfile> {
+  // default theme → VINC Commerce-Suite customer (via BFF); no legacy proxy call.
+  if (sourcePolicy(theme).account === 'vinc') {
+    const vincId = ERP_STATIC.vinc_customer_id;
+    if (!vincId) {
+      return {
+        code: ERP_STATIC.customer_code || '',
+        businessName: ERP_STATIC.company_name || undefined,
+        isLegalEntity: true,
+      } as CustomerProfile;
+    }
+    const response = await fetch('/api/b2b/customer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ customer_id: vincId }),
+    });
+    const data = await response.json();
+    if (data?.success && data?.customer) {
+      return data.customer as CustomerProfile;
+    }
+    throw new Error(data?.message || 'Failed to fetch customer from VINC API');
+  }
+
   const raw =
     theme === 'time'
       ? await erpPost<{ message?: RawCustomerResponse } | RawCustomerResponse>(
@@ -217,7 +239,7 @@ export async function fetchCustomer(theme?: string): Promise<CustomerProfile> {
 export const useCustomerQuery = (enabled = true) => {
   const theme = useThemeId();
   return useQuery<CustomerProfile, Error>({
-    queryKey: [API_ENDPOINTS_B2B.GET_CUSTOMER],
+    queryKey: [API_ENDPOINTS_B2B.GET_CUSTOMER, theme],
     queryFn: () => fetchCustomer(theme),
     enabled,
     staleTime: 1000 * 60 * 5, // 5 minutes
