@@ -61,6 +61,10 @@ type GalleryImage = {
 
 import type { PageBlock } from '@/lib/types/blocks';
 import { BlockRenderer } from '@/components/blocks/BlockRenderer';
+import DynamicBlocksSection, {
+  selectSectionBlocks,
+} from '@components/product/dynamic-blocks/DynamicBlocksSection';
+import type { DynamicBlock } from '@framework/types';
 
 const ProductB2BDetails: React.FC<{
   lang: string;
@@ -147,6 +151,12 @@ const ProductB2BDetails: React.FC<{
     : !isMultiVariantParent && variations.length === 1
       ? variations[0]
       : first;
+
+  // Per-product dynamic blocks (separate system from PageBlock zones).
+  const dynamicBlocks = (data as any)?.dynamic_blocks as
+    | DynamicBlock[]
+    | undefined;
+  const dynamicSection3Blocks = selectSectionBlocks(dynamicBlocks, lang, 3);
 
   const { settings } = useHomeSettings();
   const decimals = settings?.cardStyle?.priceDecimals ?? 2;
@@ -327,6 +337,7 @@ const ProductB2BDetails: React.FC<{
           lang={lang}
           product={data}
           zone3Blocks={zone3Blocks}
+          dynamicSection3Blocks={dynamicSection3Blocks}
         />
 
         {zone4Blocks.length > 0 && (
@@ -340,6 +351,13 @@ const ProductB2BDetails: React.FC<{
             ))}
           </div>
         )}
+
+        <DynamicBlocksSection
+          blocks={dynamicBlocks}
+          lang={lang}
+          section={4}
+          className="pt-6 space-y-6"
+        />
 
         {data?.id && (
           <div className="pt-8">
@@ -608,6 +626,13 @@ const ProductB2BDetails: React.FC<{
               ))}
             </div>
           )}
+          {/* Section 1: per-product dynamic blocks (sidebar) */}
+          <DynamicBlocksSection
+            blocks={dynamicBlocks}
+            lang={lang}
+            section={1}
+            className="pt-4 space-y-6"
+          />
         </div>
       </div>
 
@@ -625,6 +650,14 @@ const ProductB2BDetails: React.FC<{
         </div>
       )}
 
+      {/* Section 2: per-product dynamic blocks (after gallery, full width) */}
+      <DynamicBlocksSection
+        blocks={dynamicBlocks}
+        lang={lang}
+        section={2}
+        className="pt-6 space-y-6"
+      />
+
       {showZoneLabels && zone3Blocks.length > 0 && (
         <div className="pt-6">
           <ZoneLabel zone="zone3" color="purple" label="New Tab" />
@@ -634,6 +667,7 @@ const ProductB2BDetails: React.FC<{
         lang={lang}
         product={data}
         zone3Blocks={zone3Blocks}
+        dynamicSection3Blocks={dynamicSection3Blocks}
       />
 
       {/* Zone 4: Below tabs (full width) */}
@@ -649,6 +683,14 @@ const ProductB2BDetails: React.FC<{
           ))}
         </div>
       )}
+
+      {/* Section 4: per-product dynamic blocks (below tabs, full width) */}
+      <DynamicBlocksSection
+        blocks={dynamicBlocks}
+        lang={lang}
+        section={4}
+        className="pt-6 space-y-6"
+      />
 
       {/* Related Products (Correlations) */}
       {data?.id && (

@@ -7,6 +7,8 @@ import { sanitizeHtml } from '@/lib/sanitize-html';
 import type { Product } from '@framework/types';
 import type { PageBlock } from '@/lib/types/blocks';
 import { BlockRenderer } from '@/components/blocks/BlockRenderer';
+import type { DynamicBlock } from '@framework/types';
+import DynamicBlockView from '@components/product/dynamic-blocks/DynamicBlockView';
 import { HiOutlineDownload } from 'react-icons/hi';
 
 function classNames(...classes: any[]) {
@@ -193,10 +195,12 @@ export default function ProductB2BDetailsTab({
   lang, // reserved for future i18n labels
   product,
   zone3Blocks = [],
+  dynamicSection3Blocks = [],
 }: {
   lang: string;
   product: Product;
   zone3Blocks?: PageBlock[];
+  dynamicSection3Blocks?: DynamicBlock[];
 }) {
   // Use html_description for the detailed HTML content tab
   // Defensive: handle string, object, or any unexpected type from server
@@ -236,7 +240,9 @@ export default function ProductB2BDetailsTab({
     !hasMarketingFeatures &&
     !hasFeatures &&
     !hasTechSpecs &&
-    !hasDocs
+    !hasDocs &&
+    zone3Blocks.length === 0 &&
+    dynamicSection3Blocks.length === 0
   )
     return null;
 
@@ -386,6 +392,15 @@ export default function ProductB2BDetailsTab({
           productData={{ sku: String(product?.sku ?? ''), lang }}
         />
       ),
+    });
+  });
+
+  // Add per-product dynamic section-3 blocks as their own tabs
+  dynamicSection3Blocks.forEach((block, index) => {
+    tabs.push({
+      id: `dyn-section3-${block.id || index}`,
+      label: block.title || `${index + 1}`,
+      node: <DynamicBlockView key={block.id || `dyn-s3-${index}`} block={block} />,
     });
   });
 
