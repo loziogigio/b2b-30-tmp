@@ -250,6 +250,9 @@ export function transformPimProduct(
     // Pass through marketing and technical specs
     marketing_features: raw.marketing_features || {},
     technical_specifications: raw.technical_specifications || {},
+    // Per-product rich content — present only when the detail-page fetch requested
+    // include_dynamic_blocks; passed straight through for the storefront renderer.
+    dynamic_blocks: (raw as any).dynamic_blocks,
     // "New" flag from PIM (attribute_is_new_b boolean field)
     // Parent is flagged new if itself OR any variant is new
     is_new:
