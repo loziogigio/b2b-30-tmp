@@ -171,6 +171,7 @@ async function renderProductDetail(
           rows: 1,
           filters: { sku: [sku] },
           group_variants: true,
+          include_dynamic_blocks: true,
         });
         return transformPimProducts(result.results).map((p) => ({
           ...p,
