@@ -112,6 +112,7 @@ const ProductB2BDetails: React.FC<{
       filters: {
         sku: skuToSearch,
       },
+      include_dynamic_blocks: true,
     },
     { enabled: skuToSearch.length > 0, groupByParent: true },
   );
@@ -126,6 +127,7 @@ const ProductB2BDetails: React.FC<{
         filters: {
           parent_sku: skuToSearch,
         },
+        include_dynamic_blocks: true,
       },
       { enabled: skuNotFound, groupByParent: true },
     );

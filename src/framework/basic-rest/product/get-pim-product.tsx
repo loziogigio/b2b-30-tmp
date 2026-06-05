@@ -365,6 +365,11 @@ export const fetchPimProductList = async (
     body.group_variants = true;
   }
 
+  // Request per-product rich content blocks when the caller needs them
+  if (params.include_dynamic_blocks) {
+    body.include_dynamic_blocks = true;
+  }
+
   // Use proxy - credentials are injected server-side
   const data = await post<PimSearchResponse>(API_ENDPOINTS_PIM.SEARCH, body);
 
