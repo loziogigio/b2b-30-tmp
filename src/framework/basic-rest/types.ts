@@ -51,6 +51,7 @@ import type {
   PimPackagingOption,
   ProductPricing,
 } from './types/pim-pricing';
+import type { DynamicBlock } from './types/dynamic-blocks';
 
 export type Product = {
   id: number | string;
@@ -115,7 +116,14 @@ export type Product = {
         uom?: string;
         order?: number;
       }>;
+  // Per-product rich content blocks (present only when detail fetch requests include_dynamic_blocks)
+  dynamic_blocks?: DynamicBlock[];
 };
+export type {
+  DynamicBlockSection, DynamicBlockColumns, BlockElementKind, BlockLink,
+  BlockElementBase, MediaElement, TextElement, BlockElement, DynamicBlock, DynamicBlocks,
+} from './types/dynamic-blocks';
+
 export type OrderItem = {
   id: number | string;
   name: string;
