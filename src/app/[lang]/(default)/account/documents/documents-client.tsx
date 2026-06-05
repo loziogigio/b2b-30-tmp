@@ -7,6 +7,13 @@ import type { DocumentRow } from '@framework/documents/types-b2b-documents';
 import { ERP_STATIC } from '@framework/utils/static';
 import { lastMonthRange, toErpNumericDate } from '@utils/date-to-erp';
 import { useDocumentsListQuery } from '@framework/documents/fetch-documents-list';
+import {
+  fetchBarcodes,
+  downloadDocumentLinesExcel,
+  openDocumentLinesPrintWindow,
+} from './documents-export';
+import { BsFiletypePdf, BsFiletypeXlsx } from 'react-icons/bs';
+import { ImSpinner2 } from 'react-icons/im';
 
 type Tab = 'F' | 'DDT';
 type SortKey = 'destination' | 'date' | 'document' | 'number';
@@ -17,6 +24,23 @@ export default function DocumentsClient({ lang }: { lang: string }) {
   const [{ from, to }, setRange] = useState(lastMonthRange());
   const [sortKey, setSortKey] = useState<SortKey>('date');
   const [sortAsc, setSortAsc] = useState(false);
+  const [busy, setBusy] = useState<{
+    doc: string;
+    kind: 'excel' | 'pdf';
+  } | null>(null);
+
+  // Enrich the document's lines with EAN/barcode (by entity_code) then export.
+  const exportLines = async (r: DocumentRow, kind: 'excel' | 'pdf') => {
+    if (!r.lines?.length || busy) return;
+    setBusy({ doc: r.document, kind });
+    try {
+      const barcodes = await fetchBarcodes(r.lines.map((l) => l.entityCode));
+      if (kind === 'excel') downloadDocumentLinesExcel(r, barcodes);
+      else openDocumentLinesPrintWindow(r, barcodes);
+    } finally {
+      setBusy(null);
+    }
+  };
 
   const {
     data = [],
@@ -34,6 +58,8 @@ export default function DocumentsClient({ lang }: { lang: string }) {
   );
 
   const isDDT = tab === 'DDT';
+  // DDT: …PDF, Codice a barre PDF (7). Fatture: …+CSV (8).
+  const emptyColSpan = isDDT ? 7 : 8;
 
   // Default-theme documents come from VINC and carry direct document URLs
   // (r.pdf / r.barcodePdf / r.csv). Render each as a link only when present.
@@ -47,6 +73,48 @@ export default function DocumentsClient({ lang }: { lang: string }) {
       >
         {label}
       </a>
+    ) : (
+      <span className="text-gray-300">—</span>
+    );
+
+  // A single per-document line-export icon (Excel or Barcode PDF).
+  const exportIcon = (r: DocumentRow, kind: 'excel' | 'pdf') => {
+    if (!r.lines?.length) return null;
+    const docBusy = busy?.doc === r.document;
+    const thisBusy = docBusy && busy?.kind === kind;
+    const Icon = kind === 'excel' ? BsFiletypeXlsx : BsFiletypePdf;
+    const color = kind === 'excel' ? 'text-emerald-600' : 'text-red-600';
+    return (
+      <button
+        type="button"
+        onClick={() => exportLines(r, kind)}
+        disabled={docBusy}
+        className={cn(
+          'flex h-9 w-9 items-center justify-center rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50',
+          docBusy && 'cursor-not-allowed opacity-60',
+        )}
+        title={
+          kind === 'excel'
+            ? 'Esporta righe in Excel (SKU, prodotto, q.tà×UM, barcode)'
+            : 'Esporta righe in PDF con barcode'
+        }
+      >
+        {thisBusy ? (
+          <ImSpinner2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+        ) : (
+          <Icon className={cn('h-5 w-5', color)} aria-hidden="true" />
+        )}
+        <span className="sr-only">
+          {kind === 'excel' ? 'Esporta Excel' : 'Esporta Barcode PDF'}
+        </span>
+      </button>
+    );
+  };
+
+  // One export icon per cell, or "—" when the document carries no lines.
+  const exportCell = (r: DocumentRow, kind: 'excel' | 'pdf') =>
+    r.lines?.length ? (
+      <span className="inline-flex justify-center">{exportIcon(r, kind)}</span>
     ) : (
       <span className="text-gray-300">—</span>
     );
@@ -183,7 +251,7 @@ export default function DocumentsClient({ lang }: { lang: string }) {
         {/* ===== Desktop/Tablet: Tabella ===== */}
         <div className="hidden sm:block overflow-x-auto rounded-md border border-gray-200 bg-white overflow-hidden">
           <div className="max-h-[60vh] overflow-y-auto">
-            <table className="min-w-[920px] w-full text-sm">
+            <table className="min-w-[1040px] w-full text-sm">
               <thead className="sticky top-0 z-10 bg-gray-200 text-gray-800 border-b border-gray-300">
                 <tr>
                   {sortBtn(
@@ -201,7 +269,7 @@ export default function DocumentsClient({ lang }: { lang: string }) {
                     'Documento',
                     'w-44 px-4 py-3 text-left font-semibold border-l border-gray-300',
                   )}
-                  <th className="w-32 px-4 py-3 text-left font-semibold border-l border-gray-300">
+                  <th className="w-24 px-4 py-3 text-left font-semibold border-l border-gray-300">
                     Tipo
                   </th>
                   {sortBtn(
@@ -209,14 +277,14 @@ export default function DocumentsClient({ lang }: { lang: string }) {
                     'Numero',
                     'w-28 px-4 py-3 text-right font-semibold border-l border-gray-300',
                   )}
-                  <th className="w-24 px-4 py-3 text-center font-semibold border-l border-gray-300">
+                  <th className="w-20 px-4 py-3 text-center font-semibold border-l border-gray-300">
                     PDF
                   </th>
-                  <th className="w-40 px-4 py-3 text-center font-semibold border-l border-gray-300">
+                  <th className="w-36 px-4 py-3 text-center font-semibold border-l border-gray-300">
                     Codice a barre PDF
                   </th>
                   {!isDDT && (
-                    <th className="w-24 px-4 py-3 text-center font-semibold border-l border-gray-300">
+                    <th className="w-20 px-4 py-3 text-center font-semibold border-l border-gray-300">
                       CSV
                     </th>
                   )}
@@ -247,12 +315,12 @@ export default function DocumentsClient({ lang }: { lang: string }) {
                     </td>
 
                     <td className="px-4 py-3 text-center border-l border-gray-100">
-                      {docLink(r.barcodePdf, 'PDF▮▮')}
+                      {exportCell(r, 'pdf')}
                     </td>
 
                     {!isDDT && (
                       <td className="px-4 py-3 text-center border-l border-gray-100">
-                        {docLink(r.csv, 'CSV')}
+                        {exportCell(r, 'excel')}
                       </td>
                     )}
                   </tr>
@@ -261,7 +329,7 @@ export default function DocumentsClient({ lang }: { lang: string }) {
                 {!isLoading && !rows.length && (
                   <tr>
                     <td
-                      colSpan={isDDT ? 7 : 8}
+                      colSpan={emptyColSpan}
                       className="px-4 py-6 text-center text-sm text-gray-500"
                     >
                       Nessun documento trovato.
@@ -307,10 +375,10 @@ export default function DocumentsClient({ lang }: { lang: string }) {
                   {r.destination}
                 </div>
 
-                <div className="mt-3 flex flex-wrap gap-2">
+                <div className="mt-3 flex flex-wrap items-center gap-2">
                   {mLink(r.pdf, 'PDF')}
-                  {mLink(r.barcodePdf, 'PDF▮▮')}
-                  {!isDDT && mLink(r.csv, 'CSV')}
+                  {!isDDT && exportIcon(r, 'excel')}
+                  {exportIcon(r, 'pdf')}
                 </div>
               </div>
             );

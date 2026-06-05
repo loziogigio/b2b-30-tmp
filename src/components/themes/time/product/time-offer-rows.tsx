@@ -391,6 +391,7 @@ function CartCell({
       serverItemId={serverItemId}
       disabled={disabled}
       size="sm"
+      className="time-stepper"
       showPlaceholder={false}
     />
   );

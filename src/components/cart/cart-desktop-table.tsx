@@ -14,6 +14,8 @@ import { updateLineNote } from '@framework/cart/b2b-cart';
 import { useCartAnomalies } from '@/contexts/cart-anomalies.context';
 import { useModalAction } from '@components/common/modal/modal.context';
 import { fetchPimProductList } from '@framework/product/get-pim-product';
+import { IoIosCloseCircle } from 'react-icons/io';
+import { confirmAction } from '@utils/toast-confirm';
 
 export type SortKey =
   | 'rowId'
@@ -134,8 +136,19 @@ function CartDesktopRow({
   const { open, setOpen, draft, setDraft, save, saving, hasNote } =
     useNoteState(r);
   const { byEntityCode, byIdRiga } = useCartAnomalies();
+  const { clearItemFromCart } = useCart();
   const { openModal } = useModalAction();
   const [loadingProduct, setLoadingProduct] = useState(false);
+
+  const handleRemove = async () => {
+    const ok = await confirmAction({
+      message: `Rimuovere "${r?.name ?? r?.sku ?? 'articolo'}" dal carrello?`,
+      confirmLabel: 'Rimuovi',
+      cancelLabel: 'Annulla',
+      tone: 'danger',
+    });
+    if (ok) clearItemFromCart(r);
+  };
 
   const openProductBySku = async (sku?: string) => {
     if (!sku || loadingProduct) return;
@@ -370,6 +383,18 @@ function CartDesktopRow({
       <td className="px-2 py-3 align-top text-right font-semibold whitespace-nowrap">
         {formatCurrency(line)}
       </td>
+
+      <td className="px-1.5 py-3 align-top text-center">
+        <button
+          type="button"
+          onClick={handleRemove}
+          className="text-gray-300 transition hover:text-red-500"
+          aria-label="remove-item"
+          title="Rimuovi articolo"
+        >
+          <IoIosCloseCircle className="text-2xl" />
+        </button>
+      </td>
     </tr>
   );
 }
@@ -423,6 +448,9 @@ export default function CartDesktopTable({
             {sortBtn('priceDiscount', 'Prezzo Unitario', 'w-44 !text-center')}
             {sortBtn('quantity', 'Quantità', 'w-28 !text-center')}
             {sortBtn('lineTotal', 'Prezzo', 'w-24 !text-right')}
+            <th className="w-10 !text-center">
+              <span className="sr-only">Rimuovi</span>
+            </th>
           </tr>
         </thead>
 

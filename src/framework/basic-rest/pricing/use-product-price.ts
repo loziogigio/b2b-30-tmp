@@ -10,6 +10,7 @@ import type { ErpPriceData } from '@utils/transform/erp-prices';
 import { productToErpPriceData } from '@utils/transform/inline-to-erp';
 
 import { useThemeId } from '@/contexts/tenant.context';
+import { useUI } from '@contexts/ui.context';
 import { usePricingSource } from './use-pricing-source';
 import type { PricingSource } from './pricing-source';
 
@@ -48,13 +49,16 @@ export function useProductPriceData(
 ): ErpPriceData | undefined {
   const source = usePricingSource();
   const theme = useThemeId();
+  const { isAuthorized } = useUI();
   const override = options?.override;
   const enabled = options?.enabled ?? true;
   const quantity = options?.quantity ?? 1;
 
   const entityCode = product?.id != null ? String(product.id) : '';
   const wantsErp = source === 'erp' || source === 'hybrid';
-  const erpReady = enabled && wantsErp && !override && hasValidErpContext();
+  // Anonymous visitors don't see prices, so never hit the ERP endpoint for them.
+  const erpReady =
+    enabled && isAuthorized && wantsErp && !override && hasValidErpContext();
 
   const erpQuery = useQuery({
     queryKey: erpQueryKey([entityCode], quantity, ERP_STATIC),
@@ -101,6 +105,7 @@ export function useProductsPriceMap(
 ): Record<string, ErpPriceData> {
   const source = usePricingSource();
   const theme = useThemeId();
+  const { isAuthorized } = useUI();
   const overrideMap = options?.overrideMap;
   const enabled = options?.enabled ?? true;
 
@@ -126,8 +131,13 @@ export function useProductsPriceMap(
   }, [list, options?.quantities]);
 
   const wantsErp = source === 'erp' || source === 'hybrid';
+  // Anonymous visitors don't see prices, so never hit the ERP endpoint for them.
   const erpReady =
-    enabled && wantsErp && entityCodes.length > 0 && hasValidErpContext();
+    enabled &&
+    isAuthorized &&
+    wantsErp &&
+    entityCodes.length > 0 &&
+    hasValidErpContext();
 
   const erpQuery = useQuery({
     queryKey: erpQueryKey(entityCodes, quantities, ERP_STATIC),

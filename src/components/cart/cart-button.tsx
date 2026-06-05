@@ -58,7 +58,7 @@ const CartButton: React.FC<CartButtonProps> = ({
     return openDrawer();
   }
 
-  const amount = formatCurrency(meta?.totalDoc ?? total ?? 0, currency, locale);
+  const amount = formatCurrency(meta?.totalNet ?? total ?? 0, currency, locale);
   const vatAmount =
     Number(meta?.vat ?? 0) > 0
       ? formatCurrency(Number(meta?.vat ?? 0), currency, locale)
@@ -81,7 +81,7 @@ const CartButton: React.FC<CartButtonProps> = ({
         <div className="flex flex-col items-end leading-tight">
           {resolvedVariant === 'full' ? (
             <div className="text-[11px] uppercase tracking-wide text-gray-600">
-              {meta?.vat ? 'Totale documento' : t('text-cart')}
+              {meta?.totalNet != null ? 'Totale netto' : t('text-cart')}
             </div>
           ) : null}
           {resolvedVariant !== 'none' ? (

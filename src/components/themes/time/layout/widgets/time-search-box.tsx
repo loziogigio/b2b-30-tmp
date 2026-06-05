@@ -9,7 +9,7 @@ import {
   type SearchProps,
 } from '@components/common/search-box-b2b';
 
-// DFL La Mura search box: a flat white field with a 1.5px ink border, a muted
+// DFL La Mura search box: a flat white field with a 1.5px primary-color border, a muted
 // leading lens, and a solid-red square submit button on the right. Drop-in
 // replacement for SearchBoxB2B (same props) — injected into SearchB2B by the
 // time theme so the shared search/overlay logic is reused unchanged.
@@ -38,7 +38,7 @@ const TimeSearchBox = React.forwardRef<HTMLInputElement, SearchProps>(
     return (
       <form
         className={cn(
-          'relative flex w-full items-center gap-2.5 h-12 rounded-[10px] bg-white border-[1.5px] border-[var(--time-dark)] pl-3.5 pr-1.5',
+          'relative flex w-full items-center gap-2.5 h-12 rounded-[10px] bg-white border-[1.5px] border-[var(--time-red)] pl-3.5 pr-1.5',
           className,
         )}
         noValidate
@@ -48,7 +48,7 @@ const TimeSearchBox = React.forwardRef<HTMLInputElement, SearchProps>(
         <SearchIcon className="w-[18px] h-[18px] shrink-0 text-[var(--time-gray-500)]" />
         <input
           id={searchId}
-          className="flex-1 min-w-0 bg-transparent border-none outline-none text-sm font-semibold text-[var(--time-dark)] placeholder:font-normal placeholder:text-[var(--time-gray-400)]"
+          className="flex-1 min-w-0 bg-transparent border-none outline-none focus:ring-0 focus:shadow-none text-sm font-semibold text-[var(--time-dark)] placeholder:font-normal placeholder:text-[var(--time-gray-400)]"
           placeholder={t('placeholder-search') as string}
           aria-label={searchId}
           autoComplete="off"

@@ -13,6 +13,8 @@ import { updateLineNote } from '@framework/cart/b2b-cart';
 import { useCartAnomalies } from '@/contexts/cart-anomalies.context';
 import { useModalAction } from '@components/common/modal/modal.context';
 import { fetchPimProductList } from '@framework/product/get-pim-product';
+import { IoIosCloseCircle } from 'react-icons/io';
+import { confirmAction } from '@utils/toast-confirm';
 
 const defaultCurrency = (n: number) =>
   new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(
@@ -60,9 +62,19 @@ function CartMobileCard({
   lang: string;
   formatCurrency: (n: number) => string;
 }) {
-  const { meta } = useCart();
+  const { meta, clearItemFromCart } = useCart();
   const { byEntityCode, byIdRiga } = useCartAnomalies();
   const { openModal } = useModalAction();
+
+  const handleRemove = async () => {
+    const ok = await confirmAction({
+      message: `Rimuovere "${r?.name ?? r?.sku ?? 'articolo'}" dal carrello?`,
+      confirmLabel: 'Rimuovi',
+      cancelLabel: 'Annulla',
+      tone: 'danger',
+    });
+    if (ok) clearItemFromCart(r);
+  };
   const [loadingProduct, setLoadingProduct] = useState(false);
   const [noteOpen, setNoteOpen] = useState(false);
   const [noteDraft, setNoteDraft] = useState(r.note || '');
@@ -276,7 +288,15 @@ function CartMobileCard({
           </div>
 
           <div className="mt-2 flex items-center justify-between border-t pt-2">
-            <span className="text-[12px] text-gray-600">Totale</span>
+            <button
+              type="button"
+              onClick={handleRemove}
+              className="flex items-center gap-1 text-[12px] text-red-500"
+              aria-label="remove-item"
+            >
+              <IoIosCloseCircle className="text-lg" />
+              Rimuovi
+            </button>
             <span className="text-[15px] font-semibold">
               {formatCurrency(line)}
             </span>

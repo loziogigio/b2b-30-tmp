@@ -15,6 +15,34 @@ export type RawDocumentItem = {
   bar_code_request?: string; // "F/2025/90540/D"
 };
 
+/** Back-reference from an invoice line to its source DDT / order. */
+export type DocumentLineRef = {
+  causale: string; // "BC" (DDT), "OC" (order), "FA" (acconto)
+  ycale: number; // year, e.g. 2026
+  nprot: number; // protocol number
+  nriga: number; // line within that source document
+};
+
+/**
+ * A single article line of an invoice (F) or DDT. Sourced from the VINC
+ * data-model `data.items[]` (default theme only). `entityCode` is the ERP
+ * article code used to look up the EAN/barcode in PIM.
+ */
+export type DocumentLine = {
+  lineNumber: number;
+  sku: string;
+  entityCode: string;
+  name: string;
+  quantity: number;
+  uom: string;
+  unitPrice: number;
+  vatRate: number;
+  lineTotal: number;
+  discountsJson?: string; // JSON array of % discounts, e.g. "[5, 2.5]"
+  ddtRef?: DocumentLineRef; // invoice line generated from a DDT
+  orderRef?: DocumentLineRef; // invoice line generated from an order
+};
+
 export type DocumentRow = {
   destination: string;
   dateISO: string;
@@ -33,6 +61,9 @@ export type DocumentRow = {
   pdf?: string;
   barcodePdf?: string;
   csv?: string;
+
+  // article lines (default-theme VINC documents only)
+  lines?: DocumentLine[];
 };
 
 /**  (payload to ERP) */

@@ -91,6 +91,8 @@ export default function TimeProductCard({
     (brand as any)?.brand_id || (brand as any)?.name
       ? brand
       : (rep?.brand ?? brand);
+  // Only show the brand when an actual brand value is present.
+  const hasBrand = (displayBrand?.name ?? '').trim().length > 0;
   const headerImg =
     (image?.thumbnail?.trim() ? image.thumbnail : rep?.image?.thumbnail) ||
     productPlaceholder;
@@ -151,7 +153,10 @@ export default function TimeProductCard({
               ? '(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw'
               : '210px'
           }
-          className="object-cover"
+          // contain (not cover) so non-square product shots are shown whole
+          // instead of being cropped into an unrecognizable detail; the gradient
+          // backdrop fills the letterbox.
+          className="object-contain"
         />
 
         {/* Top-left stack: parent code (always) + discount/promo badge */}
@@ -200,21 +205,19 @@ export default function TimeProductCard({
                 {sku}
               </span>
             )}
-            {sku &&
-              (hasVariants || sku !== parent_sku) &&
-              displayBrand?.name && (
-                <span className="text-[11px] sm:text-xs text-[var(--time-gray-300)]">
-                  ·
-                </span>
-              )}
-            {displayBrand?.name && (displayBrand as any)?.brand_id ? (
+            {sku && (hasVariants || sku !== parent_sku) && hasBrand && (
+              <span className="text-[11px] sm:text-xs text-[var(--time-gray-300)]">
+                ·
+              </span>
+            )}
+            {hasBrand && (displayBrand as any)?.brand_id ? (
               <Link
                 href={`/${lang}/search?filters-brand_id=${(displayBrand as any).brand_id}`}
                 className="text-[11px] sm:text-xs font-bold text-[var(--time-red)] uppercase tracking-wider font-[family-name:var(--font-body)] truncate hover:underline"
               >
                 {displayBrand.name}
               </Link>
-            ) : displayBrand?.name ? (
+            ) : hasBrand ? (
               <span className="text-[11px] sm:text-xs font-bold text-[var(--time-red)] uppercase tracking-wider font-[family-name:var(--font-body)] truncate">
                 {displayBrand.name}
               </span>
@@ -376,6 +379,16 @@ export default function TimeProductCard({
                   <button
                     type="button"
                     aria-label="Toggle wishlist"
+                    title={t(
+                      isFavorite
+                        ? 'text-remove-from-wishlist'
+                        : 'text-add-to-wishlist',
+                      {
+                        defaultValue: isFavorite
+                          ? 'Rimuovi dai preferiti'
+                          : 'Aggiungi ai preferiti',
+                      },
+                    )}
                     className={`shrink-0 p-0.5 rounded transition-colors ${isFavorite ? 'text-[var(--time-red)]' : 'text-[var(--time-gray-400)] hover:text-[var(--time-red)]'}`}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -391,28 +404,40 @@ export default function TimeProductCard({
                       <IoIosHeartEmpty className="text-[16px]" />
                     )}
                   </button>
-                  <button
-                    type="button"
-                    aria-label="Toggle reminder"
-                    className={`shrink-0 p-0.5 rounded transition-colors ${hasReminder ? 'text-yellow-500' : 'text-[var(--time-gray-400)] hover:text-yellow-500'} disabled:opacity-40 disabled:cursor-default disabled:hover:text-[var(--time-gray-400)]`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (!sku) return;
-                      setReminderLoading(true);
-                      reminders
-                        .toggle(sku)
-                        .finally(() => setReminderLoading(false));
-                    }}
-                    disabled={
-                      (!isOutOfStock && !hasReminder) || reminderLoading || !sku
-                    }
-                  >
-                    {hasReminder ? (
-                      <ReminderIconFilled className="text-[16px]" />
-                    ) : (
-                      <ReminderIcon className="text-[16px]" />
-                    )}
-                  </button>
+                  {/* Reminder ("notify when back in stock") only makes sense for
+                      unavailable items — hide it entirely when in stock. */}
+                  {isOutOfStock && (
+                    <button
+                      type="button"
+                      aria-label="Toggle reminder"
+                      title={t(
+                        hasReminder
+                          ? 'text-remove-reminder'
+                          : 'text-notify-when-available',
+                        {
+                          defaultValue: hasReminder
+                            ? 'Rimuovi avviso di disponibilità'
+                            : 'Avvisami quando disponibile',
+                        },
+                      )}
+                      className={`shrink-0 p-0.5 rounded transition-colors ${hasReminder ? 'text-yellow-500' : 'text-[var(--time-gray-400)] hover:text-yellow-500'} disabled:opacity-40 disabled:cursor-default`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (!sku) return;
+                        setReminderLoading(true);
+                        reminders
+                          .toggle(sku)
+                          .finally(() => setReminderLoading(false));
+                      }}
+                      disabled={reminderLoading || !sku}
+                    >
+                      {hasReminder ? (
+                        <ReminderIconFilled className="text-[16px]" />
+                      ) : (
+                        <ReminderIcon className="text-[16px]" />
+                      )}
+                    </button>
+                  )}
                   {effectivePriceData?.buy_did && (
                     <TimeAlreadyPurchasedBadge
                       priceData={effectivePriceData}

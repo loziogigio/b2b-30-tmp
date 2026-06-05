@@ -26,6 +26,7 @@ import TimeVariantsGrid from './time-variants-grid';
 import ProductJsonLd from '@components/seo/product-json-ld';
 import { printProductDetail } from '@utils/print-product';
 import { useHomeSettings } from '@/hooks/use-home-settings';
+import { useProductReturn } from '@/hooks/use-product-return';
 import { ROUTES } from '@utils/routes';
 import {
   IoIosHeart,
@@ -62,6 +63,7 @@ const TimeProductDetail: React.FC<{
   showZoneLabels?: boolean;
 }> = ({ lang, search, blocks = [] }) => {
   const { t } = useTranslation(lang, 'common');
+  const onReturn = useProductReturn(lang);
 
   /* ── Zone blocks ── */
   const zone3Blocks = blocks.filter((b) => b.zone === 'zone3');
@@ -281,6 +283,16 @@ const TimeProductDetail: React.FC<{
   return (
     <div className="pt-7 pb-16">
       <ProductJsonLd product={data} priceData={erpPrice} lang={lang} />
+
+      {/* Return — back to where the user came from, else the catalog */}
+      <button
+        type="button"
+        onClick={onReturn}
+        className="mb-5 inline-flex items-center gap-2 h-[38px] px-4 rounded-[var(--radius-btn)] border-[1.5px] border-[var(--time-gray-200)] bg-white text-[12px] font-semibold text-[var(--time-gray-600)] transition-colors hover:border-[var(--time-dark)] hover:text-[var(--time-dark)] cursor-pointer"
+      >
+        <IoIosArrowBack size={16} />
+        {t('text-go-back', { defaultValue: 'Torna indietro' })}
+      </button>
 
       {/* ═══ HERO: Gallery + Details ═══ */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-8 xl:gap-10 mb-12">
@@ -703,6 +715,7 @@ const TimeProductDetail: React.FC<{
                 lang={lang}
                 product={data}
                 priceData={erpPrice}
+                className="time-stepper"
                 showPlaceholder={false}
               />
             </div>

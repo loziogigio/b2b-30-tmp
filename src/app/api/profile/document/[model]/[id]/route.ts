@@ -88,7 +88,7 @@ const PAGES = {
       502,
       '📄',
       'Documento non disponibile',
-      'Il documento non è momentaneamente raggiungibile. Riprova più tardi.',
+      'Il documento non è ancora disponibile.',
     ),
 };
 

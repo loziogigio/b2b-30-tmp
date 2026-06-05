@@ -44,3 +44,6 @@ tsconfig.tsbuildinfo
 /altro-mega-integrated.png
 /verify-store-orders-light.png
 /dfl_catalog_restyle.jsx
+
+# TypeScript incremental build caches
+*.tsbuildinfo

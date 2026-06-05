@@ -22,7 +22,6 @@ import type { Product } from '@framework/types';
 import { productPlaceholder } from '@assets/placeholders';
 import type { ErpPriceData } from '@utils/transform/erp-prices';
 import { buildPackagingParts } from '@utils/packaging';
-import { formatAvailability } from '@utils/format-availability';
 import { useLikes } from '@contexts/likes/likes.context';
 import { useReminders } from '@contexts/reminders/reminders.context';
 import { useUI } from '@contexts/ui.context';
@@ -33,11 +32,8 @@ import {
   pickImprovingOffer,
 } from '@components/product/b2b-offer-rows';
 import { IoIosHeart, IoIosHeartEmpty } from 'react-icons/io';
-import {
-  IoChevronDown,
-  IoChevronForward,
-  IoTimeOutline,
-} from 'react-icons/io5';
+import { IoChevronDown, IoChevronForward } from 'react-icons/io5';
+import { TimeAlreadyPurchasedBadge } from '../product/time-promo-gated-cta';
 
 const AddToCart = dynamic(() => import('@components/product/add-to-cart'), {
   ssr: false,
@@ -63,7 +59,7 @@ const C = {
   amberSoft: '#fff7ed',
 };
 
-const GRID_COLS = 'minmax(220px,1.7fr) 168px 180px 130px 132px';
+const GRID_COLS = 'minmax(180px,1.1fr) 168px 168px 168px 120px';
 
 interface Props {
   lang: string;
@@ -79,70 +75,42 @@ function netOf(pd?: ErpPriceData): number | null {
 }
 function listOf(pd?: ErpPriceData): number | null {
   const a = pd as any;
-  const n = a?.gross_price ?? a?.price_gross;
+  // Same field order as the grid card so the struck list price matches.
+  const n = a?.price_gross ?? a?.gross_price;
   return n != null ? Number(n) : null;
 }
 /* ---------- atoms ---------- */
 function fmtEuro(n: number, decimals: number) {
-  return (
-    n.toLocaleString('it-IT', {
-      minimumFractionDigits: decimals,
-      maximumFractionDigits: decimals,
-    }) + ' €'
-  );
+  // Match the grid card exactly: '€' prefix + fixed decimals.
+  return `€${n.toFixed(decimals)}`;
 }
 
-function StockPill({ text, ok }: { text: string; ok: boolean }) {
+// Availability indicator — same format as the grid card: a coloured dot plus
+// the "Disponibile" / "Non disponibile" label (no qty pill).
+function StockPill({ label, ok }: { label: string; ok: boolean }) {
+  const color = ok ? 'var(--time-success, #16a34a)' : 'var(--time-red, #dc2626)';
   return (
     <span
       style={{
         display: 'inline-flex',
         alignItems: 'center',
-        gap: 5,
-        fontSize: 11.5,
+        gap: 6,
+        fontSize: 12,
         fontWeight: 600,
-        color: ok ? C.green : C.amber,
-        background: ok ? C.greenSoft : C.amberSoft,
-        padding: '4px 9px',
-        borderRadius: 999,
+        color,
         whiteSpace: 'nowrap',
       }}
     >
-      {ok ? (
-        <span
-          style={{
-            width: 6,
-            height: 6,
-            borderRadius: 999,
-            background: C.green,
-          }}
-        />
-      ) : (
-        <IoTimeOutline size={12} />
-      )}
-      {text}
-    </span>
-  );
-}
-
-function OrderedBadge({ date, qty }: { date?: string; qty?: string }) {
-  return (
-    <span
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 5,
-        fontSize: 10.5,
-        fontWeight: 700,
-        color: '#fff',
-        background: '#16a34a',
-        padding: '3px 8px',
-        borderRadius: 999,
-        whiteSpace: 'nowrap',
-      }}
-    >
-      <IoTimeOutline size={11} /> Ordinato{date ? ` ${date}` : ''}
-      {qty ? ` · ${qty}` : ''}
+      <span
+        style={{
+          width: 6,
+          height: 6,
+          borderRadius: 999,
+          background: color,
+          display: 'inline-block',
+        }}
+      />
+      {label}
     </span>
   );
 }
@@ -239,20 +207,24 @@ export default function TimeProductRow({ lang, product }: Props) {
 
   const collapsedCount = product.variantCount || variations?.length || 0;
 
-  // Loader on expand: show a spinner from click until variant prices arrive
-  // (lazy fetch). Bounded by a timeout so a price-less product can't spin
-  // forever. Synth-priced sources resolve on the first render → no flash.
+  // Loader on expand: show a spinner only while a real ERP price fetch can be
+  // in flight — i.e. for an authorized customer. Anonymous visitors never hit
+  // the ERP endpoint (useProductsPriceMap gates the fetch on isAuthorized), so
+  // there is nothing to wait for: the variant table renders immediately, the
+  // same way the product card and the variants popup do. Bounded by a timeout
+  // so a price-less authorized product can't spin forever.
   const pricesArrived = sorted.some((v) => getVariantPrice(v.id));
   const [waited, setWaited] = useState(false);
   useEffect(() => {
-    if (!open || !hasMultiple) {
+    if (!open || !hasMultiple || !isAuthorized) {
       setWaited(false);
       return;
     }
     const id = setTimeout(() => setWaited(true), 6000);
     return () => clearTimeout(id);
-  }, [open, hasMultiple]);
-  const loadingVariants = open && hasMultiple && !pricesArrived && !waited;
+  }, [open, hasMultiple, isAuthorized]);
+  const loadingVariants =
+    open && hasMultiple && isAuthorized && !pricesArrived && !waited;
 
   return (
     <article
@@ -293,24 +265,6 @@ export default function TimeProductRow({ lang, product }: Props) {
             className="object-contain"
             style={{ width: 88, height: 88, objectFit: 'contain' }}
           />
-          {(parent_sku || product.id) && (
-            <span
-              style={{
-                position: 'absolute',
-                top: 6,
-                left: 6,
-                fontSize: 9,
-                fontWeight: 800,
-                letterSpacing: '.06em',
-                color: '#fff',
-                background: C.red,
-                padding: '2px 6px',
-                borderRadius: 5,
-              }}
-            >
-              {parent_sku || product.id}
-            </span>
-          )}
         </button>
 
         <div style={{ flex: 1, minWidth: 0, display: 'flex', gap: 16 }}>
@@ -326,36 +280,60 @@ export default function TimeProductRow({ lang, product }: Props) {
             >
               {displayName || '—'}
             </div>
-            {displayBrand?.name &&
-              ((displayBrand as any)?.brand_id ? (
-                <Link
-                  href={`/${lang}/search?filters-brand_id=${(displayBrand as any).brand_id}`}
-                  style={{
-                    fontSize: 11.5,
-                    fontWeight: 700,
-                    color: C.faint,
-                    marginTop: 2,
-                    textTransform: 'uppercase',
-                    letterSpacing: '.04em',
-                    display: 'inline-block',
-                  }}
-                >
-                  {displayBrand.name}
-                </Link>
-              ) : (
-                <div
-                  style={{
-                    fontSize: 11.5,
-                    fontWeight: 700,
-                    color: C.faint,
-                    marginTop: 2,
-                    textTransform: 'uppercase',
-                    letterSpacing: '.04em',
-                  }}
-                >
-                  {displayBrand.name}
-                </div>
-              ))}
+            {((parent_sku || product.id) || displayBrand?.name) && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  flexWrap: 'wrap',
+                  marginTop: 5,
+                }}
+              >
+                {(parent_sku || product.id) && (
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 800,
+                      letterSpacing: '.06em',
+                      color: '#fff',
+                      background: C.red,
+                      padding: '2px 7px',
+                      borderRadius: 5,
+                    }}
+                  >
+                    {parent_sku || product.id}
+                  </span>
+                )}
+                {displayBrand?.name &&
+                  ((displayBrand as any)?.brand_id ? (
+                    <Link
+                      href={`/${lang}/search?filters-brand_id=${(displayBrand as any).brand_id}`}
+                      style={{
+                        fontSize: 11.5,
+                        fontWeight: 700,
+                        color: C.faint,
+                        textTransform: 'uppercase',
+                        letterSpacing: '.04em',
+                      }}
+                    >
+                      {displayBrand.name}
+                    </Link>
+                  ) : (
+                    <span
+                      style={{
+                        fontSize: 11.5,
+                        fontWeight: 700,
+                        color: C.faint,
+                        textTransform: 'uppercase',
+                        letterSpacing: '.04em',
+                      }}
+                    >
+                      {displayBrand.name}
+                    </span>
+                  ))}
+              </div>
+            )}
 
             {displayDescription && (
               <p
@@ -599,9 +577,8 @@ export default function TimeProductRow({ lang, product }: Props) {
               const net = netOf(dPrice);
               const list = listOf(dPrice);
               const hasDiscount = net != null && list != null && list > net;
-              const off = hasDiscount
-                ? Math.round((1 - net! / list!) * 100)
-                : 0;
+              // Full discount tier chain (e.g. "-50% -8%"), same as the card.
+              const tiers = (dPrice as any)?.discount_description || '';
               const avail = vPrice ? Number(vPrice.availability) : 0;
               const uom = vPrice?.packaging_option_default?.packaging_uom;
               const packParts = dPrice ? buildPackagingParts(dPrice) : [];
@@ -745,18 +722,23 @@ export default function TimeProductRow({ lang, product }: Props) {
                   >
                     {vPrice && (
                       <StockPill
-                        text={formatAvailability(avail, uom)}
                         ok={avail > 0}
+                        label={
+                          avail > 0
+                            ? t('text-in-stock', { defaultValue: 'Disponibile' })
+                            : (vPrice as any)?.product_label_action?.LABEL ||
+                              t('text-out-stock', {
+                                defaultValue: 'Non disponibile',
+                              })
+                        }
                       />
                     )}
                     {vPrice?.buy_did && (
-                      <OrderedBadge
-                        date={(vPrice as any).buy_did_last_date}
-                        qty={
-                          (vPrice as any).buy_did_amount
-                            ? `${(vPrice as any).buy_did_amount}${uom ? ' ' + uom : ''}`
-                            : undefined
-                        }
+                      <TimeAlreadyPurchasedBadge
+                        priceData={vPrice}
+                        t={t}
+                        size="sm"
+                        inline
                       />
                     )}
                   </div>
@@ -777,14 +759,32 @@ export default function TimeProductRow({ lang, product }: Props) {
                   {/* price */}
                   <div style={{ textAlign: 'right' }}>
                     {!hidePrices && net != null ? (
-                      <>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'flex-end',
+                          gap: 7,
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: 18,
+                            fontWeight: 800,
+                            color: C.ink,
+                            fontVariantNumeric: 'tabular-nums',
+                            lineHeight: 1.1,
+                          }}
+                        >
+                          {fmtEuro(net, decimals)}
+                        </span>
                         {hasDiscount && (
                           <div
                             style={{
                               display: 'flex',
-                              alignItems: 'baseline',
-                              justifyContent: 'flex-end',
-                              gap: 7,
+                              flexDirection: 'column',
+                              alignItems: 'flex-start',
+                              lineHeight: 1.15,
                             }}
                           >
                             <span
@@ -797,32 +797,21 @@ export default function TimeProductRow({ lang, product }: Props) {
                             >
                               {fmtEuro(list!, decimals)}
                             </span>
-                            <span
-                              style={{
-                                fontSize: 10,
-                                fontWeight: 800,
-                                color: C.red,
-                                background: C.redSoft,
-                                padding: '2px 5px',
-                                borderRadius: 5,
-                              }}
-                            >
-                              -{off}%
-                            </span>
+                            {tiers && (
+                              <span
+                                style={{
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                  color: C.muted,
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                {tiers}
+                              </span>
+                            )}
                           </div>
                         )}
-                        <div
-                          style={{
-                            fontSize: 18,
-                            fontWeight: 800,
-                            color: C.ink,
-                            fontVariantNumeric: 'tabular-nums',
-                            lineHeight: 1.1,
-                          }}
-                        >
-                          {fmtEuro(net, decimals)}
-                        </div>
-                      </>
+                      </div>
                     ) : (
                       <span style={{ color: C.faint, fontSize: 13 }}>—</span>
                     )}

@@ -28,7 +28,7 @@ export default function CheckoutTopBar({
   const { t } = useTranslation(lang, 'common');
   // read local cart total on the client
   const { total, meta } = useCart();
-  const summaryTotal = meta?.totalDoc ?? totalOverride ?? total ?? 0;
+  const summaryTotal = meta?.totalNet ?? totalOverride ?? total ?? 0;
   const vatAmount = Number(meta?.vat ?? 0);
   const totalDisplay = useMemo(() => formatEUR(summaryTotal), [summaryTotal]);
 
@@ -54,7 +54,7 @@ export default function CheckoutTopBar({
         <div className="text-right">
           <div className="text-xs text-gray-500">
             {totalLabel ||
-              (vatAmount > 0 ? 'Totale documento' : t('text-total-net'))}
+              (meta?.totalNet != null ? 'Totale netto' : t('text-total-net'))}
           </div>
           <div className="text-base font-semibold">{totalDisplay}</div>
           {vatAmount > 0 && (

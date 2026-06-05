@@ -1,4 +1,61 @@
-import type { DocumentRow } from '@framework/documents/types-b2b-documents';
+import type {
+  DocumentRow,
+  DocumentLine,
+  DocumentLineRef,
+} from '@framework/documents/types-b2b-documents';
+
+/** Raw article line as stored on the VINC data-model `data.items[]`. */
+type RawDocLineRef = {
+  causale?: string;
+  ycale?: number;
+  nprot?: number;
+  nriga?: number;
+};
+type RawDocLine = {
+  line_number?: number;
+  sku?: string;
+  entity_code?: string;
+  name?: string;
+  quantity?: number;
+  uom?: string;
+  unit_price?: number;
+  vat_rate?: number;
+  line_total?: number;
+  discounts_json?: string;
+  ddt_ref?: RawDocLineRef;
+  order_ref?: RawDocLineRef;
+};
+
+function mapRef(r?: RawDocLineRef): DocumentLineRef | undefined {
+  if (!r || r.nprot == null) return undefined;
+  return {
+    causale: String(r.causale ?? ''),
+    ycale: Number(r.ycale ?? 0),
+    nprot: Number(r.nprot ?? 0),
+    nriga: Number(r.nriga ?? 0),
+  };
+}
+
+/** Map raw `data.items[]` (if present) into typed DocumentLine[]. */
+export function mapDocumentLines(
+  items?: RawDocLine[],
+): DocumentLine[] | undefined {
+  if (!Array.isArray(items) || items.length === 0) return undefined;
+  return items.map((it) => ({
+    lineNumber: Number(it.line_number ?? 0),
+    sku: String(it.sku ?? ''),
+    entityCode: String(it.entity_code ?? it.sku ?? ''),
+    name: String(it.name ?? ''),
+    quantity: Number(it.quantity ?? 0),
+    uom: String(it.uom ?? ''),
+    unitPrice: Number(it.unit_price ?? 0),
+    vatRate: Number(it.vat_rate ?? 0),
+    lineTotal: Number(it.line_total ?? 0),
+    discountsJson: it.discounts_json,
+    ddtRef: mapRef(it.ddt_ref),
+    orderRef: mapRef(it.order_ref),
+  }));
+}
 
 type VincDest = {
   code?: string;
@@ -22,6 +79,7 @@ export interface VincDeliveryNoteRecord {
     totale?: number;
     pdf_url?: string;
     pdf_barcode_url?: string;
+    items?: RawDocLine[];
   };
 }
 
@@ -39,6 +97,7 @@ export interface VincInvoiceRecord {
     pdf_url?: string;
     pdf_barcode_url?: string;
     csv_url?: string;
+    items?: RawDocLine[];
   };
 }
 
@@ -81,7 +140,9 @@ function brokerDocUrl(
   return `/api/profile/document/${model}/${encodeURIComponent(id)}?kind=${kind}`;
 }
 
-export function vincDeliveryNoteToRow(rec: VincDeliveryNoteRecord): DocumentRow {
+export function vincDeliveryNoteToRow(
+  rec: VincDeliveryNoteRecord,
+): DocumentRow {
   const d = rec.data ?? {};
   return {
     destination: destinationOf(d.destinazione),
@@ -95,7 +156,13 @@ export function vincDeliveryNoteToRow(rec: VincDeliveryNoteRecord): DocumentRow 
     number_raw: 0,
     type_bar_code: '',
     pdf: brokerDocUrl('delivery_note', rec._id, 'pdf', d.pdf_url),
-    barcodePdf: brokerDocUrl('delivery_note', rec._id, 'barcode', d.pdf_barcode_url),
+    barcodePdf: brokerDocUrl(
+      'delivery_note',
+      rec._id,
+      'barcode',
+      d.pdf_barcode_url,
+    ),
+    lines: mapDocumentLines(d.items),
   };
 }
 
@@ -115,6 +182,7 @@ export function vincInvoiceToRow(rec: VincInvoiceRecord): DocumentRow {
     pdf: brokerDocUrl('invoice', rec._id, 'pdf', d.pdf_url),
     barcodePdf: brokerDocUrl('invoice', rec._id, 'barcode', d.pdf_barcode_url),
     csv: brokerDocUrl('invoice', rec._id, 'csv', d.csv_url),
+    lines: mapDocumentLines(d.items),
   };
 }
 
@@ -125,5 +193,9 @@ export function pickDirectUrl(
   kind: DirectKind,
   row: DocumentRow,
 ): string | undefined {
-  return kind === 'pdf' ? row.pdf : kind === 'barcode' ? row.barcodePdf : row.csv;
+  return kind === 'pdf'
+    ? row.pdf
+    : kind === 'barcode'
+      ? row.barcodePdf
+      : row.csv;
 }

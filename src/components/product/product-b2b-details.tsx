@@ -8,7 +8,7 @@ import { usePimProductListQuery } from '@framework/product/get-pim-product';
 import ThumbnailCarousel from '@components/ui/carousel/thumbnail-carousel';
 import Image from '@components/ui/image';
 import Button from '@components/ui/button';
-import { IoIosHeart, IoIosHeartEmpty } from 'react-icons/io';
+import { IoIosHeart, IoIosHeartEmpty, IoIosArrowBack } from 'react-icons/io';
 import { IoArrowRedoOutline } from 'react-icons/io5';
 import { ReminderIcon, ReminderIconFilled } from '@components/icons/app-icons';
 import {
@@ -41,6 +41,7 @@ import { printProductDetail } from '@utils/print-product';
 import CorrelatedProductsCarousel from './feeds/correlated-products-carousel';
 import ProductJsonLd from '@components/seo/product-json-ld';
 import B2BVariantsGridContent from './b2b-variants-grid-content';
+import { useProductReturn } from '@/hooks/use-product-return';
 
 // add inside ProductB2BDetails.tsx (same file, above the component's return)
 
@@ -70,6 +71,7 @@ const ProductB2BDetails: React.FC<{
   const { t } = useTranslation(lang, 'common');
   const pathname = useParams();
   const { width } = useWindowSize();
+  const onReturn = useProductReturn(lang);
 
   // Filter blocks by zone
   const zone1Blocks = blocks.filter((b) => b.zone === 'zone1');
@@ -378,6 +380,16 @@ const ProductB2BDetails: React.FC<{
     <div className="pt-6 pb-2 md:pt-7">
       {/* JSON-LD Structured Data for SEO */}
       <ProductJsonLd product={data} priceData={erpPrice} lang={lang} />
+
+      {/* Return — back to where the user came from, else the catalog */}
+      <button
+        type="button"
+        onClick={onReturn}
+        className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-brand-dark/70 transition-colors hover:text-brand"
+      >
+        <IoIosArrowBack className="text-base" />
+        {t('text-go-back', { defaultValue: 'Torna indietro' })}
+      </button>
 
       {lightboxIndex != null ? (
         <ProductImageLightbox
