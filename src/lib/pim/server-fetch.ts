@@ -78,6 +78,7 @@ export interface ServerSearchParams {
   filters?: Record<string, any>;
   group_variants?: boolean;
   facet_fields?: string[];
+  include_dynamic_blocks?: boolean;
 }
 
 export interface ServerSearchFacetValue {
@@ -117,6 +118,9 @@ export const serverFetchPimProducts = cache(
     }
     if (params.facet_fields) {
       body.facet_fields = params.facet_fields;
+    }
+    if (params.include_dynamic_blocks) {
+      body.include_dynamic_blocks = true;
     }
 
     try {
