@@ -312,8 +312,5 @@
   "line-item-note-saved": "Notiz gespeichert",
   "error-erp-profile-title": "Es gibt ein Problem mit Ihrem Konto",
   "error-erp-profile-body": "Ihre Preise oder Ihr Warenkorb konnten nicht geladen werden. Möglicherweise liegt ein Problem mit Ihrem Kontoprofil vor – bitte wenden Sie sich an {{tenant}}.",
-  "error-erp-profile-contact-cta": "{{tenant}} kontaktieren",
-  "dynamic-block-video-label": "Video",
-  "dynamic-block-3d-label": "3D-Modell",
-  "dynamic-block-image-unavailable": "Bild nicht verfügbar"
+  "error-erp-profile-contact-cta": "{{tenant}} kontaktieren"
 }

@@ -333,6 +333,12 @@ const ProductB2BDetails: React.FC<{
           useWindowScroll={true}
         />
 
+        {/*
+         * Section 1 (sidebar dynamic blocks) and section 2 (below-gallery dynamic blocks)
+         * are intentionally NOT rendered in the multi-variant parent layout: that layout
+         * has no product sidebar and no single-product gallery — only section 3 (rendered
+         * as tabs inside ProductB2BDetailsTab) and section 4 (below tabs) apply here.
+         */}
         <ProductB2BDetailsTab
           lang={lang}
           product={data}

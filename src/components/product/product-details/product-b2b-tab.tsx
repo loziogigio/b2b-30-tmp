@@ -400,7 +400,7 @@ export default function ProductB2BDetailsTab({
     tabs.push({
       id: `dyn-section3-${block.id || index}`,
       label: block.title || `${index + 1}`,
-      node: <DynamicBlockView key={block.id || `dyn-s3-${index}`} block={block} />,
+      node: <DynamicBlockView block={block} />,
     });
   });
 
