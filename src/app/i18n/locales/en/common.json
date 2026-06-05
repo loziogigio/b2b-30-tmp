@@ -504,5 +504,8 @@
   "export-price-notice-line-2": "They may be subject to subsequent changes; please verify their current validity before placing or confirming an order.",
   "error-erp-profile-title": "There's a problem with your account",
   "error-erp-profile-body": "We couldn't load your prices or cart. There may be an issue with your account profile — please contact {{tenant}} for assistance.",
-  "error-erp-profile-contact-cta": "Contact {{tenant}}"
+  "error-erp-profile-contact-cta": "Contact {{tenant}}",
+  "dynamic-block-video-label": "Video",
+  "dynamic-block-3d-label": "3D Model",
+  "dynamic-block-image-unavailable": "Image unavailable"
 }
