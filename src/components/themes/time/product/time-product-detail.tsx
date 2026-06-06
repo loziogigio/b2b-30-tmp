@@ -46,6 +46,10 @@ import cn from 'classnames';
 
 import type { PageBlock } from '@/lib/types/blocks';
 import { BlockRenderer } from '@/components/blocks/BlockRenderer';
+import DynamicBlocksSection, {
+  selectSectionBlocks,
+} from '@components/product/dynamic-blocks/DynamicBlocksSection';
+import type { DynamicBlock } from '@framework/types';
 
 type GalleryImage = {
   id?: string | number;
@@ -72,14 +76,14 @@ const TimeProductDetail: React.FC<{
   /* ── PIM product data ── */
   const skuToSearch = search?.sku ? [search.sku] : [];
   const { data: pimResults = [], isLoading } = usePimProductListQuery(
-    { limit: 1, filters: { sku: skuToSearch } },
+    { limit: 1, filters: { sku: skuToSearch }, include_dynamic_blocks: true },
     { enabled: skuToSearch.length > 0, groupByParent: true },
   );
 
   const skuNotFound =
     !isLoading && skuToSearch.length > 0 && pimResults.length === 0;
   const { data: parentSkuResults = [] } = usePimProductListQuery(
-    { limit: 200, filters: { parent_sku: skuToSearch } },
+    { limit: 200, filters: { parent_sku: skuToSearch }, include_dynamic_blocks: true },
     { enabled: skuNotFound, groupByParent: true },
   );
 
@@ -101,6 +105,12 @@ const TimeProductDetail: React.FC<{
     : !isMultiVariantParent && variations.length === 1
       ? variations[0]
       : first;
+
+  // Per-product dynamic blocks (separate system from PageBlock zones).
+  const dynamicBlocks = (data as any)?.dynamic_blocks as
+    | DynamicBlock[]
+    | undefined;
+  const dynamicSection3Blocks = selectSectionBlocks(dynamicBlocks, lang, 3);
 
   const { isAuthorized, hidePrices } = useUI();
   const inPageCartRef = useRef<HTMLDivElement | null>(null);
@@ -255,11 +265,24 @@ const TimeProductDetail: React.FC<{
         <div className="mb-8">
           <TimeVariantsGrid lang={lang} product={data} />
         </div>
+        {/*
+         * Section 1 (sidebar dynamic blocks) and section 2 (below-gallery dynamic blocks)
+         * are intentionally NOT rendered in the multi-variant parent layout: that layout
+         * has no product sidebar and no single-product gallery — only section 3 (rendered
+         * as tabs inside TimeProductTabs) and section 4 (below tabs) apply here.
+         */}
         <TimeProductTabs
           lang={lang}
           product={data}
           zone3Blocks={zone3Blocks}
+          dynamicSection3Blocks={dynamicSection3Blocks}
           className="mb-8"
+        />
+        <DynamicBlocksSection
+          blocks={dynamicBlocks}
+          lang={lang}
+          section={4}
+          className="mb-8 space-y-6"
         />
         {data?.id && (
           <div className="pt-8">
@@ -622,11 +645,40 @@ const TimeProductDetail: React.FC<{
               {t('text-print', { defaultValue: 'Stampa' })}
             </button>
           </div>
+
+          {/* Section 1: per-product dynamic blocks (sidebar, below action buttons) */}
+          <DynamicBlocksSection
+            blocks={dynamicBlocks}
+            lang={lang}
+            section={1}
+            className="pt-4 space-y-6"
+          />
         </div>
       </div>
 
+      {/* Section 2: per-product dynamic blocks (after gallery/info grid, full width) */}
+      <DynamicBlocksSection
+        blocks={dynamicBlocks}
+        lang={lang}
+        section={2}
+        className="mb-12 space-y-6"
+      />
+
       {/* ═══ TABS ═══ */}
-      <TimeProductTabs lang={lang} product={data} zone3Blocks={zone3Blocks} />
+      <TimeProductTabs
+        lang={lang}
+        product={data}
+        zone3Blocks={zone3Blocks}
+        dynamicSection3Blocks={dynamicSection3Blocks}
+      />
+
+      {/* Section 4: per-product dynamic blocks (below tabs, full width) */}
+      <DynamicBlocksSection
+        blocks={dynamicBlocks}
+        lang={lang}
+        section={4}
+        className="mb-12 space-y-6"
+      />
 
       {/* ═══ ZONE 4 BLOCKS ═══ */}
       {zone4Blocks.length > 0 && (

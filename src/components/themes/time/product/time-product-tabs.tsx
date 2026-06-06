@@ -3,12 +3,14 @@
 import React from 'react';
 import ProductB2BDetailsTab from '@components/product/product-details/product-b2b-tab';
 import type { Product } from '@framework/types';
+import type { DynamicBlock } from '@framework/types';
 import type { PageBlock } from '@/lib/types/blocks';
 
 interface TimeProductTabsProps {
   lang: string;
   product: Product;
   zone3Blocks?: PageBlock[];
+  dynamicSection3Blocks?: DynamicBlock[];
   className?: string;
 }
 
@@ -21,6 +23,7 @@ export default function TimeProductTabs({
   lang,
   product,
   zone3Blocks = [],
+  dynamicSection3Blocks = [],
   className = 'mb-12',
 }: TimeProductTabsProps) {
   return (
@@ -126,6 +129,7 @@ export default function TimeProductTabs({
         lang={lang}
         product={product}
         zone3Blocks={zone3Blocks}
+        dynamicSection3Blocks={dynamicSection3Blocks}
       />
     </div>
   );
