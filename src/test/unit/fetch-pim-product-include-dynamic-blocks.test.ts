@@ -42,7 +42,10 @@ describe('fetchPimProductList — include_dynamic_blocks wiring', () => {
     mockPost.mockResolvedValue(okResponse);
   });
 
-  it('includes include_dynamic_blocks: true in the POST body when the param is set', async () => {
+  // The storefront ALWAYS requests dynamic blocks — the BE only attaches them to
+  // products that actually have blocks, so the flag is unconditional and the
+  // detail renderer never depends on a specific call site passing it.
+  it('always includes include_dynamic_blocks: true when the param is set', async () => {
     await fetchPimProductList({
       filters: { sku: ['SKU-001'] },
       include_dynamic_blocks: true,
@@ -53,17 +56,17 @@ describe('fetchPimProductList — include_dynamic_blocks wiring', () => {
     expect(body).toMatchObject({ include_dynamic_blocks: true });
   });
 
-  it('omits include_dynamic_blocks from the POST body when the param is not set', async () => {
+  it('always includes include_dynamic_blocks: true even when the param is not set', async () => {
     await fetchPimProductList({
       filters: { sku: ['SKU-002'] },
     });
 
     expect(mockPost).toHaveBeenCalledOnce();
     const [_url, body] = mockPost.mock.calls[0];
-    expect(body).not.toHaveProperty('include_dynamic_blocks');
+    expect(body).toMatchObject({ include_dynamic_blocks: true });
   });
 
-  it('omits include_dynamic_blocks when the param is explicitly false', async () => {
+  it('always includes include_dynamic_blocks: true even when the param is explicitly false', async () => {
     await fetchPimProductList({
       filters: { sku: ['SKU-003'] },
       include_dynamic_blocks: false,
@@ -71,6 +74,6 @@ describe('fetchPimProductList — include_dynamic_blocks wiring', () => {
 
     expect(mockPost).toHaveBeenCalledOnce();
     const [_url, body] = mockPost.mock.calls[0];
-    expect(body).not.toHaveProperty('include_dynamic_blocks');
+    expect(body).toMatchObject({ include_dynamic_blocks: true });
   });
 });

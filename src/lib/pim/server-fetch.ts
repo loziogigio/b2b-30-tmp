@@ -119,9 +119,9 @@ export const serverFetchPimProducts = cache(
     if (params.facet_fields) {
       body.facet_fields = params.facet_fields;
     }
-    if (params.include_dynamic_blocks) {
-      body.include_dynamic_blocks = true;
-    }
+    // Always request per-product rich content blocks (the BE only attaches them
+    // where they exist), so any storefront fetch path gets them without wiring.
+    body.include_dynamic_blocks = true;
 
     try {
       const response = await fetch(url, {

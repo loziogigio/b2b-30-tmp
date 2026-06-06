@@ -365,10 +365,10 @@ export const fetchPimProductList = async (
     body.group_variants = true;
   }
 
-  // Request per-product rich content blocks when the caller needs them
-  if (params.include_dynamic_blocks) {
-    body.include_dynamic_blocks = true;
-  }
+  // Always request per-product rich content blocks. The BE only attaches them to
+  // products that actually have blocks (the field is absent otherwise), so this is
+  // cheap for everything else and guarantees the detail renderer always gets them.
+  body.include_dynamic_blocks = true;
 
   // Use proxy - credentials are injected server-side
   const data = await post<PimSearchResponse>(API_ENDPOINTS_PIM.SEARCH, body);
