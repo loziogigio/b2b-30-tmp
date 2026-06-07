@@ -90,7 +90,11 @@ describe('loadCmsPage', () => {
 
   it('proceeds to template when b2bpage lang matches', async () => {
     pageRecordMock.mockResolvedValueOnce({ lang: 'it' });
-    const doc = { templateId: 'b2b-default-page-contatti', status: 'published', blocks: [] };
+    const doc = {
+      templateId: 'b2b-default-page-contatti',
+      status: 'published',
+      blocks: [],
+    };
     findOneMock.mockResolvedValueOnce(doc);
     const out = await loadCmsPage('contatti', 'it');
     expect(out).toEqual(doc);
@@ -98,15 +102,39 @@ describe('loadCmsPage', () => {
 
   it('proceeds to template when b2bpage has no lang field (unset)', async () => {
     pageRecordMock.mockResolvedValueOnce({ lang: undefined });
-    const doc = { templateId: 'b2b-default-page-faq', status: 'published', blocks: [] };
+    const doc = {
+      templateId: 'b2b-default-page-faq',
+      status: 'published',
+      blocks: [],
+    };
     findOneMock.mockResolvedValueOnce(doc);
     const out = await loadCmsPage('faq', 'it');
     expect(out).toEqual(doc);
   });
 
+  it('gates out an INACTIVE page whose lang differs from the URL lang', async () => {
+    // The gate lookup matches portal_slug + slug only (no status filter), so
+    // inactive records are still found and their lang still gates the URL.
+    let capturedQuery: any;
+    pageRecordMock.mockImplementationOnce((q: any) => {
+      capturedQuery = q;
+      return Promise.resolve({ lang: 'de' });
+    });
+    const out = await loadCmsPage('kontakt', 'it');
+    expect(out).toBeNull();
+    // Lookup must NOT constrain on status (would miss inactive pages otherwise)
+    expect(capturedQuery).toEqual({ portal_slug: 'default', slug: 'kontakt' });
+    // Template model should not be consulted at all
+    expect(getModelMock).not.toHaveBeenCalled();
+  });
+
   it('proceeds to template when no b2bpage record exists at all (orphan template)', async () => {
     // pageRecordMock already returns null (from beforeEach)
-    const doc = { templateId: 'b2b-default-page-legacy', status: 'published', blocks: [] };
+    const doc = {
+      templateId: 'b2b-default-page-legacy',
+      status: 'published',
+      blocks: [],
+    };
     findOneMock.mockResolvedValueOnce(doc);
     const out = await loadCmsPage('legacy', 'it');
     expect(out).toEqual(doc);

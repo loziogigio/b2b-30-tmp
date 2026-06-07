@@ -42,11 +42,16 @@ export async function loadCmsPage(
   const connection = await connectToDatabase();
 
   // Language gate: look up the b2bpage record to check its lang.
+  // Match on portal_slug + slug only (regardless of active/inactive status):
+  // an inactive page can still have a published content template, and the
+  // wrong-language URL for it must be gated out the same as an active page.
   // Only block when a record IS present AND its lang differs from the URL lang.
   if (lang !== undefined) {
     const B2BPageModel = await getB2BPageModelForDb(connection.name);
-    const pageRecord = await B2BPageModel
-      .findOne({ portal_slug: PORTAL_SLUG, slug, status: 'active' })
+    const pageRecord = await B2BPageModel.findOne({
+      portal_slug: PORTAL_SLUG,
+      slug,
+    })
       .select({ lang: 1 })
       .lean<{ lang?: string } | null>();
     if (pageRecord && pageRecord.lang && pageRecord.lang !== lang) {
@@ -87,10 +92,8 @@ export async function getCachedCmsPage(
 ): Promise<CmsPageDocument | null> {
   const { tenantId } = await resolveTenantDbTarget();
   const key = `${cmsPageCachePrefix(tenantId)}${slug}${lang ? `:${lang}` : ''}`;
-  return cachedJson(
-    key,
-    { softTtlMs: 300_000, hardTtlSeconds: 3600 },
-    () => loadCmsPage(slug, lang),
+  return cachedJson(key, { softTtlMs: 300_000, hardTtlSeconds: 3600 }, () =>
+    loadCmsPage(slug, lang),
   );
 }
 
@@ -109,7 +112,14 @@ export async function loadCmsPageRegistry(): Promise<CmsPageRegistryEntry[]> {
   const Model = await getB2BPageModelForDb(connection.name);
   return Model.find({ portal_slug: PORTAL_SLUG, status: 'active' })
     .sort({ sort_order: 1 })
-    .select({ slug: 1, title: 1, lang: 1, show_in_nav: 1, sort_order: 1, updated_at: 1 })
+    .select({
+      slug: 1,
+      title: 1,
+      lang: 1,
+      show_in_nav: 1,
+      sort_order: 1,
+      updated_at: 1,
+    })
     .lean<CmsPageRegistryEntry[]>();
 }
 
