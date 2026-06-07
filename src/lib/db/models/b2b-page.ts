@@ -20,6 +20,7 @@ export interface B2BPageDocument {
   portal_slug: string;
   slug: string;
   title: string;
+  lang?: string;
   status: B2BPageStatus;
   show_in_nav: boolean;
   sort_order: number;
