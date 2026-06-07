@@ -55,8 +55,12 @@ async function localSitemap(): Promise<MetadataRoute.Sitemap> {
   // ===============================
   try {
     const cmsPages = await getCachedCmsPageRegistry();
-    for (const lang of LANGUAGES) {
-      for (const p of cmsPages) {
+    for (const p of cmsPages) {
+      // Per-language pages are listed only under their own language; legacy
+      // pages without a lang remain listed under every served language.
+      const langs = p.lang ? [p.lang] : LANGUAGES;
+      for (const lang of langs) {
+        if (!LANGUAGES.includes(lang)) continue; // only languages the sitemap serves
         entries.push({
           url: `${siteUrl}/${lang}/${p.slug}`,
           lastModified: p.updated_at ?? now,
