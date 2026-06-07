@@ -74,7 +74,7 @@ export async function generateMetadata({
   );
 
   const [homeSettings, seoConfig] = await Promise.all([
-    getServerHomeSettings(),
+    getServerHomeSettings(lang),
     getSeoConfig(),
   ]);
   const channel = resolveCategoryChannel(homeSettings);
@@ -207,7 +207,7 @@ export default async function Page({
   // Resolve the active sales channel so the server prefetch matches the
   // client `usePimCategoriesQuery` cache key.
   const [homeSettings, seoConfig] = await Promise.all([
-    getServerHomeSettings(),
+    getServerHomeSettings(lang),
     getSeoConfig(),
   ]);
   const channel = resolveCategoryChannel(homeSettings);

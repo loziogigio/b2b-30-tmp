@@ -45,7 +45,7 @@ export async function generateMetadata({
 
   const [collection, homeSettings] = await Promise.all([
     fetchCollectionForSeo(slug),
-    getServerHomeSettings(),
+    getServerHomeSettings(lang),
   ]);
 
   const brandingTitle = homeSettings?.branding?.title || 'VINC - B2B';

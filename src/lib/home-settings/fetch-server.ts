@@ -46,19 +46,24 @@ interface FetchConfig {
   apiKeyId?: string;
   apiSecret?: string;
   tenantId?: string;
+  lang?: string;
 }
 
 async function fetchHomeSettingsWithConfig(
   config: FetchConfig,
 ): Promise<HomeSettings | null> {
-  const { pimApiUrl, apiKeyId, apiSecret, tenantId } = config;
+  const { pimApiUrl, apiKeyId, apiSecret, tenantId, lang } = config;
 
   try {
     const baseUrl = resolveBaseUrl(pimApiUrl);
-    const url = new URL(
+    let url = new URL(
       '/api/b2b/b2b/public/home?portal=default',
       `${baseUrl}/`,
     ).toString();
+
+    if (lang) {
+      url += `&lang=${encodeURIComponent(lang)}`;
+    }
 
     const response = await fetch(url, {
       headers: {
@@ -90,29 +95,37 @@ async function fetchHomeSettingsWithConfig(
 }
 
 // Single-tenant cached fetch
-const cachedSingleTenantFetch = cache(() =>
+// `lang` is part of the cache key (React `cache` memoizes on arguments), so
+// each language is cached separately. Falls back to 'default' when absent.
+const cachedSingleTenantFetch = cache((lang: string = 'default') =>
   fetchHomeSettingsWithConfig({
     pimApiUrl: DEFAULT_PIM_API_BASE,
     apiKeyId: DEFAULT_API_KEY_ID,
     apiSecret: DEFAULT_API_SECRET,
+    lang: lang === 'default' ? undefined : lang,
   }),
 );
 
-// Multi-tenant fetch (caches per hostname within same request)
-const cachedMultiTenantFetch = cache(async (hostname: string) => {
-  const tenant = await resolveTenant(hostname);
+// Multi-tenant fetch (caches per hostname + language within same request).
+// Both `hostname` and `lang` form the cache key (React `cache` memoizes on
+// arguments), so each language is cached separately. Falls back to 'default'.
+const cachedMultiTenantFetch = cache(
+  async (hostname: string, lang: string = 'default') => {
+    const tenant = await resolveTenant(hostname);
 
-  if (!tenant) {
-    return null;
-  }
+    if (!tenant) {
+      return null;
+    }
 
-  return fetchHomeSettingsWithConfig({
-    pimApiUrl: tenant.api.pimApiUrl,
-    apiKeyId: tenant.api.apiKeyId,
-    apiSecret: tenant.api.apiSecret,
-    tenantId: tenant.id,
-  });
-});
+    return fetchHomeSettingsWithConfig({
+      pimApiUrl: tenant.api.pimApiUrl,
+      apiKeyId: tenant.api.apiKeyId,
+      apiSecret: tenant.api.apiSecret,
+      tenantId: tenant.id,
+      lang: lang === 'default' ? undefined : lang,
+    });
+  },
+);
 
 /**
  * Get home settings for the current request
@@ -121,11 +134,13 @@ const cachedMultiTenantFetch = cache(async (hostname: string) => {
  * - Multi-tenant mode: Resolves tenant from request hostname and uses tenant-specific config
  * - Returns DEFAULT_HOME_SETTINGS if no settings are configured
  */
-export async function getServerHomeSettings(): Promise<HomeSettings> {
+export async function getServerHomeSettings(
+  lang?: string,
+): Promise<HomeSettings> {
   try {
     // Single-tenant mode: use .env config
     if (isSingleTenant) {
-      const result = await cachedSingleTenantFetch();
+      const result = await cachedSingleTenantFetch(lang);
       return result || DEFAULT_HOME_SETTINGS;
     }
 
@@ -136,7 +151,7 @@ export async function getServerHomeSettings(): Promise<HomeSettings> {
       headersList.get('host') ||
       'localhost';
 
-    const result = await cachedMultiTenantFetch(hostname);
+    const result = await cachedMultiTenantFetch(hostname, lang);
     return result || DEFAULT_HOME_SETTINGS;
   } catch {
     return DEFAULT_HOME_SETTINGS;

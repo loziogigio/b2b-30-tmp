@@ -222,7 +222,7 @@ export default async function RootLayout({
   // Resolve theme: tenant config > env var > "default"
   const themeId = getThemeIdForTenant(tenant.b2bTheme);
 
-  const homeSettings = await getServerHomeSettings();
+  const homeSettings = await getServerHomeSettings(lang);
   const branding = homeSettings?.branding ?? {
     title: 'B2B Store',
     primaryColor: '#009f7f',

@@ -25,7 +25,7 @@ export async function generateMetadata({
 
   const [product, homeSettings] = await Promise.all([
     fetchProductForSeo(sku, lang),
-    getServerHomeSettings(),
+    getServerHomeSettings(lang),
   ]);
 
   const brandingTitle = homeSettings?.branding?.title || 'VINC - B2B';

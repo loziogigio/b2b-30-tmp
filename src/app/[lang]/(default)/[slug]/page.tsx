@@ -56,7 +56,7 @@ async function productMetadata(
   const sku = resolved.sku;
   const [product, homeSettings] = await Promise.all([
     fetchProductForSeo(sku, lang),
-    getServerHomeSettings(),
+    getServerHomeSettings(lang),
   ]);
 
   const brandingTitle = homeSettings?.branding?.title || 'VINC - B2B';

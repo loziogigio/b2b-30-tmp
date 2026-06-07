@@ -20,7 +20,7 @@ export async function generateMetadata({
 
   // If no SKU, return default metadata for product list page
   if (!sku) {
-    const homeSettings = await getServerHomeSettings();
+    const homeSettings = await getServerHomeSettings(lang);
     const brandingTitle = homeSettings?.branding?.title || 'VINC - B2B';
     return {
       title: `Prodotti | ${brandingTitle}`,
@@ -30,7 +30,7 @@ export async function generateMetadata({
 
   const [product, homeSettings] = await Promise.all([
     fetchProductForSeo(sku, lang),
-    getServerHomeSettings(),
+    getServerHomeSettings(lang),
   ]);
 
   const brandingTitle = homeSettings?.branding?.title || 'VINC - B2B';

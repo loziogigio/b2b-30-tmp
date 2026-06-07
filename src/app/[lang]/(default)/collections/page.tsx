@@ -17,7 +17,7 @@ export async function generateMetadata({
   params: Promise<{ lang: string }>;
 }): Promise<Metadata> {
   const { lang } = await params;
-  const homeSettings = await getServerHomeSettings();
+  const homeSettings = await getServerHomeSettings(lang);
 
   const brandingTitle = homeSettings?.branding?.title || 'VINC - B2B';
   const siteUrl = process.env.NEXT_PUBLIC_WEBSITE_URL || '';
