@@ -17,11 +17,13 @@ HomeSettingsContext.displayName = 'HomeSettingsContext';
 
 interface HomeSettingsProviderProps {
   initialSettings: HomeSettings | null;
+  lang: string;
   children: React.ReactNode;
 }
 
 export function HomeSettingsProvider({
   initialSettings,
+  lang,
   children,
 }: HomeSettingsProviderProps) {
   const [settings, setSettings] = React.useState<HomeSettings | null>(
@@ -34,12 +36,15 @@ export function HomeSettingsProvider({
     setIsLoading(true);
     try {
       // Internal API route - credentials are handled server-side
-      const response = await fetch('/api/b2b/home-settings', {
-        cache: 'no-store',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetch(
+        `/api/b2b/home-settings?lang=${encodeURIComponent(lang)}`,
+        {
+          cache: 'no-store',
+          headers: {
+            'Content-Type': 'application/json',
+          },
         },
-      });
+      );
       if (!response.ok) {
         setSettings(null);
         return;
@@ -52,7 +57,7 @@ export function HomeSettingsProvider({
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [lang]);
 
   React.useEffect(() => {
     if (!initialSettings) {

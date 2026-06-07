@@ -12,6 +12,7 @@ import type { TenantPublicInfo } from '@/lib/tenant/types';
 
 interface ProvidersProps extends React.PropsWithChildren {
   initialHomeSettings: HomeSettings | null;
+  lang: string;
   tenant?: TenantPublicInfo;
   isMultiTenant?: boolean;
 }
@@ -19,6 +20,7 @@ interface ProvidersProps extends React.PropsWithChildren {
 function Providers({
   children,
   initialHomeSettings,
+  lang,
   tenant,
   isMultiTenant = false,
 }: ProvidersProps) {
@@ -44,7 +46,10 @@ function Providers({
     <Provider>
       <QueryClientProvider client={queryClientRef.current}>
         <TenantProvider tenant={tenantInfo} isMultiTenant={isMultiTenant}>
-          <HomeSettingsProvider initialSettings={initialHomeSettings}>
+          <HomeSettingsProvider
+            lang={lang}
+            initialSettings={initialHomeSettings}
+          >
             <CompareProvider>
               <PushNotificationsProvider>{children}</PushNotificationsProvider>
             </CompareProvider>

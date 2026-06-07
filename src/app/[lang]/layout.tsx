@@ -268,6 +268,7 @@ export default async function RootLayout({
       >
         <Providers
           initialHomeSettings={homeSettings}
+          lang={lang}
           tenant={tenantPublicInfo}
           isMultiTenant={isMultiTenant}
         >
