@@ -1,6 +1,7 @@
 import {
   DEFAULT_FACET_ORDER,
   DEFAULT_HIDDEN_FACETS,
+  PIM_FACET_FIELDS,
 } from '@/framework/basic-rest/utils/filters';
 import type { FacetConfig } from '@/lib/home-settings/types';
 
@@ -52,4 +53,24 @@ export function facetFieldsToRequest(
     return entries.filter((e) => e && e.visible !== false).map((e) => e.field);
   }
   return fallback;
+}
+
+/**
+ * Union of the always-fetched PIM facet fields and any visible configured
+ * fields. The storefront must REQUEST any configured field (including dynamic
+ * `spec_*`/`attribute_*` facets not in the static PIM_FACET_FIELDS list) so
+ * PIM returns buckets for them; otherwise they silently never render.
+ *
+ * No config → union equals PIM_FACET_FIELDS exactly (zero regression for the
+ * existing fetch/harvesting set). Hidden entries are excluded from the added
+ * set; `orderFacets` still drops them from render if fetched.
+ */
+export function resolveFacetFieldsToFetch(
+  config?: FacetConfig | null,
+): string[] {
+  const configured =
+    config?.entries
+      ?.filter((e) => e && e.visible !== false)
+      .map((e) => e.field) ?? [];
+  return Array.from(new Set([...PIM_FACET_FIELDS, ...configured]));
 }

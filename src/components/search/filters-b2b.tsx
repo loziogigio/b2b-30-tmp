@@ -25,7 +25,10 @@ import {
   DisclosureButton,
   DisclosurePanel,
 } from '@headlessui/react';
-import { orderFacets } from '@/components/search/facet-order';
+import {
+  orderFacets,
+  resolveFacetFieldsToFetch,
+} from '@/components/search/facet-order';
 import { useHomeSettings } from '@/hooks/use-home-settings';
 
 export const SearchFiltersB2B: React.FC<{
@@ -130,6 +133,11 @@ export const SearchFiltersB2B: React.FC<{
       ...urlParams,
       lang,
       ...(text ? { text } : {}),
+      // Request the union of the static PIM facet fields and any visible
+      // per-portal configured fields, so dynamic facets (spec_*/attribute_*)
+      // enabled in facetConfig get buckets back from PIM. No config → union
+      // equals PIM_FACET_FIELDS (unchanged fetch set).
+      facet_fields: resolveFacetFieldsToFetch(facetConfig),
     };
 
     // Add SKU filter for trending/likes pages (same as product search)
@@ -138,7 +146,7 @@ export const SearchFiltersB2B: React.FC<{
     }
 
     return params;
-  }, [urlParams, lang, text, isSpecialSource, specialSkus]);
+  }, [urlParams, lang, text, isSpecialSource, specialSkus, facetConfig]);
 
   const {
     data: filters,
