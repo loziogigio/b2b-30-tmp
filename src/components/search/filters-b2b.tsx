@@ -25,6 +25,8 @@ import {
   DisclosureButton,
   DisclosurePanel,
 } from '@headlessui/react';
+import { orderFacets } from '@/components/search/facet-order';
+import { useHomeSettings } from '@/hooks/use-home-settings';
 
 export const SearchFiltersB2B: React.FC<{
   lang: string;
@@ -41,6 +43,8 @@ export const SearchFiltersB2B: React.FC<{
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
+  const { settings: homeSettings } = useHomeSettings();
+  const facetConfig = homeSettings?.facetConfig;
 
   const urlParams: Record<string, string> = {};
   searchParams.forEach((value, key) => {
@@ -229,10 +233,12 @@ export const SearchFiltersB2B: React.FC<{
     return f;
   }, [searchParams, lang, text, isSpecialSource, specialSkus]);
 
-  // Filter out product_type_code from main filters when showing as breadcrumb
-  const mainFilters = effectiveProductTypeCode
-    ? filters?.filter((f) => f.key !== 'product_type_code')
-    : filters;
+  // Keep all facets (including product_type_code) in the list — the sidebar
+  // render anchors the TIPO PRODOTTO breadcrumb + technical-specs accordion to
+  // the product_type_code entry, swapping the flat list for the breadcrumb when
+  // a type is selected. (Previously this stripped product_type_code; that no
+  // longer works now that ordering/anchoring is config-driven.)
+  const mainFilters = filters;
 
   // Handle clearing product type filter
   const handleClearProductType = React.useCallback(() => {
@@ -294,14 +300,6 @@ export const SearchFiltersB2B: React.FC<{
                 7. Tail / boolean facets (stock_status)
             */}
             {(() => {
-              // Top-of-sidebar facets, in display order.
-              const TOP_ORDER = [
-                'promo_type', // PROMOZIONE
-                'attribute_is_new_b', // NOVITÀ
-              ];
-              const TOP_KEYS = new Set(TOP_ORDER);
-              // Tail / boolean facets stay at the bottom.
-              const TAIL_KEYS = new Set(['stock_status']);
               // Filters intentionally hidden from the sidebar UI.
               // `has_active_promo` is redundant once `promo_type` is shown
               // (the typed list filters more precisely than a Sì/No flag).
@@ -345,23 +343,12 @@ export const SearchFiltersB2B: React.FC<{
                 })
                 // Drop facets that ended up empty after the value-level filter.
                 .filter((f) => !Array.isArray(f.values) || f.values.length > 0);
-              const topFilters = TOP_ORDER.map((k) =>
-                filters.find((f) => f.key === k),
-              ).filter(Boolean) as typeof filters;
-              const headerFilters = filters.filter(
-                (f) =>
-                  f.key !== 'category_ancestors' &&
-                  f.key !== 'product_type_code' &&
-                  !TOP_KEYS.has(f.key) &&
-                  !TAIL_KEYS.has(f.key),
-              );
-              const categoryFilter = filters.find(
-                (f) => f.key === 'category_ancestors',
-              );
-              const productTypeFilter = filters.find(
-                (f) => f.key === 'product_type_code',
-              );
-              const tailFilters = filters.filter((f) => TAIL_KEYS.has(f.key));
+
+              // Config-driven ordering: per-portal facet_config decides which
+              // facets show and in what order, falling back to the default
+              // order/hidden set when there's no config. Value-level smarts
+              // above (hidden/single-value/true-only) still apply on top.
+              const ordered = orderFacets(filters as any, facetConfig);
 
               const renderFilter = (filter: any, withDivider = true) => (
                 <React.Fragment key={filter.key}>
@@ -379,80 +366,83 @@ export const SearchFiltersB2B: React.FC<{
 
               return (
                 <>
-                  {/* 1. PROMOZIONE   2. NOVITÀ */}
-                  {topFilters.map((f) => renderFilter(f))}
+                  {ordered.map((filter, i) => {
+                    const last = i === ordered.length - 1;
 
-                  {/* 3. MARCA + any other header facet */}
-                  {headerFilters.map((f) => renderFilter(f))}
+                    // CATEGORIA — drill-down navigator
+                    if (filter.key === 'category_ancestors') {
+                      return (
+                        <React.Fragment key={filter.key}>
+                          <CategoryNavigator
+                            lang={lang}
+                            label={filter.label}
+                            values={filter.values}
+                          />
+                          <hr className="border-border-base mx-4" />
+                        </React.Fragment>
+                      );
+                    }
 
-                  {/* 4. CATEGORIA — drill-down navigator */}
-                  {categoryFilter && (
-                    <>
-                      <CategoryNavigator
-                        lang={lang}
-                        label={categoryFilter.label}
-                        values={categoryFilter.values}
-                      />
-                      <hr className="border-border-base mx-4" />
-                    </>
-                  )}
+                    // TIPO PRODOTTO — list OR breadcrumb, plus the technical-specs
+                    // accordion anchored right after it when a type is selected.
+                    if (filter.key === 'product_type_code') {
+                      return (
+                        <React.Fragment key={filter.key}>
+                          {!effectiveProductTypeCode && renderFilter(filter)}
 
-                  {/* 5. TIPO PRODOTTO (list — only when no type is selected/auto-detected) */}
-                  {!effectiveProductTypeCode &&
-                    productTypeFilter &&
-                    renderFilter(productTypeFilter)}
-
-                  {/* 5b. TIPO PRODOTTO breadcrumb */}
-                  {effectiveProductTypeCode && effectiveProductTypeLabel && (
-                    <>
-                      <ProductTypeBreadcrumb
-                        lang={lang}
-                        productType={effectiveProductTypeCode}
-                        label={effectiveProductTypeLabel}
-                        onClear={handleClearProductType}
-                      />
-                      <hr className="border-border-base mx-4" />
-                    </>
-                  )}
-
-                  {/* 6. SPECIFICHE TECNICHE accordion */}
-                  {effectiveProductTypeCode && (
-                    <>
-                      <div className="block">
-                        <Disclosure defaultOpen>
-                          {({ open }) => (
-                            <div>
-                              <DisclosureButton className="w-full flex items-center justify-between px-4 py-2">
-                                <span className="text-brand-dark font-semibold text-sm uppercase">
-                                  {t('text-technical-specs')}
-                                </span>
-                                {open ? (
-                                  <IoIosArrowUp className="text-brand-dark text-opacity-80 text-sm" />
-                                ) : (
-                                  <IoIosArrowDown className="text-brand-dark text-opacity-80 text-sm" />
-                                )}
-                              </DisclosureButton>
-                              <DisclosurePanel>
-                                <TechSpecsFilters
+                          {effectiveProductTypeCode &&
+                            effectiveProductTypeLabel && (
+                              <>
+                                <ProductTypeBreadcrumb
                                   lang={lang}
                                   productType={effectiveProductTypeCode}
-                                  currentFilters={currentFilters}
+                                  label={effectiveProductTypeLabel}
+                                  onClear={handleClearProductType}
                                 />
-                              </DisclosurePanel>
-                            </div>
-                          )}
-                        </Disclosure>
-                      </div>
-                      {tailFilters.length > 0 && (
-                        <hr className="border-t-2 border-border-base" />
-                      )}
-                    </>
-                  )}
+                                <hr className="border-border-base mx-4" />
+                              </>
+                            )}
 
-                  {/* 7. Tail / boolean facets (DISPONIBILITÀ) */}
-                  {tailFilters.map((f, i) =>
-                    renderFilter(f, i < tailFilters.length - 1),
-                  )}
+                          {effectiveProductTypeCode && (
+                            <>
+                              {/* SPECIFICHE TECNICHE accordion */}
+                              <div className="block">
+                                <Disclosure defaultOpen>
+                                  {({ open }) => (
+                                    <div>
+                                      <DisclosureButton className="w-full flex items-center justify-between px-4 py-2">
+                                        <span className="text-brand-dark font-semibold text-sm uppercase">
+                                          {t('text-technical-specs')}
+                                        </span>
+                                        {open ? (
+                                          <IoIosArrowUp className="text-brand-dark text-opacity-80 text-sm" />
+                                        ) : (
+                                          <IoIosArrowDown className="text-brand-dark text-opacity-80 text-sm" />
+                                        )}
+                                      </DisclosureButton>
+                                      <DisclosurePanel>
+                                        <TechSpecsFilters
+                                          lang={lang}
+                                          productType={effectiveProductTypeCode}
+                                          currentFilters={currentFilters}
+                                        />
+                                      </DisclosurePanel>
+                                    </div>
+                                  )}
+                                </Disclosure>
+                              </div>
+                              {!last && (
+                                <hr className="border-t-2 border-border-base" />
+                              )}
+                            </>
+                          )}
+                        </React.Fragment>
+                      );
+                    }
+
+                    // Flat facets (PROMOZIONE, NOVITÀ, MARCA, DISPONIBILITÀ, …)
+                    return renderFilter(filter, !last);
+                  })}
                 </>
               );
             })()}
