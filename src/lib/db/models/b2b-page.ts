@@ -42,6 +42,7 @@ export const B2BPageSchema = new Schema(
       ],
     },
     title: { type: String, required: true, trim: true },
+    lang: { type: String, trim: true, lowercase: true },
     status: {
       type: String,
       enum: B2B_PAGE_STATUSES,

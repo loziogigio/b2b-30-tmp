@@ -26,7 +26,7 @@ export async function generateMetadata({
   const { lang, slug } = await params;
 
   // 1) CMS page wins on a single-segment collision (spec D3 / open item).
-  const page = await getCachedCmsPage(slug);
+  const page = await getCachedCmsPage(slug, lang);
   if (page) {
     const seo = (page.seo ?? {}) as {
       title?: string;
@@ -121,7 +121,7 @@ export default async function FlatSlugPage({ params }: RouteParams) {
   const { lang, slug } = await params;
 
   // 1) CMS page → render it (CMS wins, spec D3).
-  const page = await getCachedCmsPage(slug);
+  const page = await getCachedCmsPage(slug, lang);
   if (page) {
     return (
       <CmsPageRenderer blocks={page.blocks ?? []} pageSlug={slug} lang={lang} />
