@@ -49,18 +49,22 @@ export async function GET(req: NextRequest) {
     const config = await getTenantConfig(req);
     const base = (config.pimApiUrl || '').replace(/\/$/, '');
 
-    const response = await fetch(
-      `${base}/api/b2b/b2b/public/home?portal=default`,
-      {
-        cache: 'no-store',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-auth-method': 'api-key',
-          ...(config.apiKeyId && { 'X-API-Key': config.apiKeyId }),
-          ...(config.apiSecret && { 'X-API-Secret': config.apiSecret }),
-        },
+    // Per-language header/footer: forward the URL language so the upstream
+    // serve route returns the language-resolved portal sections.
+    const lang = new URL(req.url).searchParams.get('lang');
+    const upstream =
+      `${base}/api/b2b/b2b/public/home?portal=default` +
+      (lang ? `&lang=${encodeURIComponent(lang)}` : '');
+
+    const response = await fetch(upstream, {
+      cache: 'no-store',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-auth-method': 'api-key',
+        ...(config.apiKeyId && { 'X-API-Key': config.apiKeyId }),
+        ...(config.apiSecret && { 'X-API-Secret': config.apiSecret }),
       },
-    );
+    });
 
     if (!response.ok) {
       // Return default settings when the PIM API doesn't have a portal yet
