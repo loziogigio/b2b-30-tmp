@@ -70,7 +70,8 @@ export type HeaderWidgetType =
   | 'button' // Custom button/link (multiple allowed)
   | 'spacer' // Flexible space (multiple allowed)
   | 'divider' // Vertical divider (multiple allowed)
-  | 'app-launcher'; // Cross-app navigation (B2B ↔ Vetrina)
+  | 'app-launcher' // Cross-app navigation (B2B ↔ Vetrina)
+  | 'language'; // Language selector (PIM-enabled languages)
 
 export interface RadioStation {
   id: string;
@@ -259,6 +260,20 @@ export interface CustomScript {
 }
 
 // ============================================================================
+// Facet Configuration Types
+// ============================================================================
+
+export interface FacetConfigEntry {
+  field: string;
+  visible: boolean;
+  label?: string;
+}
+
+export interface FacetConfig {
+  entries: FacetConfigEntry[];
+}
+
+// ============================================================================
 // Home Settings Main Interface
 // ============================================================================
 
@@ -292,6 +307,9 @@ export interface HomeSettings {
 
   /** Custom CSS injected into the storefront <head> as a single <style> block */
   customCss?: string;
+
+  /** Per-portal facet configuration (which facets are visible, their labels) */
+  facetConfig?: FacetConfig;
 
   createdAt?: string | Date;
   updatedAt?: string | Date;

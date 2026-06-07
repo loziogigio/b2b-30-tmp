@@ -11,6 +11,7 @@ import { DEFAULT_HOME_SETTINGS } from '@/lib/home-settings/defaults';
 import type {
   CompanyBranding,
   CustomScript,
+  FacetConfig,
   FooterColumn,
   FooterColumnItem,
   FooterConfig,
@@ -42,6 +43,8 @@ export interface PortalPayload {
    * `DEFAULT_HOME_SETTINGS.cardStyle`.
    */
   cardStyle?: Partial<ProductCardStyle>;
+  /** Per-portal facet configuration (which facets are visible, their labels) */
+  facet_config?: FacetConfig;
   /** present on the read-through fallback for unmigrated tenants */
   synthesized?: boolean;
 }
@@ -281,5 +284,6 @@ export function mapPortalToHomeSettings(
     // Keep the legacy top-level fields populated for any straggler consumers.
     footerHtml: portal.footer?.footer_html,
     footerHtmlDraft: portal.footer?.footer_html_draft,
+    facetConfig: portal.facet_config,
   };
 }
