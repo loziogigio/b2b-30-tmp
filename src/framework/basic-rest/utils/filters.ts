@@ -38,3 +38,17 @@ export const PIM_FACET_LABELS: Record<string, string> = {
 };
 
 export { STOCK_STATUS_LABELS, BOOLEAN_LABELS };
+
+// Default sidebar order/visibility when a portal has no facet_config.
+// Mirrors the historical hardcoded sidebar render order:
+// promo → novità → brand → category → product type → stock.
+export const DEFAULT_FACET_ORDER: string[] = [
+  'promo_type',
+  'attribute_is_new_b',
+  'brand_id',
+  'category_ancestors',
+  'product_type_code',
+  'stock_status',
+];
+// Facets hidden by default (redundant with promo_type).
+export const DEFAULT_HIDDEN_FACETS: string[] = ['has_active_promo'];
