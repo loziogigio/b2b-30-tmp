@@ -581,7 +581,7 @@ const TimeProductDetail: React.FC<{
           )}
 
           {/* Per-article base promo (MyMB GetPromozioneBaseXArticolo) */}
-          {basePromo && (
+          {process.env.NODE_ENV !== 'production' && basePromo && (
             <div className="mb-4 rounded-lg border border-[var(--time-gray-200)] bg-[var(--time-gray-50)] px-4 py-3 text-[13px] text-[var(--time-dark)]">
               {/* Shape depends on GetPromozioneBaseXArticolo; render the message/fields
                   the backend returns. Start by surfacing the raw result for QA, then

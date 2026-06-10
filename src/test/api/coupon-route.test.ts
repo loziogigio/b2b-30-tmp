@@ -71,6 +71,18 @@ describe('coupon proxy cases', () => {
     expect(json).toEqual({ status: 'success', data: raw });
   });
 
+  it('verify_promo_item forwards the three params and echoes the JSON', async () => {
+    const raw = { GetPromozioneBaseXArticoloResult: {} };
+    verifyPromoItem.mockResolvedValue(raw);
+    const res = await POST(
+      req('verify_promo_item', { codiceInternoCliente: 'C', codiceIndirizzo: 'A', codiceInternoArticolo: 'ART1' }),
+      params('verify_promo_item'),
+    );
+    const json = await res.json();
+    expect(verifyPromoItem).toHaveBeenCalledWith('C', 'A', 'ART1');
+    expect(json).toEqual({ status: 'success', data: raw });
+  });
+
   it('disabled config short-circuits without calling MyMB', async () => {
     resolveCouponConfig.mockResolvedValue({ enabled: false, baseUrl: '', authHeader: '' });
     const res = await POST(req('validate_coupon', { codiceInternoCliente: 'C', codiceCoupon: 'AB' }), params('validate_coupon'));

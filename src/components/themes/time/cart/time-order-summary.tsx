@@ -364,7 +364,7 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
               {totalItems} articol{totalItems > 1 ? 'i' : 'o'} per un totale di
             </p>
             <div className="text-[34px] font-black text-[var(--time-dark)] font-[var(--font-display)] tabular-nums mb-6">
-              {money(doc)}
+              {money(discounted.doc)}
             </div>
             <div className="flex gap-3">
               <button

@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { resolveCouponConfigFromEnv, mapCouponRecord, DEFAULT_COUPON_CONFIG } from '@/lib/erp/coupon-config';
-import { fetchCouponSettings } from '@/lib/erp/coupon-config';
+import { resolveCouponConfigFromEnv, mapCouponRecord, DEFAULT_COUPON_CONFIG, fetchCouponSettings } from '@/lib/erp/coupon-config';
 
 describe('coupon-config (static)', () => {
   const OLD = { ...process.env };
