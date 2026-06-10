@@ -55,3 +55,36 @@ export function mapCouponRecord(data: Record<string, unknown>): CouponConfig {
 export async function resolveCouponConfig(_req: NextRequest): Promise<CouponConfig> {
   return resolveCouponConfigFromEnv();
 }
+
+interface FetchCouponArgs {
+  csBaseUrl: string;
+  apiKeyId: string;
+  apiSecret: string;
+  channel: string;
+}
+
+/**
+ * Phase 2: fetch the channel-scoped `coupon_settings` record from Commerce Suite
+ * (mirrors fetchErpSettings). Returns DEFAULT_COUPON_CONFIG when absent.
+ */
+export async function fetchCouponSettings(args: FetchCouponArgs): Promise<CouponConfig> {
+  const url = new URL(
+    `${args.csBaseUrl.replace(/\/+$/, '')}/api/b2b/data-models/coupon_settings/records`,
+  );
+  url.searchParams.set('channel', args.channel);
+
+  const res = await fetch(url.toString(), {
+    headers: {
+      Accept: 'application/json',
+      'x-auth-method': 'api-key',
+      'x-api-key-id': args.apiKeyId,
+      'x-api-secret': args.apiSecret,
+    },
+  });
+  if (!res.ok) return DEFAULT_COUPON_CONFIG;
+
+  const json: any = await res.json();
+  const record = json?.data?.items?.[0];
+  if (!record?.data) return DEFAULT_COUPON_CONFIG;
+  return mapCouponRecord(record.data as Record<string, unknown>);
+}
