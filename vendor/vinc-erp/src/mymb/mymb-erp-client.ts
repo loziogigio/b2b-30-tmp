@@ -5,6 +5,7 @@ import { ErpError } from '../erp-client.js';
 import { MYMB_ENDPOINTS } from '../endpoints.js';
 import type { MyMbErpSettings, MyMbPriceEntry, PriceQuery } from '../types/pricing.js';
 import { buildPriceEntry } from './transform.js';
+import { mymbRequest } from './request.js';
 
 export interface MyMbErpClientConfig {
   /** Base URL, no userinfo, no trailing slash (from parseMyMbConnection). */
@@ -42,31 +43,12 @@ export class MyMbErpClient implements ErpClient {
     endpoint: string,
     opts: { method?: 'GET' | 'POST'; params?: Record<string, unknown>; body?: unknown } = {},
   ): Promise<T> {
-    const method = opts.method ?? 'POST';
-    const url = new URL(`${this.baseUrl}/${endpoint}`);
-    if (opts.params) {
-      for (const [k, v] of Object.entries(opts.params)) {
-        if (v !== undefined && v !== null) url.searchParams.set(k, String(v));
-      }
-    }
-    let res: Response;
-    try {
-      res = await this.fetchImpl(url.toString(), {
-        method,
-        headers: {
-          Authorization: this.authHeader,
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        },
-        body: method === 'POST' && opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
-      });
-    } catch (err) {
-      throw new ErpError(`ERP request failed: ${(err as Error).message}`, { endpoint });
-    }
-    if (!res.ok) {
-      throw new ErpError(`ERP request failed: HTTP ${res.status}`, { endpoint, status: res.status });
-    }
-    return (await res.json()) as T;
+    return mymbRequest<T>(this.baseUrl, this.authHeader, endpoint, {
+      method: opts.method,
+      params: opts.params,
+      body: opts.body,
+      fetchImpl: this.fetchImpl,
+    });
   }
 
   async getSubstituteItems(
