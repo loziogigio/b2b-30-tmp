@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import cn from 'classnames';
 import { useCart } from '@contexts/cart/cart.context';
 import { useDeliveryAddress } from '@contexts/address/address.context';
@@ -12,6 +12,9 @@ import { useTranslation } from 'src/app/i18n/client';
 import { useOrderSubmit } from '@/hooks/use-order-submit';
 import TimeAnomalyModal from './time-anomaly-modal';
 import DuplicateSubmitModal from '@/components/checkout/duplicate-submit-modal';
+import { useCoupon } from '@/hooks/use-coupon';
+import { applyCouponDiscount } from '@/lib/coupon/discount';
+import TimeCouponField from './time-coupon-field';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -137,6 +140,15 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
   const doc = meta?.totalDoc ?? 0;
   const savings = gross - net;
 
+  const coupon = useCoupon({
+    customerCode: String(ERP_STATIC.customer_code || ''),
+    idCart: String(ERP_STATIC.id_cart || ''),
+  });
+  // Re-display a coupon already saved on the cart.
+  useEffect(() => { coupon.checkCouponCart(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+
+  const discounted = applyCouponDiscount({ net, vat }, coupon.discountPercent);
+
   const addressLabel = useMemo(() => {
     if (!selectedB2B) return '';
     return formatAddress(selectedB2B.address ?? selectedB2B);
@@ -253,14 +265,25 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
               className="w-full rounded-[var(--radius-btn)] border-[1.5px] border-[var(--time-gray-200)] px-3.5 py-2.5 text-[13px] font-[var(--font-body)] text-[var(--time-dark)] bg-white outline-none resize-y transition-all focus:border-[var(--time-red)] focus:shadow-[0_0_0_3px_rgba(230,57,70,0.1)]"
             />
           </div>
+
+          {/* Coupon */}
+          {String(ERP_STATIC.customer_code || '0') !== '0' && String(ERP_STATIC.id_cart || '0') !== '0' && (
+            <TimeCouponField
+              status={coupon.status}
+              message={coupon.message}
+              onApply={coupon.applyCoupon}
+              placeholder={t('coupon.placeholder', { defaultValue: 'Codice coupon' })}
+              applyLabel={t('coupon.apply', { defaultValue: 'Applica' })}
+            />
+          )}
         </div>
 
         {/* Totals */}
         <div className="px-6 py-4 border-t border-[var(--time-gray-100)] flex flex-col gap-2">
           {[
             { label: 'Totale lordo', value: gross, strike: true },
-            { label: 'Totale netto', value: net, bold: true },
-            { label: 'IVA (22%)', value: vat },
+            { label: 'Totale netto', value: discounted.net, bold: true },
+            { label: 'IVA (22%)', value: discounted.vat },
           ].map((row) => (
             <div
               key={row.label}
@@ -286,12 +309,19 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
             </div>
           )}
 
+          {coupon.discountPercent > 0 && (
+            <div className="flex justify-between items-center text-[12px] text-emerald-600 bg-emerald-50 px-2.5 py-1.5 rounded-lg mt-0.5">
+              <span className="font-semibold">{t('coupon.discountLine', { defaultValue: 'Sconto coupon' })} −{coupon.discountPercent}%</span>
+              <span className="font-bold">−{money(discounted.discount)}</span>
+            </div>
+          )}
+
           <div className="flex justify-between items-center pt-3 border-t-2 border-[var(--time-gray-100)] mt-1">
             <span className="text-[14px] font-bold text-[var(--time-dark)]">
               Totale
             </span>
             <span className="text-[26px] font-black text-[var(--time-dark)] font-[var(--font-display)] tabular-nums">
-              {money(doc)}
+              {money(discounted.doc)}
             </span>
           </div>
         </div>
