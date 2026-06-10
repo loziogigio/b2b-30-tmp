@@ -66,22 +66,24 @@ function couponChannel(): string {
 export async function resolveCouponConfig(req: NextRequest): Promise<CouponConfig> {
   const envCfg = resolveCouponConfigFromEnv();
   try {
-    const [{ getTenantBits }, { cachedJson }] = await Promise.all([
-      import('./factory'),
+    const [{ resolveTenantApiConfig }, { cachedJson }] = await Promise.all([
+      import('@/lib/tenant/api-config'),
       import('@/lib/cache/redis-cache'),
     ]);
-    const bits = await getTenantBits(req);
-    if (!bits.csBaseUrl || !bits.apiKeyId) return envCfg;
+    // Same resolver every CS-reaching route uses: honours PIM_API_URL_OVERRIDE
+    // (local dev → localhost suite) and falls back to env credentials.
+    const api = await resolveTenantApiConfig(req);
+    if (!api.pimApiUrl || !api.apiKeyId) return envCfg;
 
     const channel = couponChannel();
     const dyn = await cachedJson(
-      `coupon:settings:${bits.csBaseUrl}:${channel}`,
+      `coupon:settings:${api.pimApiUrl}:${channel}`,
       { softTtlMs: 5 * 60_000, hardTtlSeconds: 3600 },
       () =>
         fetchCouponSettings({
-          csBaseUrl: bits.csBaseUrl,
-          apiKeyId: bits.apiKeyId,
-          apiSecret: bits.apiSecret,
+          csBaseUrl: api.pimApiUrl,
+          apiKeyId: api.apiKeyId as string,
+          apiSecret: api.apiSecret ?? '',
           channel,
         }),
     );
