@@ -1,7 +1,53 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { CouponClient } from 'vinc-erp';
 import { getMyMbErpClient } from '@/lib/erp/factory';
+import { resolveCouponConfig } from '@/lib/erp/coupon-config';
 
 type RouteParams = { params: Promise<{ path: string[] }> };
+
+const COUPON_ENDPOINTS = new Set([
+  'validate_coupon', 'check_coupon_cart', 'submit_coupon', 'verify_promo_item',
+]);
+
+async function handleCoupon(
+  endpoint: string,
+  body: any,
+  req: NextRequest,
+): Promise<NextResponse> {
+  const cfg = await resolveCouponConfig(req);
+  if (!cfg.enabled || !cfg.baseUrl) {
+    return NextResponse.json({ status: 'error', message: 'Coupons not enabled' });
+  }
+  const client = new CouponClient({ baseUrl: cfg.baseUrl, authHeader: cfg.authHeader });
+
+  switch (endpoint) {
+    case 'validate_coupon': {
+      const data = await client.validateCoupon(body.codiceInternoCliente, body.codiceCoupon);
+      return NextResponse.json({ status: 'success', data });
+    }
+    case 'check_coupon_cart': {
+      const info = await client.getCartCoupon(body.id_cart);
+      const codice = info?.GetInfoCouponFromDocumentoResult?.m_Item2?.Codice;
+      if (!codice) {
+        return NextResponse.json({ status: 'error', message: 'No coupon on cart' });
+      }
+      const data = await client.validateCoupon(body.codiceInternoCliente, codice);
+      return NextResponse.json({ status: 'success', data });
+    }
+    case 'submit_coupon': {
+      const data = await client.submitCoupon(body.idElaborazione, body.codiceCoupon);
+      return NextResponse.json({ status: 'success', data });
+    }
+    case 'verify_promo_item': {
+      const data = await client.verifyPromoItem(
+        body.codiceInternoCliente, body.codiceIndirizzo, body.codiceInternoArticolo,
+      );
+      return NextResponse.json({ status: 'success', data });
+    }
+    default:
+      return NextResponse.json({ status: 'error', message: `Unknown coupon endpoint: ${endpoint}` }, { status: 404 });
+  }
+}
 
 export async function POST(req: NextRequest, { params }: RouteParams) {
   const { path } = await params;
@@ -12,6 +58,15 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     body = await req.json();
   } catch {
     body = {};
+  }
+
+  if (COUPON_ENDPOINTS.has(endpoint)) {
+    try {
+      return await handleCoupon(endpoint, body, req);
+    } catch (error) {
+      console.error(`[ERP route] coupon ${endpoint} failed:`, error);
+      return NextResponse.json({ status: 'error', message: (error as Error).message }, { status: 502 });
+    }
   }
 
   try {
