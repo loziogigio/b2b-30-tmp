@@ -10,4 +10,10 @@ export type { MyMbConnection } from './mymb/auth.js';
 export { MyMbErpClient } from './mymb/mymb-erp-client.js';
 export type { MyMbErpClientConfig } from './mymb/mymb-erp-client.js';
 export { getPackagingOptions, getLabelAndCartStatus, buildPriceEntry, } from './mymb/transform.js';
+export { MYMB_COUPON_ENDPOINTS } from './endpoints.js';
+export type { MyMbCouponEndpoint } from './endpoints.js';
+export { CouponClient } from './mymb/coupon-client.js';
+export type { CouponClientConfig, CouponValidation, CartCouponInfo, CouponPersistResult, } from './mymb/coupon-client.js';
+export { mymbRequest } from './mymb/request.js';
+export type { MymbRequestOpts } from './mymb/request.js';
 //# sourceMappingURL=index.d.ts.map

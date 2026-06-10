@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.MYMB_ENDPOINTS = void 0;
+exports.MYMB_COUPON_ENDPOINTS = exports.MYMB_ENDPOINTS = void 0;
 /** Raw MYMB ERP webservice endpoints (PascalCase, appended to the base URL). */
 exports.MYMB_ENDPOINTS = {
     GET_PREZZATURA_MULTIPLA: 'GetPrezzaturaMultipla',
@@ -11,5 +11,12 @@ exports.MYMB_ENDPOINTS = {
     GET_LISTA_SCADENZE_CON_INFO: 'GetListaScadenzeConInfo',
     GET_TESTATE_FATT_CON_INFO: 'GetTestateFATTConInfo',
     GET_TESTATE_DDT_CON_INFO: 'GetTestateDDTConInfo',
+};
+/** Raw MYMB coupon webservice endpoints (separate connection from pricing). */
+exports.MYMB_COUPON_ENDPOINTS = {
+    GET_STATO_COUPON_CLIENTE: 'GetStatoCouponCliente',
+    GET_INFO_COUPON_FROM_DOCUMENTO: 'GetInfoCouponFromDocumento',
+    UPDATE_TESTATA_DOCUMENTO_CON_COUPON: 'UpdateTestataDocumentoConCoupon',
+    GET_PROMOZIONE_BASE_X_ARTICOLO: 'GetPromozioneBaseXArticolo',
 };
 //# sourceMappingURL=endpoints.js.map

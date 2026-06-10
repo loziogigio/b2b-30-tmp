@@ -5,6 +5,7 @@ const cache_js_1 = require("../cache.js");
 const erp_client_js_1 = require("../erp-client.js");
 const endpoints_js_1 = require("../endpoints.js");
 const transform_js_1 = require("./transform.js");
+const request_js_1 = require("./request.js");
 function ddmmyyyy(d = new Date()) {
     const p = (n) => String(n).padStart(2, '0');
     return `${p(d.getDate())}${p(d.getMonth() + 1)}${d.getFullYear()}`;
@@ -19,33 +20,12 @@ class MyMbErpClient {
     }
     /** Mirrors Python ErpClient.request: Basic auth, ReturnCode handling, errors. */
     async request(endpoint, opts = {}) {
-        const method = opts.method ?? 'POST';
-        const url = new URL(`${this.baseUrl}/${endpoint}`);
-        if (opts.params) {
-            for (const [k, v] of Object.entries(opts.params)) {
-                if (v !== undefined && v !== null)
-                    url.searchParams.set(k, String(v));
-            }
-        }
-        let res;
-        try {
-            res = await this.fetchImpl(url.toString(), {
-                method,
-                headers: {
-                    Authorization: this.authHeader,
-                    'Content-Type': 'application/json',
-                    Accept: 'application/json',
-                },
-                body: method === 'POST' && opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
-            });
-        }
-        catch (err) {
-            throw new erp_client_js_1.ErpError(`ERP request failed: ${err.message}`, { endpoint });
-        }
-        if (!res.ok) {
-            throw new erp_client_js_1.ErpError(`ERP request failed: HTTP ${res.status}`, { endpoint, status: res.status });
-        }
-        return (await res.json());
+        return (0, request_js_1.mymbRequest)(this.baseUrl, this.authHeader, endpoint, {
+            method: opts.method,
+            params: opts.params,
+            body: opts.body,
+            fetchImpl: this.fetchImpl,
+        });
     }
     async getSubstituteItems(entityCode, idCart = 0, pricingDate = ddmmyyyy()) {
         const data = await this.request(endpoints_js_1.MYMB_ENDPOINTS.GET_LISTA_ARTICOLI_ALTERNATIVI, {

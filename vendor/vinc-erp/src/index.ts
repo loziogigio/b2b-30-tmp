@@ -29,3 +29,16 @@ export {
   getLabelAndCartStatus,
   buildPriceEntry,
 } from './mymb/transform.js';
+
+// Coupon endpoints + client
+export { MYMB_COUPON_ENDPOINTS } from './endpoints.js';
+export type { MyMbCouponEndpoint } from './endpoints.js';
+export { CouponClient } from './mymb/coupon-client.js';
+export type {
+  CouponClientConfig,
+  CouponValidation,
+  CartCouponInfo,
+  CouponPersistResult,
+} from './mymb/coupon-client.js';
+export { mymbRequest } from './mymb/request.js';
+export type { MymbRequestOpts } from './mymb/request.js';
