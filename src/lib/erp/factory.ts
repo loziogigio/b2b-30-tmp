@@ -14,7 +14,9 @@ export function resolveErpUrl(tenantUrl: string | undefined): string {
   return url;
 }
 
-async function getTenantBits(req: NextRequest) {
+/** Resolve Commerce-Suite connection bits (base URL + API key) for the request,
+ *  single- or multi-tenant. Exported so config readers (coupon, etc.) reuse it. */
+export async function getTenantBits(req: NextRequest) {
   if (isSingleTenant) {
     return {
       // No dedicated erp_url field: the MyMB connection lives in the B2B API

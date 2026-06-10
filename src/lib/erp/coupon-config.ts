@@ -48,12 +48,53 @@ export function mapCouponRecord(data: Record<string, unknown>): CouponConfig {
   };
 }
 
+/** Sales-channel code the storefront reads its `coupon_settings` record under. */
+function couponChannel(): string {
+  return process.env.COUPON_CHANNEL || 'b2b';
+}
+
 /**
- * The single phase seam. Phase 1 returns the static env config. Phase 2 (a later task)
- * swaps the body to read the channel-scoped `coupon_settings` model.
+ * The single phase seam. Reads the channel-scoped `coupon_settings` record from
+ * Commerce Suite for the request's tenant (cached), falling back to the static
+ * env config when the tenant/CS bits are unavailable, the record is absent, or
+ * the lookup fails. The MyMB Basic-auth credentials always come from env
+ * (COUPON_API_USER / COUPON_API_PASSWORD) — the record carries only enabled + api_url.
+ *
+ * Dynamic imports keep the pure helpers above free of the ERP-factory / Redis
+ * deps so they stay unit-testable in isolation.
  */
-export async function resolveCouponConfig(_req: NextRequest): Promise<CouponConfig> {
-  return resolveCouponConfigFromEnv();
+export async function resolveCouponConfig(req: NextRequest): Promise<CouponConfig> {
+  const envCfg = resolveCouponConfigFromEnv();
+  try {
+    const [{ getTenantBits }, { cachedJson }] = await Promise.all([
+      import('./factory'),
+      import('@/lib/cache/redis-cache'),
+    ]);
+    const bits = await getTenantBits(req);
+    if (!bits.csBaseUrl || !bits.apiKeyId) return envCfg;
+
+    const channel = couponChannel();
+    const dyn = await cachedJson(
+      `coupon:settings:${bits.csBaseUrl}:${channel}`,
+      { softTtlMs: 5 * 60_000, hardTtlSeconds: 3600 },
+      () =>
+        fetchCouponSettings({
+          csBaseUrl: bits.csBaseUrl,
+          apiKeyId: bits.apiKeyId,
+          apiSecret: bits.apiSecret,
+          channel,
+        }),
+    );
+
+    // Use the dynamic record only when it actually carries a connection URL;
+    // otherwise fall back to env. Credentials always come from env.
+    if (dyn?.baseUrl) {
+      return { ...dyn, authHeader: dyn.authHeader || envCfg.authHeader };
+    }
+    return envCfg;
+  } catch {
+    return envCfg;
+  }
 }
 
 interface FetchCouponArgs {
