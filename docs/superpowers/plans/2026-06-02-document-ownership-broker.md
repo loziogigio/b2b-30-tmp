@@ -9,6 +9,7 @@
 **Tech Stack:** Next.js 16 route handlers (streaming via the upstream `Response.body`), TypeScript, Vitest.
 
 **Verified facts:**
+
 - `delivery_note`/`invoice` records carry `data.pdf_url` (real `https://b2b.hidros.com/documenti-clienti/…PDF`), `pdf_barcode_url`, `csv_url`; the record's top-level `relation_id` (e.g. `015892`) is the owner.
 - `ssoApi.validate(accessToken)` → `SSOValidateResponse.user.customers: SSOCustomer[]`, each with `erp_customer_id` (`src/lib/sso-api/types.ts`). The session cookie is `AUTH_COOKIES.ACCESS_TOKEN` = `auth_token` (`src/lib/auth/cookies.ts`). The pattern to validate server-side is `src/app/api/auth/validate/route.ts` (`resolveAuthContext(req,'validate')` → `ssoApi.validate(token)`).
 - Ownership = `record.relation_id ∈ Set(user.customers[].erp_customer_id)`.
@@ -22,11 +23,13 @@
 ## File Structure
 
 **New**
+
 - `src/lib/profile/session-owner.ts` — `sessionOwnedCustomerCodes(req)` → `Set<string> | null`.
 - `src/app/api/profile/document/[model]/[id]/route.ts` — the broker GET route.
 - `src/test/api/document-broker-route.test.ts` — route tests.
 
 **Modified**
+
 - `src/utils/transform/vinc-document.ts` — emit broker URLs (gated on a real http file URL) instead of raw `pdf_url`/`pdf_barcode_url`/`csv_url`; add a `brokerDocUrl` helper.
 - `src/test/unit/vinc-document.test.ts` — assert broker URLs.
 - `src/test/hooks/fetch-documents-list-vinc.test.ts` — assert broker URLs.
@@ -38,6 +41,7 @@
 ## Task 1: Session → owned customer codes (server)
 
 **Files:**
+
 - Create: `src/lib/profile/session-owner.ts`
 
 - [ ] **Step 1: Implement** — create `src/lib/profile/session-owner.ts`:
@@ -91,6 +95,7 @@ git commit --no-verify -m "feat(profile): server-side session→owned customer c
 ## Task 2: The document broker route
 
 **Files:**
+
 - Create: `src/app/api/profile/document/[model]/[id]/route.ts`
 - Test: `src/test/api/document-broker-route.test.ts`
 
@@ -104,7 +109,11 @@ const fetchModelRecord = vi.fn();
 
 vi.mock('@/lib/profile/session-owner', () => ({ sessionOwnedCustomerCodes }));
 vi.mock('@/lib/profile/cs-creds', () => ({
-  resolveCsCreds: vi.fn(async () => ({ csBaseUrl: 'https://cs', apiKeyId: 'k', apiSecret: 's' })),
+  resolveCsCreds: vi.fn(async () => ({
+    csBaseUrl: 'https://cs',
+    apiKeyId: 'k',
+    apiSecret: 's',
+  })),
 }));
 vi.mock('@/lib/profile/vinc-data-models', async (orig) => {
   const actual = await (orig as any)();
@@ -129,7 +138,9 @@ function req(model: string, id: string, kind = 'pdf') {
     `http://localhost/api/profile/document/${model}/${id}?kind=${kind}`,
   );
 }
-const ctx = (model: string, id: string) => ({ params: Promise.resolve({ model, id }) });
+const ctx = (model: string, id: string) => ({
+  params: Promise.resolve({ model, id }),
+});
 
 describe('GET /api/profile/document/[model]/[id]', () => {
   it('404s an unknown model', async () => {
@@ -157,7 +168,11 @@ describe('GET /api/profile/document/[model]/[id]', () => {
 
   it('404s when the owned record has no file for the kind', async () => {
     sessionOwnedCustomerCodes.mockResolvedValue(new Set(['015892']));
-    fetchModelRecord.mockResolvedValue({ _id: 'i1', relation_id: '015892', data: {} });
+    fetchModelRecord.mockResolvedValue({
+      _id: 'i1',
+      relation_id: '015892',
+      data: {},
+    });
     const res = await GET(req('invoice', 'i1'), ctx('invoice', 'i1'));
     expect(res.status).toBe(404);
   });
@@ -193,7 +208,11 @@ describe('GET /api/profile/document/[model]/[id]', () => {
       relation_id: '015892',
       data: { pdf_url: 'https://b2b/x.pdf' },
     });
-    global.fetch = vi.fn(async () => ({ ok: false, status: 500, body: null })) as any;
+    global.fetch = vi.fn(async () => ({
+      ok: false,
+      status: 500,
+      body: null,
+    })) as any;
     const res = await GET(req('invoice', 'i1'), ctx('invoice', 'i1'));
     expect(res.status).toBe(502);
   });
@@ -207,7 +226,10 @@ describe('GET /api/profile/document/[model]/[id]', () => {
 ```ts
 import { NextRequest, NextResponse } from 'next/server';
 import { resolveCsCreds } from '@/lib/profile/cs-creds';
-import { isProfileModel, fetchModelRecord } from '@/lib/profile/vinc-data-models';
+import {
+  isProfileModel,
+  fetchModelRecord,
+} from '@/lib/profile/vinc-data-models';
 import { sessionOwnedCustomerCodes } from '@/lib/profile/session-owner';
 
 type RouteParams = { params: Promise<{ model: string; id: string }> };
@@ -242,7 +264,10 @@ function resolveFetchUrl(u: string): string {
 export async function GET(req: NextRequest, { params }: RouteParams) {
   const { model, id } = await params;
   if (!isProfileModel(model)) {
-    return NextResponse.json({ error: `Unknown model: ${model}` }, { status: 404 });
+    return NextResponse.json(
+      { error: `Unknown model: ${model}` },
+      { status: 404 },
+    );
   }
 
   const field = FILE_FIELD[req.nextUrl.searchParams.get('kind') ?? 'pdf'];
@@ -262,7 +287,10 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   try {
     rec = await fetchModelRecord(creds, model, id);
   } catch (error) {
-    console.error(`[document broker] ${model}/${id} record fetch failed:`, error);
+    console.error(
+      `[document broker] ${model}/${id} record fetch failed:`,
+      error,
+    );
     return NextResponse.json({ error: 'record fetch failed' }, { status: 502 });
   }
   if (!rec) {
@@ -277,20 +305,33 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   // 4) resolve + validate the file url
   const fileUrl = rec.data?.[field];
   if (!isHttpUrl(fileUrl)) {
-    return NextResponse.json({ error: 'document not available' }, { status: 404 });
+    return NextResponse.json(
+      { error: 'document not available' },
+      { status: 404 },
+    );
   }
 
   // 5) stream the file back (pass through type/length; propagate 404)
   try {
     const upstream = await fetch(resolveFetchUrl(fileUrl));
     if (upstream.status === 404) {
-      return NextResponse.json({ error: 'document not found' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'document not found' },
+        { status: 404 },
+      );
     }
     if (!upstream.ok || !upstream.body) {
-      console.error(`[document broker] upstream ${upstream.status} for ${model}/${id}`);
-      return NextResponse.json({ error: 'document unavailable' }, { status: 502 });
+      console.error(
+        `[document broker] upstream ${upstream.status} for ${model}/${id}`,
+      );
+      return NextResponse.json(
+        { error: 'document unavailable' },
+        { status: 502 },
+      );
     }
-    const filename = (fileUrl.split('/').pop() || `${model}-${id}`).split('?')[0];
+    const filename = (fileUrl.split('/').pop() || `${model}-${id}`).split(
+      '?',
+    )[0];
     const headers: Record<string, string> = {
       'content-type':
         upstream.headers.get('content-type') ??
@@ -303,7 +344,10 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     return new NextResponse(upstream.body, { status: 200, headers });
   } catch (error) {
     console.error(`[document broker] stream failed for ${model}/${id}:`, error);
-    return NextResponse.json({ error: 'document unavailable' }, { status: 502 });
+    return NextResponse.json(
+      { error: 'document unavailable' },
+      { status: 502 },
+    );
   }
 }
 ```
@@ -322,6 +366,7 @@ git commit --no-verify -m "feat(profile): per-owner document broker (validate se
 ## Task 3: Transforms emit broker URLs
 
 **Files:**
+
 - Modify: `src/utils/transform/vinc-document.ts`
 - Test: `src/test/unit/vinc-document.test.ts`
 - Test: `src/test/hooks/fetch-documents-list-vinc.test.ts`
@@ -365,21 +410,24 @@ function brokerDocUrl(
 In the `vincDeliveryNoteToRow` "maps to a DDT DocumentRow" test, the record's `_id` is `'d1'` and `pdf_url`/`pdf_barcode_url` are https. Replace the URL assertions with broker URLs:
 
 ```ts
-    expect(r.pdf).toBe('/api/profile/document/delivery_note/d1?kind=pdf');
-    expect(r.barcodePdf).toBe('/api/profile/document/delivery_note/d1?kind=barcode');
+expect(r.pdf).toBe('/api/profile/document/delivery_note/d1?kind=pdf');
+expect(r.barcodePdf).toBe(
+  '/api/profile/document/delivery_note/d1?kind=barcode',
+);
 ```
 
 In the `vincInvoiceToRow` test (record `_id` `'i1'`), replace:
 
 ```ts
-    expect(r.pdf).toBe('/api/profile/document/invoice/i1?kind=pdf');
-    expect(r.barcodePdf).toBe('/api/profile/document/invoice/i1?kind=barcode');
-    expect(r.csv).toBe('/api/profile/document/invoice/i1?kind=csv');
+expect(r.pdf).toBe('/api/profile/document/invoice/i1?kind=pdf');
+expect(r.barcodePdf).toBe('/api/profile/document/invoice/i1?kind=barcode');
+expect(r.csv).toBe('/api/profile/document/invoice/i1?kind=csv');
 ```
 
 (The "hides legacy non-http fallback strings" test still asserts `r.pdf`/`r.barcodePdf` are `undefined` — unchanged, since `brokerDocUrl` returns undefined for non-http inputs.)
 
 - [ ] **Step 3: Update the documents hook test** — in `src/test/hooks/fetch-documents-list-vinc.test.ts`, the DDT record `_id` is `'d1'` and the invoice record `_id` is `'i1'`. Replace:
+
   - DDT test: `expect(rows[0].barcodePdf).toBe('https://cs/bc.pdf');` → `expect(rows[0].pdf).toBe('/api/profile/document/delivery_note/d1?kind=pdf');` (the DDT sample has `pdf_barcode_url` but the assertion can target whichever url the sample sets — set the sample's `data.pdf_url: 'https://cs/d.pdf'` and assert `rows[0].pdf` is the broker url). Adjust the DDT sample to include `pdf_url: 'https://cs/d.pdf'` and assert `rows[0].pdf === '/api/profile/document/delivery_note/d1?kind=pdf'`.
   - Invoice test: `expect(rows[0].csv).toBe('https://cs/x.csv');` → `expect(rows[0].csv).toBe('/api/profile/document/invoice/i1?kind=csv');`.
   - The `openDocument — VINC direct urls` describe block tests `openDocument` directly with a row carrying `csv: 'https://cs/x.csv'` — that's testing the (still-present) shared `openDocument` helper, not the transform, so leave it as-is.
@@ -407,6 +455,7 @@ Expected: PASS. (Pre-existing unrelated `forms-submit-route.test.ts` failures ar
 - [ ] **Step 2: Bounded type-check** of `session-owner.ts`, the broker route, and `vinc-document.ts` (temp tsconfig extending the project; ignore the known unrelated `get-pim-product.tsx` error). Expect no errors in these files.
 
 - [ ] **Step 3: Live check** (needs `pnpm dev` + a logged-in default-theme customer):
+
   - Open `/<lang>/account/documents`, click a DDT/invoice **PDF** → opens via `/api/profile/document/<model>/<id>?kind=pdf` and streams the file.
   - With the **same** session, hit `/api/profile/document/invoice/<another-customer's-record-id>` → **403**.
   - Logged out (no `auth_token`) → **401**.

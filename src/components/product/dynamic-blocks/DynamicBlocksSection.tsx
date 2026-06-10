@@ -14,10 +14,7 @@ export function selectSectionBlocks(
   return blocks
     .filter(
       (b) =>
-        b &&
-        b.lang === lang &&
-        b.is_active === true &&
-        b.section === section,
+        b && b.lang === lang && b.is_active === true && b.section === section,
     )
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 }

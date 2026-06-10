@@ -189,6 +189,211 @@ function groupDocs(docs?: DocItem[]) {
   return out;
 }
 
+/* ----------------- Filterable list (regex search) ----------------- */
+
+// Show the search box only once a list grows past this many rows.
+const FILTER_THRESHOLD = 10;
+
+// Ordered doc types (kept in sync with the documents tab rendering).
+const DOC_TYPE_ORDER = [
+  'document',
+  'datasheet',
+  'certification',
+  'catalog',
+  'docs',
+  'safety',
+  'barcode',
+  'instruction',
+  'details',
+  'videos',
+];
+
+// Build a matcher from the query: case-insensitive regex, with a graceful
+// fallback to plain substring matching while the regex is still invalid
+// (e.g. the user has typed an unbalanced "(").
+function buildMatcher(query: string): (text: string) => boolean {
+  const q = query.trim();
+  if (!q) return () => true;
+  try {
+    const re = new RegExp(q, 'i');
+    return (text) => re.test(text);
+  } catch {
+    const lower = q.toLowerCase();
+    return (text) => text.toLowerCase().includes(lower);
+  }
+}
+
+function ListFilterInput({
+  value,
+  onChange,
+  shown,
+  total,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  shown: number;
+  total: number;
+}) {
+  return (
+    <div className="mb-3 flex items-center gap-3">
+      <div className="relative flex-1 sm:max-w-xs">
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Filtra…"
+          aria-label="Filtra elenco"
+          className="w-full rounded border border-border-base bg-white px-3 py-2 pr-8 text-sm text-brand-dark outline-none focus:border-brand"
+        />
+        {value && (
+          <button
+            type="button"
+            onClick={() => onChange('')}
+            aria-label="Cancella filtro"
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-lg leading-none text-gray-400 hover:text-brand-dark"
+          >
+            ×
+          </button>
+        )}
+      </div>
+      <span className="shrink-0 text-xs text-gray-500">
+        {shown} di {total}
+      </span>
+    </div>
+  );
+}
+
+// Key/value list (Specifiche tecniche, Caratteristiche tecniche) with an
+// optional regex filter that appears once the list exceeds FILTER_THRESHOLD.
+function SpecFilterList({
+  items,
+}: {
+  items: { label: string; value: string }[];
+}) {
+  const [query, setQuery] = React.useState('');
+
+  const filtered = React.useMemo(() => {
+    if (!query.trim()) return items;
+    const match = buildMatcher(query);
+    return items.filter(({ label, value }) => match(label) || match(value));
+  }, [items, query]);
+
+  return (
+    <div>
+      {items.length > FILTER_THRESHOLD && (
+        <ListFilterInput
+          value={query}
+          onChange={setQuery}
+          shown={filtered.length}
+          total={items.length}
+        />
+      )}
+      <div className="rounded border border-border-base">
+        {filtered.length === 0 ? (
+          <p className="px-4 py-6 text-center text-sm text-gray-500">
+            Nessun risultato
+          </p>
+        ) : (
+          <dl className="grid grid-cols-1 sm:grid-cols-[220px,1fr]">
+            {filtered.map(({ label, value }, i) => (
+              <React.Fragment key={`${label}-${i}`}>
+                <dt className="border-b border-border-base bg-gray-50 px-4 py-3 text-[12px] font-semibold text-gray-600 sm:text-sm">
+                  {label.toUpperCase()}
+                </dt>
+                <dd className="border-b border-border-base px-4 py-3 text-sm text-brand-dark">
+                  {value}
+                </dd>
+              </React.Fragment>
+            ))}
+          </dl>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Documents list (Schede tecniche e documenti) with an optional regex filter
+// that appears once the total number of documents exceeds FILTER_THRESHOLD.
+function DocsFilterList({
+  docsByType,
+}: {
+  docsByType: Record<string, DocItem[]>;
+}) {
+  const [query, setQuery] = React.useState('');
+
+  const entries = React.useMemo(
+    () =>
+      DOC_TYPE_ORDER.filter((type) => docsByType[type]?.length).flatMap(
+        (type) => docsByType[type]!.map((d) => ({ type, d })),
+      ),
+    [docsByType],
+  );
+
+  const filtered = React.useMemo(() => {
+    if (!query.trim()) return entries;
+    const match = buildMatcher(query);
+    return entries.filter(
+      ({ type, d }) =>
+        match(d.label || DOC_LABEL[type] || type) ||
+        match(d.filename || d.url || ''),
+    );
+  }, [entries, query]);
+
+  return (
+    <div>
+      {entries.length > FILTER_THRESHOLD && (
+        <ListFilterInput
+          value={query}
+          onChange={setQuery}
+          shown={filtered.length}
+          total={entries.length}
+        />
+      )}
+      <div className="rounded border border-border-base">
+        {filtered.length === 0 ? (
+          <p className="px-4 py-6 text-center text-sm text-gray-500">
+            Nessun risultato
+          </p>
+        ) : (
+          <dl className="grid grid-cols-1 sm:grid-cols-[220px,1fr]">
+            {filtered.map(({ type, d }, i) => (
+              <React.Fragment key={`${type}-${i}`}>
+                {/* Left column: label */}
+                <dt className="border-b border-border-base bg-gray-50 px-4 py-3 text-[12px] font-semibold text-gray-600 sm:text-sm">
+                  {d.label || DOC_LABEL[type] || type}
+                </dt>
+                {/* Right column: filename + download button */}
+                <dd className="border-b border-border-base px-4 py-3 text-sm flex items-center justify-between gap-2">
+                  <span className="flex items-center gap-2 min-w-0">
+                    <span className="break-words" title={d.filename}>
+                      {d.filename || d.url}
+                    </span>
+                    {d.ext && (
+                      <span className="shrink-0 inline-flex items-center rounded border px-1 text-[11px] uppercase text-gray-600">
+                        {d.ext.slice(0, 4)}
+                      </span>
+                    )}
+                  </span>
+                  <a
+                    href={d.url}
+                    target="_blank"
+                    rel="noopener noreferrer nofollow"
+                    download
+                    className="shrink-0 inline-flex items-center gap-1.5 rounded bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark transition-colors"
+                  >
+                    <HiOutlineDownload className="h-4 w-4" />
+                    Scarica
+                  </a>
+                </dd>
+              </React.Fragment>
+            ))}
+          </dl>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ----------------- Component ----------------- */
 
 export default function ProductB2BDetailsTab({
@@ -279,22 +484,7 @@ export default function ProductB2BDetailsTab({
     tabs.push({
       id: 'tech-specs',
       label: 'Specifiche tecniche',
-      node: (
-        <div className="rounded border border-border-base">
-          <dl className="grid grid-cols-1 sm:grid-cols-[220px,1fr]">
-            {techSpecs.map(({ label, value }, i) => (
-              <React.Fragment key={`${label}-${i}`}>
-                <dt className="border-b border-border-base bg-gray-50 px-4 py-3 text-[12px] font-semibold text-gray-600 sm:text-sm">
-                  {label.toUpperCase()}
-                </dt>
-                <dd className="border-b border-border-base px-4 py-3 text-sm text-brand-dark">
-                  {value}
-                </dd>
-              </React.Fragment>
-            ))}
-          </dl>
-        </div>
-      ),
+      node: <SpecFilterList items={techSpecs} />,
     });
   }
 
@@ -302,22 +492,7 @@ export default function ProductB2BDetailsTab({
     tabs.push({
       id: 'feat',
       label: 'Caratteristiche tecniche',
-      node: (
-        <div className="rounded border border-border-base">
-          <dl className="grid grid-cols-1 sm:grid-cols-[220px,1fr]">
-            {features.map(({ label, value }, i) => (
-              <React.Fragment key={`${label}-${i}`}>
-                <dt className="border-b border-border-base bg-gray-50 px-4 py-3 text-[12px] font-semibold text-gray-600 sm:text-sm">
-                  {label.toUpperCase()}
-                </dt>
-                <dd className="border-b border-border-base px-4 py-3 text-sm text-brand-dark">
-                  {value}
-                </dd>
-              </React.Fragment>
-            ))}
-          </dl>
-        </div>
-      ),
+      node: <SpecFilterList items={features} />,
     });
   }
 
@@ -325,58 +500,7 @@ export default function ProductB2BDetailsTab({
     tabs.push({
       id: 'docs',
       label: 'Schede tecniche e documenti',
-      node: (
-        <div className="rounded border border-border-base">
-          <dl className="grid grid-cols-1 sm:grid-cols-[220px,1fr]">
-            {[
-              'document',
-              'datasheet',
-              'certification',
-              'catalog',
-              'docs',
-              'safety',
-              'barcode',
-              'instruction',
-              'details',
-              'videos',
-            ]
-              .filter((type) => docsByType[type]?.length)
-              .flatMap((type) =>
-                docsByType[type]!.map((d, i) => (
-                  <React.Fragment key={`${type}-${i}`}>
-                    {/* Left column: label */}
-                    <dt className="border-b border-border-base bg-gray-50 px-4 py-3 text-[12px] font-semibold text-gray-600 sm:text-sm">
-                      {d.label || DOC_LABEL[type] || type}
-                    </dt>
-                    {/* Right column: filename + download button */}
-                    <dd className="border-b border-border-base px-4 py-3 text-sm flex items-center justify-between gap-2">
-                      <span className="flex items-center gap-2 min-w-0">
-                        <span className="break-words" title={d.filename}>
-                          {d.filename || d.url}
-                        </span>
-                        {d.ext && (
-                          <span className="shrink-0 inline-flex items-center rounded border px-1 text-[11px] uppercase text-gray-600">
-                            {d.ext.slice(0, 4)}
-                          </span>
-                        )}
-                      </span>
-                      <a
-                        href={d.url}
-                        target="_blank"
-                        rel="noopener noreferrer nofollow"
-                        download
-                        className="shrink-0 inline-flex items-center gap-1.5 rounded bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-brand-dark transition-colors"
-                      >
-                        <HiOutlineDownload className="h-4 w-4" />
-                        Scarica
-                      </a>
-                    </dd>
-                  </React.Fragment>
-                )),
-              )}
-          </dl>
-        </div>
-      ),
+      node: <DocsFilterList docsByType={docsByType} />,
     });
   }
 

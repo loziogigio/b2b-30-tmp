@@ -314,10 +314,16 @@ export default function OrderDetailClient({ lang, initialParams }: Props) {
             />
           )}
           {order.paymentMethod && (
-            <Row label={t('orders-payment') || 'Pagamento'} value={order.paymentMethod} />
+            <Row
+              label={t('orders-payment') || 'Pagamento'}
+              value={order.paymentMethod}
+            />
           )}
           {order.agentCode && (
-            <Row label={t('orders-agent') || 'Agente'} value={order.agentCode} />
+            <Row
+              label={t('orders-agent') || 'Agente'}
+              value={order.agentCode}
+            />
           )}
           {order.notes && (
             <Row label={t('orders-notes') || 'Note'} value={order.notes} />
@@ -335,11 +341,7 @@ export default function OrderDetailClient({ lang, initialParams }: Props) {
 
       {/* Items table with internal scroll */}
       <div className="px-6 pb-6">
-        <OrderItemsTable
-          items={enrichedItems}
-          height={360}
-          lang={lang}
-        />
+        <OrderItemsTable items={enrichedItems} height={360} lang={lang} />
       </div>
 
       {/* Back link */}

@@ -18,6 +18,7 @@ import {
   SpacerWidget,
   DividerWidget,
   AppLauncherWidget,
+  LanguageWidget,
 } from './widgets';
 
 interface HeaderWidgetRendererProps {
@@ -82,6 +83,9 @@ export function HeaderWidgetRenderer({
 
     case 'app-launcher':
       return <AppLauncherWidget config={widget.config} lang={lang} />;
+
+    case 'language':
+      return <LanguageWidget config={widget.config} lang={lang} />;
 
     default:
       console.warn(`Unknown widget type: ${widget.type}`);

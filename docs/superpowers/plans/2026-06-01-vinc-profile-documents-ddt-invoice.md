@@ -9,6 +9,7 @@
 **Tech Stack:** Next.js 16, React Query, TypeScript, Vitest. Spec: `docs/superpowers/specs/2026-06-01-vinc-profile-data-source-design.md` §6.3/§6.4. Foundation plan: `docs/superpowers/plans/2026-06-01-vinc-profile-orders.md`.
 
 **Live-confirmed VINC schemas (this dev env):**
+
 - `delivery_note`: `numero_ddt`(extref), `numero_documento`, `data`(date), `data_consegna`, `stato`, `destinazione{code,label,street,city,province,postal_code,country}`, `totale`, `pdf_url`, `pdf_barcode_url`, `items[]`, `erp_meta{}`.
 - `invoice`: `numero_fattura`(extref), `numero_documento`, `data`(date), `data_scadenza`, `tipo`, `stato_pagamento`, `valuta`, `imponibile`, `iva`, `totale`, `importo_pagato`, `importo_residuo`, `destinazione{…}`, `payment_method`, `agent_code`, `notes`, `pdf_url`, `pdf_barcode_url`, `csv_url`, `erp_meta{}`.
 
@@ -19,11 +20,13 @@
 ## File Structure
 
 **New**
+
 - `src/utils/transform/vinc-document.ts` — pure transforms `vincDeliveryNoteToRow`, `vincInvoiceToRow`, + helpers (`isoToDmy`, `ddmmyyyyToIso`, `pickDirectUrl`) and the `VincDeliveryNoteRecord` / `VincInvoiceRecord` types.
 - `src/test/unit/vinc-document.test.ts` — transform + helper tests.
 - `src/test/hooks/fetch-documents-list-vinc.test.ts` — documents hook VINC-branch + `openDocument` direct-URL tests.
 
 **Modified**
+
 - `src/lib/profile/vinc-data-models.ts` — add `PROFILE_MODEL_DATE_FIELD`; parameterize `buildRecordsQuery(p, dateField)`.
 - `src/app/api/profile/[model]/route.ts` — pass the model's date field to `buildRecordsQuery`.
 - `src/test/unit/vinc-data-models-query.test.ts` — add a `dateField` case.
@@ -36,6 +39,7 @@
 The generic query builder hardcodes `document_date`. `delivery_note`/`invoice` filter & sort on `data`. Parameterize it and have the route pass each model's date field.
 
 **Files:**
+
 - Modify: `src/lib/profile/vinc-data-models.ts`
 - Modify: `src/app/api/profile/[model]/route.ts`
 - Test: `src/test/unit/vinc-data-models-query.test.ts`
@@ -43,17 +47,17 @@ The generic query builder hardcodes `document_date`. `delivery_note`/`invoice` f
 - [ ] **Step 1: Add the failing test** — append to `src/test/unit/vinc-data-models-query.test.ts` (inside the existing `describe('buildRecordsQuery', …)` block, as a new `it`):
 
 ```ts
-  it('uses a custom date field for filters and default sort', () => {
-    const q = buildRecordsQuery(
-      { relation_id: '015892', date_from: '2026-05-01', date_to: '2026-05-31' },
-      'data',
-    );
-    expect(q.get('filter[data][gte]')).toBe('2026-05-01');
-    expect(q.get('filter[data][lte]')).toBe('2026-05-31');
-    expect(q.get('sort')).toBe('-data.data');
-    // legacy document_date filter must NOT be emitted for this model
-    expect(q.get('filter[document_date][gte]')).toBeNull();
-  });
+it('uses a custom date field for filters and default sort', () => {
+  const q = buildRecordsQuery(
+    { relation_id: '015892', date_from: '2026-05-01', date_to: '2026-05-31' },
+    'data',
+  );
+  expect(q.get('filter[data][gte]')).toBe('2026-05-01');
+  expect(q.get('filter[data][lte]')).toBe('2026-05-31');
+  expect(q.get('sort')).toBe('-data.data');
+  // legacy document_date filter must NOT be emitted for this model
+  expect(q.get('filter[document_date][gte]')).toBeNull();
+});
 ```
 
 Also add this `it` to confirm the allow-list date-field map exists — append after the existing `describe('PROFILE_MODELS allow-list', …)` block a new block:
@@ -121,19 +125,19 @@ export function buildRecordsQuery(
 (b) change the `buildRecordsQuery({...})` call to pass the model's date field as the 2nd arg:
 
 ```ts
-  const query = buildRecordsQuery(
-    {
-      relation_id: relationId,
-      status: sp.get('status') ?? undefined,
-      date_from: sp.get('date_from') ?? undefined,
-      date_to: sp.get('date_to') ?? undefined,
-      document_number: sp.get('document_number') ?? undefined,
-      page: sp.get('page') ? Number(sp.get('page')) : undefined,
-      limit: sp.get('limit') ? Number(sp.get('limit')) : undefined,
-      sort: sp.get('sort') ?? undefined,
-    },
-    PROFILE_MODEL_DATE_FIELD[model],
-  );
+const query = buildRecordsQuery(
+  {
+    relation_id: relationId,
+    status: sp.get('status') ?? undefined,
+    date_from: sp.get('date_from') ?? undefined,
+    date_to: sp.get('date_to') ?? undefined,
+    document_number: sp.get('document_number') ?? undefined,
+    page: sp.get('page') ? Number(sp.get('page')) : undefined,
+    limit: sp.get('limit') ? Number(sp.get('limit')) : undefined,
+    sort: sp.get('sort') ?? undefined,
+  },
+  PROFILE_MODEL_DATE_FIELD[model],
+);
 ```
 
 - [ ] **Step 5: Run tests to verify they pass**
@@ -153,6 +157,7 @@ git commit --no-verify -m "feat(profile): per-model date field for the data-mode
 ## Task 2: VINC document transforms (pure)
 
 **Files:**
+
 - Create: `src/utils/transform/vinc-document.ts`
 - Test: `src/test/unit/vinc-document.test.ts`
 
@@ -323,7 +328,9 @@ function destinationOf(a?: VincDest): string {
   return [a.street, a.city].filter(Boolean).join(' - ');
 }
 
-export function vincDeliveryNoteToRow(rec: VincDeliveryNoteRecord): DocumentRow {
+export function vincDeliveryNoteToRow(
+  rec: VincDeliveryNoteRecord,
+): DocumentRow {
   const d = rec.data ?? {};
   return {
     destination: destinationOf(d.destinazione),
@@ -367,7 +374,11 @@ export function pickDirectUrl(
   kind: DirectKind,
   row: DocumentRow,
 ): string | undefined {
-  return kind === 'pdf' ? row.pdf : kind === 'barcode' ? row.barcodePdf : row.csv;
+  return kind === 'pdf'
+    ? row.pdf
+    : kind === 'barcode'
+      ? row.barcodePdf
+      : row.csv;
 }
 ```
 
@@ -388,6 +399,7 @@ git commit --no-verify -m "feat(profile): pure VINC delivery_note/invoice → Do
 ## Task 3: Wire the documents hook + actions
 
 **Files:**
+
 - Modify: `src/framework/basic-rest/documents/fetch-documents-list.ts`
 - Test: `src/test/hooks/fetch-documents-list-vinc.test.ts`
 
@@ -413,7 +425,11 @@ afterEach(() => {
 });
 beforeEach(() => vi.clearAllMocks());
 
-const base = { date_from: '01052026', date_to: '31052026', customer_code: '015892' };
+const base = {
+  date_from: '01052026',
+  date_to: '31052026',
+  customer_code: '015892',
+};
 
 describe('fetchDocumentsList — default (VINC) branch', () => {
   it('DDT → /api/profile/delivery_note, maps to DDT rows with barcode url', async () => {
@@ -439,7 +455,10 @@ describe('fetchDocumentsList — default (VINC) branch', () => {
         }),
       } as any;
     });
-    const rows = await fetchDocumentsList({ ...base, type: 'DDT' } as any, 'default');
+    const rows = await fetchDocumentsList(
+      { ...base, type: 'DDT' } as any,
+      'default',
+    );
     expect(calls[0]).toContain('/api/profile/delivery_note');
     expect(calls[0]).toContain('relation_id=015892');
     expect(calls[0]).toContain('2026-05-01'); // date_from → ISO
@@ -455,11 +474,22 @@ describe('fetchDocumentsList — default (VINC) branch', () => {
       json: async () => ({
         available: true,
         items: [
-          { _id: 'i1', data: { numero_fattura: '900', numero_documento: 'F/2026/900', data: '2026-05-10', csv_url: 'https://cs/x.csv' } },
+          {
+            _id: 'i1',
+            data: {
+              numero_fattura: '900',
+              numero_documento: 'F/2026/900',
+              data: '2026-05-10',
+              csv_url: 'https://cs/x.csv',
+            },
+          },
         ],
       }),
     })) as any;
-    const rows = await fetchDocumentsList({ ...base, type: 'F' } as any, 'default');
+    const rows = await fetchDocumentsList(
+      { ...base, type: 'F' } as any,
+      'default',
+    );
     expect(rows[0].doc_type).toBe('F');
     expect(rows[0].csv).toBe('https://cs/x.csv');
   });
@@ -469,7 +499,10 @@ describe('fetchDocumentsList — default (VINC) branch', () => {
       ok: true,
       json: async () => ({ available: false, items: [] }),
     })) as any;
-    const rows = await fetchDocumentsList({ ...base, type: 'F' } as any, 'default');
+    const rows = await fetchDocumentsList(
+      { ...base, type: 'F' } as any,
+      'default',
+    );
     expect(rows).toEqual([]);
   });
 });
@@ -514,20 +547,20 @@ import {
 - [ ] **Step 4: Add the VINC branch** as the FIRST statement inside `fetchDocumentsList`, before the existing `const payload = toErpPayload(params);`:
 
 ```ts
-  // default theme → VINC data-model (empty state if unavailable; no proxy fallback)
-  if (sourcePolicy(theme).account === 'vinc') {
-    const model = params.type === 'DDT' ? 'delivery_note' : 'invoice';
-    const result = await fetchProfileRecords(model, {
-      relation_id: params.customer_code,
-      date_from: ddmmyyyyToIso(params.date_from),
-      date_to: ddmmyyyyToIso(params.date_to),
-      limit: 50,
-    });
-    if (!result.available) return [];
-    return params.type === 'DDT'
-      ? (result.items as VincDeliveryNoteRecord[]).map(vincDeliveryNoteToRow)
-      : (result.items as VincInvoiceRecord[]).map(vincInvoiceToRow);
-  }
+// default theme → VINC data-model (empty state if unavailable; no proxy fallback)
+if (sourcePolicy(theme).account === 'vinc') {
+  const model = params.type === 'DDT' ? 'delivery_note' : 'invoice';
+  const result = await fetchProfileRecords(model, {
+    relation_id: params.customer_code,
+    date_from: ddmmyyyyToIso(params.date_from),
+    date_to: ddmmyyyyToIso(params.date_to),
+    limit: 50,
+  });
+  if (!result.available) return [];
+  return params.type === 'DDT'
+    ? (result.items as VincDeliveryNoteRecord[]).map(vincDeliveryNoteToRow)
+    : (result.items as VincInvoiceRecord[]).map(vincInvoiceToRow);
+}
 ```
 
 Leave the existing `time` and legacy-proxy code after this point unchanged.

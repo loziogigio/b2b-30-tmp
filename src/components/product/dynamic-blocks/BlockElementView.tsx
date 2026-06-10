@@ -150,7 +150,11 @@ const BlockElementView: React.FC<{ element: BlockElement }> = ({ element }) => {
   return (
     <figure className="flex flex-col">
       {/* Images/videos may be link-wrapped; 3d viewer needs pointer events so don't wrap it */}
-      {element.kind === '3d' ? media : <MaybeLink link={element.link}>{media}</MaybeLink>}
+      {element.kind === '3d' ? (
+        media
+      ) : (
+        <MaybeLink link={element.link}>{media}</MaybeLink>
+      )}
       {element.description ? (
         <figcaption className="mt-2 text-xs text-gray-600">
           {element.description}

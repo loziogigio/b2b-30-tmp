@@ -14,3 +14,4 @@ export { SpacerWidget } from './spacer-widget';
 export { DividerWidget } from './divider-widget';
 export { PushNotificationWidget } from './push-notification-widget';
 export { AppLauncherWidget } from './app-launcher-widget';
+export { LanguageWidget } from './language-widget';

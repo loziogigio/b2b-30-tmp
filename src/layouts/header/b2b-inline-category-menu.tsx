@@ -54,6 +54,7 @@ const B2BInlineCategoryMenu: React.FC<InlineMenuProps> = ({
   const { data, isLoading, isError } = usePimMenuQuery({
     location: 'header',
     channel,
+    lang,
     staleTime: 5 * 60 * 1000,
   });
 

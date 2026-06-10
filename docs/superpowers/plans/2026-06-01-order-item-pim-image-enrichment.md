@@ -15,10 +15,12 @@
 ## File Structure
 
 **New**
+
 - `src/framework/basic-rest/order/use-enriched-order-items.ts` — the hook + pure helpers (`imagelessSkus`, `mergeItemImages`). One responsibility: image-enrich a list of order items from PIM.
 - `src/test/unit/enriched-order-items.test.ts` — unit tests for the pure helpers.
 
 **Modified**
+
 - `src/app/[lang]/(default)/account/order-detail/order-detail.client.tsx` — full order-detail page: call the hook (with the other hooks, before the early returns) and feed enriched items to `OrderItemsTable`.
 - `src/components/orders/order-details.tsx` — orders-list right-panel summary card: compute raw items above the `if (!order)` guard, call the hook, feed enriched items to `OrderItemsTable`.
 
@@ -27,6 +29,7 @@
 ## Task 1: The enrichment hook + pure helpers (TDD on the helpers)
 
 **Files:**
+
 - Create: `src/framework/basic-rest/order/use-enriched-order-items.ts`
 - Test: `src/test/unit/enriched-order-items.test.ts`
 
@@ -69,7 +72,10 @@ describe('imagelessSkus', () => {
 
   it('returns [] when every item has an image (ERP case)', () => {
     expect(
-      imagelessSkus([item({ sku: 'A', image: 'a' }), item({ sku: 'B', image: 'b' })]),
+      imagelessSkus([
+        item({ sku: 'A', image: 'a' }),
+        item({ sku: 'B', image: 'b' }),
+      ]),
     ).toEqual([]);
   });
 });
@@ -183,6 +189,7 @@ git commit --no-verify -m "feat(order): useEnrichedOrderItems — batch PIM imag
 ## Task 2: Wire the full order-detail page
 
 **Files:**
+
 - Modify: `src/app/[lang]/(default)/account/order-detail/order-detail.client.tsx`
 
 This component has early returns (`!params`, `isLoading`, `isError`, `!order`) before the main JSX, so the hook MUST be called with the other hooks, before those returns. It also already renders `OrderItemsTable` with `order.items ?? []`.
@@ -200,18 +207,18 @@ import { useEnrichedOrderItems } from '@framework/order/use-enriched-order-items
 Find the `useOrderDetailsQuery` block:
 
 ```ts
-  const {
-    data: order,
-    isLoading,
-    isError,
-    error,
-  } = useOrderDetailsQuery(params as any);
+const {
+  data: order,
+  isLoading,
+  isError,
+  error,
+} = useOrderDetailsQuery(params as any);
 ```
 
 Immediately after it, add:
 
 ```ts
-  const enrichedItems = useEnrichedOrderItems(order?.items ?? []);
+const enrichedItems = useEnrichedOrderItems(order?.items ?? []);
 ```
 
 (`order` may be undefined here; the hook handles an empty list by disabling the query. This keeps the hook call unconditional, satisfying the rules of hooks.)
@@ -221,21 +228,13 @@ Immediately after it, add:
 Find (around line 335):
 
 ```tsx
-        <OrderItemsTable
-          items={order.items ?? []}
-          height={360}
-          lang={lang}
-        />
+<OrderItemsTable items={order.items ?? []} height={360} lang={lang} />
 ```
 
 Replace `items={order.items ?? []}` with `items={enrichedItems}`:
 
 ```tsx
-        <OrderItemsTable
-          items={enrichedItems}
-          height={360}
-          lang={lang}
-        />
+<OrderItemsTable items={enrichedItems} height={360} lang={lang} />
 ```
 
 - [ ] **Step 4: Verify the suite still passes**
@@ -255,6 +254,7 @@ git commit --no-verify -m "feat(order): image-enrich items on the full order-det
 ## Task 3: Wire the orders-list summary card
 
 **Files:**
+
 - Modify: `src/components/orders/order-details.tsx`
 
 This component computes `items` AFTER an `if (!order) return …` guard. To call the hook unconditionally, move the raw-items computation above the guard (using optional chaining on `order`), call the hook there, then keep the guard.
@@ -272,52 +272,52 @@ import { useEnrichedOrderItems } from '@framework/order/use-enriched-order-items
 The current code is:
 
 ```tsx
-  if (!order) {
-    return (
-      <section className="rounded-2xl bg-white shadow-sm p-8 text-center text-sm text-gray-500">
-        {t('orders-select-order')}
-      </section>
-    );
-  }
+if (!order) {
+  return (
+    <section className="rounded-2xl bg-white shadow-sm p-8 text-center text-sm text-gray-500">
+      {t('orders-select-order')}
+    </section>
+  );
+}
 
-  const items: TransformedOrderItem[] =
-    (order as any).items ??
-    (order as any).products?.map((p: any) => ({
-      id: p.id,
-      name: p.name,
-      image: p.image?.thumbnail || p.image?.original,
-      unit: p.unit,
-      price: money(p.pivot?.unit_price ?? p.price),
-      quantity: Number(p.pivot?.order_quantity ?? 1),
-      reviewUrl: '#',
-    })) ??
-    [];
+const items: TransformedOrderItem[] =
+  (order as any).items ??
+  (order as any).products?.map((p: any) => ({
+    id: p.id,
+    name: p.name,
+    image: p.image?.thumbnail || p.image?.original,
+    unit: p.unit,
+    price: money(p.pivot?.unit_price ?? p.price),
+    quantity: Number(p.pivot?.order_quantity ?? 1),
+    reviewUrl: '#',
+  })) ??
+  [];
 ```
 
 Replace that whole block with (raw items + hook BEFORE the guard):
 
 ```tsx
-  const rawItems: TransformedOrderItem[] =
-    (order as any)?.items ??
-    (order as any)?.products?.map((p: any) => ({
-      id: p.id,
-      name: p.name,
-      image: p.image?.thumbnail || p.image?.original,
-      unit: p.unit,
-      price: money(p.pivot?.unit_price ?? p.price),
-      quantity: Number(p.pivot?.order_quantity ?? 1),
-      reviewUrl: '#',
-    })) ??
-    [];
-  const items = useEnrichedOrderItems(rawItems);
+const rawItems: TransformedOrderItem[] =
+  (order as any)?.items ??
+  (order as any)?.products?.map((p: any) => ({
+    id: p.id,
+    name: p.name,
+    image: p.image?.thumbnail || p.image?.original,
+    unit: p.unit,
+    price: money(p.pivot?.unit_price ?? p.price),
+    quantity: Number(p.pivot?.order_quantity ?? 1),
+    reviewUrl: '#',
+  })) ??
+  [];
+const items = useEnrichedOrderItems(rawItems);
 
-  if (!order) {
-    return (
-      <section className="rounded-2xl bg-white shadow-sm p-8 text-center text-sm text-gray-500">
-        {t('orders-select-order')}
-      </section>
-    );
-  }
+if (!order) {
+  return (
+    <section className="rounded-2xl bg-white shadow-sm p-8 text-center text-sm text-gray-500">
+      {t('orders-select-order')}
+    </section>
+  );
+}
 ```
 
 (The `<OrderItemsTable items={items} lang={lang} />` further down is unchanged — it now receives the enriched list. Note the optional chaining `(order as any)?.` so `rawItems` is `[]` when `order` is null, before the guard returns.)
@@ -350,6 +350,7 @@ Expected: PASS. (Pre-existing unrelated failures in `src/test/api/forms-submit-r
 - [ ] **Step 2: Observe in the running app**
 
 With `pnpm dev` running, log in as a default-theme customer with VINC orders → open an order → confirm:
+
 - line items now show product images (network tab shows ONE `POST /api/proxy/pim/api/search/search` with `filters.sku` = the order's item SKUs);
 - a line whose SKU has no PIM match still renders (imageless), and the page does not error;
 - the orders-list right-panel summary card also shows item images.

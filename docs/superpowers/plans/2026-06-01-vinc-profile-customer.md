@@ -9,6 +9,7 @@
 **Tech Stack:** Next.js 16, React Query, TypeScript, Vitest.
 
 **Confirmed source (Commerce Suite `vinc-commerce-suite`):**
+
 - `GET /api/b2b/customers/{id}` (api-key authed; looks up by `customer_id` then `external_code`) → `{ success, customer }`.
 - Customer fields: `public_code`, `external_code`, `company_name`, `first_name`, `last_name`, `email`, `customer_type` (`business|private|reseller`), `legal_info { vat_number, fiscal_code, pec_email, sdi_code }`.
 - Target `CustomerProfile` (`src/framework/basic-rest/acccount/types-b2b-account.ts`) fields the Fido/profile page uses: `code, businessName, firstName, lastName, taxCode, vatNumber, pec, sdi, isLegalEntity`.
@@ -22,6 +23,7 @@
 ## File Structure
 
 **New**
+
 - `src/utils/transform/cs-customer.ts` — pure `csCustomerToProfile` + `CsCustomerRecord` type.
 - `src/app/api/b2b/customer/route.ts` — BFF `POST` route → CS customer → `CustomerProfile`.
 - `src/test/unit/cs-customer.test.ts` — transform tests.
@@ -29,6 +31,7 @@
 - `src/test/hooks/fetch-customer-vinc.test.ts` — `fetchCustomer` VINC-branch tests.
 
 **Modified**
+
 - `src/framework/basic-rest/acccount/fetch-account.ts` — VINC branch in `fetchCustomer`; add `theme` to the `useCustomerQuery` query key.
 
 ---
@@ -36,6 +39,7 @@
 ## Task 1: CS customer → CustomerProfile transform (pure)
 
 **Files:**
+
 - Create: `src/utils/transform/cs-customer.ts`
 - Test: `src/test/unit/cs-customer.test.ts`
 
@@ -148,6 +152,7 @@ git commit --no-verify -m "feat(profile): pure CS customer -> CustomerProfile tr
 ## Task 2: BFF route — POST /api/b2b/customer
 
 **Files:**
+
 - Create: `src/app/api/b2b/customer/route.ts`
 - Test: `src/test/api/customer-route.test.ts`
 
@@ -205,7 +210,11 @@ describe('POST /api/b2b/customer', () => {
             public_code: '007959',
             company_name: 'ACME',
             customer_type: 'business',
-            legal_info: { vat_number: 'IT1', pec_email: 'p@e.it', sdi_code: 'SDI123' },
+            legal_info: {
+              vat_number: 'IT1',
+              pec_email: 'p@e.it',
+              sdi_code: 'SDI123',
+            },
           },
         }),
       } as any;
@@ -320,6 +329,7 @@ git commit --no-verify -m "feat(profile): BFF /api/b2b/customer route (CS custom
 ## Task 3: Wire fetchCustomer (VINC branch)
 
 **Files:**
+
 - Modify: `src/framework/basic-rest/acccount/fetch-account.ts`
 - Test: `src/test/hooks/fetch-customer-vinc.test.ts`
 
@@ -331,7 +341,12 @@ READ `src/framework/basic-rest/acccount/fetch-account.ts` first. `fetchCustomer(
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('@framework/utils/static', () => ({
-  ERP_STATIC: { customer_code: '007959', vinc_customer_id: 'cust_X', address_code: '', id_cart: '0' },
+  ERP_STATIC: {
+    customer_code: '007959',
+    vinc_customer_id: 'cust_X',
+    address_code: '',
+    id_cart: '0',
+  },
 }));
 
 import { fetchCustomer } from '@framework/acccount/fetch-account';
@@ -354,7 +369,12 @@ describe('fetchCustomer — default (VINC) branch', () => {
         ok: true,
         json: async () => ({
           success: true,
-          customer: { code: '007959', businessName: 'ACME', vatNumber: 'IT1', isLegalEntity: true },
+          customer: {
+            code: '007959',
+            businessName: 'ACME',
+            vatNumber: 'IT1',
+            isLegalEntity: true,
+          },
         }),
       } as any;
     }) as any;
@@ -384,28 +404,28 @@ import { sourcePolicy } from '@framework/profile/source-policy';
 - [ ] **Step 4: Add the VINC branch** as the FIRST statement inside `fetchCustomer`, before the existing `const raw = …`:
 
 ```ts
-  // default theme → VINC Commerce-Suite customer (via BFF); no legacy proxy call.
-  if (sourcePolicy(theme).account === 'vinc') {
-    const vincId = ERP_STATIC.vinc_customer_id;
-    if (!vincId) {
-      // No VINC customer id yet — fall back to the minimal info from ERP_STATIC.
-      return {
-        code: ERP_STATIC.customer_code || '',
-        businessName: ERP_STATIC.company_name || undefined,
-        isLegalEntity: true,
-      } as CustomerProfile;
-    }
-    const response = await fetch('/api/b2b/customer', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ customer_id: vincId }),
-    });
-    const data = await response.json();
-    if (data?.success && data?.customer) {
-      return data.customer as CustomerProfile;
-    }
-    throw new Error(data?.message || 'Failed to fetch customer from VINC API');
+// default theme → VINC Commerce-Suite customer (via BFF); no legacy proxy call.
+if (sourcePolicy(theme).account === 'vinc') {
+  const vincId = ERP_STATIC.vinc_customer_id;
+  if (!vincId) {
+    // No VINC customer id yet — fall back to the minimal info from ERP_STATIC.
+    return {
+      code: ERP_STATIC.customer_code || '',
+      businessName: ERP_STATIC.company_name || undefined,
+      isLegalEntity: true,
+    } as CustomerProfile;
   }
+  const response = await fetch('/api/b2b/customer', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ customer_id: vincId }),
+  });
+  const data = await response.json();
+  if (data?.success && data?.customer) {
+    return data.customer as CustomerProfile;
+  }
+  throw new Error(data?.message || 'Failed to fetch customer from VINC API');
+}
 ```
 
 Leave the existing `time` / legacy-proxy code after this point unchanged.

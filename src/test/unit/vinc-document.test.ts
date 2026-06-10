@@ -44,7 +44,9 @@ describe('vincDeliveryNoteToRow', () => {
     expect(r.dateISO).toBe('2026-05-28');
     expect(r.date_label).toBe('28/05/2026');
     expect(r.pdf).toBe('/api/profile/document/delivery_note/d1?kind=pdf');
-    expect(r.barcodePdf).toBe('/api/profile/document/delivery_note/d1?kind=barcode');
+    expect(r.barcodePdf).toBe(
+      '/api/profile/document/delivery_note/d1?kind=barcode',
+    );
   });
   it('falls back to street+city when destinazione.label missing', () => {
     const r = vincDeliveryNoteToRow({

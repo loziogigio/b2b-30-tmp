@@ -120,8 +120,16 @@ export type Product = {
   dynamic_blocks?: DynamicBlock[];
 };
 export type {
-  DynamicBlockSection, DynamicBlockColumns, BlockElementKind, BlockLink,
-  BlockElementBase, MediaElement, TextElement, BlockElement, DynamicBlock, DynamicBlocks,
+  DynamicBlockSection,
+  DynamicBlockColumns,
+  BlockElementKind,
+  BlockLink,
+  BlockElementBase,
+  MediaElement,
+  TextElement,
+  BlockElement,
+  DynamicBlock,
+  DynamicBlocks,
 } from './types/dynamic-blocks';
 
 export type OrderItem = {

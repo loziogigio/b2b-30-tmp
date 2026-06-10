@@ -1,7 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('@framework/utils/static', () => ({
-  ERP_STATIC: { customer_code: '015892', vinc_customer_id: 'cust_X', address_code: '', id_cart: '0' },
+  ERP_STATIC: {
+    customer_code: '015892',
+    vinc_customer_id: 'cust_X',
+    address_code: '',
+    id_cart: '0',
+  },
 }));
 
 import { fetchPaymentDeadline } from '@framework/acccount/fetch-account';
@@ -32,7 +37,10 @@ describe('fetchPaymentDeadline — default (VINC) branch', () => {
                 importo: 100,
                 residuo: 100,
                 valuta: 'EUR',
-                documento: { numero_documento: 'F/2026/54', data_documento: '2026-01-02T00:00:00Z' },
+                documento: {
+                  numero_documento: 'F/2026/54',
+                  data_documento: '2026-01-02T00:00:00Z',
+                },
               },
             },
           ],

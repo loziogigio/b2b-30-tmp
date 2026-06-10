@@ -15,7 +15,11 @@ afterEach(() => {
 });
 beforeEach(() => vi.clearAllMocks());
 
-const base = { date_from: '01052026', date_to: '31052026', customer_code: '015892' };
+const base = {
+  date_from: '01052026',
+  date_to: '31052026',
+  customer_code: '015892',
+};
 
 describe('fetchDocumentsList — default (VINC) branch', () => {
   it('DDT → /api/profile/delivery_note, maps to DDT rows with barcode url', async () => {
@@ -42,7 +46,10 @@ describe('fetchDocumentsList — default (VINC) branch', () => {
         }),
       } as any;
     });
-    const rows = await fetchDocumentsList({ ...base, type: 'DDT' } as any, 'default');
+    const rows = await fetchDocumentsList(
+      { ...base, type: 'DDT' } as any,
+      'default',
+    );
     expect(calls[0]).toContain('/api/profile/delivery_note');
     expect(calls[0]).toContain('relation_id=015892');
     expect(calls[0]).toContain('2026-05-01'); // date_from → ISO
@@ -58,11 +65,22 @@ describe('fetchDocumentsList — default (VINC) branch', () => {
       json: async () => ({
         available: true,
         items: [
-          { _id: 'i1', data: { numero_fattura: '900', numero_documento: 'F/2026/900', data: '2026-05-10', csv_url: 'https://cs/x.csv' } },
+          {
+            _id: 'i1',
+            data: {
+              numero_fattura: '900',
+              numero_documento: 'F/2026/900',
+              data: '2026-05-10',
+              csv_url: 'https://cs/x.csv',
+            },
+          },
         ],
       }),
     })) as any;
-    const rows = await fetchDocumentsList({ ...base, type: 'F' } as any, 'default');
+    const rows = await fetchDocumentsList(
+      { ...base, type: 'F' } as any,
+      'default',
+    );
     expect(rows[0].doc_type).toBe('F');
     expect(rows[0].csv).toBe('/api/profile/document/invoice/i1?kind=csv');
   });
@@ -72,7 +90,10 @@ describe('fetchDocumentsList — default (VINC) branch', () => {
       ok: true,
       json: async () => ({ available: false, items: [] }),
     })) as any;
-    const rows = await fetchDocumentsList({ ...base, type: 'F' } as any, 'default');
+    const rows = await fetchDocumentsList(
+      { ...base, type: 'F' } as any,
+      'default',
+    );
     expect(rows).toEqual([]);
   });
 });

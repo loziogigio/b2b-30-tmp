@@ -84,14 +84,20 @@ export default function FormBlockClient({ config, blockId, pageSlug }: Props) {
 
   if (status.kind === 'success') {
     return (
-      <div className="rounded-md border border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-800">
-        {status.message}
+      <div className="mx-auto w-full max-w-2xl py-8">
+        <div className="rounded-md border border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-800">
+          {status.message}
+        </div>
       </div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+    <form
+      onSubmit={handleSubmit(onSubmit)}
+      className="mx-auto w-full max-w-2xl space-y-4 py-8"
+      noValidate
+    >
       {config.title && (
         <h2 className="text-lg font-semibold">{config.title}</h2>
       )}

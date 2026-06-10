@@ -39,6 +39,7 @@ export default function CategoryPage({
   const { t } = useTranslation(lang, 'common');
   const { data, isLoading, isError } = usePimMenuQuery({
     location: 'header',
+    lang,
     staleTime: 5 * 60 * 1000,
   });
 

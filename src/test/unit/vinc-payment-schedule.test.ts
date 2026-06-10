@@ -12,7 +12,10 @@ const recs = [
       importo: 100,
       residuo: 100,
       valuta: 'EUR',
-      documento: { numero_documento: 'F/2026/54', data_documento: '2026-01-02T00:00:00Z' },
+      documento: {
+        numero_documento: 'F/2026/54',
+        data_documento: '2026-01-02T00:00:00Z',
+      },
     },
   },
   {
@@ -25,7 +28,10 @@ const recs = [
       importo: 40,
       residuo: 40,
       valuta: 'EUR',
-      documento: { numero_documento: 'F/2026/99', data_documento: '2026-06-01T00:00:00Z' },
+      documento: {
+        numero_documento: 'F/2026/99',
+        data_documento: '2026-06-01T00:00:00Z',
+      },
     },
   },
 ];

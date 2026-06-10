@@ -98,7 +98,12 @@ export async function probeModelAvailable(
 
 export interface RecordsPage {
   items: any[];
-  pagination?: { page: number; limit: number; total: number; totalPages: number };
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
 }
 
 /** Fetch a page of records. Throws on non-OK (caller maps to 502). */
@@ -110,7 +115,8 @@ export async function fetchModelRecords(
   const res = await fetch(`${modelBase(creds, model)}/records?${query}`, {
     headers: authHeaders(creds),
   });
-  if (!res.ok) throw new Error(`data-model ${model} records HTTP ${res.status}`);
+  if (!res.ok)
+    throw new Error(`data-model ${model} records HTTP ${res.status}`);
   const body: any = await res.json();
   return { items: body?.data?.items ?? [], pagination: body?.data?.pagination };
 }

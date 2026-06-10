@@ -83,7 +83,11 @@ const TimeProductDetail: React.FC<{
   const skuNotFound =
     !isLoading && skuToSearch.length > 0 && pimResults.length === 0;
   const { data: parentSkuResults = [] } = usePimProductListQuery(
-    { limit: 200, filters: { parent_sku: skuToSearch }, include_dynamic_blocks: true },
+    {
+      limit: 200,
+      filters: { parent_sku: skuToSearch },
+      include_dynamic_blocks: true,
+    },
     { enabled: skuNotFound, groupByParent: true },
   );
 

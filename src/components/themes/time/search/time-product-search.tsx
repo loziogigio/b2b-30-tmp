@@ -19,7 +19,6 @@ import React from 'react';
 import TimeProductCard from '@components/themes/time/product/time-product-card';
 import TimeProductRow from './time-product-row';
 import { IoGridOutline, IoListOutline } from 'react-icons/io5';
-import { IoChevronDown } from 'react-icons/io5';
 
 interface TimeProductSearchProps {
   lang: string;
@@ -28,34 +27,6 @@ interface TimeProductSearchProps {
   sidebarOpen?: boolean;
   onToggleSidebar?: () => void;
 }
-
-const SORT_OPTIONS = [
-  {
-    name: 'text-sorting-options',
-    value: 'relevance',
-    defaultLabel: 'Rilevanza',
-  },
-  {
-    name: 'text-lowest-price',
-    value: 'lowest',
-    defaultLabel: 'Prezzo crescente',
-  },
-  {
-    name: 'text-highest-price',
-    value: 'highest',
-    defaultLabel: 'Prezzo decrescente',
-  },
-  {
-    name: 'text-new-arrival',
-    value: 'new-arrival',
-    defaultLabel: 'Nuovi arrivi',
-  },
-  {
-    name: 'text-most-order',
-    value: 'most-order',
-    defaultLabel: 'Più ordinati',
-  },
-];
 
 export const TimeProductSearch: FC<TimeProductSearchProps> = ({
   lang,
@@ -275,16 +246,6 @@ export const TimeProductSearch: FC<TimeProductSearchProps> = ({
     };
   }, [hasNextPage, loadingMore, fetchNextPage]);
 
-  // Sort
-  const currentSort = searchParams.get('sort_by') || 'relevance';
-  const handleSortChange = (value: string) => {
-    const params = new URLSearchParams(searchParams?.toString() ?? '');
-    if (value === 'relevance') params.delete('sort_by');
-    else params.set('sort_by', value);
-    const qs = params.toString();
-    router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-  };
-
   const totalItems =
     data?.pages?.[0]?.total ??
     (data?.pages
@@ -334,27 +295,8 @@ export const TimeProductSearch: FC<TimeProductSearchProps> = ({
           </span>
         </div>
 
-        {/* Right: sort + view toggle */}
+        {/* Right: view toggle */}
         <div className="flex items-center gap-2.5">
-          {/* Sort dropdown */}
-          <div className="relative hidden sm:block">
-            <select
-              value={currentSort}
-              onChange={(e) => handleSortChange(e.target.value)}
-              className="h-9 rounded-[var(--radius-btn)] border-[1.5px] border-[var(--time-gray-200)] pl-3 pr-8 text-[12px] font-[family-name:var(--font-body)] text-[var(--time-gray-500)] bg-white cursor-pointer outline-none appearance-none transition-colors hover:border-[var(--time-gray-400)] focus:border-[var(--time-red)] focus:ring-0"
-            >
-              {SORT_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {t(opt.name, { defaultValue: opt.defaultLabel })}
-                </option>
-              ))}
-            </select>
-            <IoChevronDown
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--time-gray-400)]"
-              size={12}
-            />
-          </div>
-
           {/* View toggle */}
           <div className="flex rounded-[var(--radius-btn)] border-[1.5px] border-[var(--time-gray-200)] overflow-hidden">
             <button

@@ -89,7 +89,10 @@ describe('vincOrderToSummary', () => {
   it('falls back to street+city when label is missing', () => {
     const s = vincOrderToSummary({
       ...rec,
-      data: { ...rec.data, shipping_address: { street: 'VIA X', city: 'ROMA' } },
+      data: {
+        ...rec.data,
+        shipping_address: { street: 'VIA X', city: 'ROMA' },
+      },
     });
     expect(s.destination).toBe('VIA X - ROMA');
   });
@@ -121,7 +124,10 @@ describe('vincOrderDetailToTransformed', () => {
   it('parses discounts_json safely (bad JSON → [])', () => {
     const o = vincOrderDetailToTransformed({
       ...rec,
-      data: { ...rec.data, items: [{ ...rec.data.items[0], discounts_json: 'nope' }] },
+      data: {
+        ...rec.data,
+        items: [{ ...rec.data.items[0], discounts_json: 'nope' }],
+      },
     });
     expect(o.items[0].discounts).toEqual([]);
   });

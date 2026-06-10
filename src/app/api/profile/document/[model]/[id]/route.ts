@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resolveCsCreds } from '@/lib/profile/cs-creds';
-import { isProfileModel, fetchModelRecord } from '@/lib/profile/vinc-data-models';
+import {
+  isProfileModel,
+  fetchModelRecord,
+} from '@/lib/profile/vinc-data-models';
 import { sessionOwnedCustomerCodes } from '@/lib/profile/session-owner';
 
 type RouteParams = { params: Promise<{ model: string; id: string }> };
@@ -43,7 +46,12 @@ function resolveFetchUrl(u: string): string {
  * errors render as a small friendly HTML page rather than raw JSON. The success
  * case streams the PDF inline.
  */
-function errorPage(status: number, icon: string, title: string, message: string) {
+function errorPage(
+  status: number,
+  icon: string,
+  title: string,
+  message: string,
+) {
   const html = `<!doctype html><html lang="it"><head><meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>${title}</title><style>
@@ -57,7 +65,10 @@ p{font-size:14px;color:#6b7280;margin:0;line-height:1.5}
 </style></head><body><div class="card"><div class="ic">${icon}</div><h1>${title}</h1><p>${message}</p></div></body></html>`;
   return new NextResponse(html, {
     status,
-    headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' },
+    headers: {
+      'content-type': 'text/html; charset=utf-8',
+      'cache-control': 'no-store',
+    },
   });
 }
 
@@ -109,7 +120,10 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
   try {
     rec = await fetchModelRecord(creds, model, id);
   } catch (error) {
-    console.error(`[document broker] ${model}/${id} record fetch failed:`, error);
+    console.error(
+      `[document broker] ${model}/${id} record fetch failed:`,
+      error,
+    );
     return PAGES.unavailable();
   }
   if (!rec) return PAGES.notAvailable();
@@ -130,7 +144,9 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     const upstream = await fetch(resolveFetchUrl(fileUrl));
     if (upstream.status === 404) return PAGES.notAvailable();
     if (!upstream.ok || !upstream.body) {
-      console.error(`[document broker] upstream ${upstream.status} for ${model}/${id}`);
+      console.error(
+        `[document broker] upstream ${upstream.status} for ${model}/${id}`,
+      );
       return PAGES.unavailable();
     }
     const filename = (fileUrl.split('/').pop() || `${model}-${id}`)

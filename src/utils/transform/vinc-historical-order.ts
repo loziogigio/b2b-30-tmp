@@ -102,7 +102,9 @@ function parseDiscounts(json?: string): number[] {
   if (!json) return [];
   try {
     const v = JSON.parse(json);
-    return Array.isArray(v) ? v.map(Number).filter((x) => Number.isFinite(x)) : [];
+    return Array.isArray(v)
+      ? v.map(Number).filter((x) => Number.isFinite(x))
+      : [];
   } catch {
     return [];
   }

@@ -11,6 +11,7 @@
 **Key UI fact (verified):** `deadlines.client.tsx` renders `data.items` where a row with `isDueView` is a HEADER (shows `description`/`dueDate`/`total`) and a row with `isReferenceView` is a DETAIL (shows `document`/`referenceDate`/`amount`); rows with neither are not rendered. So each VINC scadenza becomes a **header row + detail row pair** (preserving the legacy two-line rendering — this is a data-source migration, not a redesign).
 
 **Mapping per scadenza** → two `PaymentDeadlineRow`s:
+
 - header: `{ isDueView:true, isReferenceView:false, description:tipo_label, type:tipo_code, dueDate:data_scadenza, total:importo, amount:0 }`
 - detail: `{ isReferenceView:true, isDueView:false, description:'', document:documento.numero_documento, referenceDate:documento.data_documento, amount:residuo, total:0 }`
 
@@ -23,11 +24,13 @@
 ## File Structure
 
 **New**
+
 - `src/utils/transform/vinc-payment-schedule.ts` — pure `vincPaymentScheduleToSummary` + `VincScadenzaRecord` type.
 - `src/test/unit/vinc-payment-schedule.test.ts` — transform tests.
 - `src/test/hooks/fetch-payment-deadline-vinc.test.ts` — hook VINC-branch tests.
 
 **Modified**
+
 - `src/lib/profile/vinc-data-models.ts` — add `payment_schedule` to `PROFILE_MODELS` + `PROFILE_MODEL_DATE_FIELD`.
 - `src/test/unit/vinc-data-models-query.test.ts` — update the allow-list + date-field assertions.
 - `src/framework/basic-rest/acccount/fetch-account.ts` — VINC branch in `fetchPaymentDeadline`; add `theme` to the `usePaymentDeadlineQuery` query key.
@@ -37,6 +40,7 @@
 ## Task 1: Allow-list + date field for payment_schedule (foundation)
 
 **Files:**
+
 - Modify: `src/lib/profile/vinc-data-models.ts`
 - Test: `src/test/unit/vinc-data-models-query.test.ts`
 
@@ -45,31 +49,31 @@
 Change the `PROFILE_MODELS` allow-list assertion to include `payment_schedule`:
 
 ```ts
-    expect(PROFILE_MODELS).toEqual([
-      'historical_order',
-      'credit_exposure',
-      'invoice',
-      'delivery_note',
-      'payment_schedule',
-    ]);
+expect(PROFILE_MODELS).toEqual([
+  'historical_order',
+  'credit_exposure',
+  'invoice',
+  'delivery_note',
+  'payment_schedule',
+]);
 ```
 
 And add `payment_schedule` to the `isProfileModel` accept case (in the same `it` that checks `isProfileModel`), e.g. after the existing `expect(isProfileModel('historical_order')).toBe(true);` add:
 
 ```ts
-    expect(isProfileModel('payment_schedule')).toBe(true);
+expect(isProfileModel('payment_schedule')).toBe(true);
 ```
 
 Update the `PROFILE_MODEL_DATE_FIELD` assertion to include the new entry:
 
 ```ts
-    expect(PROFILE_MODEL_DATE_FIELD).toEqual({
-      historical_order: 'document_date',
-      delivery_note: 'data',
-      invoice: 'data',
-      credit_exposure: 'snapshot_date',
-      payment_schedule: 'data_scadenza',
-    });
+expect(PROFILE_MODEL_DATE_FIELD).toEqual({
+  historical_order: 'document_date',
+  delivery_note: 'data',
+  invoice: 'data',
+  credit_exposure: 'snapshot_date',
+  payment_schedule: 'data_scadenza',
+});
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -114,6 +118,7 @@ git commit --no-verify -m "feat(profile): allow-list payment_schedule (date fiel
 ## Task 2: VINC payment_schedule → PaymentDeadlineSummary transform (pure)
 
 **Files:**
+
 - Create: `src/utils/transform/vinc-payment-schedule.ts`
 - Test: `src/test/unit/vinc-payment-schedule.test.ts`
 
@@ -134,7 +139,10 @@ const recs = [
       importo: 100,
       residuo: 100,
       valuta: 'EUR',
-      documento: { numero_documento: 'F/2026/54', data_documento: '2026-01-02T00:00:00Z' },
+      documento: {
+        numero_documento: 'F/2026/54',
+        data_documento: '2026-01-02T00:00:00Z',
+      },
     },
   },
   {
@@ -147,7 +155,10 @@ const recs = [
       importo: 40,
       residuo: 40,
       valuta: 'EUR',
-      documento: { numero_documento: 'F/2026/99', data_documento: '2026-06-01T00:00:00Z' },
+      documento: {
+        numero_documento: 'F/2026/99',
+        data_documento: '2026-06-01T00:00:00Z',
+      },
     },
   },
 ];
@@ -308,6 +319,7 @@ git commit --no-verify -m "feat(profile): pure VINC payment_schedule -> PaymentD
 ## Task 3: Wire fetchPaymentDeadline (VINC branch)
 
 **Files:**
+
 - Modify: `src/framework/basic-rest/acccount/fetch-account.ts`
 - Test: `src/test/hooks/fetch-payment-deadline-vinc.test.ts`
 
@@ -319,7 +331,12 @@ READ `src/framework/basic-rest/acccount/fetch-account.ts` first. `fetchPaymentDe
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('@framework/utils/static', () => ({
-  ERP_STATIC: { customer_code: '015892', vinc_customer_id: 'cust_X', address_code: '', id_cart: '0' },
+  ERP_STATIC: {
+    customer_code: '015892',
+    vinc_customer_id: 'cust_X',
+    address_code: '',
+    id_cart: '0',
+  },
 }));
 
 import { fetchPaymentDeadline } from '@framework/acccount/fetch-account';
@@ -350,7 +367,10 @@ describe('fetchPaymentDeadline — default (VINC) branch', () => {
                 importo: 100,
                 residuo: 100,
                 valuta: 'EUR',
-                documento: { numero_documento: 'F/2026/54', data_documento: '2026-01-02T00:00:00Z' },
+                documento: {
+                  numero_documento: 'F/2026/54',
+                  data_documento: '2026-01-02T00:00:00Z',
+                },
               },
             },
           ],
@@ -398,23 +418,23 @@ import {
 - [ ] **Step 4: Add the VINC branch** as the FIRST statement inside `fetchPaymentDeadline`, before the existing `const raw = …`:
 
 ```ts
-  // default theme → VINC payment_schedule (Scadenziario); empty summary if
-  // unavailable, no proxy fallback. Oldest-due first.
-  if (sourcePolicy(theme).account === 'vinc') {
-    const result = await fetchProfileRecords('payment_schedule', {
-      relation_id: ERP_STATIC.customer_code,
-      sort: 'data.data_scadenza',
-      limit: 200,
-    });
-    const todayISO = new Date().toISOString().slice(0, 10);
-    if (!result.available) {
-      return vincPaymentScheduleToSummary([], todayISO);
-    }
-    return vincPaymentScheduleToSummary(
-      result.items as VincScadenzaRecord[],
-      todayISO,
-    );
+// default theme → VINC payment_schedule (Scadenziario); empty summary if
+// unavailable, no proxy fallback. Oldest-due first.
+if (sourcePolicy(theme).account === 'vinc') {
+  const result = await fetchProfileRecords('payment_schedule', {
+    relation_id: ERP_STATIC.customer_code,
+    sort: 'data.data_scadenza',
+    limit: 200,
+  });
+  const todayISO = new Date().toISOString().slice(0, 10);
+  if (!result.available) {
+    return vincPaymentScheduleToSummary([], todayISO);
   }
+  return vincPaymentScheduleToSummary(
+    result.items as VincScadenzaRecord[],
+    todayISO,
+  );
+}
 ```
 
 Leave the existing `time` / legacy-proxy code after this point unchanged.
@@ -438,6 +458,7 @@ git commit --no-verify -m "feat(profile): scadenziario (payment_deadline) VINC b
 ```
 
 ## Hard rules (Task 3)
+
 - Modify ONLY `fetchPaymentDeadline` (add VINC branch) and the `usePaymentDeadlineQuery` queryKey. Do NOT touch `fetchExposition`, `fetchCustomer`, `fetchAddresses`, etc. Leave the `time`/proxy branches unchanged. No duplicate imports.
 
 ---

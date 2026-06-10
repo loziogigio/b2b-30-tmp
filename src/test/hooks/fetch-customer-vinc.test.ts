@@ -1,7 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('@framework/utils/static', () => ({
-  ERP_STATIC: { customer_code: '007959', vinc_customer_id: 'cust_X', address_code: '', id_cart: '0' },
+  ERP_STATIC: {
+    customer_code: '007959',
+    vinc_customer_id: 'cust_X',
+    address_code: '',
+    id_cart: '0',
+  },
 }));
 
 import { fetchCustomer } from '@framework/acccount/fetch-account';
@@ -24,7 +29,12 @@ describe('fetchCustomer — default (VINC) branch', () => {
         ok: true,
         json: async () => ({
           success: true,
-          customer: { code: '007959', businessName: 'ACME', vatNumber: 'IT1', isLegalEntity: true },
+          customer: {
+            code: '007959',
+            businessName: 'ACME',
+            vatNumber: 'IT1',
+            isLegalEntity: true,
+          },
         }),
       } as any;
     }) as any;

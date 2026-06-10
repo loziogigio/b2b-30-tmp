@@ -46,7 +46,11 @@ describe('POST /api/b2b/customer', () => {
             public_code: '007959',
             company_name: 'ACME',
             customer_type: 'business',
-            legal_info: { vat_number: 'IT1', pec_email: 'p@e.it', sdi_code: 'SDI123' },
+            legal_info: {
+              vat_number: 'IT1',
+              pec_email: 'p@e.it',
+              sdi_code: 'SDI123',
+            },
           },
         }),
       } as any;

@@ -158,11 +158,13 @@ merge is unit-tested without React Query.)
 ## 7. Files
 
 **New**
+
 - `src/framework/basic-rest/order/use-enriched-order-items.ts` — the hook (+ a
   pure `mergeItemImages` helper for testing).
 - `src/test/unit/enriched-order-items.test.ts` — merge-logic tests.
 
 **Modified**
+
 - `src/app/[lang]/(default)/account/order-detail/order-detail.client.tsx`
 - `src/components/orders/order-details.tsx`
 

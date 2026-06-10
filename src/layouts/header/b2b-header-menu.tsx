@@ -87,11 +87,13 @@ const B2BHeaderMenu: React.FC<MenuProps> = ({
   } = usePimMenuQuery({
     location: 'header',
     channel,
+    lang,
     staleTime: 5 * 60 * 1000,
   });
   const { data: mobileData, isLoading: mobileLoading } = usePimMenuQuery({
     location: 'mobile',
     channel,
+    lang,
     staleTime: 5 * 60 * 1000,
   });
 

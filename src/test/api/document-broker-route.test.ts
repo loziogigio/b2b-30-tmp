@@ -7,7 +7,11 @@ const { sessionOwnedCustomerCodes, fetchModelRecord } = vi.hoisted(() => ({
 
 vi.mock('@/lib/profile/session-owner', () => ({ sessionOwnedCustomerCodes }));
 vi.mock('@/lib/profile/cs-creds', () => ({
-  resolveCsCreds: vi.fn(async () => ({ csBaseUrl: 'https://cs', apiKeyId: 'k', apiSecret: 's' })),
+  resolveCsCreds: vi.fn(async () => ({
+    csBaseUrl: 'https://cs',
+    apiKeyId: 'k',
+    apiSecret: 's',
+  })),
 }));
 vi.mock('@/lib/profile/vinc-data-models', async (orig) => {
   const actual = await (orig as any)();
@@ -28,9 +32,13 @@ beforeEach(() => {
 });
 
 function req(model: string, id: string, kind = 'pdf') {
-  return new NextRequest(`http://localhost/api/profile/document/${model}/${id}?kind=${kind}`);
+  return new NextRequest(
+    `http://localhost/api/profile/document/${model}/${id}?kind=${kind}`,
+  );
 }
-const ctx = (model: string, id: string) => ({ params: Promise.resolve({ model, id }) });
+const ctx = (model: string, id: string) => ({
+  params: Promise.resolve({ model, id }),
+});
 
 describe('GET /api/profile/document/[model]/[id]', () => {
   it('404s an unknown model (before any session/record work)', async () => {
@@ -47,14 +55,22 @@ describe('GET /api/profile/document/[model]/[id]', () => {
 
   it('403s when the record is owned by another customer', async () => {
     sessionOwnedCustomerCodes.mockResolvedValue(new Set(['015892']));
-    fetchModelRecord.mockResolvedValue({ _id: 'i1', relation_id: '999999', data: { pdf_url: 'https://b2b.hidros.com/documenti-clienti/x.pdf' } });
+    fetchModelRecord.mockResolvedValue({
+      _id: 'i1',
+      relation_id: '999999',
+      data: { pdf_url: 'https://b2b.hidros.com/documenti-clienti/x.pdf' },
+    });
     const res = await GET(req('invoice', 'i1'), ctx('invoice', 'i1'));
     expect(res.status).toBe(403);
   });
 
   it('404s when the owned record has no file for the kind', async () => {
     sessionOwnedCustomerCodes.mockResolvedValue(new Set(['015892']));
-    fetchModelRecord.mockResolvedValue({ _id: 'i1', relation_id: '015892', data: {} });
+    fetchModelRecord.mockResolvedValue({
+      _id: 'i1',
+      relation_id: '015892',
+      data: {},
+    });
     const res = await GET(req('invoice', 'i1'), ctx('invoice', 'i1'));
     expect(res.status).toBe(404);
   });
@@ -65,7 +81,9 @@ describe('GET /api/profile/document/[model]/[id]', () => {
     fetchModelRecord.mockResolvedValue({
       _id: 'i1',
       relation_id: '015892',
-      data: { pdf_url: 'https://b2b.hidros.com/documenti-clienti/D.D.T/2026/F.pdf' },
+      data: {
+        pdf_url: 'https://b2b.hidros.com/documenti-clienti/D.D.T/2026/F.pdf',
+      },
     });
     let fetchedUrl = '';
     global.fetch = vi.fn(async (u: any) => {
@@ -74,7 +92,10 @@ describe('GET /api/profile/document/[model]/[id]', () => {
         ok: true,
         status: 200,
         body: new ReadableStream(),
-        headers: new Headers({ 'content-type': 'application/pdf', 'content-length': '123' }),
+        headers: new Headers({
+          'content-type': 'application/pdf',
+          'content-length': '123',
+        }),
       } as any;
     }) as any;
 
@@ -90,16 +111,32 @@ describe('GET /api/profile/document/[model]/[id]', () => {
 
   it('propagates a 404 from the upstream file server', async () => {
     sessionOwnedCustomerCodes.mockResolvedValue(new Set(['015892']));
-    fetchModelRecord.mockResolvedValue({ _id: 'i1', relation_id: '015892', data: { pdf_url: 'https://b2b.hidros.com/documenti-clienti/x.pdf' } });
-    global.fetch = vi.fn(async () => ({ ok: false, status: 404, body: null })) as any;
+    fetchModelRecord.mockResolvedValue({
+      _id: 'i1',
+      relation_id: '015892',
+      data: { pdf_url: 'https://b2b.hidros.com/documenti-clienti/x.pdf' },
+    });
+    global.fetch = vi.fn(async () => ({
+      ok: false,
+      status: 404,
+      body: null,
+    })) as any;
     const res = await GET(req('invoice', 'i1'), ctx('invoice', 'i1'));
     expect(res.status).toBe(404);
   });
 
   it('502s on other upstream failures', async () => {
     sessionOwnedCustomerCodes.mockResolvedValue(new Set(['015892']));
-    fetchModelRecord.mockResolvedValue({ _id: 'i1', relation_id: '015892', data: { pdf_url: 'https://b2b.hidros.com/documenti-clienti/x.pdf' } });
-    global.fetch = vi.fn(async () => ({ ok: false, status: 500, body: null })) as any;
+    fetchModelRecord.mockResolvedValue({
+      _id: 'i1',
+      relation_id: '015892',
+      data: { pdf_url: 'https://b2b.hidros.com/documenti-clienti/x.pdf' },
+    });
+    global.fetch = vi.fn(async () => ({
+      ok: false,
+      status: 500,
+      body: null,
+    })) as any;
     const res = await GET(req('invoice', 'i1'), ctx('invoice', 'i1'));
     expect(res.status).toBe(502);
   });

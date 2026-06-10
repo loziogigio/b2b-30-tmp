@@ -5,7 +5,7 @@
   "menu-minimal": "Mínimo",
   "menu-vintage": "Vendimia",
   "menu-classic": "Clásico",
-  "menu-trendy": "Trendy",
+  "menu-trendy": "De moda",
   "menu-elegant": "Elegante",
   "menu-refined": "Refinada",
   "menu-antique": "Antigua",
@@ -35,5 +35,12 @@
   "menu-terms-condition": "Términos y Condiciones",
   "menu-contact-us": "Contáctenos",
   "menu-checkout": "Caja",
-  "menu-404": "404"
+  "menu-404": "404",
+  "all-categories": "Todas las categorías",
+  "loading": "Cargando...",
+  "menu-error": "El menú no está disponible en este momento.",
+  "close": "Cerrar",
+  "back": "Atrás",
+  "see-all-in": "Ver todo en",
+  "more": "Más"
 }

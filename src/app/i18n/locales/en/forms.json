@@ -55,5 +55,12 @@
   "contact-title-required": "Contact title is required",
   "default-type-required": "Default type Required",
   "contact-number-required": "Contact number is required",
-  "text-subscription-success-msg": "Thank you for subscribing to our newsletter"
+  "text-subscription-success-msg": "Thank you for subscribing to our newsletter",
+  "label-company-name": "Company Name *",
+  "company-name-required": "Company name is required",
+  "label-vat-number": "VAT Number *",
+  "vat-number-required": "VAT number is required",
+  "label-sdi-code": "SDI Code",
+  "label-notes": "Additional notes",
+  "city-required": "City is required"
 }

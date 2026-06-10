@@ -1,56 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { DEFAULT_HOME_SETTINGS } from '@/lib/home-settings/defaults';
-import { resolveTenant, isSingleTenant } from '@/lib/tenant';
+import { resolveTenantApiConfig } from '@/lib/tenant';
 import {
   mapPortalToHomeSettings,
   type PortalPayload,
 } from '@/lib/home-settings/portal-mapper';
 
-// Default values from .env (used in single-tenant mode)
-const DEFAULT_PIM_API_URL =
-  process.env.PIM_API_PRIVATE_URL || process.env.NEXT_PUBLIC_PIM_API_URL || '';
-const DEFAULT_API_KEY_ID =
-  process.env.API_KEY_ID || process.env.NEXT_PUBLIC_API_KEY_ID;
-const DEFAULT_API_SECRET =
-  process.env.API_SECRET || process.env.NEXT_PUBLIC_API_SECRET;
-
-async function getTenantConfig(req: NextRequest) {
-  if (isSingleTenant) {
-    return {
-      pimApiUrl: DEFAULT_PIM_API_URL,
-      apiKeyId: DEFAULT_API_KEY_ID,
-      apiSecret: DEFAULT_API_SECRET,
-    };
-  }
-
-  const hostname =
-    req.headers.get('x-tenant-hostname') ||
-    req.headers.get('host') ||
-    'localhost';
-  const tenant = await resolveTenant(hostname);
-
-  if (!tenant) {
-    return {
-      pimApiUrl: DEFAULT_PIM_API_URL,
-      apiKeyId: DEFAULT_API_KEY_ID,
-      apiSecret: DEFAULT_API_SECRET,
-    };
-  }
-
-  return {
-    pimApiUrl: tenant.api.pimApiUrl || DEFAULT_PIM_API_URL,
-    apiKeyId: tenant.api.apiKeyId || DEFAULT_API_KEY_ID,
-    apiSecret: tenant.api.apiSecret || DEFAULT_API_SECRET,
-  };
-}
-
 export async function GET(req: NextRequest) {
   try {
-    const config = await getTenantConfig(req);
+    const config = await resolveTenantApiConfig(req);
     const base = (config.pimApiUrl || '').replace(/\/$/, '');
 
-    // Per-language header/footer: forward the URL language so the upstream
-    // serve route returns the language-resolved portal sections.
     const lang = new URL(req.url).searchParams.get('lang');
     const upstream =
       `${base}/api/b2b/b2b/public/home?portal=default` +

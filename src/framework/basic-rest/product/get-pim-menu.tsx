@@ -70,6 +70,7 @@ export function transformPimMenuTree(items: PimMenuTreeItem[]): MenuTreeNode[] {
 export const fetchPimMenu = async (
   location?: 'header' | 'footer' | 'mobile',
   channel?: string,
+  lang?: string,
 ): Promise<{
   menuItems: MenuTreeNode[];
   flat: PimMenuTreeItem[];
@@ -77,6 +78,7 @@ export const fetchPimMenu = async (
   const params: Record<string, string> = {};
   if (location) params.location = location;
   if (channel) params.channel = channel;
+  if (lang) params.lang = lang;
   const data = await get<PimMenuResponse>(
     API_ENDPOINTS_PIM.MENU,
     Object.keys(params).length > 0 ? params : undefined,
@@ -98,18 +100,19 @@ export const fetchPimMenu = async (
 export const usePimMenuQuery = (options?: {
   location?: 'header' | 'footer' | 'mobile';
   channel?: string;
+  lang?: string;
   enabled?: boolean;
   staleTime?: number;
 }) => {
   const enabled = options?.enabled ?? true;
   const location = options?.location;
   const channel = options?.channel;
+  const lang = options?.lang;
 
   return useQuery({
-    queryKey: channel
-      ? ['pim-menu', location, channel]
-      : ['pim-menu', location],
-    queryFn: () => fetchPimMenu(location, channel),
+    // lang is part of the key so switching language refetches translated labels.
+    queryKey: ['pim-menu', location, channel ?? null, lang ?? null],
+    queryFn: () => fetchPimMenu(location, channel, lang),
     enabled,
     staleTime: options?.staleTime ?? 1000 * 60 * 5, // 5 minutes default
   });

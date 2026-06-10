@@ -17,11 +17,13 @@
 ## File Structure
 
 **New**
+
 - `src/utils/transform/vinc-credit-exposure.ts` — pure `vincCreditExposureToExposition` + `VincCreditExposureRecord` type.
 - `src/test/unit/vinc-credit-exposure.test.ts` — mapper tests.
 - `src/test/hooks/fetch-exposition-vinc.test.ts` — `fetchExposition` VINC-branch tests.
 
 **Modified**
+
 - `src/framework/basic-rest/acccount/fetch-account.ts` — VINC branch in `fetchExposition`; add `theme` to the `useExpositionQuery` query key.
 
 ---
@@ -29,6 +31,7 @@
 ## Task 1: VINC credit_exposure → Exposition transform (pure)
 
 **Files:**
+
 - Create: `src/utils/transform/vinc-credit-exposure.ts`
 - Test: `src/test/unit/vinc-credit-exposure.test.ts`
 
@@ -44,10 +47,32 @@ const rec = {
     snapshot_date: '2026-06-02T00:00:00.000Z',
     currency: 'EUR',
     lines: [
-      { code: 'rimesse', label: 'Rimesse Dirette', scaduto: 10, da_scadere: 5, totale: 15 },
-      { code: 'cambiaria', label: 'RIBA', scaduto: 2, da_scadere: 3, totale: 5 },
-      { code: 'bolle_nf', label: 'Bolle non fatturate', da_scadere: 7, totale: 7 },
-      { code: 'ordini_ne', label: 'Ordini non evasi', da_scadere: 8, totale: 8 },
+      {
+        code: 'rimesse',
+        label: 'Rimesse Dirette',
+        scaduto: 10,
+        da_scadere: 5,
+        totale: 15,
+      },
+      {
+        code: 'cambiaria',
+        label: 'RIBA',
+        scaduto: 2,
+        da_scadere: 3,
+        totale: 5,
+      },
+      {
+        code: 'bolle_nf',
+        label: 'Bolle non fatturate',
+        da_scadere: 7,
+        totale: 7,
+      },
+      {
+        code: 'ordini_ne',
+        label: 'Ordini non evasi',
+        da_scadere: 8,
+        totale: 8,
+      },
       { code: 'prebolle', label: 'Da scadere', da_scadere: 9, totale: 9 },
       { code: 'acconti', label: 'Acconti', totale: 4 },
     ],
@@ -209,6 +234,7 @@ git commit --no-verify -m "feat(profile): pure VINC credit_exposure snapshot →
 ## Task 2: Wire the exposition hook (VINC branch)
 
 **Files:**
+
 - Modify: `src/framework/basic-rest/acccount/fetch-account.ts`
 - Test: `src/test/hooks/fetch-exposition-vinc.test.ts`
 
@@ -301,20 +327,20 @@ import {
 - [ ] **Step 4: Add the VINC branch** as the FIRST statement inside `fetchExposition`, before the existing `const raw = …`:
 
 ```ts
-  // default theme → VINC credit_exposure latest snapshot (zeroed if unavailable;
-  // no proxy fallback). Default route sort is -data.snapshot_date, so limit:1
-  // returns the most recent snapshot (today's if written, else the previous day).
-  if (sourcePolicy(theme).account === 'vinc') {
-    const result = await fetchProfileRecords('credit_exposure', {
-      relation_id: ERP_STATIC.customer_code,
-      limit: 1,
-    });
-    const rec = result.items?.[0] as VincCreditExposureRecord | undefined;
-    if (!result.available || !rec) {
-      return vincCreditExposureToExposition({ _id: '', data: {} });
-    }
-    return vincCreditExposureToExposition(rec);
+// default theme → VINC credit_exposure latest snapshot (zeroed if unavailable;
+// no proxy fallback). Default route sort is -data.snapshot_date, so limit:1
+// returns the most recent snapshot (today's if written, else the previous day).
+if (sourcePolicy(theme).account === 'vinc') {
+  const result = await fetchProfileRecords('credit_exposure', {
+    relation_id: ERP_STATIC.customer_code,
+    limit: 1,
+  });
+  const rec = result.items?.[0] as VincCreditExposureRecord | undefined;
+  if (!result.available || !rec) {
+    return vincCreditExposureToExposition({ _id: '', data: {} });
   }
+  return vincCreditExposureToExposition(rec);
+}
 ```
 
 Leave the existing `time` / legacy-proxy code after this point unchanged.
@@ -352,7 +378,7 @@ Expected: PASS. (Pre-existing unrelated `forms-submit-route.test.ts` failures ar
 
 Open `/<lang>/account/fido`. Confirm: network shows `GET /api/profile/credit_exposure?relation_id=…&limit=1`; the 6 rows (Rimesse, RIBA, Bolle non fatturate, Ordini non evasi, Da scadere, Acconti) plus Totale / Fido assicurato / Differenza render with the snapshot values; **Differenza** color matches the legacy convention (red when the customer is over their fido limit). No legacy proxy call.
 
-> **Sign-convention check:** the guide states *negative* `differenza` = over the fido limit (red). The existing page's color logic keys on `differenceTotal`. During this step, confirm an over-limit customer shows red; if the sign is inverted vs the ERP convention the page was built for, raise it (do not silently flip — it's a one-line change to the page's color test once confirmed).
+> **Sign-convention check:** the guide states _negative_ `differenza` = over the fido limit (red). The existing page's color logic keys on `differenceTotal`. During this step, confirm an over-limit customer shows red; if the sign is inverted vs the ERP convention the page was built for, raise it (do not silently flip — it's a one-line change to the page's color test once confirmed).
 
 - [ ] **Step 3: Confirm `time` theme unchanged** — on a time-theme tenant the Fido page still loads via `/api/erp/exposition`; no `/api/profile/*` call.
 

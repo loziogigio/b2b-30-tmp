@@ -1,7 +1,12 @@
 export interface ProfileRecordsResult {
   available: boolean;
   items: any[];
-  pagination?: { page: number; limit: number; total: number; totalPages: number };
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
 }
 
 export interface ProfileRecordResult {

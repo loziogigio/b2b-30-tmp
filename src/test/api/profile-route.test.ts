@@ -17,7 +17,12 @@ vi.mock('@/lib/profile/cs-creds', () => ({
 }));
 vi.mock('@/lib/profile/vinc-data-models', async (orig) => {
   const actual = await (orig as any)();
-  return { ...actual, probeModelAvailable, fetchModelRecords, fetchModelRecord };
+  return {
+    ...actual,
+    probeModelAvailable,
+    fetchModelRecords,
+    fetchModelRecord,
+  };
 });
 
 import { GET as listGET } from '@/app/api/profile/[model]/route';

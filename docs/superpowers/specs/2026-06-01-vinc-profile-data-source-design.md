@@ -28,11 +28,11 @@ domains under the default theme.
 
 The theme implies every source decision:
 
-| Theme (from backend) | UI theme | Pricing source | Account data (orders · credit · DDT · invoices) |
-|---|---|---|---|
-| **`time`** | time | ERP (time services, `/api/erp/…`) | ERP (time services, `/api/erp/…`) — **unchanged** |
-| **`default`** | default | inline (PIM) | **VINC data-models**; empty state if model unavailable |
-| _other/unknown_ | (theme) | (current resolution) | legacy proxy — **unchanged safety net** |
+| Theme (from backend) | UI theme | Pricing source                    | Account data (orders · credit · DDT · invoices)        |
+| -------------------- | -------- | --------------------------------- | ------------------------------------------------------ |
+| **`time`**           | time     | ERP (time services, `/api/erp/…`) | ERP (time services, `/api/erp/…`) — **unchanged**      |
+| **`default`**        | default  | inline (PIM)                      | **VINC data-models**; empty state if model unavailable |
+| _other/unknown_      | (theme)  | (current resolution)              | legacy proxy — **unchanged safety net**                |
 
 Only the **`default`** theme's account-data path changes in this work. The
 `time` theme keeps its direct-ERP path verbatim, and any other/unknown theme
@@ -52,11 +52,11 @@ pricing at `sourcePolicy(theme).pricing` becomes a one-line follow-up (see
 
 ```ts
 // src/framework/basic-rest/profile/source-policy.ts  (new)
-export type AccountSource = 'erp' | 'vinc';      // 'erp' here = the existing path (time→/api/erp, others→legacy proxy)
+export type AccountSource = 'erp' | 'vinc'; // 'erp' here = the existing path (time→/api/erp, others→legacy proxy)
 export type PricingSourceHint = 'erp' | 'inline';
 
 export interface SourcePolicy {
-  account: AccountSource;     // consumed NOW
+  account: AccountSource; // consumed NOW
   pricing: PricingSourceHint; // documented seam for the future migration
 }
 
@@ -82,7 +82,7 @@ accidentally route account data to VINC — it must be added to the allow-list
 deliberately.
 
 > Note: `account: 'erp'` is a coarse "use the existing path" signal. The hook,
-> not the policy, decides *which* existing path (`/api/erp` for `time` vs legacy
+> not the policy, decides _which_ existing path (`/api/erp` for `time` vs legacy
 > proxy otherwise), because that branch already exists today and is unchanged.
 
 ## 3. Architecture (Approach A — hook decides, single source per branch)
@@ -127,9 +127,9 @@ query semantics (`relation_id`, `filter[…]`, `sort=-data.…`, `page`/`limit`)
 ```ts
 const PROFILE_MODELS = {
   historical_order: true,
-  credit_exposure:  true,
-  invoice:          true,
-  delivery_note:    true,
+  credit_exposure: true,
+  invoice: true,
+  delivery_note: true,
 } as const;
 ```
 
@@ -140,16 +140,16 @@ to read arbitrary tenant data-models from the browser.
 
 Client query params are translated to the VINC data-models query syntax:
 
-| Client param | Upstream | Notes |
-|---|---|---|
-| `relation_id` | `relation_id` | **required**; the customer scope (= `customer_code`) |
-| `status` | `filter[status]=<v>` | exact match on `data.status` |
-| `date_from` (`YYYY-MM-DD`) | `filter[document_date][gte]=<v>` | |
-| `date_to` (`YYYY-MM-DD`) | `filter[document_date][lte]=<v>` | |
-| `document_number` | `filter[document_number]=<v>` | for number lookups |
-| `page` | `page` | 1-indexed |
-| `limit` | `limit` | default 50 |
-| `sort` | `sort` | default `-data.document_date` (newest first) |
+| Client param               | Upstream                         | Notes                                                |
+| -------------------------- | -------------------------------- | ---------------------------------------------------- |
+| `relation_id`              | `relation_id`                    | **required**; the customer scope (= `customer_code`) |
+| `status`                   | `filter[status]=<v>`             | exact match on `data.status`                         |
+| `date_from` (`YYYY-MM-DD`) | `filter[document_date][gte]=<v>` |                                                      |
+| `date_to` (`YYYY-MM-DD`)   | `filter[document_date][lte]=<v>` |                                                      |
+| `document_number`          | `filter[document_number]=<v>`    | for number lookups                                   |
+| `page`                     | `page`                           | 1-indexed                                            |
+| `limit`                    | `limit`                          | default 50                                           |
+| `sort`                     | `sort`                           | default `-data.document_date` (newest first)         |
 
 **Never** forward `external_ref` as a query param (per the integration guide it
 bypasses tenant scoping and returns the whole tenant's records). Only
@@ -224,32 +224,32 @@ from the deferred "richer VINC-only" views.
 **List mapping — VINC `data.*` → `OrderSummary`**
 (`src/framework/basic-rest/order/types-b2b-orders-list.ts`):
 
-| `OrderSummary` field | VINC source | Notes |
-|---|---|---|
-| `id` | `_id` | stable key; **also the detail lookup key** (see below) |
-| `destination` | `data.shipping_address.label` | fallback: `street, city` |
-| `date_label` | `data.document_date` | format `DD/MM/YYYY` |
-| `document` | `data.document_number` | already `OC/9345`, `PB2B/126291` |
-| `delivery_label` | `data.delivery_date` | `DD/MM/YYYY`; may be empty |
-| `ordered_total` | `data.total` | number |
-| `status_code` | `data.status` | enum (see §6.1.1) |
-| `status_label` | `data.status_label ?? localize(data.status)` | |
-| `doc_number` / `cause` / `doc_year` | parsed from `data.document_number` | best-effort; primary key for VINC detail is `_id` |
+| `OrderSummary` field                | VINC source                                  | Notes                                                  |
+| ----------------------------------- | -------------------------------------------- | ------------------------------------------------------ |
+| `id`                                | `_id`                                        | stable key; **also the detail lookup key** (see below) |
+| `destination`                       | `data.shipping_address.label`                | fallback: `street, city`                               |
+| `date_label`                        | `data.document_date`                         | format `DD/MM/YYYY`                                    |
+| `document`                          | `data.document_number`                       | already `OC/9345`, `PB2B/126291`                       |
+| `delivery_label`                    | `data.delivery_date`                         | `DD/MM/YYYY`; may be empty                             |
+| `ordered_total`                     | `data.total`                                 | number                                                 |
+| `status_code`                       | `data.status`                                | enum (see §6.1.1)                                      |
+| `status_label`                      | `data.status_label ?? localize(data.status)` |                                                        |
+| `doc_number` / `cause` / `doc_year` | parsed from `data.document_number`           | best-effort; primary key for VINC detail is `_id`      |
 
 #### 6.1.1 Status enum → filter & label
 
 VINC statuses: `draft, submitted, to_fulfill, in_transit, fulfilled, invoiced,
 cancelled`. Italian label fallback (when `status_label` empty):
 
-| status | label |
-|---|---|
-| `draft` | Bozza |
-| `submitted` | Inviato |
-| `to_fulfill` | Da evadere |
+| status       | label       |
+| ------------ | ----------- |
+| `draft`      | Bozza       |
+| `submitted`  | Inviato     |
+| `to_fulfill` | Da evadere  |
 | `in_transit` | In consegna |
-| `fulfilled` | Evaso |
-| `invoiced` | Fatturato |
-| `cancelled` | Annullato |
+| `fulfilled`  | Evaso       |
+| `invoiced`   | Fatturato   |
+| `cancelled`  | Annullato   |
 
 **Filter-chip mapping:** the existing orders page filters by an ERP `type`
 (`T`/`NE`/`E`/`IA`). For the VINC branch these map to `filter[status]`:
@@ -278,16 +278,16 @@ The VINC detail block is **richer than the current ERP detail**, which stubs
 most values. We **enrich** the order-detail view with the VINC data rather than
 flattening it to today's shape. Current gaps the VINC detail fills:
 
-| Current `TransformedOrder` | Today (ERP) | VINC enrichment |
-|---|---|---|
-| `discount` / `tax` / `delivery_fee` | hardcoded `0` | real `discount_total` / `vat_total` / `shipping_cost` |
-| `total` | `= sub_total` (computed) | authoritative `data.total` (+ `subtotal`, `currency`) |
-| currency | (none) | `data.currency` |
-| status | (none) | `data.status` + label (§6.1.1) |
-| payment / agent / notes | (none) | `data.payment_method`, `data.agent_code`, `data.notes` |
-| `shipping_address.state/zip` | empty strings | `province`, `postal_code` (+ `label`, `code`) |
-| item VAT / discounts / line total | (none) | per line `vat_rate`, decoded `discounts_json`, `line_total` |
-| item uom / unit price | `unit` / `price` | `uom` / `unit_price` (same slots) |
+| Current `TransformedOrder`          | Today (ERP)              | VINC enrichment                                             |
+| ----------------------------------- | ------------------------ | ----------------------------------------------------------- |
+| `discount` / `tax` / `delivery_fee` | hardcoded `0`            | real `discount_total` / `vat_total` / `shipping_cost`       |
+| `total`                             | `= sub_total` (computed) | authoritative `data.total` (+ `subtotal`, `currency`)       |
+| currency                            | (none)                   | `data.currency`                                             |
+| status                              | (none)                   | `data.status` + label (§6.1.1)                              |
+| payment / agent / notes             | (none)                   | `data.payment_method`, `data.agent_code`, `data.notes`      |
+| `shipping_address.state/zip`        | empty strings            | `province`, `postal_code` (+ `label`, `code`)               |
+| item VAT / discounts / line total   | (none)                   | per line `vat_rate`, decoded `discounts_json`, `line_total` |
+| item uom / unit price               | `unit` / `price`         | `uom` / `unit_price` (same slots)                           |
 
 **Implementation:** extend `TransformedOrder` and `TransformedOrderItem` with
 **optional** enrichment fields (`currency?`, `status?`, `statusLabel?`,
@@ -333,8 +333,8 @@ iteration.
   exposes a **barcode-PDF** action that calls the ERP wrapper
   (`/wrapper/pdf_barcode_document`) through the proxy. VINC list records are not
   known to expose a rendered PDF. Default assumption to confirm at this phase:
-  **keep the existing action endpoints for the buttons** (document *rendering*
-  is orthogonal to list *data source*), OR map a VINC-provided document URL if
+  **keep the existing action endpoints for the buttons** (document _rendering_
+  is orthogonal to list _data source_), OR map a VINC-provided document URL if
   the schema exposes one. If neither is acceptable and actions must not touch the
   proxy, the buttons are hidden under VINC. **Resolve when the schema arrives.**
 
@@ -411,6 +411,7 @@ Follows `src/test/TESTING_STANDARDS.md`.
 ## 11. File-by-file change list
 
 **New**
+
 - `src/framework/basic-rest/profile/source-policy.ts` — theme → source seam.
 - `src/app/api/profile/[model]/route.ts` — generic list route (probe + cache +
   query translation + allow-list).
@@ -426,6 +427,7 @@ Follows `src/test/TESTING_STANDARDS.md`.
 - Matching tests under `src/test/unit/` and `src/test/api/`.
 
 **Modified**
+
 - `src/framework/basic-rest/order/fetch-orders-list.ts` — add VINC branch.
 - `src/framework/basic-rest/order/types-b2b-orders-list.ts` — add optional
   `source` / `vincId` to `OrderSummary`.

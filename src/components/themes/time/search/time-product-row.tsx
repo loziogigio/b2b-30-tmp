@@ -88,7 +88,9 @@ function fmtEuro(n: number, decimals: number) {
 // Availability indicator — same format as the grid card: a coloured dot plus
 // the "Disponibile" / "Non disponibile" label (no qty pill).
 function StockPill({ label, ok }: { label: string; ok: boolean }) {
-  const color = ok ? 'var(--time-success, #16a34a)' : 'var(--time-red, #dc2626)';
+  const color = ok
+    ? 'var(--time-success, #16a34a)'
+    : 'var(--time-red, #dc2626)';
   return (
     <span
       style={{
@@ -280,7 +282,7 @@ export default function TimeProductRow({ lang, product }: Props) {
             >
               {displayName || '—'}
             </div>
-            {((parent_sku || product.id) || displayBrand?.name) && (
+            {(parent_sku || product.id || displayBrand?.name) && (
               <div
                 style={{
                   display: 'flex',
@@ -725,7 +727,9 @@ export default function TimeProductRow({ lang, product }: Props) {
                         ok={avail > 0}
                         label={
                           avail > 0
-                            ? t('text-in-stock', { defaultValue: 'Disponibile' })
+                            ? t('text-in-stock', {
+                                defaultValue: 'Disponibile',
+                              })
                             : (vPrice as any)?.product_label_action?.LABEL ||
                               t('text-out-stock', {
                                 defaultValue: 'Non disponibile',

@@ -45,6 +45,7 @@ export default function ProductCategoryBreadcrumb({ lang, sku }: Props) {
 
   const { data: menu } = usePimMenuQuery({
     location: 'header',
+    lang,
     staleTime: 5 * 60 * 1000,
   });
 

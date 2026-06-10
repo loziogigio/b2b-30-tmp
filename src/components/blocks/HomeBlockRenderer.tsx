@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Container from '@components/ui/container';
+import { isBlockFullWidth } from '@/lib/blocks/block-layout';
 import BannerAllCarousel from '@components/common/banner-all-carousel';
 import ProductsCarousel from '@components/product/products-carousel';
 import LikedProductsProductsCarousel from '@components/product/feeds/liked-products-products-carousel';
@@ -129,7 +130,7 @@ const HomeBlockRenderer: React.FC<HomeBlockRendererProps> = ({
   block,
   lang,
 }) => {
-  const isFullWidth = block.config?.fullWidth === true;
+  const isFullWidth = isBlockFullWidth(block);
 
   // Hero With Widgets Block (80/20 layout)
   if (block.type === 'hero-with-widgets') {

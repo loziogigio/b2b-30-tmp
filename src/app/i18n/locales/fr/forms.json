@@ -55,5 +55,12 @@
   "contact-title-required": "L'intitulé du contact est requis",
   "default-type-required": "Le type par défaut est requis",
   "contact-number-required": "Le numéro de contact est requis",
-  "text-subscription-success-msg": "Merci de vous être abonné à notre newsletter"
+  "text-subscription-success-msg": "Merci de vous être abonné à notre newsletter",
+  "label-company-name": "Raison sociale *",
+  "company-name-required": "La raison sociale est obligatoire",
+  "label-vat-number": "Numéro de TVA *",
+  "vat-number-required": "Le numéro de TVA est obligatoire",
+  "label-sdi-code": "Code SDI",
+  "label-notes": "Notes complémentaires",
+  "city-required": "La commune est obligatoire"
 }

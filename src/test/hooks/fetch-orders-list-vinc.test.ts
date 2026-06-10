@@ -26,7 +26,10 @@ describe('fetchOrdersList — default (VINC) branch', () => {
         json: async () => ({
           available: true,
           items: [
-            { _id: 'X1', data: { document_number: 'OC/1', total: 10, status: 'fulfilled' } },
+            {
+              _id: 'X1',
+              data: { document_number: 'OC/1', total: 10, status: 'fulfilled' },
+            },
           ],
         }),
       } as any;
@@ -56,7 +59,10 @@ describe('fetchOrdersList — default (VINC) branch', () => {
     const calls: string[] = [];
     global.fetch = vi.fn(async (url: any) => {
       calls.push(String(url));
-      return { ok: true, json: async () => ({ available: true, items: [] }) } as any;
+      return {
+        ok: true,
+        json: async () => ({ available: true, items: [] }),
+      } as any;
     });
     await fetchOrdersList(
       { ...params, date_from: '', date_to: 'not-a-date' } as any,

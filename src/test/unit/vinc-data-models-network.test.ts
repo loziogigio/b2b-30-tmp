@@ -2,8 +2,11 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 
 // Bypass Redis: run the producer directly so the probe's real fetch logic is exercised.
 vi.mock('@/lib/cache/redis-cache', () => ({
-  cachedJson: (_key: string, _opts: unknown, producer: () => Promise<unknown>) =>
-    producer(),
+  cachedJson: (
+    _key: string,
+    _opts: unknown,
+    producer: () => Promise<unknown>,
+  ) => producer(),
 }));
 
 import {
@@ -12,7 +15,11 @@ import {
   fetchModelRecord,
 } from '@/lib/profile/vinc-data-models';
 
-const creds = { csBaseUrl: 'https://cs.example/', apiKeyId: 'ak', apiSecret: 'sk' };
+const creds = {
+  csBaseUrl: 'https://cs.example/',
+  apiKeyId: 'ak',
+  apiSecret: 'sk',
+};
 
 const realFetch = global.fetch;
 afterEach(() => {
@@ -80,7 +87,10 @@ describe('fetchModelRecords', () => {
   });
 
   it('defaults items to [] when the envelope is empty, and throws on non-OK', async () => {
-    global.fetch = vi.fn(async () => ({ ok: true, json: async () => ({}) })) as any;
+    global.fetch = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({}),
+    })) as any;
     const page = await fetchModelRecords(
       creds,
       'historical_order',

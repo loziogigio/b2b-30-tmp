@@ -87,6 +87,7 @@ export function GroupsBreadcrumb({ lang }: { lang: string }) {
   const { data: menuData } = usePimMenuQuery({
     location: 'header',
     channel: 'b2b',
+    lang,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -191,6 +192,7 @@ export function GroupsNavigator({ lang, text }: GroupsNavigatorProps) {
   const { data: menuData, isLoading } = usePimMenuQuery({
     location: 'header',
     channel: 'b2b',
+    lang,
     staleTime: 5 * 60 * 1000,
   });
 

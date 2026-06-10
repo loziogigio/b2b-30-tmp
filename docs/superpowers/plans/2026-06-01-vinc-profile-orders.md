@@ -9,6 +9,7 @@
 **Tech Stack:** Next.js 16 App Router (route handlers), React Query, TypeScript, Vitest. Server creds + Redis cache reuse `src/lib/erp/*` and `src/lib/cache/redis-cache` patterns. Spec: `docs/superpowers/specs/2026-06-01-vinc-profile-data-source-design.md`.
 
 **Conventions used below**
+
 - Run one test file: `pnpm test <path>` (this is `vitest run <path>`).
 - Path aliases: `@/` → `src/`, `@framework/` → `src/framework/basic-rest/`, `@utils/` → `src/utils/`, `@components/` → `src/components/`.
 - Commit messages: **no** `Co-Authored-By` / `Generated with` lines (per CLAUDE.md). Use `--no-verify` if pre-existing lint blocks a commit.
@@ -19,6 +20,7 @@
 ## File Structure
 
 **New**
+
 - `src/framework/basic-rest/profile/source-policy.ts` — pure theme→source seam.
 - `src/lib/profile/cs-creds.ts` — server: resolve per-tenant Commerce-Suite creds.
 - `src/lib/profile/vinc-data-models.ts` — server: allow-list, pure query builder, probe (cached), record fetchers.
@@ -29,6 +31,7 @@
 - Tests: `src/test/unit/source-policy.test.ts`, `src/test/unit/vinc-data-models-query.test.ts`, `src/test/unit/vinc-historical-order.test.ts`, `src/test/api/profile-route.test.ts`, `src/test/hooks/fetch-orders-list-vinc.test.ts`.
 
 **Modified**
+
 - `src/framework/basic-rest/order/types-b2b-orders-list.ts` — add `source?`, `vincId?` to `OrderSummary`.
 - `src/utils/transform/b2b-order.ts` — add optional enrichment fields to `TransformedOrder` / `TransformedOrderItem`.
 - `src/framework/basic-rest/order/fetch-orders-list.ts` — VINC branch.
@@ -43,6 +46,7 @@
 ## Task 1: Theme→source policy seam
 
 **Files:**
+
 - Create: `src/framework/basic-rest/profile/source-policy.ts`
 - Test: `src/test/unit/source-policy.test.ts`
 
@@ -55,7 +59,10 @@ import { sourcePolicy } from '@/framework/basic-rest/profile/source-policy';
 
 describe('sourcePolicy', () => {
   it('default theme → VINC account + inline pricing', () => {
-    expect(sourcePolicy('default')).toEqual({ account: 'vinc', pricing: 'inline' });
+    expect(sourcePolicy('default')).toEqual({
+      account: 'vinc',
+      pricing: 'inline',
+    });
   });
 
   it('time theme → erp account + erp pricing', () => {
@@ -124,6 +131,7 @@ git commit --no-verify -m "feat(profile): theme-keyed source policy seam (accoun
 ## Task 2: VINC data-models query builder (pure) + allow-list
 
 **Files:**
+
 - Create: `src/lib/profile/vinc-data-models.ts`
 - Test: `src/test/unit/vinc-data-models-query.test.ts`
 
@@ -263,6 +271,7 @@ git commit --no-verify -m "feat(profile): VINC data-models allow-list + pure que
 ## Task 3: Commerce-Suite credential resolver (server)
 
 **Files:**
+
 - Create: `src/lib/profile/cs-creds.ts`
 
 Mirrors the Commerce-Suite portion of `getTenantBits` in `src/lib/erp/factory.ts:17` (single-tenant → env; multi-tenant → `resolveTenant(hostname)`). No new test — exercised by the route tests in Task 5; it is a thin re-use of an existing, tested pattern.
@@ -322,6 +331,7 @@ git commit --no-verify -m "feat(profile): per-tenant Commerce-Suite credential r
 ## Task 4: VINC probe + record fetchers (server, cached)
 
 **Files:**
+
 - Modify: `src/lib/profile/vinc-data-models.ts`
 
 Adds the network functions to the module created in Task 2. Availability is probed once per (tenant, model) and Redis-cached via the existing `cachedJson` helper (`src/lib/cache/redis-cache`), exactly like `erp_settings` in `factory.ts:69`.
@@ -378,7 +388,12 @@ export async function probeModelAvailable(
 
 export interface RecordsPage {
   items: any[];
-  pagination?: { page: number; limit: number; total: number; totalPages: number };
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
 }
 
 /** Fetch a page of records. Throws on non-OK (caller maps to 502). */
@@ -390,7 +405,8 @@ export async function fetchModelRecords(
   const res = await fetch(`${modelBase(creds, model)}/records?${query}`, {
     headers: authHeaders(creds),
   });
-  if (!res.ok) throw new Error(`data-model ${model} records HTTP ${res.status}`);
+  if (!res.ok)
+    throw new Error(`data-model ${model} records HTTP ${res.status}`);
   const body: any = await res.json();
   return { items: body?.data?.items ?? [], pagination: body?.data?.pagination };
 }
@@ -429,6 +445,7 @@ git commit --no-verify -m "feat(profile): cached availability probe + VINC recor
 ## Task 5: Generic profile route — list + single record
 
 **Files:**
+
 - Create: `src/app/api/profile/[model]/route.ts`
 - Create: `src/app/api/profile/[model]/[id]/route.ts`
 - Test: `src/test/api/profile-route.test.ts`
@@ -452,7 +469,12 @@ vi.mock('@/lib/profile/cs-creds', () => ({
 }));
 vi.mock('@/lib/profile/vinc-data-models', async (orig) => {
   const actual = await (orig as any)();
-  return { ...actual, probeModelAvailable, fetchModelRecords, fetchModelRecord };
+  return {
+    ...actual,
+    probeModelAvailable,
+    fetchModelRecords,
+    fetchModelRecord,
+  };
 });
 
 import { GET as listGET } from '@/app/api/profile/[model]/route';
@@ -672,6 +694,7 @@ git commit --no-verify -m "feat(profile): generic /api/profile/[model] list + re
 ## Task 6: Browser client for the profile routes
 
 **Files:**
+
 - Create: `src/framework/basic-rest/profile/vinc-profile-client.ts`
 
 Thin `fetch` wrapper the hooks call. No dedicated unit test (it is exercised by the hook test in Task 9 and manual verification); it contains no logic beyond URL assembly and shape passthrough.
@@ -684,7 +707,12 @@ Thin `fetch` wrapper the hooks call. No dedicated unit test (it is exercised by 
 export interface ProfileRecordsResult {
   available: boolean;
   items: any[];
-  pagination?: { page: number; limit: number; total: number; totalPages: number };
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
 }
 
 export interface ProfileRecordResult {
@@ -732,6 +760,7 @@ git commit --no-verify -m "feat(profile): browser client for /api/profile routes
 ## Task 7: Extend the order types (list + enriched detail)
 
 **Files:**
+
 - Modify: `src/framework/basic-rest/order/types-b2b-orders-list.ts`
 - Modify: `src/utils/transform/b2b-order.ts`
 
@@ -824,6 +853,7 @@ git commit --no-verify -m "feat(profile): add optional source/vincId + order-det
 ## Task 8: VINC historical_order transforms (pure)
 
 **Files:**
+
 - Create: `src/utils/transform/vinc-historical-order.ts`
 - Test: `src/test/unit/vinc-historical-order.test.ts`
 
@@ -920,7 +950,10 @@ describe('vincOrderToSummary', () => {
   it('falls back to street+city when label is missing', () => {
     const s = vincOrderToSummary({
       ...rec,
-      data: { ...rec.data, shipping_address: { street: 'VIA X', city: 'ROMA' } },
+      data: {
+        ...rec.data,
+        shipping_address: { street: 'VIA X', city: 'ROMA' },
+      },
     });
     expect(s.destination).toBe('VIA X - ROMA');
   });
@@ -948,7 +981,10 @@ describe('vincOrderDetailToTransformed', () => {
   it('parses discounts_json safely (bad JSON → [])', () => {
     const o = vincOrderDetailToTransformed({
       ...rec,
-      data: { ...rec.data, items: [{ ...rec.data.items[0], discounts_json: 'nope' }] },
+      data: {
+        ...rec.data,
+        items: [{ ...rec.data.items[0], discounts_json: 'nope' }],
+      },
     });
     expect(o.items[0].discounts).toEqual([]);
   });
@@ -1060,7 +1096,9 @@ function parseDiscounts(json?: string): number[] {
   if (!json) return [];
   try {
     const v = JSON.parse(json);
-    return Array.isArray(v) ? v.map(Number).filter((x) => Number.isFinite(x)) : [];
+    return Array.isArray(v)
+      ? v.map(Number).filter((x) => Number.isFinite(x))
+      : [];
   } catch {
     return [];
   }
@@ -1189,6 +1227,7 @@ git commit --no-verify -m "feat(profile): pure VINC historical_order → OrderSu
 ## Task 9: Wire the orders LIST hook (VINC branch) + hook test
 
 **Files:**
+
 - Modify: `src/framework/basic-rest/order/fetch-orders-list.ts`
 - Test: `src/test/hooks/fetch-orders-list-vinc.test.ts`
 
@@ -1224,7 +1263,10 @@ describe('fetchOrdersList — default (VINC) branch', () => {
         json: async () => ({
           available: true,
           items: [
-            { _id: 'X1', data: { document_number: 'OC/1', total: 10, status: 'fulfilled' } },
+            {
+              _id: 'X1',
+              data: { document_number: 'OC/1', total: 10, status: 'fulfilled' },
+            },
           ],
         }),
       } as any;
@@ -1348,6 +1390,7 @@ git commit --no-verify -m "feat(profile): orders list VINC branch on default the
 ## Task 10: Wire the order DETAIL hook (VINC-by-id branch)
 
 **Files:**
+
 - Modify: `src/framework/basic-rest/order/fetch-order.ts`
 
 - [ ] **Step 1: Add `vincId` to `OrderParams` and a VINC branch**
@@ -1418,6 +1461,7 @@ git commit --no-verify -m "feat(profile): order detail VINC-by-id branch"
 ## Task 11: Orders list page — pass vincId to the detail hook
 
 **Files:**
+
 - Modify: `src/app/[lang]/(default)/account/orders/order-client.tsx`
 
 - [ ] **Step 1: Branch `detailParams` on source**
@@ -1425,22 +1469,22 @@ git commit --no-verify -m "feat(profile): order detail VINC-by-id branch"
 In `order-client.tsx`, replace the `detailParams` memo (currently lines ~100–111) with:
 
 ```ts
-  // detail params: VINC orders → by _id; ERP orders → NumeroDoc/Causale/Anno
-  const detailParams = useMemo(() => {
-    if (!selected) return null;
-    if (selected.source === 'vinc' && selected.vincId) {
-      return { vincId: selected.vincId };
-    }
-    const doc_number = (selected as any).doc_number;
-    const cause = (selected as any).cause;
-    const doc_year = (selected as any).doc_year;
-    if (!doc_number || !cause || !doc_year) return null;
-    return {
-      doc_number: String(doc_number),
-      cause: String(cause),
-      doc_year: String(doc_year),
-    };
-  }, [selected]);
+// detail params: VINC orders → by _id; ERP orders → NumeroDoc/Causale/Anno
+const detailParams = useMemo(() => {
+  if (!selected) return null;
+  if (selected.source === 'vinc' && selected.vincId) {
+    return { vincId: selected.vincId };
+  }
+  const doc_number = (selected as any).doc_number;
+  const cause = (selected as any).cause;
+  const doc_year = (selected as any).doc_year;
+  if (!doc_number || !cause || !doc_year) return null;
+  return {
+    doc_number: String(doc_number),
+    cause: String(cause),
+    doc_year: String(doc_year),
+  };
+}, [selected]);
 ```
 
 (`useOrderDetailsQuery(detailParams as any, !!detailParams)` already handles a null/empty `enabled`, so no other change is needed here.)
@@ -1459,6 +1503,7 @@ git commit --no-verify -m "feat(profile): orders list selects VINC detail by _id
 ## Task 12: Order-detail route page — accept id/source
 
 **Files:**
+
 - Modify: `src/app/[lang]/(default)/account/order-detail/page.tsx`
 - Modify: `src/app/[lang]/(default)/account/order-detail/order-detail.client.tsx`
 
@@ -1467,22 +1512,22 @@ git commit --no-verify -m "feat(profile): orders list selects VINC detail by _id
 In `order-detail/page.tsx`, after the existing `doc_number` line, add:
 
 ```ts
-  const cause = asString(sp.cause);
-  const doc_year = asString(sp.doc_year);
-  const doc_number = asString(sp.doc_number);
-  const vincId = asString(sp.id); // VINC record _id (default theme)
+const cause = asString(sp.cause);
+const doc_year = asString(sp.doc_year);
+const doc_number = asString(sp.doc_number);
+const vincId = asString(sp.id); // VINC record _id (default theme)
 
-  // VINC orders identify by _id; ERP orders need cause+doc_year+doc_number.
-  const missing = vincId ? false : !cause || !doc_year || !doc_number;
+// VINC orders identify by _id; ERP orders need cause+doc_year+doc_number.
+const missing = vincId ? false : !cause || !doc_year || !doc_number;
 ```
 
 And pass `vincId` into the client:
 
 ```tsx
-            <OrderDetailClient
-              lang={lang}
-              initialParams={{ cause, doc_year, doc_number, vincId }}
-            />
+<OrderDetailClient
+  lang={lang}
+  initialParams={{ cause, doc_year, doc_number, vincId }}
+/>
 ```
 
 - [ ] **Step 2: Accept `vincId` in `order-detail.client.tsx`**
@@ -1506,21 +1551,20 @@ type Props = {
 Change the `params` memo (currently ~lines 79–83):
 
 ```ts
-  const params = useMemo(() => {
-    const { cause, doc_year, doc_number, vincId } = initialParams;
-    if (vincId) return { vincId };
-    if (!cause || !doc_year || !doc_number) return null;
-    return { cause, doc_year, doc_number };
-  }, [initialParams]);
+const params = useMemo(() => {
+  const { cause, doc_year, doc_number, vincId } = initialParams;
+  if (vincId) return { vincId };
+  if (!cause || !doc_year || !doc_number) return null;
+  return { cause, doc_year, doc_number };
+}, [initialParams]);
 ```
 
 The `useOrderDetailsQuery(params as any)` call already consumes this. The print/export block reads `order.*` fields that the enriched transform also populates, so it keeps working; the `orderNumber` label there uses `initialParams.cause/...` which for VINC will be empty — guard it:
 
 ```ts
-      const orderNumber =
-        initialParams.vincId
-          ? (order as any).tracking_number || initialParams.vincId
-          : `${initialParams.cause}/${initialParams.doc_number}/${initialParams.doc_year}`;
+const orderNumber = initialParams.vincId
+  ? (order as any).tracking_number || initialParams.vincId
+  : `${initialParams.cause}/${initialParams.doc_number}/${initialParams.doc_year}`;
 ```
 
 (Replace the existing `const orderNumber = ...` line inside `handlePrint`.)
@@ -1539,6 +1583,7 @@ git commit --no-verify -m "feat(profile): order-detail page accepts VINC _id"
 ## Task 13: Render the enrichment (summary card + detail page)
 
 **Files:**
+
 - Modify: `src/components/orders/order-details.tsx`
 - Modify: `src/app/[lang]/(default)/account/order-detail/order-detail.client.tsx`
 
@@ -1547,17 +1592,17 @@ git commit --no-verify -m "feat(profile): order-detail page accepts VINC _id"
 In `order-details.tsx`, the `order` here is a `TransformedOrder` whose `id` is the VINC `_id` when sourced from VINC (Task 8 sets `id = rec._id`, `tracking_number = document_number`, `doc_year = ''`). Build the link conditionally. Replace the `<Link href=...>` block (lines ~55–61) with:
 
 ```tsx
-        <Link
-          href={
-            (order as any).doc_year
-              ? `/${lang}/account/order-detail?cause=${order.cause}&doc_year=${order.doc_year}&doc_number=${order.doc_number}`
-              : `/${lang}/account/order-detail?id=${encodeURIComponent(order.id)}`
-          }
-          className="text-sm text-teal-600 hover:underline"
-          aria-label={t('orders-view-details')}
-        >
-          {t('orders-view-details')}
-        </Link>
+<Link
+  href={
+    (order as any).doc_year
+      ? `/${lang}/account/order-detail?cause=${order.cause}&doc_year=${order.doc_year}&doc_number=${order.doc_number}`
+      : `/${lang}/account/order-detail?id=${encodeURIComponent(order.id)}`
+  }
+  className="text-sm text-teal-600 hover:underline"
+  aria-label={t('orders-view-details')}
+>
+  {t('orders-view-details')}
+</Link>
 ```
 
 (VINC detail has no `doc_year`, so it routes by `id`; ERP keeps the legacy query.)
@@ -1567,50 +1612,65 @@ In `order-details.tsx`, the `order` here is a `TransformedOrder` whose `id` is t
 In `order-detail.client.tsx`, add a totals/enrichment section. Insert this block immediately **after** the "Stat cards" `</div>` (after line ~277, before the Shipping Address `<div>`):
 
 ```tsx
-      {/* Enriched breakdown (VINC only — fields are undefined on the ERP path) */}
-      {((order as any).vatTotal != null ||
-        (order as any).discountTotal != null ||
-        (order as any).paymentMethod ||
-        (order as any).statusLabel) && (
-        <div className="grid gap-2 border-b px-6 py-4 text-sm md:grid-cols-2">
-          {(order as any).statusLabel && (
-            <Row label={t('order-detail-status')} value={(order as any).statusLabel} />
-          )}
-          {(order as any).subtotal != null && (
-            <Row
-              label={t('orders-subtotal') || 'Imponibile'}
-              value={`€${formatPriceIt(money((order as any).subtotal), decimals)}`}
-            />
-          )}
-          {(order as any).discountTotal != null && (order as any).discountTotal > 0 && (
-            <Row
-              label={t('orders-discount') || 'Sconto'}
-              value={`€${formatPriceIt(money((order as any).discountTotal), decimals)}`}
-            />
-          )}
-          {(order as any).vatTotal != null && (
-            <Row
-              label={t('orders-vat') || 'IVA'}
-              value={`€${formatPriceIt(money((order as any).vatTotal), decimals)}`}
-            />
-          )}
-          {(order as any).shippingCost != null && (order as any).shippingCost > 0 && (
-            <Row
-              label={t('orders-shipping') || 'Spedizione'}
-              value={`€${formatPriceIt(money((order as any).shippingCost), decimals)}`}
-            />
-          )}
-          {(order as any).paymentMethod && (
-            <Row label={t('orders-payment') || 'Pagamento'} value={(order as any).paymentMethod} />
-          )}
-          {(order as any).agentCode && (
-            <Row label={t('orders-agent') || 'Agente'} value={(order as any).agentCode} />
-          )}
-          {(order as any).notes && (
-            <Row label={t('orders-notes') || 'Note'} value={(order as any).notes} />
-          )}
-        </div>
+{
+  /* Enriched breakdown (VINC only — fields are undefined on the ERP path) */
+}
+{
+  ((order as any).vatTotal != null ||
+    (order as any).discountTotal != null ||
+    (order as any).paymentMethod ||
+    (order as any).statusLabel) && (
+    <div className="grid gap-2 border-b px-6 py-4 text-sm md:grid-cols-2">
+      {(order as any).statusLabel && (
+        <Row
+          label={t('order-detail-status')}
+          value={(order as any).statusLabel}
+        />
       )}
+      {(order as any).subtotal != null && (
+        <Row
+          label={t('orders-subtotal') || 'Imponibile'}
+          value={`€${formatPriceIt(money((order as any).subtotal), decimals)}`}
+        />
+      )}
+      {(order as any).discountTotal != null &&
+        (order as any).discountTotal > 0 && (
+          <Row
+            label={t('orders-discount') || 'Sconto'}
+            value={`€${formatPriceIt(money((order as any).discountTotal), decimals)}`}
+          />
+        )}
+      {(order as any).vatTotal != null && (
+        <Row
+          label={t('orders-vat') || 'IVA'}
+          value={`€${formatPriceIt(money((order as any).vatTotal), decimals)}`}
+        />
+      )}
+      {(order as any).shippingCost != null &&
+        (order as any).shippingCost > 0 && (
+          <Row
+            label={t('orders-shipping') || 'Spedizione'}
+            value={`€${formatPriceIt(money((order as any).shippingCost), decimals)}`}
+          />
+        )}
+      {(order as any).paymentMethod && (
+        <Row
+          label={t('orders-payment') || 'Pagamento'}
+          value={(order as any).paymentMethod}
+        />
+      )}
+      {(order as any).agentCode && (
+        <Row
+          label={t('orders-agent') || 'Agente'}
+          value={(order as any).agentCode}
+        />
+      )}
+      {(order as any).notes && (
+        <Row label={t('orders-notes') || 'Note'} value={(order as any).notes} />
+      )}
+    </div>
+  );
+}
 ```
 
 And add the `Row` helper next to the existing `StatCard` helper at the bottom of the file:
@@ -1649,7 +1709,7 @@ git commit --no-verify -m "feat(profile): render VINC order-detail enrichment (h
 - [ ] **Step 1: Run the full unit/integration suite**
 
 Run: `pnpm test`
-Expected: all green (new + existing). If a *pre-existing* unrelated failure appears, note it but do not fix it here.
+Expected: all green (new + existing). If a _pre-existing_ unrelated failure appears, note it but do not fix it here.
 
 - [ ] **Step 2: Start the dev server**
 
@@ -1659,6 +1719,7 @@ Open the app on a **default-theme** tenant, log in as a customer whose `customer
 - [ ] **Step 3: Verify the list**
 
 Navigate to `/<lang>/account/orders`. Confirm:
+
 - Orders load (network tab shows `GET /api/profile/historical_order?relation_id=…`).
 - The "Stato" filter chips filter (Evaso → `filter[status]=fulfilled`, Da evadere/In accettazione → `to_fulfill`).
 - A customer with no VINC data (or a model-unavailable tenant) shows the empty state, and there is **no** call to `/api/proxy/b2b/account/get_orders`.
@@ -1683,6 +1744,7 @@ git commit --no-verify -m "test(profile): verify orders VINC path end to end"
 ## Self-Review (completed by plan author)
 
 **Spec coverage**
+
 - §2.1 source-policy seam → Task 1. §4.1 allow-list + §4.2 query translation → Task 2; §4.3 auth + §5 probe/cache → Task 4; §4.4 response contract + §4.5 security (allow-list, relation_id required, no `external_ref`) → Tasks 2/5. §6.1 list mapping → Task 8/9; §6.1.1 status enum + chip mapping → Task 8 (`typeToVincStatus`, `vincStatusLabel`) used in Task 9; §6.1.2 detail key threading + enrichment → Tasks 7/8/10/11/12/13. §7 empty/unavailable behavior → Tasks 5/9 (return `[]`). §8 error handling (probe false → empty; records fail → 502) → Tasks 4/5. §10 testing → Tasks 1,2,5,8,9 + manual Task 14. §11 file list → matches "File Structure" above.
 - Out of scope for this phase (per spec §9 phasing): credit_exposure, delivery_note, invoice (separate plans); document PDF actions; multi-address union; pricing-from-theme migration. The `time` theme and legacy proxy are explicitly untouched.
 

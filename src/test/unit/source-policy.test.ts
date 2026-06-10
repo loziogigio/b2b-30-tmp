@@ -3,7 +3,10 @@ import { sourcePolicy } from '@/framework/basic-rest/profile/source-policy';
 
 describe('sourcePolicy', () => {
   it('default theme → VINC account + inline pricing', () => {
-    expect(sourcePolicy('default')).toEqual({ account: 'vinc', pricing: 'inline' });
+    expect(sourcePolicy('default')).toEqual({
+      account: 'vinc',
+      pricing: 'inline',
+    });
   });
 
   it('time theme → erp account + erp pricing', () => {

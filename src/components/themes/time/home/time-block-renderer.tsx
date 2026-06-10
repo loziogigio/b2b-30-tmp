@@ -1,6 +1,7 @@
 'use client';
 
 import TimeBannerCarousel from './time-banner-carousel';
+import { isBlockFullWidth } from '@/lib/blocks/block-layout';
 import { RichTextBlock } from '@components/blocks/RichTextBlock';
 import { CustomHTMLBlock } from '@components/blocks/CustomHTMLBlock';
 import { YouTubeBlock } from '@components/blocks/YouTubeBlock';
@@ -244,7 +245,7 @@ const TimeBlockRenderer: React.FC<TimeBlockRendererProps> = ({
   block,
   lang,
 }) => {
-  const isFullWidth = block.config?.fullWidth === true;
+  const isFullWidth = isBlockFullWidth(block);
 
   // Hero With Widgets — grid: hero carousel + two side banners
   if (block.type === 'hero-with-widgets') {

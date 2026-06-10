@@ -173,11 +173,12 @@ export const serverFetchPimProducts = cache(
 // ===============================
 
 export const serverFetchPimMenu = cache(
-  async (location: string = 'header'): Promise<any[]> => {
+  async (location: string = 'header', lang?: string): Promise<any[]> => {
     const config = await getApiConfig();
     if (!config) return [];
 
-    const url = `${config.pimApiUrl}/api/public/menu?location=${location}`;
+    const langParam = lang ? `&lang=${encodeURIComponent(lang)}` : '';
+    const url = `${config.pimApiUrl}/api/public/menu?location=${location}${langParam}`;
 
     try {
       const response = await fetch(url, {

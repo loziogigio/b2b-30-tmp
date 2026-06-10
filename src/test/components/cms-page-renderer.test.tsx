@@ -107,6 +107,42 @@ describe('CmsPageRenderer', () => {
     }
   });
 
+  it('wraps a container-layout block in a centered max-width Container', () => {
+    const { container } = render(
+      <CmsPageRenderer
+        pageSlug="faq"
+        lang="it"
+        blocks={[
+          block({
+            type: 'content-custom-html',
+            layout: 'container',
+            config: { html: 'X' },
+          }),
+        ]}
+      />,
+    );
+    const wrapper = screen.getByTestId('custom-html').parentElement;
+    expect(wrapper?.className).toContain('max-w-[1600px]');
+  });
+
+  it('renders a full-width block without the max-width constraint', () => {
+    render(
+      <CmsPageRenderer
+        pageSlug="faq"
+        lang="it"
+        blocks={[
+          block({
+            type: 'content-custom-html',
+            layout: 'full-width',
+            config: { html: 'X' },
+          }),
+        ]}
+      />,
+    );
+    const wrapper = screen.getByTestId('custom-html').parentElement;
+    expect(wrapper?.className ?? '').not.toContain('max-w-[1600px]');
+  });
+
   it('renders blocks in array order', () => {
     render(
       <CmsPageRenderer
