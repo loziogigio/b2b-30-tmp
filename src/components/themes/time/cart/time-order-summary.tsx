@@ -140,9 +140,16 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
   const doc = meta?.totalDoc ?? 0;
   const savings = gross - net;
 
+  // Active cart/document id for coupon persist + re-display. This tenant's
+  // checkout drives the order off meta.orderId / vinc_order_id (the legacy
+  // ERP_STATIC.id_cart is the pricing id and is often "0" here), so prefer the
+  // same id the order submit uses, falling back to id_cart.
+  const couponCartId = String(
+    meta?.orderId || ERP_STATIC.vinc_order_id || ERP_STATIC.id_cart || '',
+  );
   const coupon = useCoupon({
     customerCode: String(ERP_STATIC.customer_code || ''),
-    idCart: String(ERP_STATIC.id_cart || ''),
+    idCart: couponCartId,
   });
   // Re-display a coupon already saved on the cart.
   useEffect(() => { coupon.checkCouponCart(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
@@ -267,8 +274,9 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
             />
           </div>
 
-          {/* Coupon */}
-          {String(ERP_STATIC.customer_code || '0') !== '0' && String(ERP_STATIC.id_cart || '0') !== '0' && (
+          {/* Coupon — shown to any logged-in customer (validate/preview needs
+              only customer_code; the cart id is only used for persist/re-display). */}
+          {String(ERP_STATIC.customer_code || '0') !== '0' && (
             <TimeCouponField
               status={coupon.status}
               message={coupon.message}
