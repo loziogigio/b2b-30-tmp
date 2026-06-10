@@ -12,3 +12,14 @@ export const MYMB_ENDPOINTS = {
 
 export type MyMbEndpoint =
   (typeof MYMB_ENDPOINTS)[keyof typeof MYMB_ENDPOINTS];
+
+/** Raw MYMB coupon webservice endpoints (separate connection from pricing). */
+export const MYMB_COUPON_ENDPOINTS = {
+  GET_STATO_COUPON_CLIENTE: 'GetStatoCouponCliente',
+  GET_INFO_COUPON_FROM_DOCUMENTO: 'GetInfoCouponFromDocumento',
+  UPDATE_TESTATA_DOCUMENTO_CON_COUPON: 'UpdateTestataDocumentoConCoupon',
+  GET_PROMOZIONE_BASE_X_ARTICOLO: 'GetPromozioneBaseXArticolo',
+} as const;
+
+export type MyMbCouponEndpoint =
+  (typeof MYMB_COUPON_ENDPOINTS)[keyof typeof MYMB_COUPON_ENDPOINTS];
