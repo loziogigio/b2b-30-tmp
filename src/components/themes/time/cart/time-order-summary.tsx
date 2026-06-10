@@ -166,6 +166,7 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
+    await coupon.persistCoupon(); // best-effort; no-op when no valid coupon applied
     await submitOrder(submitOpts);
     setShowConfirm(false);
   };
