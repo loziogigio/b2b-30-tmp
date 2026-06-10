@@ -42,6 +42,8 @@ import {
 } from 'react-icons/hi';
 import { ReminderIcon, ReminderIconFilled } from '@components/icons/app-icons';
 import { useCompareList } from '@/contexts/compare/compare.context';
+import { verifyPromoItem } from '@/hooks/use-coupon';
+import { ERP_STATIC } from '@framework/utils/static';
 import cn from 'classnames';
 
 import type { PageBlock } from '@/lib/types/blocks';
@@ -173,6 +175,17 @@ const TimeProductDetail: React.FC<{
   const isInCompare = hasSku(sku);
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const [reminderLoading, setReminderLoading] = useState(false);
+
+  /* ── Per-article base promo (MyMB GetPromozioneBaseXArticolo) ── */
+  const [basePromo, setBasePromo] = useState<any | null>(null);
+  useEffect(() => {
+    verifyPromoItem(
+      String(ERP_STATIC.customer_code || ''),
+      String(ERP_STATIC.address_code || ''),
+      String(data?.id || ''),
+    ).then(setBasePromo);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data?.id]);
 
   React.useEffect(() => {
     if (!sku) return;
@@ -564,6 +577,18 @@ const TimeProductDetail: React.FC<{
               className="mb-4 scroll-mt-24"
             >
               <TimeOfferRows lang={lang} product={data} priceData={erpPrice} />
+            </div>
+          )}
+
+          {/* Per-article base promo (MyMB GetPromozioneBaseXArticolo) */}
+          {basePromo && (
+            <div className="mb-4 rounded-lg border border-[var(--time-gray-200)] bg-[var(--time-gray-50)] px-4 py-3 text-[13px] text-[var(--time-dark)]">
+              {/* Shape depends on GetPromozioneBaseXArticolo; render the message/fields
+                  the backend returns. Start by surfacing the raw result for QA, then
+                  refine the markup once a real response is observed. */}
+              <pre className="whitespace-pre-wrap text-[11px] text-[var(--time-gray-600)]">
+                {JSON.stringify(basePromo, null, 2)}
+              </pre>
             </div>
           )}
 
