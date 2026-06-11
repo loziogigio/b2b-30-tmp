@@ -78,6 +78,8 @@ export interface SubmitOpts {
   autofix?: boolean;
   /** Re-submit of a cart whose erp_cart_id is already in ordini — customer confirmed duplicate */
   force_duplicate_submit?: boolean;
+  /** Validated coupon applied to the order; carried through to MyMB via the order sync. */
+  coupon?: Record<string, unknown> | null;
 }
 
 export type SubmitOutcome =
@@ -126,6 +128,7 @@ export function useOrderSubmit(lang: string) {
           pickup_data: opts.pickup_data,
           autofix: opts.autofix || undefined,
           force_duplicate_submit: opts.force_duplicate_submit || undefined,
+          coupon: opts.coupon || undefined,
         });
 
         // Backend occasionally returns HTTP 200 with an error code body when the

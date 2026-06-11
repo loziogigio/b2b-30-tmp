@@ -38,7 +38,7 @@ describe('coupon proxy cases', () => {
     validateCoupon.mockResolvedValue(raw);
     const res = await POST(req('validate_coupon', { codiceInternoCliente: 'C', codiceCoupon: 'AB' }), params('validate_coupon'));
     const json = await res.json();
-    expect(json).toEqual({ status: 'success', data: raw });
+    expect(json).toEqual({ status: 'success', data: raw, apply_url: 'http://c/web/UpdateTestataDocumentoConCoupon' });
     expect(validateCoupon).toHaveBeenCalledWith('C', 'AB');
   });
 
@@ -50,7 +50,7 @@ describe('coupon proxy cases', () => {
     const json = await res.json();
     expect(getCartCoupon).toHaveBeenCalledWith('9');
     expect(validateCoupon).toHaveBeenCalledWith('C', 'AB');
-    expect(json).toEqual({ status: 'success', data: raw });
+    expect(json).toEqual({ status: 'success', data: raw, apply_url: 'http://c/web/UpdateTestataDocumentoConCoupon' });
   });
 
   it('check_coupon_cart with no coupon on the cart returns a soft error', async () => {

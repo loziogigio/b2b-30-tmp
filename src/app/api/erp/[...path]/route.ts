@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { CouponClient } from 'vinc-erp';
+import { CouponClient, MYMB_COUPON_ENDPOINTS } from 'vinc-erp';
 import { getMyMbErpClient } from '@/lib/erp/factory';
 import { resolveCouponConfig } from '@/lib/erp/coupon-config';
 import { buildOrderDetailResponse } from '@utils/transform/erp-order-detail';
@@ -33,11 +33,13 @@ async function handleCoupon(
   }
   const client = new CouponClient({ baseUrl: cfg.baseUrl, authHeader: cfg.authHeader });
   const cliente = erpCustomerCode(body.codiceInternoCliente);
+  // Endpoint the order sync POSTs to apply the coupon onto the MyMB document.
+  const applyUrl = `${cfg.baseUrl}/${MYMB_COUPON_ENDPOINTS.UPDATE_TESTATA_DOCUMENTO_CON_COUPON}`;
 
   switch (endpoint) {
     case 'validate_coupon': {
       const data = await client.validateCoupon(cliente, body.codiceCoupon);
-      return NextResponse.json({ status: 'success', data });
+      return NextResponse.json({ status: 'success', data, apply_url: applyUrl });
     }
     case 'check_coupon_cart': {
       const info = await client.getCartCoupon(body.id_cart);
@@ -46,7 +48,7 @@ async function handleCoupon(
         return NextResponse.json({ status: 'error', message: 'No coupon on cart' });
       }
       const data = await client.validateCoupon(cliente, codice);
-      return NextResponse.json({ status: 'success', data });
+      return NextResponse.json({ status: 'success', data, apply_url: applyUrl });
     }
     case 'submit_coupon': {
       const data = await client.submitCoupon(body.idElaborazione, body.codiceCoupon);

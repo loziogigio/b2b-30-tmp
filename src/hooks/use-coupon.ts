@@ -16,11 +16,41 @@ const ERP = (endpoint: string, body: unknown) =>
     body: JSON.stringify(body),
   }).then((r) => r.json());
 
-function readValidation(json: any): { ok: boolean; percent: number; message: string } {
+/** The validated coupon, shaped for the order-submit payload (rides to MyMB via the order sync). */
+export interface AppliedCoupon {
+  code: string;
+  codice?: string;
+  descrizione?: string;
+  messaggio?: string;
+  is_valido?: string;
+  percentuale_sconto?: number | string;
+  /** MyMB endpoint the order sync POSTs to apply the coupon to the document. */
+  apply_url?: string;
+}
+
+function readValidation(json: any): {
+  ok: boolean;
+  percent: number;
+  message: string;
+  raw: any;
+} {
   const m = json?.data?.GetStatoCouponClienteResult?.m_Item2 ?? {};
   const ok = m.isValido === 'S';
   const percent = ok ? Math.abs(parseFloat(m.percentualeSconto ?? '0')) || 0 : 0;
-  return { ok, percent, message: m.Messaggio ?? '' };
+  return { ok, percent, message: m.Messaggio ?? '', raw: m };
+}
+
+/** Build the coupon object carried in the submit payload from a validation result. */
+function toAppliedCoupon(code: string, raw: any, applyUrl?: string): AppliedCoupon {
+  return {
+    code,
+    codice: raw?.Codice,
+    descrizione: raw?.Descrizione,
+    messaggio: raw?.Messaggio,
+    is_valido: raw?.isValido,
+    percentuale_sconto: raw?.percentualeSconto,
+    apply_url: applyUrl,
+  };
 }
 
 export function useCoupon({ customerCode, idCart }: UseCouponArgs) {
@@ -28,22 +58,24 @@ export function useCoupon({ customerCode, idCart }: UseCouponArgs) {
   const [status, setStatus] = useState<Status>('idle');
   const [discountPercent, setDiscountPercent] = useState(0);
   const [message, setMessage] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
 
-  /** Validate only — display math, no persistence (persist happens at order submit). */
+  /** Validate only — display math, no persistence (the coupon rides with the order submit). */
   const applyCoupon = useCallback(async (input: string) => {
     setStatus('loading'); setMessage('');
     try {
       const json = await ERP('validate_coupon', { codiceInternoCliente: customerCode, codiceCoupon: input });
       if (json?.status !== 'success') {
-        setStatus('error'); setMessage(json?.message ?? 'Errore'); setDiscountPercent(0); return false;
+        setStatus('error'); setMessage(json?.message ?? 'Errore'); setDiscountPercent(0); setAppliedCoupon(null); return false;
       }
       const v = readValidation(json);
       setCode(input);
       setDiscountPercent(v.percent); setMessage(v.message);
       setStatus(v.ok ? 'valid' : 'invalid');
+      setAppliedCoupon(v.ok ? toAppliedCoupon(input, v.raw, json.apply_url) : null);
       return v.ok;
     } catch (e) {
-      setStatus('error'); setMessage((e as Error).message); setDiscountPercent(0); return false;
+      setStatus('error'); setMessage((e as Error).message); setDiscountPercent(0); setAppliedCoupon(null); return false;
     }
   }, [customerCode]);
 
@@ -63,15 +95,18 @@ export function useCoupon({ customerCode, idCart }: UseCouponArgs) {
   const checkCouponCart = useCallback(async () => {
     try {
       const json = await ERP('check_coupon_cart', { codiceInternoCliente: customerCode, id_cart: idCart });
-      if (json?.status !== 'success') { setStatus('idle'); setDiscountPercent(0); return; }
+      if (json?.status !== 'success') { setStatus('idle'); setDiscountPercent(0); setAppliedCoupon(null); return; }
       const v = readValidation(json);
       setDiscountPercent(v.percent); setMessage(v.message); setStatus(v.ok ? 'valid' : 'invalid');
+      const codice = v.raw?.Codice ?? '';
+      if (v.ok && codice) setCode(codice);
+      setAppliedCoupon(v.ok ? toAppliedCoupon(codice || code, v.raw, json.apply_url) : null);
     } catch {
-      setStatus('idle'); setDiscountPercent(0);
+      setStatus('idle'); setDiscountPercent(0); setAppliedCoupon(null);
     }
-  }, [customerCode, idCart]);
+  }, [customerCode, idCart, code]);
 
-  return { code, setCode, status, discountPercent, message, applyCoupon, persistCoupon, checkCouponCart };
+  return { code, setCode, status, discountPercent, message, appliedCoupon, applyCoupon, persistCoupon, checkCouponCart };
 }
 
 /** Per-article promo (separate from coupons). Returns the raw MyMB JSON or null. */

@@ -165,15 +165,32 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
     selectedB2B && deliveryDate && !isSubmitting && totalItems > 0,
   );
 
+  // Carry the validated coupon with the order submit so it travels to MyMB via the
+  // order sync (the cart/order lives in CS — there is no MyMB document id to persist
+  // against directly at checkout). Includes the final discounted totals and the MyMB
+  // apply endpoint so the sync payload is self-contained.
+  const couponPayload = coupon.appliedCoupon
+    ? {
+        ...coupon.appliedCoupon,
+        final: {
+          gross,
+          net: discounted.net,
+          vat: discounted.vat,
+          doc: discounted.doc,
+          discount: discounted.discount,
+        },
+      }
+    : null;
+
   const submitOpts = {
     delivery_date: deliveryDate,
     delivery_type: deliveryType === 'ritiro' ? 'pickup' : 'courier',
     notes,
+    coupon: couponPayload,
   };
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
-    await coupon.persistCoupon(); // best-effort; no-op when no valid coupon applied
     await submitOrder(submitOpts);
     setShowConfirm(false);
   };
