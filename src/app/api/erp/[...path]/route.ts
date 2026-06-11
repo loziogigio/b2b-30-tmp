@@ -2,12 +2,25 @@ import { NextRequest, NextResponse } from 'next/server';
 import { CouponClient } from 'vinc-erp';
 import { getMyMbErpClient } from '@/lib/erp/factory';
 import { resolveCouponConfig } from '@/lib/erp/coupon-config';
+import { buildOrderDetailResponse } from '@utils/transform/erp-order-detail';
 
 type RouteParams = { params: Promise<{ path: string[] }> };
 
 const COUPON_ENDPOINTS = new Set([
   'validate_coupon', 'check_coupon_cart', 'submit_coupon', 'verify_promo_item',
 ]);
+
+/**
+ * MyMB's coupon webservice resolves the customer with TO_NUMBER(codiceInternoCliente)
+ * (an Oracle proc), so it needs the bare numeric ERP id — the storefront's
+ * customer_code carries a prefix (e.g. "B_10080"). Strip to digits; fall back to
+ * the raw value if there are none.
+ */
+function erpCustomerCode(value: unknown): string {
+  const raw = String(value ?? '');
+  const digits = raw.replace(/\D/g, '');
+  return digits || raw;
+}
 
 async function handleCoupon(
   endpoint: string,
@@ -19,10 +32,11 @@ async function handleCoupon(
     return NextResponse.json({ status: 'error', message: 'Coupons not enabled' });
   }
   const client = new CouponClient({ baseUrl: cfg.baseUrl, authHeader: cfg.authHeader });
+  const cliente = erpCustomerCode(body.codiceInternoCliente);
 
   switch (endpoint) {
     case 'validate_coupon': {
-      const data = await client.validateCoupon(body.codiceInternoCliente, body.codiceCoupon);
+      const data = await client.validateCoupon(cliente, body.codiceCoupon);
       return NextResponse.json({ status: 'success', data });
     }
     case 'check_coupon_cart': {
@@ -31,7 +45,7 @@ async function handleCoupon(
       if (!codice) {
         return NextResponse.json({ status: 'error', message: 'No coupon on cart' });
       }
-      const data = await client.validateCoupon(body.codiceInternoCliente, codice);
+      const data = await client.validateCoupon(cliente, codice);
       return NextResponse.json({ status: 'success', data });
     }
     case 'submit_coupon': {
@@ -40,7 +54,7 @@ async function handleCoupon(
     }
     case 'verify_promo_item': {
       const data = await client.verifyPromoItem(
-        body.codiceInternoCliente, body.codiceIndirizzo, body.codiceInternoArticolo,
+        cliente, body.codiceIndirizzo, body.codiceInternoArticolo,
       );
       return NextResponse.json({ status: 'success', data });
     }
@@ -93,6 +107,37 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
           customerRef: body.cust_rif ?? body.customer_ref,
         });
         return NextResponse.json({ status: 'success', data });
+      }
+      case 'get_order_detail': {
+        // MyMB has no single-order detail endpoint: find the order in the same
+        // GetTestateConInfoConsegna list order-list uses, then read its
+        // IDCarrello rows via GetRigheCarrello. Returns the RawOrderResponse
+        // shape (success/message) that fetchOrderDetails → transformOrder eats.
+        const orders = await client.getOrders({
+          customerCode: body.customer_code,
+          addressCode: body.address_code,
+          type: body.type,
+          dateFrom: body.date_from,
+          dateTo: body.date_to,
+          customerRef: body.cust_rif ?? body.customer_ref,
+        });
+        const num = String(body.NumeroDocDefinitivo ?? body.doc_number ?? '');
+        const cau = String(body.CausaleDocDefinitivo ?? body.cause ?? '');
+        const anno = String(body.AnnoDocDefinitivo ?? body.doc_year ?? '');
+        const testata = (orders ?? []).find(
+          (o: any) =>
+            String(o.NumeroDocDefinitivo) === num &&
+            String(o.CausaleDocDefinitivo) === cau &&
+            String(o.AnnoDocDefinitivo) === anno,
+        );
+        if (!testata) {
+          return NextResponse.json(
+            { success: false, message: 'Order not found.' },
+            { status: 404 },
+          );
+        }
+        const righe = await client.getCartRows(testata.IDCarrello);
+        return NextResponse.json(buildOrderDetailResponse(testata, righe));
       }
       case 'get_customer': {
         const data = await client.getCustomer(body.customer_code);
