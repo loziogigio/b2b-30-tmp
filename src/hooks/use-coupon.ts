@@ -17,6 +17,14 @@ const ERP = (endpoint: string, body: unknown) =>
   }).then((r) => r.json());
 
 /** The validated coupon, shaped for the order-submit payload (rides to MyMB via the order sync). */
+/** Complete, self-describing call the order sync makes to apply the coupon to MyMB. */
+export interface CouponApply {
+  method: 'GET';
+  url: string;
+  auth: { type: 'basic'; username: string; password: string };
+  params: { codiceCoupon: string; idElaborazione: string | null };
+}
+
 export interface AppliedCoupon {
   code: string;
   codice?: string;
@@ -24,8 +32,8 @@ export interface AppliedCoupon {
   messaggio?: string;
   is_valido?: string;
   percentuale_sconto?: number | string;
-  /** MyMB endpoint the order sync POSTs to apply the coupon to the document. */
-  apply_url?: string;
+  /** How the order sync applies the coupon to the MyMB document. */
+  apply?: CouponApply;
 }
 
 function readValidation(json: any): {
@@ -41,7 +49,7 @@ function readValidation(json: any): {
 }
 
 /** Build the coupon object carried in the submit payload from a validation result. */
-function toAppliedCoupon(code: string, raw: any, applyUrl?: string): AppliedCoupon {
+function toAppliedCoupon(code: string, raw: any, apply?: CouponApply): AppliedCoupon {
   return {
     code,
     codice: raw?.Codice,
@@ -49,7 +57,7 @@ function toAppliedCoupon(code: string, raw: any, applyUrl?: string): AppliedCoup
     messaggio: raw?.Messaggio,
     is_valido: raw?.isValido,
     percentuale_sconto: raw?.percentualeSconto,
-    apply_url: applyUrl,
+    apply,
   };
 }
 
@@ -72,7 +80,7 @@ export function useCoupon({ customerCode, idCart }: UseCouponArgs) {
       setCode(input);
       setDiscountPercent(v.percent); setMessage(v.message);
       setStatus(v.ok ? 'valid' : 'invalid');
-      setAppliedCoupon(v.ok ? toAppliedCoupon(input, v.raw, json.apply_url) : null);
+      setAppliedCoupon(v.ok ? toAppliedCoupon(input, v.raw, json.apply) : null);
       return v.ok;
     } catch (e) {
       setStatus('error'); setMessage((e as Error).message); setDiscountPercent(0); setAppliedCoupon(null); return false;
@@ -100,7 +108,7 @@ export function useCoupon({ customerCode, idCart }: UseCouponArgs) {
       setDiscountPercent(v.percent); setMessage(v.message); setStatus(v.ok ? 'valid' : 'invalid');
       const codice = v.raw?.Codice ?? '';
       if (v.ok && codice) setCode(codice);
-      setAppliedCoupon(v.ok ? toAppliedCoupon(codice || code, v.raw, json.apply_url) : null);
+      setAppliedCoupon(v.ok ? toAppliedCoupon(codice || code, v.raw, json.apply) : null);
     } catch {
       setStatus('idle'); setDiscountPercent(0); setAppliedCoupon(null);
     }

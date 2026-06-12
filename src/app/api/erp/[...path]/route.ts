@@ -33,13 +33,27 @@ async function handleCoupon(
   }
   const client = new CouponClient({ baseUrl: cfg.baseUrl, authHeader: cfg.authHeader });
   const cliente = erpCustomerCode(body.codiceInternoCliente);
-  // Endpoint the order sync POSTs to apply the coupon onto the MyMB document.
+
+  // Complete, self-describing call the order sync makes to apply the coupon onto
+  // the MyMB document. `idElaborazione` is left null — the sync fills it with the
+  // order's erp_cart_id (the MyMB document id, assigned at cart.create).
   const applyUrl = `${cfg.baseUrl}/${MYMB_COUPON_ENDPOINTS.UPDATE_TESTATA_DOCUMENTO_CON_COUPON}`;
+  const [, authB64 = ''] = (cfg.authHeader || '').split(' ');
+  const decodedAuth = authB64 ? Buffer.from(authB64, 'base64').toString('utf8') : '';
+  const authSep = decodedAuth.indexOf(':');
+  const username = authSep >= 0 ? decodedAuth.slice(0, authSep) : decodedAuth;
+  const password = authSep >= 0 ? decodedAuth.slice(authSep + 1) : '';
+  const buildApply = (codiceCoupon: string) => ({
+    method: 'GET' as const,
+    url: applyUrl,
+    auth: { type: 'basic' as const, username, password },
+    params: { codiceCoupon, idElaborazione: null as string | null },
+  });
 
   switch (endpoint) {
     case 'validate_coupon': {
       const data = await client.validateCoupon(cliente, body.codiceCoupon);
-      return NextResponse.json({ status: 'success', data, apply_url: applyUrl });
+      return NextResponse.json({ status: 'success', data, apply: buildApply(body.codiceCoupon) });
     }
     case 'check_coupon_cart': {
       const info = await client.getCartCoupon(body.id_cart);
@@ -48,7 +62,7 @@ async function handleCoupon(
         return NextResponse.json({ status: 'error', message: 'No coupon on cart' });
       }
       const data = await client.validateCoupon(cliente, codice);
-      return NextResponse.json({ status: 'success', data, apply_url: applyUrl });
+      return NextResponse.json({ status: 'success', data, apply: buildApply(codice) });
     }
     case 'submit_coupon': {
       const data = await client.submitCoupon(body.idElaborazione, body.codiceCoupon);

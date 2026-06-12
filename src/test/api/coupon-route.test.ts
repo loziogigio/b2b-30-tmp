@@ -30,7 +30,18 @@ const params = (p: string) => ({ params: Promise.resolve({ path: [p] }) });
 describe('coupon proxy cases', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    resolveCouponConfig.mockResolvedValue({ enabled: true, baseUrl: 'http://c/web', authHeader: 'Basic x' });
+    resolveCouponConfig.mockResolvedValue({
+      enabled: true,
+      baseUrl: 'http://c/web',
+      authHeader: 'Basic ' + Buffer.from('u:p').toString('base64'),
+    });
+  });
+
+  const apply = (codiceCoupon: string) => ({
+    method: 'GET',
+    url: 'http://c/web/UpdateTestataDocumentoConCoupon',
+    auth: { type: 'basic', username: 'u', password: 'p' },
+    params: { codiceCoupon, idElaborazione: null },
   });
 
   it('validate_coupon echoes the MyMB JSON', async () => {
@@ -38,7 +49,7 @@ describe('coupon proxy cases', () => {
     validateCoupon.mockResolvedValue(raw);
     const res = await POST(req('validate_coupon', { codiceInternoCliente: 'C', codiceCoupon: 'AB' }), params('validate_coupon'));
     const json = await res.json();
-    expect(json).toEqual({ status: 'success', data: raw, apply_url: 'http://c/web/UpdateTestataDocumentoConCoupon' });
+    expect(json).toEqual({ status: 'success', data: raw, apply: apply('AB') });
     expect(validateCoupon).toHaveBeenCalledWith('C', 'AB');
   });
 
@@ -50,7 +61,7 @@ describe('coupon proxy cases', () => {
     const json = await res.json();
     expect(getCartCoupon).toHaveBeenCalledWith('9');
     expect(validateCoupon).toHaveBeenCalledWith('C', 'AB');
-    expect(json).toEqual({ status: 'success', data: raw, apply_url: 'http://c/web/UpdateTestataDocumentoConCoupon' });
+    expect(json).toEqual({ status: 'success', data: raw, apply: apply('AB') });
   });
 
   it('check_coupon_cart with no coupon on the cart returns a soft error', async () => {
