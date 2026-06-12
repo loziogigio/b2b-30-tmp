@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { CouponClient, MYMB_COUPON_ENDPOINTS } from 'vinc-erp';
+import { CouponClient } from 'vinc-erp';
 import { getMyMbErpClient } from '@/lib/erp/factory';
 import { resolveCouponConfig } from '@/lib/erp/coupon-config';
 import { buildOrderDetailResponse } from '@utils/transform/erp-order-detail';
@@ -34,19 +34,12 @@ async function handleCoupon(
   const client = new CouponClient({ baseUrl: cfg.baseUrl, authHeader: cfg.authHeader });
   const cliente = erpCustomerCode(body.codiceInternoCliente);
 
-  // Complete, self-describing call the order sync makes to apply the coupon onto
-  // the MyMB document. `idElaborazione` is left null — the sync fills it with the
-  // order's erp_cart_id (the MyMB document id, assigned at cart.create).
-  const applyUrl = `${cfg.baseUrl}/${MYMB_COUPON_ENDPOINTS.UPDATE_TESTATA_DOCUMENTO_CON_COUPON}`;
-  const [, authB64 = ''] = (cfg.authHeader || '').split(' ');
-  const decodedAuth = authB64 ? Buffer.from(authB64, 'base64').toString('utf8') : '';
-  const authSep = decodedAuth.indexOf(':');
-  const username = authSep >= 0 ? decodedAuth.slice(0, authSep) : decodedAuth;
-  const password = authSep >= 0 ? decodedAuth.slice(authSep + 1) : '';
+  // Call descriptor the order sync uses to apply the coupon onto the MyMB
+  // document (UpdateTestataDocumentoConCoupon). `idElaborazione` is left null —
+  // the sync fills it with the order's erp_cart_id. No url/auth here: the
+  // Windmill worker calls the INTERNAL ERP service with its own credentials.
   const buildApply = (codiceCoupon: string) => ({
     method: 'GET' as const,
-    url: applyUrl,
-    auth: { type: 'basic' as const, username, password },
     params: { codiceCoupon, idElaborazione: null as string | null },
   });
 

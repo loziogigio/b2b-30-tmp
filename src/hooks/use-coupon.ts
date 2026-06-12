@@ -17,11 +17,10 @@ const ERP = (endpoint: string, body: unknown) =>
   }).then((r) => r.json());
 
 /** The validated coupon, shaped for the order-submit payload (rides to MyMB via the order sync). */
-/** Complete, self-describing call the order sync makes to apply the coupon to MyMB. */
+/** Call descriptor for the order sync's coupon apply (UpdateTestataDocumentoConCoupon).
+ *  No url/auth — the Windmill worker uses its own internal ERP connection. */
 export interface CouponApply {
   method: 'GET';
-  url: string;
-  auth: { type: 'basic'; username: string; password: string };
   params: { codiceCoupon: string; idElaborazione: string | null };
 }
 

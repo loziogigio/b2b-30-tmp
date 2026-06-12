@@ -37,10 +37,10 @@ describe('coupon proxy cases', () => {
     });
   });
 
+  // No url/auth in the apply descriptor — the Windmill worker uses its own
+  // internal ERP connection; the payload only documents the call shape.
   const apply = (codiceCoupon: string) => ({
     method: 'GET',
-    url: 'http://c/web/UpdateTestataDocumentoConCoupon',
-    auth: { type: 'basic', username: 'u', password: 'p' },
     params: { codiceCoupon, idElaborazione: null },
   });
 
