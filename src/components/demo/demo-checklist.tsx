@@ -44,9 +44,8 @@ export default function DemoChecklist() {
               <li
                 key={step.id}
                 className="flex items-center gap-2.5 text-[13px]"
-                aria-checked={isDone}
-                role="checkbox"
               >
+                <span className="sr-only">{isDone ? '(completato)' : '(da fare)'}</span>
                 <span
                   aria-hidden="true"
                   className={

@@ -285,8 +285,8 @@ export default async function RootLayout({
               <DemoBanner />
               <DemoBrowseTracker />
               <DemoChecklist />
+              {children}
             </DemoUiEnvProvider>
-            {children}
             <ManagedModal lang={lang} />
             <ManagedDrawer lang={lang} />
             {/* <EliaDrawer /> */}
