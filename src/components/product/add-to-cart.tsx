@@ -9,6 +9,8 @@ import { generateCartItem } from '@utils/generate-cart-item';
 import { useTranslation } from 'src/app/i18n/client';
 import { toast } from 'react-toastify';
 import type { ErpPriceData } from '@utils/transform/erp-prices';
+import { useDemoUi } from '@/lib/demo/use-demo-ui';
+import { useDemoChecklist } from '@/lib/demo/demo-checklist-atom';
 
 interface AddToCartProps {
   lang: string;
@@ -147,6 +149,9 @@ export default function AddToCart({
     getItemFromCart,
     addToCartServer, // provided by your CartContext
   } = useCart() as any;
+
+  const demoUi = useDemoUi();
+  const { markStep: markDemoStep } = useDemoChecklist();
 
   const meta = product?.__cartMeta;
   const effectivePriceData = (priceData ?? meta) as ErpPriceData | undefined;
@@ -303,6 +308,7 @@ export default function AddToCart({
           promo_row: item.__cartMeta?.promo_row,
         });
         await addToCartServer?.(payload, lookupItem);
+        if (demoUi) markDemoStep('add-to-cart');
       } catch (err: any) {
         // The BE returns 4xx with `{ error: "..." }` (e.g. min-quantity,
         // out-of-stock). Surface it as a toast instead of letting the

@@ -13,6 +13,8 @@ import { CustomScripts, CustomStyles } from '@components/common/custom-scripts';
 import { EliaDrawer } from '@components/elia/elia-drawer';
 import { headers } from 'next/headers';
 import DemoBanner from '@components/demo/demo-banner';
+import DemoChecklist from '@components/demo/demo-checklist';
+import DemoBrowseTracker from '@components/demo/demo-browse-tracker';
 import { DemoUiEnvProvider } from '@/lib/demo/use-demo-ui';
 import {
   resolveTenant,
@@ -281,6 +283,8 @@ export default async function RootLayout({
           <ManagedUIContext>
             <DemoUiEnvProvider value={demoUiEnabled}>
               <DemoBanner />
+              <DemoBrowseTracker />
+              <DemoChecklist />
             </DemoUiEnvProvider>
             {children}
             <ManagedModal lang={lang} />
