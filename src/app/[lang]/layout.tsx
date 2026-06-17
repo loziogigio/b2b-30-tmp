@@ -12,6 +12,8 @@ import { getServerHomeSettings } from '@/lib/home-settings/fetch-server';
 import { CustomScripts, CustomStyles } from '@components/common/custom-scripts';
 import { EliaDrawer } from '@components/elia/elia-drawer';
 import { headers } from 'next/headers';
+import DemoBanner from '@components/demo/demo-banner';
+import { DemoUiEnvProvider } from '@/lib/demo/use-demo-ui';
 import {
   resolveTenant,
   isMultiTenant,
@@ -174,6 +176,10 @@ export default async function RootLayout({
 }) {
   const { lang } = await params;
 
+  // Read the DEMO_UI_ENABLED runtime server env (not a NEXT_PUBLIC_ var — surfaced
+  // to client components via DemoUiEnvProvider below).
+  const demoUiEnabled = process.env.DEMO_UI_ENABLED === 'true';
+
   // Resolve tenant configuration
   let tenant = null;
   if (isMultiTenant) {
@@ -273,6 +279,9 @@ export default async function RootLayout({
           isMultiTenant={isMultiTenant}
         >
           <ManagedUIContext>
+            <DemoUiEnvProvider value={demoUiEnabled}>
+              <DemoBanner />
+            </DemoUiEnvProvider>
             {children}
             <ManagedModal lang={lang} />
             <ManagedDrawer lang={lang} />
