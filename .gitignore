@@ -46,5 +46,8 @@ tsconfig.tsbuildinfo
 /verify-store-orders-light.png
 /dfl_catalog_restyle.jsx
 
+# superpowers working docs (local specs/plans — not part of the project)
+docs/superpowers/
+
 # TypeScript incremental build caches
 *.tsbuildinfo
