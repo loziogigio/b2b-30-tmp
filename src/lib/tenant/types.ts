@@ -51,6 +51,13 @@ export interface TenantDbConfig {
 export interface TenantFeatures {
   /** Pricing data source. See `framework/basic-rest/pricing/pricing-source.ts`. */
   pricingSource?: 'inline' | 'erp' | 'hybrid';
+  /**
+   * When true, this tenant is a sales DEMO. Drives the flag-gated demo-only UI
+   * layer (banner + guided checklist) in vinc-b2b. Combined with the
+   * DEMO_UI_ENABLED runtime server env kill-switch — see src/lib/demo/use-demo-ui.ts.
+   * Stored snake_case as `features.is_demo` in the vinc-admin.tenants doc.
+   */
+  isDemo?: boolean;
 }
 
 /**
