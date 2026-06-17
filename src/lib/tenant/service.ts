@@ -47,6 +47,7 @@ interface TenantDocument {
   /** Per-tenant feature flags. snake_case as stored. */
   features?: {
     pricing_source?: 'inline' | 'erp' | 'hybrid';
+    is_demo?: boolean;
   };
   status: string;
 }
@@ -54,7 +55,7 @@ interface TenantDocument {
 /**
  * Convert MongoDB document (snake_case) to TenantConfig (camelCase)
  */
-function fromDocument(doc: TenantDocument): TenantConfig {
+export function fromDocument(doc: TenantDocument): TenantConfig {
   return {
     id: doc.tenant_id,
     name: doc.name || doc.tenant_id,
@@ -81,7 +82,10 @@ function fromDocument(doc: TenantDocument): TenantConfig {
     b2bTheme: doc.b2b_theme || 'default',
     supportContact: doc.support_contact,
     features: doc.features
-      ? { pricingSource: doc.features.pricing_source }
+      ? {
+          pricingSource: doc.features.pricing_source,
+          isDemo: doc.features.is_demo,
+        }
       : undefined,
     isActive: doc.status === 'active',
   };
