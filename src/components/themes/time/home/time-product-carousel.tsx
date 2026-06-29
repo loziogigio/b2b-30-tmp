@@ -7,6 +7,7 @@ import TimeScrollArrows from '@components/themes/time/shared/time-scroll-arrows'
 import { useHorizontalScroll } from '@components/themes/time/shared/use-horizontal-scroll';
 import ProductCardLoader from '@components/ui/loaders/product-card-loader';
 import Link from '@components/ui/link';
+import { useTranslation } from 'src/app/i18n/client';
 
 interface BreakpointConfig {
   [key: string]: { slidesPerView: number; spaceBetween?: number };
@@ -65,6 +66,7 @@ export default function TimeProductCarousel({
   categorySlug,
   breakpoints,
 }: TimeProductCarouselProps) {
+  const { t } = useTranslation(lang, 'common');
   // Compute card layout from breakpoints
   const hasBreakpoints = !!breakpoints && Object.keys(breakpoints).length > 0;
   const [cardLayout, setCardLayout] = useState({ slidesPerView: 4, gap: 16 });
@@ -124,7 +126,7 @@ export default function TimeProductCarousel({
               href={normalizedSlug}
               className="h-9 px-4 rounded-[var(--radius-btn)] border-[1.5px] border-[var(--time-gray-200)] bg-white text-xs font-semibold text-[var(--time-gray-600)] flex items-center gap-1.5 transition-all hover:border-[var(--time-red)] hover:text-[var(--time-red)]"
             >
-              Vedi tutti
+              {t('view-all-products', { defaultValue: 'Vedi tutti' })}
               <svg
                 width="16"
                 height="16"

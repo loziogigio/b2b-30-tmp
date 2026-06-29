@@ -40,6 +40,15 @@ export declare class CouponClient {
     validateCoupon(cliente: string, coupon: string): Promise<CouponValidation>;
     getCartCoupon(idCart: string | number): Promise<CartCouponInfo>;
     submitCoupon(idElaborazione: string | number, coupon: string): Promise<CouponPersistResult>;
-    verifyPromoItem(cliente: string, indirizzo: string, articolo: string): Promise<any>;
+    /**
+     * GetPromozioneBaseXArticolo(ambiente, codiceInternoCliente, codiceIndirizzo,
+     * dataPrezzatura, valuta, codiceInternoArticolo). `dataPrezzatura` and `valuta`
+     * are REQUIRED by MyMB — the service does DateTime.ParseExact(dataPrezzatura,
+     * "dd/MM/yyyy"): a missing value throws ArgumentNullException, a wrong format
+     * throws FormatException (both surface as ReturnCode 99). `articolo` must be the
+     * NUMERIC internal article code (CodiceInternoArticolo) — passing the SKU
+     * triggers ORA-06502 (Oracle TO_NUMBER). Defaults: today (dd/MM/yyyy) and EUR.
+     */
+    verifyPromoItem(cliente: string, indirizzo: string, articolo: string, dataPrezzatura?: string, valuta?: string): Promise<any>;
 }
 //# sourceMappingURL=coupon-client.d.ts.map

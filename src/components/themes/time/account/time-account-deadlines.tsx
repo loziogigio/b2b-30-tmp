@@ -173,7 +173,15 @@ export default function TimeAccountDeadlines({
               <div className="flex items-center gap-3 shrink-0 ml-3">
                 <TimeStatusBadge
                   label={
-                    isPaid ? 'Pagata' : isExpired ? 'Scaduta' : 'In scadenza'
+                    isPaid
+                      ? t('deadline-status-paid', { defaultValue: 'Pagata' })
+                      : isExpired
+                        ? t('deadline-status-expired', {
+                            defaultValue: 'Scaduta',
+                          })
+                        : t('deadline-status-due', {
+                            defaultValue: 'In scadenza',
+                          })
                   }
                   color={isPaid ? '#059669' : isExpired ? '#dc2626' : '#2563eb'}
                   bg={

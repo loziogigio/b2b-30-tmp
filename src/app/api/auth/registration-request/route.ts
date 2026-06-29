@@ -1,47 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { resolveTenant, isSingleTenant } from '@/lib/tenant';
-
-// Default values from .env (used in single-tenant mode / fallback)
-const DEFAULT_PIM_API_URL =
-  process.env.PIM_API_PRIVATE_URL || process.env.NEXT_PUBLIC_PIM_API_URL || '';
-const DEFAULT_API_KEY_ID =
-  process.env.API_KEY_ID || process.env.NEXT_PUBLIC_API_KEY_ID;
-const DEFAULT_API_SECRET =
-  process.env.API_SECRET || process.env.NEXT_PUBLIC_API_SECRET;
-
-// Local dev override - takes precedence over tenant config
-const PIM_API_URL_OVERRIDE = process.env.PIM_API_URL_OVERRIDE;
-
-async function getTenantConfig(req: NextRequest) {
-  if (isSingleTenant) {
-    return {
-      pimApiUrl: PIM_API_URL_OVERRIDE || DEFAULT_PIM_API_URL,
-      apiKeyId: DEFAULT_API_KEY_ID,
-      apiSecret: DEFAULT_API_SECRET,
-    };
-  }
-
-  const hostname =
-    req.headers.get('x-tenant-hostname') ||
-    req.headers.get('host') ||
-    'localhost';
-  const tenant = await resolveTenant(hostname);
-
-  if (!tenant) {
-    return {
-      pimApiUrl: PIM_API_URL_OVERRIDE || DEFAULT_PIM_API_URL,
-      apiKeyId: DEFAULT_API_KEY_ID,
-      apiSecret: DEFAULT_API_SECRET,
-    };
-  }
-
-  return {
-    pimApiUrl:
-      PIM_API_URL_OVERRIDE || tenant.api.pimApiUrl || DEFAULT_PIM_API_URL,
-    apiKeyId: tenant.api.apiKeyId || DEFAULT_API_KEY_ID,
-    apiSecret: tenant.api.apiSecret || DEFAULT_API_SECRET,
-  };
-}
+import { resolveTenantApiConfig } from '@/lib/tenant';
 
 export async function POST(req: NextRequest) {
   try {
@@ -65,7 +23,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const config = await getTenantConfig(req);
+    const config = await resolveTenantApiConfig(req);
 
     if (!config.pimApiUrl) {
       console.error('[registration-request] Missing PIM API URL');

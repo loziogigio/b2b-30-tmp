@@ -41,7 +41,7 @@ describe('CouponClient', () => {
     expect(url).toContain('codiceCoupon=ABC');
   });
 
-  it('verifyPromoItem GETs GetPromozioneBaseXArticolo with the three params', async () => {
+  it('verifyPromoItem GETs GetPromozioneBaseXArticolo with all params + default date/valuta', async () => {
     const raw = { GetPromozioneBaseXArticoloResult: {} };
     const fetchImpl = vi.fn(async () => jsonResponse(raw));
     await makeClient(fetchImpl).verifyPromoItem('C1', 'A1', 'ART1');
@@ -50,5 +50,19 @@ describe('CouponClient', () => {
     expect(url).toContain('codiceInternoCliente=C1');
     expect(url).toContain('codiceIndirizzo=A1');
     expect(url).toContain('codiceInternoArticolo=ART1');
+    // MyMB requires these — a missing/wrong dataPrezzatura makes the service throw
+    // on DateTime.ParseExact(…, "dd/MM/yyyy"). Default: today dd/MM/yyyy + EUR.
+    // Slashes are URL-encoded to %2F in the query string.
+    expect(url).toMatch(/dataPrezzatura=\d{2}%2F\d{2}%2F\d{4}/);
+    expect(url).toContain('valuta=EUR');
+  });
+
+  it('verifyPromoItem forwards an explicit dataPrezzatura and valuta', async () => {
+    const raw = { GetPromozioneBaseXArticoloResult: {} };
+    const fetchImpl = vi.fn(async () => jsonResponse(raw));
+    await makeClient(fetchImpl).verifyPromoItem('C1', 'A1', 'ART1', '15/06/2026', 'USD');
+    const url = String(fetchImpl.mock.calls[0][0]);
+    expect(url).toContain('dataPrezzatura=15%2F06%2F2026');
+    expect(url).toContain('valuta=USD');
   });
 });

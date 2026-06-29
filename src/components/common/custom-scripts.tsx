@@ -27,7 +27,11 @@ export function selectScriptsForPlacement(
 export function CustomStyles({ css }: { css: string | undefined }) {
   const trimmed = css?.trim();
   if (!trimmed) return null;
-  return <style dangerouslySetInnerHTML={{ __html: trimmed }} />;
+  return (
+    <style href="custom-portal-css" precedence="default">
+      {trimmed}
+    </style>
+  );
 }
 
 export function CustomScripts({

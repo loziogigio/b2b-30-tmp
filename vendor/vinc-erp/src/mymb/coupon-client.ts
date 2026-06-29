@@ -1,6 +1,17 @@
 import { MYMB_COUPON_ENDPOINTS } from '../endpoints.js';
 import { mymbRequest } from './request.js';
 
+/**
+ * Date format GetPromozioneBaseXArticolo's DateTime.ParseExact expects: dd/MM/yyyy
+ * (with slashes). NOTE this differs from GetPrezzaturaMultipla, which wants
+ * DDMMYYYY with no separators — verified empirically against the live service:
+ * "12062026"/"2026-06-12" → FormatException, "12/06/2026" → accepted.
+ */
+function ddMMyyyySlash(d = new Date()): string {
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`;
+}
+
 export interface CouponClientConfig {
   /** Base URL, no userinfo, no trailing slash (from parseMyMbConnection). */
   baseUrl: string;
@@ -61,9 +72,28 @@ export class CouponClient {
     });
   }
 
-  verifyPromoItem(cliente: string, indirizzo: string, articolo: string): Promise<any> {
+  /**
+   * GetPromozioneBaseXArticolo(ambiente, codiceInternoCliente, codiceIndirizzo,
+   * dataPrezzatura, valuta, codiceInternoArticolo). `dataPrezzatura` and `valuta`
+   * are REQUIRED by MyMB — the service does DateTime.ParseExact(dataPrezzatura,
+   * "dd/MM/yyyy"): a missing value throws ArgumentNullException, a wrong format
+   * throws FormatException (both surface as ReturnCode 99). `articolo` must be the
+   * NUMERIC internal article code (CodiceInternoArticolo) — passing the SKU
+   * triggers ORA-06502 (Oracle TO_NUMBER). Defaults: today (dd/MM/yyyy) and EUR.
+   */
+  verifyPromoItem(
+    cliente: string,
+    indirizzo: string,
+    articolo: string,
+    dataPrezzatura: string = ddMMyyyySlash(),
+    valuta: string = 'EUR',
+  ): Promise<any> {
     return this.get(MYMB_COUPON_ENDPOINTS.GET_PROMOZIONE_BASE_X_ARTICOLO, {
-      codiceInternoCliente: cliente, codiceIndirizzo: indirizzo, codiceInternoArticolo: articolo,
+      codiceInternoCliente: cliente,
+      codiceIndirizzo: indirizzo,
+      dataPrezzatura,
+      valuta,
+      codiceInternoArticolo: articolo,
     });
   }
 }

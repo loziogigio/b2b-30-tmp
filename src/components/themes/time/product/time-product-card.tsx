@@ -4,7 +4,9 @@ import React from 'react';
 import Link from '@components/ui/link';
 import Image from '@components/ui/image';
 import { Product } from '@framework/types';
-import { useModalAction } from '@components/common/modal/modal.context';
+import { useProductOpen } from '@/hooks/use-product-open';
+import { useCatalogSettings } from '@/hooks/use-catalog-settings';
+import { formatTimeAvailability } from './format-time-availability';
 import { productPlaceholder } from '@assets/placeholders';
 import { ErpPriceData } from '@utils/transform/erp-prices';
 import { useProductPriceData } from '@framework/pricing';
@@ -46,7 +48,7 @@ export default function TimeProductCard({
 }: TimeProductCardProps) {
   const { name, image, sku, brand, parent_sku, description, model } =
     product ?? {};
-  const { openModal } = useModalAction();
+  const openProduct = useProductOpen(lang);
   const { isAuthorized, hidePrices } = useUI();
   const { settings } = useHomeSettings();
   const decimals = settings?.cardStyle?.priceDecimals ?? 2;
@@ -115,6 +117,12 @@ export default function TimeProductCard({
     ? Math.round((1 - Number(netPrice) / Number(listPrice)) * 100)
     : 0;
 
+  const { settings: catalogSettings } = useCatalogSettings();
+  const availInfo = formatTimeAvailability(
+    effectivePriceData,
+    catalogSettings.availabilityDisplay,
+    t,
+  );
   const isOutOfStock = effectivePriceData
     ? Number(effectivePriceData.availability) <= 0
     : false;
@@ -124,11 +132,7 @@ export default function TimeProductCard({
     usePromoGating(effectivePriceData, product);
 
   function handleClick() {
-    if (hasVariants) {
-      openModal('B2B_PRODUCT_VARIANTS_QUICK_VIEW', product);
-    } else {
-      openModal('PRODUCT_VIEW', product);
-    }
+    openProduct(product, !!hasVariants);
   }
 
   const variantCount = product.variantCount ?? variations.length;
@@ -353,10 +357,7 @@ export default function TimeProductCard({
                         : 'var(--time-success, #16a34a)',
                     }}
                   >
-                    {isOutOfStock
-                      ? effectivePriceData?.product_label_action?.LABEL ||
-                        t('text-out-stock', { defaultValue: 'Non disponibile' })
-                      : t('text-in-stock', { defaultValue: 'Disponibile' })}
+                    {availInfo.label}
                   </span>
                 </div>
                 {hasActivePromo(product, effectivePriceData) && (

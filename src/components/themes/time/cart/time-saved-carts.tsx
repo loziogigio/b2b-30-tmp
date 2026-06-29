@@ -12,6 +12,7 @@ import {
 } from '@framework/cart/saved-carts';
 import { ERP_STATIC } from '@framework/utils/static';
 import { TimeCard } from '@/components/themes/time/account/time-account-primitives';
+import { useTranslation } from 'src/app/i18n/client';
 
 const money = (n: number) =>
   new Intl.NumberFormat('it-IT', {
@@ -133,14 +134,17 @@ const CollapseIcon = ({ collapsed }: { collapsed: boolean }) => (
 // ── component ───────────────────────────────────────────────────────────────
 
 interface TimeSavedCartsProps {
+  lang: string;
   collapsed?: boolean;
   onToggle?: () => void;
 }
 
 export default function TimeSavedCarts({
+  lang,
   collapsed,
   onToggle,
 }: TimeSavedCartsProps) {
+  const { t } = useTranslation(lang, 'common');
   const { meta, getCart, items: activeItems } = useCart();
   const activeCartId = meta?.orderId || ERP_STATIC.vinc_order_id;
 
@@ -207,7 +211,11 @@ export default function TimeSavedCarts({
     async (cartId: string) => {
       const trimmed = editingLabel.trim();
       if (!trimmed) {
-        setActionError('Nome carrello obbligatorio');
+        setActionError(
+          t('savedcarts-name-required', {
+            defaultValue: 'Nome carrello obbligatorio',
+          }),
+        );
         return;
       }
       setSavingLabel(true);
@@ -230,11 +238,17 @@ export default function TimeSavedCarts({
   const handleSaveCurrentCart = useCallback(async () => {
     const trimmed = saveNewName.trim();
     if (!trimmed) {
-      setActionError('Inserisci un nome per il carrello');
+      setActionError(
+        t('text-saved-cart-name-placeholder', {
+          defaultValue: 'Inserisci un nome per il carrello',
+        }),
+      );
       return;
     }
     if (!activeCartId) {
-      setActionError('Nessun carrello attivo');
+      setActionError(
+        t('savedcarts-no-active', { defaultValue: 'Nessun carrello attivo' }),
+      );
       return;
     }
     setIsSavingNew(true);
@@ -260,7 +274,7 @@ export default function TimeSavedCarts({
         <button
           onClick={onToggle}
           className="w-full px-2 py-3 flex flex-col items-center gap-2 text-[var(--time-gray-400)] hover:text-[var(--time-dark)] transition-colors"
-          title="Mostra carrelli"
+          title={t('savedcarts-show', { defaultValue: 'Mostra carrelli' })}
         >
           <CartIcon />
           <CollapseIcon collapsed={true} />
@@ -276,7 +290,7 @@ export default function TimeSavedCarts({
         <div className="flex items-center gap-2 text-[var(--time-dark)]">
           <CartIcon />
           <h3 className="text-[13px] font-extrabold font-[var(--font-display)]">
-            I miei carrelli
+            {t('text-my-carts', { defaultValue: 'I miei carrelli' })}
           </h3>
         </div>
         <div className="flex items-center gap-1">
@@ -291,7 +305,7 @@ export default function TimeSavedCarts({
             <button
               onClick={onToggle}
               className="p-1.5 rounded-[var(--radius-btn)] text-[var(--time-gray-400)] hover:text-[var(--time-dark)] hover:bg-[var(--time-gray-50)] transition-colors"
-              title="Nascondi carrelli"
+              title={t('savedcarts-hide', { defaultValue: 'Nascondi carrelli' })}
             >
               <CollapseIcon collapsed={false} />
             </button>
@@ -303,7 +317,10 @@ export default function TimeSavedCarts({
       {activeItemCount > 0 && (
         <div className="px-4 py-3 border-b border-[var(--time-gray-100)] bg-[var(--time-gray-50)]/50">
           <div className="text-[10px] font-bold text-[var(--time-gray-500)] uppercase tracking-[0.06em] mb-1.5 font-[var(--font-body)]">
-            Salva carrello corrente ({activeItemCount} art.)
+            {t('savedcarts-save-current', {
+              count: activeItemCount,
+              defaultValue: 'Salva carrello corrente ({{count}} art.)',
+            })}
           </div>
           <div className="flex gap-1.5">
             <input
@@ -313,7 +330,9 @@ export default function TimeSavedCarts({
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleSaveCurrentCart();
               }}
-              placeholder="Nome carrello..."
+              placeholder={t('savedcarts-name-placeholder', {
+                defaultValue: 'Nome carrello...',
+              })}
               className="h-7 flex-1 rounded-[var(--radius-btn)] border-[1.5px] border-[var(--time-gray-200)] px-2.5 text-[11px] font-[var(--font-body)] text-[var(--time-dark)] bg-white outline-none focus:border-[var(--time-red)] transition-colors"
               disabled={isSavingNew}
             />
@@ -322,7 +341,7 @@ export default function TimeSavedCarts({
               disabled={isSavingNew || !saveNewName.trim()}
               className="h-7 px-3 rounded-[var(--radius-btn)] bg-[var(--time-dark)] text-[10px] font-bold text-white font-[var(--font-body)] hover:bg-[var(--time-red)] transition-colors disabled:opacity-50 shrink-0"
             >
-              {isSavingNew ? '...' : 'Salva'}
+              {isSavingNew ? '...' : t('text-save', { defaultValue: 'Salva' })}
             </button>
           </div>
         </div>
@@ -341,7 +360,7 @@ export default function TimeSavedCarts({
       <div className="overflow-y-auto max-h-[400px]">
         {savedCartsQuery.isLoading ? (
           <div className="py-8 text-center text-[12px] text-[var(--time-gray-500)]">
-            Caricamento...
+            {t('savedcarts-loading', { defaultValue: 'Caricamento...' })}
           </div>
         ) : carts.length === 0 ? (
           <div className="py-6 px-4 text-center">
@@ -349,10 +368,12 @@ export default function TimeSavedCarts({
               <CartIcon />
             </div>
             <p className="text-[12px] font-semibold text-[var(--time-gray-500)]">
-              Nessun carrello salvato
+              {t('savedcarts-empty', { defaultValue: 'Nessun carrello salvato' })}
             </p>
             <p className="text-[10px] text-[var(--time-gray-400)] mt-1">
-              Usa il form sopra per salvare il carrello corrente
+              {t('savedcarts-empty-hint', {
+                defaultValue: 'Usa il form sopra per salvare il carrello corrente',
+              })}
             </p>
           </div>
         ) : (
@@ -407,12 +428,16 @@ export default function TimeSavedCarts({
                         <span className="text-[12px] font-bold text-[var(--time-dark)] font-[var(--font-body)] truncate">
                           {cart.hasCustomLabel
                             ? cart.label
-                            : `Carrello #${cart.cartId.slice(-6)}`}
+                            : t('text-cart-id', {
+                                id: cart.cartId.slice(-6),
+                                defaultValue: 'Carrello #{{id}}',
+                              })}
                         </span>
                         {isActive && (
                           <>
                             <span className="shrink-0 inline-flex items-center gap-0.5 rounded-full bg-[var(--time-red)]/10 px-1.5 py-0.5 text-[9px] font-bold text-[var(--time-red)] uppercase tracking-wide">
-                              <CheckIcon /> Attivo
+                              <CheckIcon />{' '}
+                              {t('text-active', { defaultValue: 'Attivo' })}
                             </span>
                             <button
                               onClick={() => {
@@ -436,7 +461,10 @@ export default function TimeSavedCarts({
                     <span>{fmtDate(cart.updatedAt)}</span>
                     <span>
                       <span className="font-bold">{cart.itemsCount ?? 0}</span>{' '}
-                      articoli
+                      {t('savedcarts-items-noun', {
+                        count: cart.itemsCount ?? 0,
+                        defaultValue: 'articoli',
+                      })}
                     </span>
                     <span className="font-bold text-[var(--time-dark)]">
                       {money(cart.documentTotal)}
@@ -455,7 +483,11 @@ export default function TimeSavedCarts({
                       disabled={isDeactivating}
                       className="w-full h-7 rounded-[var(--radius-btn)] border-[1.5px] border-[var(--time-gray-200)] text-[11px] font-bold text-[var(--time-gray-600)] hover:border-[var(--time-dark)] transition-colors font-[var(--font-body)] disabled:opacity-50"
                     >
-                      {isDeactivating ? 'Salvataggio...' : 'Salva per dopo'}
+                      {isDeactivating
+                        ? t('text-saving-cart', { defaultValue: 'Salvataggio...' })
+                        : t('text-save-for-later', {
+                            defaultValue: 'Salva per dopo',
+                          })}
                     </button>
                   ) : (
                     <button
@@ -463,7 +495,11 @@ export default function TimeSavedCarts({
                       disabled={isActivating}
                       className="w-full h-7 rounded-[var(--radius-btn)] bg-[var(--time-dark)] text-[11px] font-bold text-white hover:bg-[var(--time-red)] transition-colors font-[var(--font-body)] disabled:opacity-50"
                     >
-                      {isActivating ? 'Attivazione...' : 'Attiva'}
+                      {isActivating
+                        ? t('savedcarts-activating', {
+                            defaultValue: 'Attivazione...',
+                          })
+                        : t('text-activate-cart', { defaultValue: 'Attiva' })}
                     </button>
                   )}
                 </div>

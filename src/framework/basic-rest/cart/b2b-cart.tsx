@@ -9,7 +9,7 @@ import {
   del as pimDel,
 } from '@framework/utils/httpPIM';
 import { CS_CART } from '@framework/utils/api-endpoints-cs';
-import { ERP_STATIC, setErpStatic } from '@framework/utils/static';
+import { ERP_STATIC, setErpStatic, hasValidErpContext } from '@framework/utils/static';
 import { useCart } from '@contexts/cart/cart.context';
 import {
   mapCSOrderToCart,
@@ -71,8 +71,7 @@ export const fetchCartData = async (
 
 export const useCartQuery = () => {
   const { isAuthorized } = useUI();
-  const enabled =
-    isAuthorized && !!ERP_STATIC.customer_code && !!ERP_STATIC.address_code;
+  const enabled = isAuthorized && hasValidErpContext();
   return useQuery({
     queryKey: ['b2b-cart'],
     queryFn: () => fetchCartData(),

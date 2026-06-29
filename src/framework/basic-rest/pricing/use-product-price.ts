@@ -60,6 +60,18 @@ export function useProductPriceData(
   const erpReady =
     enabled && isAuthorized && wantsErp && !override && hasValidErpContext();
 
+  if (process.env.NODE_ENV !== 'production' && entityCode) {
+    console.log('[prices] erpReady:', erpReady, {
+      source,
+      isAuthorized,
+      wantsErp,
+      hasContext: hasValidErpContext(),
+      customer_code: ERP_STATIC.customer_code,
+      address_code: ERP_STATIC.address_code,
+      entityCode,
+    });
+  }
+
   const erpQuery = useQuery({
     queryKey: erpQueryKey([entityCode], quantity, ERP_STATIC),
     queryFn: () =>

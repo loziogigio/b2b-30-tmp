@@ -35,6 +35,40 @@ describe('coupon-config (static)', () => {
     expect(cfg.baseUrl).toBe('http://mymb:8884/MyMB/Service/web');
     expect(cfg.authHeader).toBe('Basic ' + Buffer.from('U:P').toString('base64'));
   });
+
+  it('mapCouponRecord uses record api_user/api_password (no env, no creds in url)', () => {
+    // The container has no COUPON_API_* — the dynamic record is the only source.
+    const cfg = mapCouponRecord({
+      enabled: true,
+      api_url: 'http://mymb.baseprotection.com:8885/MyMB/Service/web',
+      api_user: 'RECUSER',
+      api_password: 'RECPASS',
+    });
+    expect(cfg.enabled).toBe(true);
+    expect(cfg.baseUrl).toBe('http://mymb.baseprotection.com:8885/MyMB/Service/web');
+    expect(cfg.authHeader).toBe('Basic ' + Buffer.from('RECUSER:RECPASS').toString('base64'));
+  });
+
+  it('mapCouponRecord prefers record api_user/api_password over env creds', () => {
+    process.env.COUPON_API_USER = 'ENVUSER';
+    process.env.COUPON_API_PASSWORD = 'ENVPASS';
+    const cfg = mapCouponRecord({
+      enabled: true,
+      api_url: 'http://mymb.baseprotection.com:8885/MyMB/Service/web',
+      api_user: 'RECUSER',
+      api_password: 'RECPASS',
+    });
+    expect(cfg.authHeader).toBe('Basic ' + Buffer.from('RECUSER:RECPASS').toString('base64'));
+  });
+
+  it('mapCouponRecord still honours credentials embedded in api_url (back-compat)', () => {
+    const cfg = mapCouponRecord({
+      enabled: true,
+      api_url: 'http://RECUSER:RECPASS@mymb.baseprotection.com:8885/MyMB/Service/web',
+    });
+    expect(cfg.baseUrl).toBe('http://mymb.baseprotection.com:8885/MyMB/Service/web');
+    expect(cfg.authHeader).toBe('Basic ' + Buffer.from('RECUSER:RECPASS').toString('base64'));
+  });
 });
 
 describe('coupon-config (dynamic)', () => {

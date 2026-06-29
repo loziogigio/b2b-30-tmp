@@ -9,6 +9,7 @@ import {
   deleteCart,
   fetchCartData,
 } from '@framework/cart/b2b-cart';
+import { ERP_STATIC, setErpStatic } from '@framework/utils/static';
 import { AddToCartInput } from '@utils/transform/cart';
 
 // Mapped API getter that returns Item[]
@@ -212,9 +213,21 @@ export function CartProvider(props: React.PropsWithChildren<any>) {
   const resetCart = React.useCallback(
     async (idCart?: number | string) => {
       try {
-        if (idCart != null && idCart !== '') {
-          await deleteCart(idCart);
+        // "Svuota carrello" calls resetCart() with no id, so resolve the
+        // active cart from the summary / ERP context. Without this the
+        // backing VINC cart was never deleted and its items re-appeared on
+        // the next add. (Don't lean on deleteCart's own fallback: it derives
+        // the id from String(idCart), and String(undefined) === "undefined".)
+        const id = idCart ?? state.meta?.orderId ?? ERP_STATIC.vinc_order_id;
+        if (id != null && id !== '') {
+          await deleteCart(id);
         }
+        // Drop the reference to the now-deleted cart so the re-fetch below and
+        // the next add-to-cart provision a fresh, empty active cart instead of
+        // re-reading the deleted one.
+        setErpStatic({ vinc_order_id: undefined });
+      } catch (e) {
+        console.error('[cart] resetCart server delete failed:', e);
       } finally {
         const fresh = await fetchCartData();
         hydrateFromServer(fresh.items, 'replace');
@@ -222,7 +235,7 @@ export function CartProvider(props: React.PropsWithChildren<any>) {
         dispatch({ type: 'RESET_CART' });
       }
     },
-    [hydrateFromServer, setCartSummary],
+    [state.meta, hydrateFromServer, setCartSummary],
   );
 
   const value = React.useMemo(

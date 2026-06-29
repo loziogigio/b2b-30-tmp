@@ -19,6 +19,8 @@ import React from 'react';
 import TimeProductCard from '@components/themes/time/product/time-product-card';
 import TimeProductRow from './time-product-row';
 import { IoGridOutline, IoListOutline } from 'react-icons/io5';
+import { useProductsPriceMap } from '@framework/pricing';
+import { useCatalogSettings } from '@/hooks/use-catalog-settings';
 
 interface TimeProductSearchProps {
   lang: string;
@@ -39,7 +41,9 @@ export const TimeProductSearch: FC<TimeProductSearchProps> = ({
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // View mode persistence
+  // View mode persistence. The channel `catalog_settings` config supplies the
+  // default layout when the user hasn't chosen one (no URL param / localStorage).
+  const { settings: catalogSettings } = useCatalogSettings();
   const [view, setViewState] = useState<'grid' | 'list'>('grid');
   const isList = view === 'list';
   const setView = (next: 'grid' | 'list') => {
@@ -64,9 +68,11 @@ export const TimeProductSearch: FC<TimeProductSearchProps> = ({
         if (ls === 'grid' || ls === 'list') next = ls as 'grid' | 'list';
       } catch {}
     }
+    // No explicit user choice → fall back to the channel-configured default.
+    if (!next) next = catalogSettings.defaultView;
     if (next && next !== view) setViewState(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
+  }, [searchParams, catalogSettings.defaultView]);
 
   // Build params for PIM API
   const urlParams: Record<string, string> = {};
@@ -255,6 +261,24 @@ export const TimeProductSearch: FC<TimeProductSearchProps> = ({
         )
       : 0);
 
+  // Collect all visible products into a flat list so we can batch the ERP
+  // price request. Without this, each TimeProductCard fires its own request
+  // (N cards = N calls). With this, one request covers the whole page.
+  const allVisibleProducts = useMemo(() => {
+    const pages = data?.pages ?? [];
+    const out: any[] = [];
+    for (const page of pages) {
+      for (const p of page?.items ?? []) {
+        const vars = Array.isArray(p.variations) ? p.variations : [];
+        const isSingleVariant = vars.length === 1 && (p.variantCount === 1 || !p.variantCount);
+        out.push(isSingleVariant ? { ...vars[0], variantCount: 1 } : p);
+      }
+    }
+    return out;
+  }, [data?.pages]);
+
+  const priceMap = useProductsPriceMap(allVisibleProducts);
+
   return (
     <>
       {/* Toolbar */}
@@ -399,17 +423,25 @@ export const TimeProductSearch: FC<TimeProductSearchProps> = ({
                   ? { ...vars[0], variantCount: 1 }
                   : p;
 
+                // Always pass a defined priceData so cards/rows never self-fetch.
+                // While the batch is loading priceMap[id] is undefined; fall back
+                // to {} so override is truthy and erpReady stays false.
+                const cardPrice = target.id
+                  ? (priceMap[String(target.id)] ?? ({} as any))
+                  : undefined;
                 return isList ? (
                   <TimeProductRow
                     key={`row-${target.id}`}
                     lang={lang}
                     product={target}
+                    priceData={cardPrice}
                   />
                 ) : (
                   <TimeProductCard
                     key={`card-${target.id}`}
                     lang={lang}
                     product={target}
+                    priceData={cardPrice}
                     className="w-full h-full flex flex-col"
                   />
                 );

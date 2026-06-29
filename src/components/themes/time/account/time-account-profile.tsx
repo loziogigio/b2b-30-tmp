@@ -97,12 +97,16 @@ export default function TimeAccountProfile({ lang }: TimeAccountProfileProps) {
                 copyable
               />
               <TimeInfoRow
-                label="SDI"
+                label={t('text-sdi', { defaultValue: 'SDI' })}
                 value={customer.sdi ?? '—'}
                 mono
                 copyable
               />
-              <TimeInfoRow label="PEC" value={customer.pec ?? '—'} copyable />
+              <TimeInfoRow
+                label={t('text-pec', { defaultValue: 'PEC' })}
+                value={customer.pec ?? '—'}
+                copyable
+              />
               {customer.firstName && (
                 <TimeInfoRow
                   label={t('FIRST_NAME', { defaultValue: 'Nome' })}

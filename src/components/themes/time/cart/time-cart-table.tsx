@@ -19,6 +19,10 @@ import { TimeCard } from '@/components/themes/time/account/time-account-primitiv
 import { useTranslation } from 'src/app/i18n/client';
 import { updateLineNote } from '@framework/cart/b2b-cart';
 import { useModalAction } from '@components/common/modal/modal.context';
+import { useCartSettings } from '@/hooks/use-cart-settings';
+
+// Per-line note UI on the time-theme checkout is toggled per sales channel via
+// the `cart_settings` data model (useCartSettings → showLineNote). Defaults off.
 
 // Opens the cart-line item in the product preview modal. The popup itself
 // re-fetches the full PIM product by sku, so we just hand it the cart item
@@ -107,10 +111,12 @@ function TimeCartRow({
   item,
   index,
   lang,
+  showLineNote,
 }: {
   item: Item;
   index: number;
   lang: string;
+  showLineNote: boolean;
 }) {
   const { clearItemFromCart, meta } = useCart();
   const openPreview = useOpenCartItemPreview();
@@ -199,7 +205,7 @@ function TimeCartRow({
           )}
           {item.model && (
             <div className="text-[11px] font-semibold text-[var(--time-dark)] leading-tight">
-              MODELLO: {item.model}
+              {t('text-model', { defaultValue: 'MODELLO:' })} {item.model}
             </div>
           )}
           <button
@@ -212,46 +218,48 @@ function TimeCartRow({
           </button>
           {!isAvailable && (
             <div className="inline-flex items-center gap-1 mt-0.5 text-red-500 text-[10px] font-semibold">
-              <AlertIcon /> Non disponibile
+              <AlertIcon />{' '}
+              {t('cart-item-unavailable', { defaultValue: 'Non disponibile' })}
             </div>
           )}
 
           {/* Note inline */}
-          {showNote ? (
-            <div className="mt-1">
-              <input
-                type="text"
-                value={noteDraft}
-                onChange={(e) => handleNoteChange(e.target.value)}
-                onBlur={() => {
-                  if (!noteDraft) setShowNote(false);
-                }}
-                autoFocus
-                placeholder={t('line-item-note-placeholder', {
-                  defaultValue: 'Aggiungi una nota...',
-                })}
-                className="w-full max-w-[320px] h-6 rounded-md border border-[var(--time-gray-200)] px-2 text-[10px] text-[var(--time-dark)] outline-none focus:border-[var(--time-red)] focus:shadow-[0_0_0_2px_rgba(230,57,70,0.1)] transition-colors"
-              />
-            </div>
-          ) : hasNote ? (
-            <button
-              onClick={() => setShowNote(true)}
-              className="mt-1 flex items-center gap-1 text-[10px] text-[var(--time-red)] italic transition-colors"
-            >
-              <NoteIcon />
-              <span className="truncate max-w-[280px]">{noteDraft}</span>
-            </button>
-          ) : (
-            <button
-              onClick={() => setShowNote(true)}
-              className="mt-1 flex items-center gap-1 text-[10px] text-[var(--time-gray-400)] hover:text-[var(--time-gray-600)] transition-colors"
-            >
-              <NoteIcon />
-              <span>
-                + {t('line-item-note', { defaultValue: 'Aggiungi nota' })}
-              </span>
-            </button>
-          )}
+          {showLineNote &&
+            (showNote ? (
+              <div className="mt-1">
+                <input
+                  type="text"
+                  value={noteDraft}
+                  onChange={(e) => handleNoteChange(e.target.value)}
+                  onBlur={() => {
+                    if (!noteDraft) setShowNote(false);
+                  }}
+                  autoFocus
+                  placeholder={t('line-item-note-placeholder', {
+                    defaultValue: 'Aggiungi una nota...',
+                  })}
+                  className="w-full max-w-[320px] h-6 rounded-md border border-[var(--time-gray-200)] px-2 text-[10px] text-[var(--time-dark)] outline-none focus:border-[var(--time-red)] focus:shadow-[0_0_0_2px_rgba(230,57,70,0.1)] transition-colors"
+                />
+              </div>
+            ) : hasNote ? (
+              <button
+                onClick={() => setShowNote(true)}
+                className="mt-1 flex items-center gap-1 text-[10px] text-[var(--time-red)] italic transition-colors"
+              >
+                <NoteIcon />
+                <span className="truncate max-w-[280px]">{noteDraft}</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowNote(true)}
+                className="mt-1 flex items-center gap-1 text-[10px] text-[var(--time-gray-400)] hover:text-[var(--time-gray-600)] transition-colors"
+              >
+                <NoteIcon />
+                <span>
+                  + {t('line-item-note', { defaultValue: 'Aggiungi nota' })}
+                </span>
+              </button>
+            ))}
         </div>
 
         {/* Details: UM / MV / CF in mini grid */}
@@ -261,7 +269,7 @@ function TimeCartRow({
         >
           <div className="flex flex-col items-center w-[28px]">
             <span className="text-[8px] font-bold text-[var(--time-gray-400)]">
-              UM
+              {t('cart-col-um', { defaultValue: 'UM' })}
             </span>
             <span className="text-[var(--time-gray-600)]">
               {(item as any).uom || '—'}
@@ -269,7 +277,7 @@ function TimeCartRow({
           </div>
           <div className="flex flex-col items-center w-[28px]">
             <span className="text-[8px] font-bold text-[var(--time-gray-400)]">
-              MV
+              {t('cart-col-mv', { defaultValue: 'MV' })}
             </span>
             <span className="text-[var(--time-gray-600)]">
               {(item as any).mvQty || '—'}
@@ -277,7 +285,7 @@ function TimeCartRow({
           </div>
           <div className="flex flex-col items-center w-[28px]">
             <span className="text-[8px] font-bold text-[var(--time-gray-400)]">
-              CF
+              {t('cart-col-cf', { defaultValue: 'CF' })}
             </span>
             <span className="text-[var(--time-gray-600)]">
               {(item as any).cfQty || '—'}
@@ -341,7 +349,7 @@ function TimeCartRow({
         <div className="flex items-center justify-center">
           <button
             onClick={() => clearItemFromCart(item)}
-            title="Rimuovi"
+            title={t('text-remove', { defaultValue: 'Rimuovi' })}
             className="w-7 h-7 rounded-md flex items-center justify-center text-[var(--time-gray-400)] hover:text-[var(--time-red)] transition-colors"
           >
             <TrashIcon />
@@ -427,41 +435,43 @@ function TimeCartRow({
         <div className="mt-2 pl-[64px]">
           <UpdateCart item={item} lang={lang} className="time-stepper" />
         </div>
-        <div className="mt-2 pl-[64px]">
-          {showNote ? (
-            <input
-              type="text"
-              value={noteDraft}
-              onChange={(e) => handleNoteChange(e.target.value)}
-              onBlur={() => {
-                if (!noteDraft) setShowNote(false);
-              }}
-              autoFocus
-              placeholder={t('line-item-note-placeholder', {
-                defaultValue: 'Aggiungi una nota...',
-              })}
-              className="w-full h-7 rounded-md border border-[var(--time-gray-200)] px-2 text-[11px] text-[var(--time-dark)] outline-none focus:border-[var(--time-red)] transition-colors"
-            />
-          ) : hasNote ? (
-            <button
-              onClick={() => setShowNote(true)}
-              className="flex items-center gap-1 text-[10px] text-[var(--time-red)] italic"
-            >
-              <NoteIcon />
-              <span className="truncate max-w-[220px]">{noteDraft}</span>
-            </button>
-          ) : (
-            <button
-              onClick={() => setShowNote(true)}
-              className="flex items-center gap-1 text-[10px] text-[var(--time-gray-400)]"
-            >
-              <NoteIcon />
-              <span>
-                + {t('line-item-note', { defaultValue: 'Aggiungi nota' })}
-              </span>
-            </button>
-          )}
-        </div>
+        {showLineNote && (
+          <div className="mt-2 pl-[64px]">
+            {showNote ? (
+              <input
+                type="text"
+                value={noteDraft}
+                onChange={(e) => handleNoteChange(e.target.value)}
+                onBlur={() => {
+                  if (!noteDraft) setShowNote(false);
+                }}
+                autoFocus
+                placeholder={t('line-item-note-placeholder', {
+                  defaultValue: 'Aggiungi una nota...',
+                })}
+                className="w-full h-7 rounded-md border border-[var(--time-gray-200)] px-2 text-[11px] text-[var(--time-dark)] outline-none focus:border-[var(--time-red)] transition-colors"
+              />
+            ) : hasNote ? (
+              <button
+                onClick={() => setShowNote(true)}
+                className="flex items-center gap-1 text-[10px] text-[var(--time-red)] italic"
+              >
+                <NoteIcon />
+                <span className="truncate max-w-[220px]">{noteDraft}</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowNote(true)}
+                className="flex items-center gap-1 text-[10px] text-[var(--time-gray-400)]"
+              >
+                <NoteIcon />
+                <span>
+                  + {t('line-item-note', { defaultValue: 'Aggiungi nota' })}
+                </span>
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </>
   );
@@ -484,6 +494,7 @@ export default function TimeCartTable({
 }: TimeCartTableProps) {
   const { t } = useTranslation(lang, 'common');
   const { items, resetCart, meta } = useCart();
+  const { settings: cartSettings } = useCartSettings();
 
   const baseRows = useMemo<Item[]>(() => items ?? [], [items]);
 
@@ -508,12 +519,15 @@ export default function TimeCartTable({
       <div className="flex items-center justify-between mb-5">
         <div>
           <h1 className="text-[28px] font-black text-[var(--time-dark)] font-[var(--font-display)] tracking-tight">
-            Riepilogo Carrello
+            {t('cart-summary-title', { defaultValue: 'Riepilogo Carrello' })}
           </h1>
           <p className="text-[13px] text-[var(--time-gray-500)] mt-1">
-            {availableCount} articol{availableCount !== 1 ? 'i' : 'o'}{' '}
-            disponibil{availableCount !== 1 ? 'i' : 'e'} · {baseRows.length}{' '}
-            totali
+            {t('cart-summary-availability', {
+              count: availableCount,
+              total: baseRows.length,
+              defaultValue:
+                '{{count}} articoli disponibili · {{total}} totali',
+            })}
           </p>
         </div>
         {baseRows.length > 0 && (
@@ -521,7 +535,7 @@ export default function TimeCartTable({
             onClick={() => resetCart()}
             className="h-9 px-3.5 rounded-lg border-[1.5px] border-[rgba(230,57,70,0.3)] bg-[rgba(230,57,70,0.04)] text-[var(--time-red)] text-[12px] font-semibold font-[var(--font-body)] hover:bg-[rgba(230,57,70,0.1)] transition-colors"
           >
-            Svuota carrello
+            {t('cart-clear-cart', { defaultValue: 'Svuota carrello' })}
           </button>
         )}
       </div>
@@ -547,12 +561,22 @@ export default function TimeCartTable({
         {/* Table header (desktop) */}
         <div className="hidden md:grid grid-cols-[52px_1fr_auto_90px_70px_120px_90px_36px] gap-x-3 px-5 py-2.5 bg-[var(--time-gray-50)] border-b border-[var(--time-gray-100)] text-[9px] font-bold text-[var(--time-gray-400)] uppercase tracking-[0.08em]">
           <span />
-          <span>Articolo</span>
-          <span className="w-[84px] text-center">Dettagli</span>
-          <span className="text-right">Prezzo Unit.</span>
-          <span className="text-center">Promo</span>
-          <span className="text-center">Quantità</span>
-          <span className="text-right">Totale</span>
+          <span>{t('orders-item', { defaultValue: 'Articolo' })}</span>
+          <span className="w-[84px] text-center">
+            {t('text-details', { defaultValue: 'Dettagli' })}
+          </span>
+          <span className="text-right">
+            {t('orders-unit-price', { defaultValue: 'Prezzo Unit.' })}
+          </span>
+          <span className="text-center">
+            {t('cart-col-promo', { defaultValue: 'Promo' })}
+          </span>
+          <span className="text-center">
+            {t('text-quantity', { defaultValue: 'Quantità' })}
+          </span>
+          <span className="text-right">
+            {t('orders-total', { defaultValue: 'Totale' })}
+          </span>
           <span />
         </div>
 
@@ -563,13 +587,17 @@ export default function TimeCartTable({
               <div className="text-[40px] mb-3">🛒</div>
               <div className="text-[15px] font-semibold text-[var(--time-gray-600)]">
                 {baseRows.length === 0
-                  ? 'Il carrello è vuoto'
-                  : 'Nessun risultato'}
+                  ? t('text-cart-empty', { defaultValue: 'Il carrello è vuoto' })
+                  : t('cart-no-results', { defaultValue: 'Nessun risultato' })}
               </div>
               <div className="text-[12px] mt-1">
                 {baseRows.length === 0
-                  ? 'Aggiungi prodotti dal catalogo'
-                  : 'Prova con un altro termine di ricerca'}
+                  ? t('cart-empty-hint', {
+                      defaultValue: 'Aggiungi prodotti dal catalogo',
+                    })
+                  : t('cart-no-results-hint', {
+                      defaultValue: 'Prova con un altro termine di ricerca',
+                    })}
               </div>
             </div>
           ) : (
@@ -579,6 +607,7 @@ export default function TimeCartTable({
                 item={item}
                 index={i}
                 lang={lang}
+                showLineNote={cartSettings.showLineNote}
               />
             ))
           )}
@@ -591,7 +620,7 @@ export default function TimeCartTable({
               onClick={onContinue}
               className="h-11 px-7 rounded-[var(--radius-btn)] bg-[var(--time-dark)] text-white text-[13px] font-bold font-[var(--font-body)] flex items-center gap-2 transition-colors hover:bg-[var(--time-red)]"
             >
-              Continua Ordine
+              {t('cart-continue-order', { defaultValue: 'Continua Ordine' })}
               <svg
                 width="16"
                 height="16"
@@ -615,14 +644,16 @@ export default function TimeCartTable({
           <AlertIcon />
           <span>
             <strong>
-              {unavailableItems.length} articol
-              {unavailableItems.length > 1 ? 'i' : 'o'}
+              {t('cart-summary-unavailable-count', {
+                count: unavailableItems.length,
+                defaultValue: '{{count}} articoli',
+              })}
             </strong>{' '}
-            non disponibil{unavailableItems.length > 1 ? 'i' : 'e'} —{' '}
-            {unavailableItems.length > 1
-              ? 'non saranno inclusi'
-              : 'non sarà incluso'}{' '}
-            nell&apos;ordine.
+            {t('cart-summary-unavailable-rest', {
+              count: unavailableItems.length,
+              defaultValue:
+                'non disponibili — non saranno inclusi nell’ordine.',
+            })}
           </span>
         </div>
       )}

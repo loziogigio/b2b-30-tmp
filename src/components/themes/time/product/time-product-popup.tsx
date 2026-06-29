@@ -37,6 +37,8 @@ import { useLikes } from '@contexts/likes/likes.context';
 import { useReminders } from '@contexts/reminders/reminders.context';
 import { useUI } from '@contexts/ui.context';
 import { useHomeSettings } from '@/hooks/use-home-settings';
+import { useCatalogSettings } from '@/hooks/use-catalog-settings';
+import { formatTimeAvailability } from './format-time-availability';
 import { productPlaceholder } from '@assets/placeholders';
 import { printProductDetail } from '@utils/print-product';
 import TimeVariantsGrid from './time-variants-grid';
@@ -133,6 +135,12 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
     : 0;
   const hasValidPrice = erpPrice && netPrice != null && Number(netPrice) > 0;
   const isOutOfStock = erpPrice ? Number(erpPrice.availability) <= 0 : false;
+  const { settings: catalogSettings } = useCatalogSettings();
+  const availInfo = formatTimeAvailability(
+    erpPrice,
+    catalogSettings.availabilityDisplay,
+    t,
+  );
   const { hasMultiplePromos } = usePromoGating(erpPrice, product);
 
   /* ── Likes / Reminders init ── */
@@ -494,12 +502,7 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
                       className="font-bold text-xs sm:text-[13px]"
                       style={{ color: isOutOfStock ? '#dc2626' : '#059669' }}
                     >
-                      {isOutOfStock
-                        ? erpPrice?.product_label_action?.LABEL ||
-                          t('text-out-stock', {
-                            defaultValue: 'Non disponibile',
-                          })
-                        : t('text-in-stock', { defaultValue: 'Disponibile' })}
+                      {availInfo.label}
                     </span>
                   </span>
                 </>

@@ -12,9 +12,13 @@ export interface CsCreds {
  * Single-tenant → env (PIM_API_*). Multi-tenant → tenant registry by hostname.
  */
 export async function resolveCsCreds(req: NextRequest): Promise<CsCreds> {
+  // PIM_API_URL_OVERRIDE wins so local dev points every CS call at a locally
+  // running suite, matching resolveTenantApiConfig (the common method).
+  const override = process.env.PIM_API_URL_OVERRIDE;
+
   if (isSingleTenant) {
     return {
-      csBaseUrl: process.env.PIM_API_URL || '',
+      csBaseUrl: override || process.env.PIM_API_URL || '',
       apiKeyId: process.env.PIM_API_KEY_ID || '',
       apiSecret: process.env.PIM_API_SECRET || '',
     };
@@ -25,7 +29,8 @@ export async function resolveCsCreds(req: NextRequest): Promise<CsCreds> {
     'localhost';
   const tenant = await resolveTenant(hostname);
   return {
-    csBaseUrl: tenant?.api.pimApiUrl || process.env.PIM_API_URL || '',
+    csBaseUrl:
+      override || tenant?.api.pimApiUrl || process.env.PIM_API_URL || '',
     apiKeyId: tenant?.api.apiKeyId || '',
     apiSecret: tenant?.api.apiSecret || '',
   };

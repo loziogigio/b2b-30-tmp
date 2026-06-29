@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { AddressB2B } from '@framework/acccount/types-b2b-account';
-import { resolveTenant, isMultiTenant } from '@/lib/tenant';
+import { resolveTenantApiConfig } from '@/lib/tenant';
 
 // PIM API response type
 interface PIMAddressResponse {
@@ -82,35 +82,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Resolve tenant
-    let tenantId = process.env.NEXT_PUBLIC_TENANT_ID || 'default';
-    // Use PIM_API_URL for addresses (not SSO)
-    let pimApiUrl = process.env.PIM_API_URL;
-
-    if (isMultiTenant) {
-      const hostname =
-        request.headers.get('x-tenant-hostname') ||
-        request.headers.get('host') ||
-        'localhost';
-      const tenant = await resolveTenant(hostname);
-
-      if (!tenant) {
-        console.error(
-          '[b2b/addresses] Tenant not found for hostname:',
-          hostname,
-        );
-        return NextResponse.json(
-          { success: false, message: 'Tenant not found' },
-          { status: 404 },
-        );
-      }
-
-      tenantId = tenant.id;
-      pimApiUrl = tenant.api.pimApiUrl || pimApiUrl;
-    }
+    // Resolve the PIM API target via the shared helper so every route reaches
+    // the suite the same way (honours PIM_API_URL_OVERRIDE for local dev).
+    const { pimApiUrl, tenantId } = await resolveTenantApiConfig(request);
 
     if (!pimApiUrl) {
-      console.error('[b2b/addresses] PIM_API_URL not configured');
+      console.error('[b2b/addresses] PIM API URL not configured');
       return NextResponse.json(
         { success: false, message: 'PIM API not configured' },
         { status: 500 },

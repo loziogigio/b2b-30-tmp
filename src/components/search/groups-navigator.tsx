@@ -19,36 +19,13 @@ import {
 } from '@framework/product/get-pim-menu';
 import { useQuery } from '@tanstack/react-query';
 import { fetchPimFilters } from '@framework/product/get-pim-filters';
-
-const GROUP_PARAM = 'filters-attribute_erp_groups_ss';
-const SEPARATOR = ';';
-
-/** Extract the group code from a menu node's url (e.g. "/search?filters-attribute_erp_groups_ss=10" → "10") */
-function extractGroupCode(node: MenuTreeNode): string | null {
-  if (!node.url) return null;
-  try {
-    const qs = node.url.includes('?') ? node.url.split('?')[1] : '';
-    const sp = new URLSearchParams(qs);
-    return sp.get(GROUP_PARAM) || null;
-  } catch {
-    return null;
-  }
-}
-
-/** Recursively find a node whose url contains the given group code */
-function findNodeByGroupCode(
-  tree: MenuTreeNode[],
-  code: string,
-): MenuTreeNode | null {
-  for (const node of tree) {
-    if (extractGroupCode(node) === code) return node;
-    if (node.children.length) {
-      const found = findNodeByGroupCode(node.children, code);
-      if (found) return found;
-    }
-  }
-  return null;
-}
+import {
+  ERP_GROUP_PARAM as GROUP_PARAM,
+  ERP_GROUP_SEPARATOR as SEPARATOR,
+  extractGroupCode,
+  findNodeByGroupCode,
+  toggleGroupCode,
+} from '@utils/erp-group-selection';
 
 /** Build breadcrumb ancestor nodes by walking the tree following path segments */
 function buildPathNodes(
@@ -354,7 +331,8 @@ export function GroupsNavigator({ lang, text }: GroupsNavigatorProps) {
     });
   }, [baseDisplayItems, selectedCodes, getTotalCount, hasCodeInSubtree]);
 
-  // Toggle a group code in the URL filter
+  // Toggle a group code in the URL filter. Selecting a node replaces any
+  // selected ancestor/descendant (drill-down/up) — see toggleGroupCode.
   const toggleGroup = useCallback(
     (code: string) => {
       const params = new URLSearchParams(searchParams?.toString() ?? '');
@@ -362,9 +340,7 @@ export function GroupsNavigator({ lang, text }: GroupsNavigatorProps) {
         .split(SEPARATOR)
         .filter(Boolean);
 
-      const next = current.includes(code)
-        ? current.filter((c) => c !== code)
-        : [...current, code];
+      const next = toggleGroupCode(tree, current, code);
 
       if (next.length > 0) {
         params.set(GROUP_PARAM, next.join(SEPARATOR));
@@ -376,7 +352,7 @@ export function GroupsNavigator({ lang, text }: GroupsNavigatorProps) {
       const qs = params.toString();
       router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
     },
-    [searchParams, pathname, router],
+    [searchParams, pathname, router, tree],
   );
 
   // Drill into a group via chevron — visual navigation only.

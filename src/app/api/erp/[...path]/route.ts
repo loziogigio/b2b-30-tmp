@@ -62,8 +62,14 @@ async function handleCoupon(
       return NextResponse.json({ status: 'success', data });
     }
     case 'verify_promo_item': {
+      // dataPrezzatura (DDMMYYYY) + valuta are required by MyMB; the client
+      // defaults them to today/EUR when the body omits them.
       const data = await client.verifyPromoItem(
-        cliente, body.codiceIndirizzo, body.codiceInternoArticolo,
+        cliente,
+        body.codiceIndirizzo,
+        body.codiceInternoArticolo,
+        body.dataPrezzatura,
+        body.valuta,
       );
       return NextResponse.json({ status: 'success', data });
     }
@@ -97,13 +103,16 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
 
     switch (endpoint) {
       case 'get_multiple_prices': {
-        const data = await client.getMultiplePrices({
+        const priceReq = {
           customerCode: body.customer_code,
           addressCode: body.address_code,
           entityCodes: body.entity_codes ?? [],
           quantityList: body.quantity_list,
           idCart: body.id_cart,
-        });
+        };
+        console.log('[ERP prices] request:', JSON.stringify(priceReq));
+        const data = await client.getMultiplePrices(priceReq);
+        console.log('[ERP prices] response:', JSON.stringify(data));
         return NextResponse.json({ status: 'success', data });
       }
       case 'get_orders': {

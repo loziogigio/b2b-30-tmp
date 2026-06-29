@@ -54,6 +54,44 @@ describe('DynamicBlockView', () => {
     expect(container.querySelectorAll('img')).toHaveLength(2);
   });
 
+  it('shows a multi-column grid on mobile (column count halved, rounded up) instead of full-width tiles', () => {
+    const block = baseBlock({
+      columns: 8,
+      elements: [
+        { id: 'e1', kind: 'image', media: { url: 'https://cdn/x/p1.png' } },
+        { id: 'e2', kind: 'image', media: { url: 'https://cdn/x/p2.png' } },
+        { id: 'e3', kind: 'image', media: { url: 'https://cdn/x/p3.png' } },
+        { id: 'e4', kind: 'image', media: { url: 'https://cdn/x/p4.png' } },
+      ],
+    });
+    const { container } = render(<DynamicBlockView block={block} />);
+    const grid = container.querySelector('.grid') as HTMLElement;
+    // Mobile shows a 4-up grid of smaller boxes, not one full-width tile per row.
+    expect(grid.style.getPropertyValue('--db-cols-mobile')).toBe(
+      'repeat(4, minmax(0, 1fr))',
+    );
+    // Desktop keeps the full configured column count.
+    expect(grid.style.getPropertyValue('--db-cols')).toBe(
+      'repeat(8, minmax(0, 1fr))',
+    );
+    // The mobile default must not be the old full-width single column.
+    expect(grid.className).not.toContain('grid-cols-1');
+  });
+
+  it('keeps a deliberately single-column block full-width on mobile', () => {
+    const block = baseBlock({
+      columns: 1,
+      elements: [
+        { id: 'e1', kind: 'image', media: { url: 'https://cdn/x/p1.png' } },
+      ],
+    });
+    const { container } = render(<DynamicBlockView block={block} />);
+    const grid = container.querySelector('.grid') as HTMLElement;
+    expect(grid.style.getPropertyValue('--db-cols-mobile')).toBe(
+      'repeat(1, minmax(0, 1fr))',
+    );
+  });
+
   it('switches on kind: text renders its string, media with no url is skipped', () => {
     const block = baseBlock({
       columns: 1,

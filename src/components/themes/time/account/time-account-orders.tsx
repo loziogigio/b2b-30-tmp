@@ -53,19 +53,39 @@ function lastMonthDefaults(): Criteria {
   };
 }
 
-const statusMap: Record<string, { color: string; bg: string; label: string }> =
-  {
-    NE: { color: '#2563eb', bg: 'rgba(37,99,235,0.08)', label: 'Da evadere' },
-    E: { color: '#059669', bg: 'rgba(5,150,105,0.08)', label: 'Evaso' },
-    IA: { color: '#d97706', bg: 'rgba(217,119,6,0.08)', label: 'In attesa' },
-  };
+const statusMap: Record<
+  string,
+  { color: string; bg: string; labelKey: string; labelDefault: string }
+> = {
+  NE: {
+    color: '#2563eb',
+    bg: 'rgba(37,99,235,0.08)',
+    labelKey: 'order-status-to-fulfill',
+    labelDefault: 'Da evadere',
+  },
+  E: {
+    color: '#059669',
+    bg: 'rgba(5,150,105,0.08)',
+    labelKey: 'order-status-fulfilled',
+    labelDefault: 'Evaso',
+  },
+  IA: {
+    color: '#d97706',
+    bg: 'rgba(217,119,6,0.08)',
+    labelKey: 'order-status-waiting',
+    labelDefault: 'In attesa',
+  },
+};
 
 export default function TimeAccountOrders() {
   const params = useParams<{ lang?: string }>();
   const lang = (params?.lang as string) || 'it';
   const { t } = useTranslation(lang, 'common');
 
-  const destinationOptions = useMemo(() => [{ value: '', label: 'Tutti' }], []);
+  const destinationOptions = useMemo(
+    () => [{ value: '', label: t('text-all', { defaultValue: 'Tutti' }) }],
+    [t],
+  );
   const [criteria, setCriteria] = useState<Criteria>(() => lastMonthDefaults());
 
   const {
@@ -117,8 +137,15 @@ export default function TimeAccountOrders() {
       doc_number: String(doc_number),
       cause: String(cause),
       doc_year: String(doc_year),
+      // ERP context so the direct-MyMB detail flow can re-read the order from
+      // the same GetTestateConInfoConsegna window the list used.
+      customer_code: (ERP_STATIC as any).customer_code,
+      address_code: criteria.address_code || (ERP_STATIC as any).address_code,
+      type: criteria.type,
+      date_from: criteria.date_from,
+      date_to: criteria.date_to,
     };
-  }, [selected]);
+  }, [selected, criteria]);
 
   const {
     data: orderDetail,
@@ -243,7 +270,7 @@ export default function TimeAccountOrders() {
                       {money(o.ordered_total)}
                     </div>
                     <TimeStatusBadge
-                      label={st.label}
+                      label={t(st.labelKey, { defaultValue: st.labelDefault })}
                       color={st.color}
                       bg={st.bg}
                     />

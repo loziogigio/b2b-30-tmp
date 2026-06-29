@@ -141,6 +141,20 @@ export class MyMbErpClient implements ErpClient {
     return data?.GetTestateConInfoConsegnaResult?.ListaTestateConInfoConsegna ?? [];
   }
 
+  /**
+   * Cart/order line rows — MyMB `GetRigheCarrello?IdCarrello=…` (GET). Each
+   * order testata carries an `IDCarrello`; this returns that cart's
+   * `ListaRighe` (the ordered line items). Used to build order detail, since
+   * MyMB has no single-order detail endpoint.
+   */
+  async getCartRows(idCarrello: number | string): Promise<any[]> {
+    const data = await this.request<any>(MYMB_ENDPOINTS.GET_RIGHE_CARRELLO, {
+      method: 'GET',
+      params: { IdCarrello: idCarrello },
+    });
+    return data?.GetRigheCarrelloResult?.ListaRighe ?? [];
+  }
+
   /** Customer profile — hub `get_client` → MyMB `GetCliente` (GET). */
   async getCustomer(customerCode: string): Promise<any> {
     const data = await this.request<any>(MYMB_ENDPOINTS.GET_CLIENTE, {

@@ -7,8 +7,10 @@ import type {
 } from '@/hooks/use-order-submit';
 import { formatAnomalyFlags } from '@/hooks/use-order-submit';
 import cn from 'classnames';
+import { useTranslation } from 'src/app/i18n/client';
 
 interface TimeAnomalyModalProps {
+  lang: string;
   result: AnomalyResult;
   isSubmitting: boolean;
   onAutofix: () => void;
@@ -22,12 +24,14 @@ function resolveCode(anomaly: ErpAnomaly, erpItems: ErpItem[]): string {
 }
 
 export default function TimeAnomalyModal({
+  lang,
   result,
   isSubmitting,
   onAutofix,
   onEdit,
   onClose,
 }: TimeAnomalyModalProps) {
+  const { t } = useTranslation(lang, 'common');
   const { anomalies, erpItems } = result;
   const count = anomalies.length;
 
@@ -59,11 +63,13 @@ export default function TimeAnomalyModal({
             </div>
             <div>
               <h3 className="text-[18px] font-black text-[var(--time-dark)] font-[var(--font-display)]">
-                Anomalie riscontrate
+                {t('anomaly-title', { defaultValue: 'Anomalie riscontrate' })}
               </h3>
               <p className="text-[13px] text-[var(--time-gray-500)]">
-                {count} anomali{count === 1 ? 'a' : 'e'} riscontrat
-                {count === 1 ? 'a' : 'e'}
+                {t('anomaly-count', {
+                  count,
+                  defaultValue: '{{count}} anomalie riscontrate',
+                })}
               </p>
             </div>
           </div>
@@ -71,12 +77,21 @@ export default function TimeAnomalyModal({
 
         {/* Explanation */}
         <div className="px-6 pt-4 text-[13px] text-[var(--time-gray-600)] leading-relaxed font-[var(--font-body)]">
-          Gentile cliente, nel carrello sono presenti articoli con listino
-          variato o promozioni non valide, cliccando su{' '}
+          {t('anomaly-explain-pre', {
+            defaultValue:
+              'Gentile cliente, nel carrello sono presenti articoli con listino variato o promozioni non valide, cliccando su',
+          })}{' '}
           <strong className="text-[var(--time-dark)]">
-            "AGGIORNA CARRELLO CON LISTINO VARIATO O PROMOZIONI NON VALIDE"
+            &quot;
+            {t('anomaly-explain-strong', {
+              defaultValue:
+                'AGGIORNA CARRELLO CON LISTINO VARIATO O PROMOZIONI NON VALIDE',
+            })}
+            &quot;
           </strong>{' '}
-          verranno mostrati i valori aggiornati.
+          {t('anomaly-explain-post', {
+            defaultValue: 'verranno mostrati i valori aggiornati.',
+          })}
         </div>
 
         {/* Anomalies table */}
@@ -85,8 +100,12 @@ export default function TimeAnomalyModal({
             <table className="w-full text-[13px] font-[var(--font-body)]">
               <thead>
                 <tr className="text-left text-[11px] uppercase tracking-[0.06em] text-[var(--time-gray-500)] border-b border-[var(--time-gray-100)]">
-                  <th className="pb-2 pr-3 font-bold">Articolo</th>
-                  <th className="pb-2 font-bold">Problema</th>
+                  <th className="pb-2 pr-3 font-bold">
+                    {t('orders-item', { defaultValue: 'Articolo' })}
+                  </th>
+                  <th className="pb-2 font-bold">
+                    {t('anomaly-col-problem', { defaultValue: 'Problema' })}
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--time-gray-50)]">
@@ -120,7 +139,9 @@ export default function TimeAnomalyModal({
             disabled={isSubmitting}
             className="min-h-[80px] px-4 py-3 rounded-xl border-[1.5px] border-[var(--time-gray-200)] bg-white text-[13px] font-bold text-[var(--time-gray-600)] font-[var(--font-body)] hover:bg-[var(--time-gray-50)] transition-colors disabled:opacity-50 uppercase leading-snug text-center"
           >
-            Torna al carrello e aggiorna manualmente
+            {t('anomaly-edit', {
+              defaultValue: 'Torna al carrello e aggiorna manualmente',
+            })}
           </button>
           <button
             onClick={onAutofix}
@@ -133,8 +154,13 @@ export default function TimeAnomalyModal({
             )}
           >
             {isSubmitting
-              ? 'Aggiornamento in corso...'
-              : 'Aggiorna carrello con listino variato o promozioni non valide'}
+              ? t('anomaly-updating', {
+                  defaultValue: 'Aggiornamento in corso...',
+                })
+              : t('anomaly-autofix', {
+                  defaultValue:
+                    'Aggiorna carrello con listino variato o promozioni non valide',
+                })}
           </button>
         </div>
       </div>

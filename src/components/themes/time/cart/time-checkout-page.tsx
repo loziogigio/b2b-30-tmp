@@ -70,7 +70,8 @@ export default function TimeCheckoutPage({ lang }: { lang: string }) {
               href={`/${lang}`}
               className="h-[38px] px-4 rounded-[var(--radius-btn)] border-[1.5px] border-[var(--time-gray-200)] bg-white text-[12px] font-semibold text-[var(--time-gray-600)] flex items-center gap-2 transition-colors hover:border-[var(--time-dark)] hover:text-[var(--time-dark)]"
             >
-              <ArrowLeft /> Torna al Catalogo
+              <ArrowLeft />{' '}
+              {t('text-back-to-catalog', { defaultValue: 'Torna al catalogo' })}
             </Link>
 
             <button
@@ -94,6 +95,7 @@ export default function TimeCheckoutPage({ lang }: { lang: string }) {
           {/* Left: Saved Carts */}
           <div className="hidden lg:block lg:sticky lg:top-24">
             <TimeSavedCarts
+              lang={lang}
               collapsed={!sidebarOpen}
               onToggle={() => setSidebarOpen((v) => !v)}
             />
@@ -101,7 +103,7 @@ export default function TimeCheckoutPage({ lang }: { lang: string }) {
 
           {/* Center: Processing Orders + Cart Table */}
           <div className="space-y-6">
-            <TimeProcessingOrders />
+            <TimeProcessingOrders lang={lang} />
             <TimeCartTable
               lang={lang}
               searchQuery={searchQuery}
@@ -118,7 +120,7 @@ export default function TimeCheckoutPage({ lang }: { lang: string }) {
 
         {/* Mobile: Saved Carts */}
         <div className="lg:hidden pb-6">
-          <TimeSavedCarts />
+          <TimeSavedCarts lang={lang} />
         </div>
       </div>
     </div>

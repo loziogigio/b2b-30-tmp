@@ -39,6 +39,13 @@ export declare class MyMbErpClient implements ErpClient {
         dateTo?: string;
         customerRef?: string;
     }): Promise<any[]>;
+    /**
+     * Cart/order line rows — MyMB `GetRigheCarrello?IdCarrello=…` (GET). Each
+     * order testata carries an `IDCarrello`; this returns that cart's
+     * `ListaRighe` (the ordered line items). Used to build order detail, since
+     * MyMB has no single-order detail endpoint.
+     */
+    getCartRows(idCarrello: number | string): Promise<any[]>;
     /** Customer profile — hub `get_client` → MyMB `GetCliente` (GET). */
     getCustomer(customerCode: string): Promise<any>;
     /** Credit exposure — hub `exposition` → MyMB `GetEsposizioneClienteInfo` (GET). */

@@ -38,14 +38,38 @@ export function resolveCouponConfigFromEnv(): CouponConfig {
   }
 }
 
-/** Phase 2: map a `coupon_settings` data-model record `data` to typed config. Pure. */
+/** Build a Basic auth header from explicit user/pass strings; '' when either is missing. */
+function basicAuth(user: string, pass: string): string {
+  if (!user || !pass) return '';
+  return `Basic ${Buffer.from(`${user}:${pass}`).toString('base64')}`;
+}
+
+/**
+ * Phase 2: map a `coupon_settings` data-model record `data` to typed config. Pure.
+ *
+ * Credentials are sourced from the dynamic record so the container needs no
+ * coupon secrets of its own (and they stay per-tenant). Resolution order:
+ *   1. record `api_user` / `api_password` fields (preferred)
+ *   2. credentials embedded in `api_url` (http://user:pass@host/path) — back-compat
+ *   3. COUPON_API_USER / COUPON_API_PASSWORD env — last-resort fallback
+ */
 export function mapCouponRecord(data: Record<string, unknown>): CouponConfig {
-  const baseUrl = String(data.api_url ?? '').replace(/\/+$/, '');
-  return {
-    enabled: data.enabled === undefined ? true : Boolean(data.enabled),
-    baseUrl,
-    authHeader: authFromEnv(),
-  };
+  const rawUrl = String(data.api_url ?? '');
+  const enabled = data.enabled === undefined ? true : Boolean(data.enabled);
+
+  const user = data.api_user == null ? '' : String(data.api_user);
+  const pass = data.api_password == null ? '' : String(data.api_password);
+  const recordAuth = basicAuth(user, pass);
+  if (recordAuth) {
+    return { enabled, baseUrl: rawUrl.replace(/\/+$/, ''), authHeader: recordAuth };
+  }
+
+  try {
+    const { baseUrl, authHeader } = parseMyMbConnection(rawUrl);
+    return { enabled, baseUrl, authHeader };
+  } catch {
+    return { enabled, baseUrl: rawUrl.replace(/\/+$/, ''), authHeader: authFromEnv() };
+  }
 }
 
 /** Sales-channel code the storefront reads its `coupon_settings` record under. */

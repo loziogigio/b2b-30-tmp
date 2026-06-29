@@ -11,6 +11,7 @@ exports.MYMB_ENDPOINTS = {
     GET_LISTA_SCADENZE_CON_INFO: 'GetListaScadenzeConInfo',
     GET_TESTATE_FATT_CON_INFO: 'GetTestateFATTConInfo',
     GET_TESTATE_DDT_CON_INFO: 'GetTestateDDTConInfo',
+    GET_RIGHE_CARRELLO: 'GetRigheCarrello',
 };
 /** Raw MYMB coupon webservice endpoints (separate connection from pricing). */
 exports.MYMB_COUPON_ENDPOINTS = {

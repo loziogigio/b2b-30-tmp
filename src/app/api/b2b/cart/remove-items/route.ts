@@ -1,41 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { resolveTenant, isSingleTenant } from '@/lib/tenant';
-
-const DEFAULT_PIM_API_URL =
-  process.env.PIM_API_URL || process.env.NEXT_PUBLIC_PIM_API_URL || '';
-const PIM_API_URL_OVERRIDE = process.env.PIM_API_URL_OVERRIDE;
-const DEFAULT_API_KEY_ID =
-  process.env.API_KEY_ID || process.env.NEXT_PUBLIC_API_KEY_ID;
-const DEFAULT_API_SECRET =
-  process.env.API_SECRET || process.env.NEXT_PUBLIC_API_SECRET;
-
-async function getTenantConfig(req: NextRequest) {
-  if (isSingleTenant) {
-    return {
-      pimApiUrl: DEFAULT_PIM_API_URL,
-      apiKeyId: DEFAULT_API_KEY_ID,
-      apiSecret: DEFAULT_API_SECRET,
-    };
-  }
-  const hostname =
-    req.headers.get('x-tenant-hostname') ||
-    req.headers.get('host') ||
-    'localhost';
-  const tenant = await resolveTenant(hostname);
-  if (!tenant) {
-    return {
-      pimApiUrl: DEFAULT_PIM_API_URL,
-      apiKeyId: DEFAULT_API_KEY_ID,
-      apiSecret: DEFAULT_API_SECRET,
-    };
-  }
-  return {
-    pimApiUrl:
-      PIM_API_URL_OVERRIDE || tenant.api.pimApiUrl || DEFAULT_PIM_API_URL,
-    apiKeyId: tenant.api.apiKeyId || DEFAULT_API_KEY_ID,
-    apiSecret: tenant.api.apiSecret || DEFAULT_API_SECRET,
-  };
-}
+import { resolveTenantApiConfig } from '@/lib/tenant';
 
 /**
  * POST /api/b2b/cart/remove-items
@@ -66,7 +30,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const config = await getTenantConfig(req);
+    const config = await resolveTenantApiConfig(req);
     const baseUrl = config.pimApiUrl.endsWith('/')
       ? config.pimApiUrl
       : `${config.pimApiUrl}/`;

@@ -110,8 +110,14 @@ export default function OrderPageClient() {
       doc_number: String(doc_number),
       cause: String(cause),
       doc_year: String(doc_year),
+      // ERP context for the direct-MyMB (time) detail flow.
+      customer_code: (ERP_STATIC as any).customer_code,
+      address_code: criteria.address_code || (ERP_STATIC as any).address_code,
+      type: criteria.type,
+      date_from: criteria.date_from,
+      date_to: criteria.date_to,
     };
-  }, [selected]);
+  }, [selected, criteria]);
 
   const {
     data: orderDetail,

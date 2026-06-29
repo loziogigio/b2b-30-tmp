@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useMemo, useState, useCallback } from 'react';
 import { useOrderDetailsQuery } from '@framework/order/fetch-order';
 import { useEnrichedOrderItems } from '@framework/order/use-enriched-order-items';
+import { ERP_STATIC } from '@framework/utils/static';
 import AddressCard from '@components/orders/address-card';
 import OrderItemsTable from '@components/orders/order-items-table';
 import { useTranslation } from 'src/app/i18n/client';
@@ -78,7 +79,16 @@ export default function OrderDetailClient({ lang, initialParams }: Props) {
     const { cause, doc_year, doc_number, vincId } = initialParams;
     if (vincId) return { vincId };
     if (!cause || !doc_year || !doc_number) return null;
-    return { cause, doc_year, doc_number };
+    return {
+      cause,
+      doc_year,
+      doc_number,
+      // ERP context for the direct-MyMB (time) detail flow — this deep-link
+      // page has no order list to inherit it from, so read it from ERP_STATIC.
+      customer_code: (ERP_STATIC as any).customer_code,
+      address_code: (ERP_STATIC as any).address_code,
+      type: 'T',
+    };
   }, [initialParams]);
 
   const {

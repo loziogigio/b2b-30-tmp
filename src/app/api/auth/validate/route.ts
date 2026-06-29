@@ -30,6 +30,10 @@ export async function GET(request: NextRequest) {
     );
     console.log('[validate] user.customers:', validation.user?.customers);
 
+    if (!validation.authenticated || !validation.user) {
+      return NextResponse.json({ authenticated: false }, { status: 401 });
+    }
+
     return NextResponse.json({
       authenticated: true,
       user: {

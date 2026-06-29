@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
+  ERP_STATIC,
   hydrateErpStatic,
   hasValidErpContext,
   applyVincProfileToErpStatic,
@@ -99,39 +100,50 @@ export default function ErpHydrator() {
         }
       }
 
-      // Fallback: Fetch user profile from validate endpoint
-      console.log('[ErpHydrator] Fetching profile from validate endpoint');
-      const response = await fetch('/api/auth/validate', {
-        method: 'GET',
-        credentials: 'include',
-      });
+      // Fallback: Fetch user profile from validate endpoint, with one refresh retry
+      // if the access token is expired (common when the SSO callback redirect
+      // takes longer than the token's short-lived window).
+      const tryApplyFromValidate = async (): Promise<boolean> => {
+        const response = await fetch('/api/auth/validate', {
+          method: 'GET',
+          credentials: 'include',
+        });
 
-      if (response.ok) {
+        if (!response.ok) return false;
+
         const data = await response.json();
         console.log('[ErpHydrator] Validate response:', data);
         console.log('[ErpHydrator] data.user.customers:', data.user?.customers);
 
-        if (data.authenticated && data.user) {
-          // Map the validate response to the profile format expected by applyVincProfileToErpStatic
-          const profile = {
-            id: data.user.id,
-            email: data.user.email,
-            name: data.user.name,
-            role: data.user.role,
-            status: 'active',
-            supplier_id: data.user.supplier_id,
-            supplier_name: data.user.supplier_name,
-            customers: data.user.customers || [],
-          };
+        if (!data.authenticated || !data.user) return false;
 
-          // Store profile in localStorage
-          applyVincProfileToErpStatic(profile);
+        applyVincProfileToErpStatic({
+          id: data.user.id,
+          email: data.user.email,
+          name: data.user.name,
+          role: data.user.role,
+          status: 'active',
+          supplier_id: data.user.supplier_id,
+          supplier_name: data.user.supplier_name,
+          customers: data.user.customers || [],
+        });
+        authorize();
+        setProfileFetched(true);
+        return true;
+      };
 
-          // Trigger UI authorization
-          authorize();
+      console.log('[ErpHydrator] Fetching profile from validate endpoint');
+      const ok = await tryApplyFromValidate();
 
-          // Mark profile as fetched to trigger hydration
-          setProfileFetched(true);
+      if (!ok) {
+        // Token may be expired — try to refresh it, then re-validate once.
+        console.log('[ErpHydrator] Validate failed, attempting token refresh');
+        const refreshRes = await fetch('/api/auth/refresh', {
+          method: 'POST',
+          credentials: 'include',
+        });
+        if (refreshRes.ok) {
+          await tryApplyFromValidate();
         }
       }
     } catch (error) {
@@ -150,6 +162,38 @@ export default function ErpHydrator() {
 
     // Try to hydrate from localStorage
     const didHydrate = hydrateErpStatic();
+
+    // Fallback: if user is authorized but localStorage has no valid ERP context
+    // (e.g. fresh session after token refresh, cleared storage, or first load
+    // after login without going through the SSO callback path), call validate
+    // to re-populate ERP_STATIC from the server-side session.
+    if (isAuthorized && !hasValidErpContext()) {
+      (async () => {
+        try {
+          const res = await fetch('/api/auth/validate', { credentials: 'include' });
+          if (!res.ok) {
+            // Token may be expired — refresh once then retry
+            const refreshRes = await fetch('/api/auth/refresh', { method: 'POST', credentials: 'include' });
+            if (!refreshRes.ok) return;
+            const res2 = await fetch('/api/auth/validate', { credentials: 'include' });
+            if (!res2.ok) return;
+            const data2 = await res2.json();
+            if (data2.authenticated && data2.user) {
+              applyVincProfileToErpStatic({ ...data2.user, status: 'active', customers: data2.user.customers || [] });
+              setProfileFetched((v) => !v);
+            }
+            return;
+          }
+          const data = await res.json();
+          if (data.authenticated && data.user) {
+            applyVincProfileToErpStatic({ ...data.user, status: 'active', customers: data.user.customers || [] });
+            setProfileFetched((v) => !v);
+          }
+        } catch {
+          // silent — not being logged in is a valid state
+        }
+      })();
+    }
 
     // If user is authorized and we successfully hydrated ERP data,
     // invalidate queries so they re-fetch with correct customer context
@@ -223,6 +267,34 @@ export default function ErpHydrator() {
       }
     }
   }, [isAuthorized, addresses, selected, setSelectedAddress]);
+
+  // Keep ERP_STATIC.address_code in sync with the selected delivery address.
+  //
+  // The backend keys the active cart on (customer_code + shipping_address_code)
+  // — both ERP external codes. AddressB2B.id already IS the address external
+  // code (CS maps `id: external_code || address_id`), but address selection only
+  // updates AddressContext; ERP_STATIC.address_code stays at its login-time value.
+  // Without this sync, cart/active always sends the original address code and
+  // returns the same cart no matter which address the user picks.
+  const prevAddressCodeRef = useRef<string | null>(null);
+  useEffect(() => {
+    const nextCode = selected?.id ? String(selected.id) : null;
+    if (!nextCode) return;
+    if (prevAddressCodeRef.current === nextCode) return;
+    prevAddressCodeRef.current = nextCode;
+
+    // Only act when the address actually differs from the persisted ERP context.
+    // The steady state (selection already matches ERP_STATIC) is a no-op so the
+    // initial load doesn't trigger a spurious cart refetch.
+    if (nextCode === ERP_STATIC.address_code) return;
+
+    // New (customer + address) cart key. Clear the cached active-cart id so the
+    // next getOrderId()/ensureActiveCart() resolves the correct cart for this
+    // address, then refetch cart + saved-carts.
+    setErpStatic({ address_code: nextCode, vinc_order_id: undefined });
+    queryClient.invalidateQueries({ queryKey: ['b2b-cart'] });
+    queryClient.invalidateQueries({ queryKey: ['saved-carts'] });
+  }, [selected?.id, queryClient]);
 
   // This component doesn't render anything
   return null;

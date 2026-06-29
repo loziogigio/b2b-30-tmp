@@ -18,6 +18,7 @@ type ComponentSlot =
   | 'ProductDetail'
   | 'ProductPopup'
   | 'VariantsQuickView'
+  | 'VariantsTable'
   | 'Cart'
   | 'SearchOverlay';
 
@@ -38,6 +39,8 @@ const registry: Record<ThemeId, Record<ComponentSlot, () => Promise<any>>> = {
       import('@/components/themes/default/product/default-product-popup'),
     VariantsQuickView: () =>
       import('@/components/themes/default/product/default-variants-quick-view'),
+    VariantsTable: () =>
+      import('@/components/themes/default/product/default-variants-table'),
     Cart: () => import('@/components/themes/default/cart/default-cart'),
     SearchOverlay: () =>
       import('@/components/themes/default/search/default-search-overlay'),
@@ -59,6 +62,8 @@ const registry: Record<ThemeId, Record<ComponentSlot, () => Promise<any>>> = {
       import('@/components/themes/time/product/time-product-popup'),
     VariantsQuickView: () =>
       import('@/components/themes/time/product/time-variants-quick-view'),
+    VariantsTable: () =>
+      import('@/components/themes/time/product/time-variants-table'),
     Cart: () => import('@/components/themes/time/cart/time-cart'),
     SearchOverlay: () =>
       import('@/components/themes/time/search/time-search-overlay'),

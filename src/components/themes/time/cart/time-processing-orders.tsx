@@ -8,6 +8,9 @@ import {
 } from '@/hooks/use-processing-orders';
 import { formatAnomalyFlags, type ErpAnomaly } from '@/hooks/use-order-submit';
 import { TimeCard } from '@/components/themes/time/account/time-account-primitives';
+import { useTranslation } from 'src/app/i18n/client';
+
+type TFn = (key: string, options?: Record<string, unknown>) => string;
 
 const money = (n: number) =>
   new Intl.NumberFormat('it-IT', {
@@ -28,7 +31,7 @@ const fmtDate = (iso?: string) => {
 
 // ── Status badge ────────────────────────────────────────────────────────────
 
-function StatusBadge({ status }: { status?: string }) {
+function StatusBadge({ status, t }: { status?: string; t: TFn }) {
   if (status === 'processing') {
     return (
       <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-blue-700 font-[var(--font-body)]">
@@ -52,7 +55,9 @@ function StatusBadge({ status }: { status?: string }) {
             strokeLinecap="round"
           />
         </svg>
-        In elaborazione...
+        {t('processing-status-processing', {
+          defaultValue: 'In elaborazione...',
+        })}
       </span>
     );
   }
@@ -71,7 +76,7 @@ function StatusBadge({ status }: { status?: string }) {
           <line x1="12" y1="9" x2="12" y2="13" />
           <line x1="12" y1="17" x2="12.01" y2="17" />
         </svg>
-        Anomalie riscontrate
+        {t('anomaly-title', { defaultValue: 'Anomalie riscontrate' })}
       </span>
     );
   }
@@ -90,7 +95,7 @@ function StatusBadge({ status }: { status?: string }) {
           <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
           <polyline points="22,4 12,14.01 9,11.01" />
         </svg>
-        Ordine completato
+        {t('order-status-completed', { defaultValue: 'Ordine completato' })}
       </span>
     );
   }
@@ -103,10 +108,12 @@ function TimeOrderRow({
   order,
   onRevert,
   onResubmit,
+  t,
 }: {
   order: ProcessingOrder;
   onRevert: (id: string) => void;
   onResubmit: (id: string) => void;
+  t: TFn;
 }) {
   const [expanded, setExpanded] = useState(false);
   const anomalies: ErpAnomaly[] = order.erp_data?.anomalies || [];
@@ -118,8 +125,11 @@ function TimeOrderRow({
         <div className="flex items-center gap-3 min-w-0">
           <div className="min-w-0">
             <div className="text-[13px] font-extrabold text-[var(--time-dark)] font-[var(--font-display)] truncate">
-              Ordine #
-              {order.order_number || order.cart_number || order.order_id}
+              {t('processing-order-number', {
+                number:
+                  order.order_number || order.cart_number || order.order_id,
+                defaultValue: 'Ordine #{{number}}',
+              })}
             </div>
             <div className="text-[11px] text-[var(--time-gray-500)] mt-0.5 font-[var(--font-body)]">
               {fmtDate(order.submitted_at || order.created_at)}
@@ -130,7 +140,7 @@ function TimeOrderRow({
               )}
             </div>
           </div>
-          <StatusBadge status={order.processing_status} />
+          <StatusBadge status={order.processing_status} t={t} />
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
@@ -140,13 +150,15 @@ function TimeOrderRow({
                 onClick={() => onRevert(order.order_id)}
                 className="h-8 px-3 rounded-[var(--radius-btn)] border-[1.5px] border-[var(--time-gray-200)] text-[11px] font-bold text-[var(--time-gray-600)] hover:border-[var(--time-dark)] transition-colors font-[var(--font-body)]"
               >
-                Modifica ordine
+                {t('processing-edit-order', {
+                  defaultValue: 'Modifica ordine',
+                })}
               </button>
               <button
                 onClick={() => onResubmit(order.order_id)}
                 className="h-8 px-3 rounded-[var(--radius-btn)] bg-[var(--time-dark)] text-[11px] font-bold text-white hover:bg-[var(--time-red)] transition-colors font-[var(--font-body)]"
               >
-                Riinvia
+                {t('processing-resubmit', { defaultValue: 'Riinvia' })}
               </button>
             </>
           )}
@@ -184,8 +196,12 @@ function TimeOrderRow({
           <table className="w-full text-[11px] font-[var(--font-body)] mt-2">
             <thead>
               <tr className="text-left text-[var(--time-gray-600)]">
-                <th className="pb-1 pr-2 font-bold">Articolo</th>
-                <th className="pb-1 font-bold">Problema</th>
+                <th className="pb-1 pr-2 font-bold">
+                  {t('orders-item', { defaultValue: 'Articolo' })}
+                </th>
+                <th className="pb-1 font-bold">
+                  {t('anomaly-col-problem', { defaultValue: 'Problema' })}
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--time-red)]/10">
@@ -193,7 +209,10 @@ function TimeOrderRow({
                 <tr key={i}>
                   <td className="py-1.5 pr-2">
                     <span className="inline-block px-1.5 py-0.5 rounded bg-[var(--time-red)]/8 text-[var(--time-red)] font-bold font-[var(--font-mono)]">
-                      Riga {a.IdRiga}
+                      {t('processing-row', {
+                        n: a.IdRiga,
+                        defaultValue: 'Riga {{n}}',
+                      })}
                     </span>
                   </td>
                   <td className="py-1.5 text-[var(--time-gray-600)]">
@@ -211,7 +230,8 @@ function TimeOrderRow({
 
 // ── Main component ──────────────────────────────────────────────────────────
 
-export default function TimeProcessingOrders() {
+export default function TimeProcessingOrders({ lang }: { lang: string }) {
+  const { t } = useTranslation(lang, 'common');
   const {
     orders,
     isLoading,
@@ -228,7 +248,9 @@ export default function TimeProcessingOrders() {
   if (isLoading && orders.length === 0) {
     return (
       <div className="py-6 text-center text-[13px] text-[var(--time-gray-500)] font-[var(--font-body)]">
-        Caricamento ordini in elaborazione...
+        {t('processing-loading', {
+          defaultValue: 'Caricamento ordini in elaborazione...',
+        })}
       </div>
     );
   }
@@ -239,7 +261,7 @@ export default function TimeProcessingOrders() {
     <TimeCard className="overflow-hidden">
       <div className="px-5 py-4 border-b border-[var(--time-gray-100)] flex items-center justify-between">
         <h3 className="text-[15px] font-extrabold text-[var(--time-dark)] font-[var(--font-display)]">
-          Ordini in elaborazione
+          {t('processing-title', { defaultValue: 'Ordini in elaborazione' })}
           {hasProcessing && (
             <span className="ml-2 inline-block h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
           )}
@@ -249,7 +271,7 @@ export default function TimeProcessingOrders() {
           disabled={isLoading}
           className="text-[11px] text-[var(--time-gray-500)] hover:text-[var(--time-dark)] font-[var(--font-body)] font-bold"
         >
-          Aggiorna
+          {t('text-refresh', { defaultValue: 'Aggiorna' })}
         </button>
       </div>
 
@@ -260,6 +282,7 @@ export default function TimeProcessingOrders() {
             order={order}
             onRevert={revertToCart}
             onResubmit={resubmitOrder}
+            t={t}
           />
         ))}
       </div>

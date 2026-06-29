@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { resolveTenant, isSingleTenant } from '@/lib/tenant';
+import { resolveTenantApiConfig } from '@/lib/tenant';
 
 type SubmitBody = {
   pageSlug?: string;
@@ -7,35 +7,12 @@ type SubmitBody = {
   data?: Record<string, unknown>;
 };
 
-// Single-tenant fallbacks from .env — multi-tenant gets these from the DB
-// per request hostname.
-const DEFAULT_BASE =
-  process.env.PIM_API_PRIVATE_URL || process.env.NEXT_PUBLIC_PIM_API_URL || '';
-const DEFAULT_KEY_ID = process.env.API_KEY_ID || '';
-const DEFAULT_SECRET = process.env.API_SECRET || '';
-
-async function getSuiteConfig(req: NextRequest) {
-  if (isSingleTenant) {
-    return {
-      base: DEFAULT_BASE,
-      keyId: DEFAULT_KEY_ID,
-      secret: DEFAULT_SECRET,
-    };
-  }
-  const hostname =
-    req.headers.get('x-tenant-hostname') ||
-    req.headers.get('host') ||
-    'localhost';
-  const tenant = await resolveTenant(hostname).catch(() => null);
-  return {
-    base: tenant?.api.pimApiUrl || DEFAULT_BASE,
-    keyId: tenant?.api.apiKeyId || DEFAULT_KEY_ID,
-    secret: tenant?.api.apiSecret || DEFAULT_SECRET,
-  };
-}
-
 export async function POST(req: NextRequest): Promise<Response> {
-  const { base, keyId, secret } = await getSuiteConfig(req);
+  const {
+    pimApiUrl: base,
+    apiKeyId: keyId,
+    apiSecret: secret,
+  } = await resolveTenantApiConfig(req);
 
   if (!base || !keyId || !secret) {
     return NextResponse.json(

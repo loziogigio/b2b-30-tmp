@@ -15,6 +15,7 @@ import DuplicateSubmitModal from '@/components/checkout/duplicate-submit-modal';
 import { useCoupon } from '@/hooks/use-coupon';
 import { applyCouponDiscount } from '@/lib/coupon/discount';
 import TimeCouponField from './time-coupon-field';
+import { useCartSettings } from '@/hooks/use-cart-settings';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -105,6 +106,7 @@ interface TimeOrderSummaryProps {
 export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
   const { t } = useTranslation(lang, 'common');
   const { items, meta } = useCart();
+  const { settings: cartSettings } = useCartSettings();
   const { selected: selectedB2B } = useDeliveryAddress();
   const { data: customer } = useCustomerQuery(true);
   const {
@@ -121,7 +123,20 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
     clearOrderAlreadySubmitted,
   } = useOrderSubmit(lang);
 
+  // ERP_STATIC is hydrated from localStorage on the client only, so any render
+  // condition reading it must wait for mount or SSR/client HTML diverges.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   const [deliveryType, setDeliveryType] = useState('spedizione');
+  // Pickup can be hidden per channel via cart_settings. If it's off while
+  // "ritiro" is selected (e.g. toggled after mount), fall back to shipping so we
+  // never submit a delivery type the storefront no longer offers.
+  useEffect(() => {
+    if (!cartSettings.showPickup && deliveryType === 'ritiro') {
+      setDeliveryType('spedizione');
+    }
+  }, [cartSettings.showPickup, deliveryType]);
   const [deliveryDate, setDeliveryDate] = useState(() =>
     toLocalISODate(nextBusinessDay()),
   );
@@ -152,7 +167,9 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
     idCart: couponCartId,
   });
   // Re-display a coupon already saved on the cart.
-  useEffect(() => { coupon.checkCouponCart(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+  useEffect(() => {
+    coupon.checkCouponCart(); /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, []);
 
   const discounted = applyCouponDiscount({ net, vat }, coupon.discountPercent);
 
@@ -201,10 +218,12 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
         {/* Header */}
         <div className="px-6 pt-5 pb-4 border-b border-[var(--time-gray-100)]">
           <h3 className="text-[16px] font-extrabold text-[var(--time-dark)] font-[var(--font-display)] mb-1">
-            Dettagli Ordine
+            {t('ordersummary-title', { defaultValue: 'Dettagli Ordine' })}
           </h3>
           <p className="text-[12px] text-[var(--time-gray-500)]">
-            Completa il tuo acquisto
+            {t('ordersummary-subtitle', {
+              defaultValue: 'Completa il tuo acquisto',
+            })}
           </p>
         </div>
 
@@ -212,7 +231,9 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
         <div className="px-6 py-4 flex flex-col gap-3.5">
           {/* Company */}
           <div>
-            <label className={labelCls}>Nome Azienda</label>
+            <label className={labelCls}>
+              {t('ordersummary-company-name', { defaultValue: 'Nome Azienda' })}
+            </label>
             <div
               className={cn(
                 inputCls,
@@ -226,15 +247,32 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
 
           {/* Delivery type */}
           <div>
-            <label className={labelCls}>Tipo di Consegna</label>
+            <label className={labelCls}>
+              {t('ordersummary-delivery-type', {
+                defaultValue: 'Tipo di Consegna',
+              })}
+            </label>
             <div className="flex gap-2">
               {[
                 {
                   value: 'spedizione',
-                  label: 'Spedizione',
+                  label: t('ordersummary-shipping', {
+                    defaultValue: 'Spedizione',
+                  }),
                   icon: <TruckIcon />,
                 },
-                { value: 'ritiro', label: 'Ritiro', icon: <ShieldIcon /> },
+                // "Ritiro" (pickup) is gated by the channel cart_settings flag.
+                ...(cartSettings.showPickup
+                  ? [
+                      {
+                        value: 'ritiro',
+                        label: t('ordersummary-pickup', {
+                          defaultValue: 'Ritiro',
+                        }),
+                        icon: <ShieldIcon />,
+                      },
+                    ]
+                  : []),
               ].map((opt) => (
                 <button
                   key={opt.value}
@@ -255,7 +293,13 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
           {/* Date */}
           <div>
             <label className={labelCls}>
-              Data di {deliveryType === 'spedizione' ? 'Spedizione' : 'Ritiro'}
+              {deliveryType === 'spedizione'
+                ? t('ordersummary-date-shipping', {
+                    defaultValue: 'Data di Spedizione',
+                  })
+                : t('ordersummary-date-pickup', {
+                    defaultValue: 'Data di Ritiro',
+                  })}
             </label>
             <input
               type="date"
@@ -267,38 +311,51 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
 
           {/* Address */}
           <div>
-            <label className={labelCls}>Indirizzo</label>
+            <label className={labelCls}>
+              {t('ordersummary-address', { defaultValue: 'Indirizzo' })}
+            </label>
             <div
               className={cn(
                 inputCls,
-                'flex items-center bg-[var(--time-gray-50)] cursor-default text-ellipsis overflow-hidden whitespace-nowrap',
+                'flex items-center bg-[var(--time-gray-50)] cursor-default overflow-hidden',
               )}
+              title={addressLabel || undefined}
               suppressHydrationWarning
             >
-              {addressLabel || '—'}
+              <span className="min-w-0 truncate">{addressLabel || '—'}</span>
             </div>
           </div>
 
-          {/* Notes */}
-          <div>
-            <label className={labelCls}>Note ordine (opzionale)</label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Eventuali note..."
-              rows={2}
-              className="w-full rounded-[var(--radius-btn)] border-[1.5px] border-[var(--time-gray-200)] px-3.5 py-2.5 text-[13px] font-[var(--font-body)] text-[var(--time-dark)] bg-white outline-none resize-y transition-all focus:border-[var(--time-red)] focus:shadow-[0_0_0_3px_rgba(230,57,70,0.1)]"
-            />
-          </div>
+          {/* Notes (head note) — toggled per channel via cart_settings */}
+          {cartSettings.showHeadNote && (
+            <div>
+              <label className={labelCls}>
+                {t('ordersummary-notes', {
+                  defaultValue: 'Note ordine (opzionale)',
+                })}
+              </label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder={t('ordersummary-notes-placeholder', {
+                  defaultValue: 'Eventuali note...',
+                })}
+                rows={2}
+                className="w-full rounded-[var(--radius-btn)] border-[1.5px] border-[var(--time-gray-200)] px-3.5 py-2.5 text-[13px] font-[var(--font-body)] text-[var(--time-dark)] bg-white outline-none resize-y transition-all focus:border-[var(--time-red)] focus:shadow-[0_0_0_3px_rgba(230,57,70,0.1)]"
+              />
+            </div>
+          )}
 
           {/* Coupon — shown to any logged-in customer (validate/preview needs
               only customer_code; the cart id is only used for persist/re-display). */}
-          {String(ERP_STATIC.customer_code || '0') !== '0' && (
+          {mounted && String(ERP_STATIC.customer_code || '0') !== '0' && (
             <TimeCouponField
               status={coupon.status}
               message={coupon.message}
               onApply={coupon.applyCoupon}
-              placeholder={t('coupon.placeholder', { defaultValue: 'Codice coupon' })}
+              placeholder={t('coupon.placeholder', {
+                defaultValue: 'Codice coupon',
+              })}
               applyLabel={t('coupon.apply', { defaultValue: 'Applica' })}
             />
           )}
@@ -307,12 +364,30 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
         {/* Totals */}
         <div className="px-6 py-4 border-t border-[var(--time-gray-100)] flex flex-col gap-2">
           {[
-            { label: 'Totale lordo', value: gross, strike: true },
-            { label: 'Totale netto', value: discounted.net, bold: true },
-            { label: 'IVA (22%)', value: discounted.vat },
+            {
+              id: 'gross',
+              label: t('ordersummary-total-gross', {
+                defaultValue: 'Totale lordo',
+              }),
+              value: gross,
+              strike: true,
+            },
+            {
+              id: 'net',
+              label: t('ordersummary-total-net', {
+                defaultValue: 'Totale netto',
+              }),
+              value: discounted.net,
+              bold: true,
+            },
+            {
+              id: 'vat',
+              label: t('ordersummary-vat', { defaultValue: 'IVA (22%)' }),
+              value: discounted.vat,
+            },
           ].map((row) => (
             <div
-              key={row.label}
+              key={row.id}
               className="flex justify-between items-center text-[13px] text-[var(--time-gray-600)]"
             >
               <span>{row.label}</span>
@@ -330,21 +405,26 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
 
           {savings > 0 && (
             <div className="flex justify-between items-center text-[12px] text-emerald-600 bg-emerald-50 px-2.5 py-1.5 rounded-lg mt-0.5">
-              <span className="font-semibold">Risparmi</span>
+              <span className="font-semibold">
+                {t('ordersummary-savings', { defaultValue: 'Risparmi' })}
+              </span>
               <span className="font-bold">−{money(savings)}</span>
             </div>
           )}
 
           {coupon.discountPercent > 0 && (
             <div className="flex justify-between items-center text-[12px] text-emerald-600 bg-emerald-50 px-2.5 py-1.5 rounded-lg mt-0.5">
-              <span className="font-semibold">{t('coupon.discountLine', { defaultValue: 'Sconto coupon' })} −{coupon.discountPercent}%</span>
+              <span className="font-semibold">
+                {t('coupon.discountLine', { defaultValue: 'Sconto coupon' })} −
+                {coupon.discountPercent}%
+              </span>
               <span className="font-bold">−{money(discounted.discount)}</span>
             </div>
           )}
 
           <div className="flex justify-between items-center pt-3 border-t-2 border-[var(--time-gray-100)] mt-1">
             <span className="text-[14px] font-bold text-[var(--time-dark)]">
-              Totale
+              {t('orders-total', { defaultValue: 'Totale' })}
             </span>
             <span className="text-[26px] font-black text-[var(--time-dark)] font-[var(--font-display)] tabular-nums">
               {money(discounted.doc)}
@@ -364,7 +444,8 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
                 : 'bg-[var(--time-gray-200)] text-[var(--time-gray-400)] cursor-not-allowed',
             )}
           >
-            Completa Ordine <ArrowRight />
+            {t('ordersummary-submit', { defaultValue: 'Completa Ordine' })}{' '}
+            <ArrowRight />
           </button>
         </div>
       </TimeCard>
@@ -383,10 +464,15 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
               <CheckCircle />
             </div>
             <h2 className="text-[22px] font-black text-[var(--time-dark)] font-[var(--font-display)] mb-2">
-              Confermi l&apos;ordine?
+              {t('ordersummary-confirm-title', {
+                defaultValue: 'Confermi l’ordine?',
+              })}
             </h2>
             <p className="text-[14px] text-[var(--time-gray-500)] mb-2 leading-relaxed">
-              {totalItems} articol{totalItems > 1 ? 'i' : 'o'} per un totale di
+              {t('ordersummary-confirm-count', {
+                count: totalItems,
+                defaultValue: '{{count}} articoli per un totale di',
+              })}
             </p>
             <div className="text-[34px] font-black text-[var(--time-dark)] font-[var(--font-display)] tabular-nums mb-6">
               {money(discounted.doc)}
@@ -396,7 +482,7 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
                 onClick={() => setShowConfirm(false)}
                 className="flex-1 h-12 rounded-xl border-[1.5px] border-[var(--time-gray-200)] bg-white text-[14px] font-bold text-[var(--time-gray-600)] font-[var(--font-body)] hover:bg-[var(--time-gray-50)] transition-colors"
               >
-                Annulla
+                {t('text-cancel', { defaultValue: 'Annulla' })}
               </button>
               <button
                 onClick={handleSubmit}
@@ -408,7 +494,11 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
                     : 'bg-[var(--time-red)] hover:bg-[var(--time-dark)] cursor-pointer',
                 )}
               >
-                {isSubmitting ? 'Invio in corso...' : 'Conferma'}
+                {isSubmitting
+                  ? t('ordersummary-submitting', {
+                      defaultValue: 'Invio in corso...',
+                    })
+                  : t('ordersummary-confirm', { defaultValue: 'Conferma' })}
               </button>
             </div>
           </div>
@@ -418,6 +508,7 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
       {/* ── Anomaly Modal (422 ERP validation) ─────────────────────────── */}
       {anomalyResult && (
         <TimeAnomalyModal
+          lang={lang}
           result={anomalyResult}
           isSubmitting={isSubmitting}
           onAutofix={() => resubmitWithAutofix(submitOpts)}

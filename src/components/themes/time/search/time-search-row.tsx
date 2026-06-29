@@ -3,7 +3,7 @@
 import Link from '@components/ui/link';
 import Image from '@components/ui/image';
 import { Product } from '@framework/types';
-import { useModalAction } from '@components/common/modal/modal.context';
+import { useProductOpen } from '@/hooks/use-product-open';
 import { productPlaceholder } from '@assets/placeholders';
 import { ErpPriceData } from '@utils/transform/erp-prices';
 import { buildPackagingParts } from '@utils/packaging';
@@ -12,6 +12,8 @@ import AddToCart from '@components/product/add-to-cart';
 import { useTranslation } from 'src/app/i18n/client';
 import { useUI } from '@contexts/ui.context';
 import { useHomeSettings } from '@/hooks/use-home-settings';
+import { useCatalogSettings } from '@/hooks/use-catalog-settings';
+import { formatTimeAvailability } from '@components/themes/time/product/format-time-availability';
 import { useLikes } from '@contexts/likes/likes.context';
 import { useReminders } from '@contexts/reminders/reminders.context';
 import { IoIosHeart, IoIosHeartEmpty } from 'react-icons/io';
@@ -44,7 +46,7 @@ export default function TimeSearchRow({
   // (or fetched per the active source flag). A caller-provided priceData
   // still wins as an explicit override.
   const priceData = useProductPriceData(product, { override: priceDataProp });
-  const { openModal } = useModalAction();
+  const openProduct = useProductOpen(lang);
   const { t } = useTranslation(lang, 'common');
   const { isAuthorized, hidePrices } = useUI();
   const { settings } = useHomeSettings();
@@ -77,6 +79,12 @@ export default function TimeSearchRow({
     : 0;
 
   const isOutOfStock = priceData ? Number(priceData.availability) <= 0 : false;
+  const { settings: catalogSettings } = useCatalogSettings();
+  const availInfo = formatTimeAvailability(
+    priceData,
+    catalogSettings.availabilityDisplay,
+    t,
+  );
   // Legacy PvQuantityInput.vue gating + cart-total readout. When a promo
   // gates direct add (multiple promos, or a non-improving threshold promo)
   // we replace the inline qty selector with a PROMO CTA that opens the
@@ -89,11 +97,7 @@ export default function TimeSearchRow({
   const packagingParts = priceData ? buildPackagingParts(priceData) : [];
 
   function handleClick() {
-    if (hasVariants) {
-      openModal('B2B_PRODUCT_VARIANTS_QUICK_VIEW', product);
-    } else {
-      openModal('PRODUCT_VIEW', product);
-    }
+    openProduct(product, !!hasVariants);
   }
 
   return (
@@ -313,9 +317,7 @@ export default function TimeSearchRow({
                 className="text-xs sm:text-[13px] font-semibold font-[family-name:var(--font-body)]"
                 style={{ color: isOutOfStock ? '#dc2626' : '#16a34a' }}
               >
-                {isOutOfStock
-                  ? priceData?.product_label_action?.LABEL || 'Non disponibile'
-                  : 'Disponibile'}
+                {availInfo.label}
               </span>
             </div>
             <TimeStatusBadges

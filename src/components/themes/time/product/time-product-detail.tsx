@@ -26,6 +26,8 @@ import TimeVariantsGrid from './time-variants-grid';
 import ProductJsonLd from '@components/seo/product-json-ld';
 import { printProductDetail } from '@utils/print-product';
 import { useHomeSettings } from '@/hooks/use-home-settings';
+import { useCatalogSettings } from '@/hooks/use-catalog-settings';
+import { formatTimeAvailability } from './format-time-availability';
 import { useProductReturn } from '@/hooks/use-product-return';
 import { ROUTES } from '@utils/routes';
 import {
@@ -159,6 +161,12 @@ const TimeProductDetail: React.FC<{
   const discountTiers = erpPrice?.discount_description || '';
   const hasValidPrice = erpPrice && netPrice != null && Number(netPrice) > 0;
   const isOutOfStock = erpPrice ? Number(erpPrice.availability) <= 0 : false;
+  const { settings: catalogSettings } = useCatalogSettings();
+  const availInfo = formatTimeAvailability(
+    erpPrice,
+    catalogSettings.availabilityDisplay,
+    t,
+  );
   const { hasMultiplePromos } = usePromoGating(erpPrice, data);
 
   /* ── Likes / Reminders ── */
@@ -176,9 +184,16 @@ const TimeProductDetail: React.FC<{
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const [reminderLoading, setReminderLoading] = useState(false);
 
-  /* ── Per-article base promo (MyMB GetPromozioneBaseXArticolo) ── */
+  /* ── Per-article base promo (MyMB GetPromozioneBaseXArticolo) ──
+   * DISABLED for now (2026-06-12): GetPromozioneBaseXArticolo does TO_NUMBER on
+   * codiceInternoArticolo (ORA-06502) so it can't handle this tenant's
+   * alphanumeric article codes (e.g. CB0134-0WA), and the base discount is
+   * already carried by GetPrezzaturaMultipla's `discount[]`. Flip to true to
+   * re-enable once MyMB tolerates non-numeric article codes. */
+  const ENABLE_BASE_PROMO = false;
   const [basePromo, setBasePromo] = useState<any | null>(null);
   useEffect(() => {
+    if (!ENABLE_BASE_PROMO) return;
     verifyPromoItem(
       String(ERP_STATIC.customer_code || ''),
       String(ERP_STATIC.address_code || ''),
@@ -543,11 +558,7 @@ const TimeProductDetail: React.FC<{
                     className="text-xs sm:text-[13px] font-bold"
                     style={{ color: isOutOfStock ? '#dc2626' : '#059669' }}
                   >
-                    {isOutOfStock
-                      ? t('text-out-stock', {
-                          defaultValue: 'Non disponibile',
-                        })
-                      : t('text-in-stock', { defaultValue: 'Disponibile' })}
+                    {availInfo.label}
                   </span>
                 </span>
               </>

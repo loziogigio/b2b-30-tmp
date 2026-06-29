@@ -10,6 +10,7 @@ import { BlockRenderer } from '@/components/blocks/BlockRenderer';
 import type { DynamicBlock } from '@framework/types';
 import DynamicBlockView from '@components/product/dynamic-blocks/DynamicBlockView';
 import { HiOutlineDownload } from 'react-icons/hi';
+import { useTranslation } from 'src/app/i18n/client';
 
 function classNames(...classes: any[]) {
   return classes.filter(Boolean).join(' ');
@@ -397,7 +398,7 @@ function DocsFilterList({
 /* ----------------- Component ----------------- */
 
 export default function ProductB2BDetailsTab({
-  lang, // reserved for future i18n labels
+  lang,
   product,
   zone3Blocks = [],
   dynamicSection3Blocks = [],
@@ -407,6 +408,8 @@ export default function ProductB2BDetailsTab({
   zone3Blocks?: PageBlock[];
   dynamicSection3Blocks?: DynamicBlock[];
 }) {
+  const { t } = useTranslation(lang, 'common');
+
   // Use html_description for the detailed HTML content tab
   // Defensive: handle string, object, or any unexpected type from server
   const rawDesc = (product as any)?.html_description;
@@ -456,7 +459,7 @@ export default function ProductB2BDetailsTab({
   if (hasDescription) {
     tabs.push({
       id: 'desc',
-      label: 'Descrizione',
+      label: t('text-product-tab-description'),
       node: (
         <div
           className="prose prose-sm max-w-none leading-[1.9] text-brand-muted"
@@ -469,7 +472,7 @@ export default function ProductB2BDetailsTab({
   if (hasMarketingFeatures) {
     tabs.push({
       id: 'marketing',
-      label: 'Caratteristiche',
+      label: t('text-product-tab-features'),
       node: (
         <ul className="list-disc list-inside space-y-2 text-sm text-brand-dark">
           {marketingFeatures.map((feature, i) => (
@@ -483,7 +486,7 @@ export default function ProductB2BDetailsTab({
   if (hasTechSpecs) {
     tabs.push({
       id: 'tech-specs',
-      label: 'Specifiche tecniche',
+      label: t('text-technical-specs'),
       node: <SpecFilterList items={techSpecs} />,
     });
   }
@@ -491,7 +494,7 @@ export default function ProductB2BDetailsTab({
   if (hasFeatures) {
     tabs.push({
       id: 'feat',
-      label: 'Caratteristiche tecniche',
+      label: t('text-product-tab-tech-features'),
       node: <SpecFilterList items={features} />,
     });
   }
@@ -499,7 +502,7 @@ export default function ProductB2BDetailsTab({
   if (hasDocs) {
     tabs.push({
       id: 'docs',
-      label: 'Schede tecniche e documenti',
+      label: t('text-product-tab-documents'),
       node: <DocsFilterList docsByType={docsByType} />,
     });
   }

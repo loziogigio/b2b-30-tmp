@@ -8,6 +8,7 @@ export declare const MYMB_ENDPOINTS: {
     readonly GET_LISTA_SCADENZE_CON_INFO: "GetListaScadenzeConInfo";
     readonly GET_TESTATE_FATT_CON_INFO: "GetTestateFATTConInfo";
     readonly GET_TESTATE_DDT_CON_INFO: "GetTestateDDTConInfo";
+    readonly GET_RIGHE_CARRELLO: "GetRigheCarrello";
 };
 export type MyMbEndpoint = (typeof MYMB_ENDPOINTS)[keyof typeof MYMB_ENDPOINTS];
 /** Raw MYMB coupon webservice endpoints (separate connection from pricing). */

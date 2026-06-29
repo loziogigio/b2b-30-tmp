@@ -37,6 +37,11 @@ const DEFAULT_API_KEY_ID =
 const DEFAULT_API_SECRET =
   process.env.API_SECRET || process.env.NEXT_PUBLIC_API_SECRET;
 
+// Local dev override — when set, point home-settings (header/footer config) at
+// this URL instead of the tenant's `pimApiUrl`, mirroring `resolveTenantApiConfig`
+// and the PIM proxy so the whole storefront can hit a local commerce-suite.
+const PIM_API_URL_OVERRIDE = process.env.PIM_API_URL_OVERRIDE;
+
 // =============================================================================
 // HOME SETTINGS FETCH
 // =============================================================================
@@ -99,7 +104,7 @@ async function fetchHomeSettingsWithConfig(
 // each language is cached separately. Falls back to 'default' when absent.
 const cachedSingleTenantFetch = cache((lang: string = 'default') =>
   fetchHomeSettingsWithConfig({
-    pimApiUrl: DEFAULT_PIM_API_BASE,
+    pimApiUrl: PIM_API_URL_OVERRIDE || DEFAULT_PIM_API_BASE,
     apiKeyId: DEFAULT_API_KEY_ID,
     apiSecret: DEFAULT_API_SECRET,
     lang: lang === 'default' ? undefined : lang,
@@ -113,15 +118,21 @@ const cachedMultiTenantFetch = cache(
   async (hostname: string, lang: string = 'default') => {
     const tenant = await resolveTenant(hostname);
 
-    if (!tenant) {
+    // Honour PIM_API_URL_OVERRIDE for local dev (mirrors resolveTenantApiConfig):
+    // when set, fetch home-settings from the override URL even if the hostname
+    // didn't resolve to a tenant, falling back to .env credentials. Without an
+    // override and no resolved tenant, return null → DEFAULT_HOME_SETTINGS
+    // (unchanged production behaviour).
+    const pimApiUrl = PIM_API_URL_OVERRIDE || tenant?.api.pimApiUrl;
+    if (!pimApiUrl) {
       return null;
     }
 
     return fetchHomeSettingsWithConfig({
-      pimApiUrl: tenant.api.pimApiUrl,
-      apiKeyId: tenant.api.apiKeyId,
-      apiSecret: tenant.api.apiSecret,
-      tenantId: tenant.id,
+      pimApiUrl,
+      apiKeyId: tenant?.api.apiKeyId || DEFAULT_API_KEY_ID,
+      apiSecret: tenant?.api.apiSecret || DEFAULT_API_SECRET,
+      tenantId: tenant?.id || process.env.NEXT_PUBLIC_TENANT_ID || SINGLE_TENANT_ID,
       lang: lang === 'default' ? undefined : lang,
     });
   },

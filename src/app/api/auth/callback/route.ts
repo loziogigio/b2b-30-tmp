@@ -234,11 +234,32 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // If user profile is included in token response, store it for client
-    // This avoids an extra round-trip to the validate endpoint
+    // If user profile is included in token response, store a minimal slice for
+    // the client. The full user object can include hundreds of addresses which
+    // easily exceeds the 4 KB browser cookie limit and causes the cookie to be
+    // silently dropped. We only need erp_customer_id and erp_address_id (first
+    // address) for applyVincProfileToErpStatic — strip everything else.
     if (tokenData.user) {
-      console.log('[auth/callback] Storing user profile from token response');
-      cookieStore.set('sso_user_profile', JSON.stringify(tokenData.user), {
+      const minimalProfile = {
+        id: tokenData.user.id,
+        email: tokenData.user.email,
+        name: tokenData.user.name,
+        role: tokenData.user.role,
+        supplier_id: tokenData.user.supplier_id,
+        supplier_name: tokenData.user.supplier_name,
+        customers: (tokenData.user.customers ?? []).map((c: any) => ({
+          id: c.id,
+          erp_customer_id: c.erp_customer_id,
+          name: c.name,
+          business_name: c.business_name,
+          // Keep only the first address — that's all applyVincProfileToErpStatic uses
+          addresses: Array.isArray(c.addresses) && c.addresses.length > 0
+            ? [{ id: c.addresses[0].id, erp_address_id: c.addresses[0].erp_address_id }]
+            : [],
+        })),
+      };
+      console.log('[auth/callback] Storing minimal user profile (addresses trimmed to first)');
+      cookieStore.set('sso_user_profile', JSON.stringify(minimalProfile), {
         httpOnly: false, // Client needs to read this
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',

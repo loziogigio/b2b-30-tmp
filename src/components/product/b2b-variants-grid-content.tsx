@@ -1,10 +1,15 @@
 // components/product/b2b-variants-grid-content.tsx
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { getThemedComponent } from '@/lib/theme/registry';
+import { useProductsPriceMap } from '@framework/pricing';
+import { useThemeId } from '@/contexts/tenant.context';
+import { useCatalogSettings } from '@/hooks/use-catalog-settings';
+import { IoGridOutline, IoListOutline } from 'react-icons/io5';
 
 const ThemedProductCard = getThemedComponent('ProductCard');
+const ThemedVariantsTable = getThemedComponent('VariantsTable');
 import cn from 'classnames';
 import Image from '@components/ui/image';
 import { productPlaceholder } from '@assets/placeholders';
@@ -38,6 +43,30 @@ export default function B2BVariantsGridContent({
 }: B2BVariantsGridContentProps) {
   const { isAuthorized } = useUI();
   const { t } = useTranslation(lang, 'common');
+
+  // Grid/list view toggle — only the time theme has a themed variant table,
+  // so the toggle (and list mode) are gated to it. Each open starts on the
+  // channel's `default_view` (catalog_settings, same source as the catalog
+  // listing); a manual toggle wins for the rest of the session.
+  const themeId = useThemeId();
+  const supportsList = themeId === 'time';
+  const { settings: catalogSettings } = useCatalogSettings();
+  const [view, setView] = useState<'grid' | 'list'>('grid');
+  const userToggledRef = useRef(false);
+  const isList = view === 'list';
+
+  // Apply the channel default once settings resolve (the hook returns the
+  // default 'grid' synchronously, then updates), unless the user already chose.
+  // List mode only exists in the time theme, so other themes stay on grid.
+  useEffect(() => {
+    if (userToggledRef.current || !supportsList) return;
+    setView(catalogSettings.defaultView === 'list' ? 'list' : 'grid');
+  }, [catalogSettings.defaultView, supportsList]);
+
+  const chooseView = (next: 'grid' | 'list') => {
+    userToggledRef.current = true;
+    setView(next);
+  };
 
   const {
     name,
@@ -134,6 +163,11 @@ export default function B2BVariantsGridContent({
     return copy;
   }, [filtered, sortKey, isAuthorized, selectedModels]);
 
+  // One batched ERP request for all visible variants. The sentinel {} is passed
+  // when a variant has no price yet (batch loading or no ERP price) so individual
+  // cards don't fire their own requests.
+  const variantPriceMap = useProductsPriceMap(sorted);
+
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const parentSku = parent_sku ?? sku;
   // Parent groups often lack their own image/name/brand/description — fall back
@@ -167,10 +201,27 @@ export default function B2BVariantsGridContent({
           lang={lang}
           className="w-full"
           hideDescription
+          priceData={variantPriceMap[String(v.id)] ?? ({} as any)}
         />
       ))}
     </div>
   );
+
+  // List mode reuses the theme's spec-table, fed the same sorted variants +
+  // batched prices the grid uses. The shared search/sort/model controls drive
+  // both views.
+  const listContent = (
+    <ThemedVariantsTable
+      lang={lang}
+      parent={product}
+      variants={sorted}
+      priceMap={variantPriceMap}
+      brand={displayBrand}
+      fallbackImg={displayImage}
+    />
+  );
+
+  const bodyContent = isList && supportsList ? listContent : gridContent;
 
   return (
     <div
@@ -256,8 +307,8 @@ export default function B2BVariantsGridContent({
               </button>
             )}
           </div>
-          {isAuthorized && (
-            <div className="shrink-0 ml-auto">
+          <div className="shrink-0 ml-auto flex items-center gap-2">
+            {isAuthorized && (
               <select
                 aria-label={t('sort-variants-aria')}
                 value={sortKey}
@@ -272,8 +323,42 @@ export default function B2BVariantsGridContent({
                 <option value="price-asc">{t('sort-price-asc')}</option>
                 <option value="price-desc">{t('sort-price-desc')}</option>
               </select>
-            </div>
-          )}
+            )}
+            {supportsList && (
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => chooseView('grid')}
+                  className={cn(
+                    'h-10 sm:h-11 w-10 flex items-center justify-center rounded-md border',
+                    !isList
+                      ? 'bg-brand text-white border-brand'
+                      : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50',
+                  )}
+                  aria-label={t('grid', { defaultValue: 'Grid' })}
+                  aria-pressed={!isList}
+                  title={t('grid', { defaultValue: 'Grid' })}
+                >
+                  <IoGridOutline />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => chooseView('list')}
+                  className={cn(
+                    'h-10 sm:h-11 w-10 flex items-center justify-center rounded-md border',
+                    isList
+                      ? 'bg-brand text-white border-brand'
+                      : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50',
+                  )}
+                  aria-label={t('list', { defaultValue: 'List' })}
+                  aria-pressed={isList}
+                  title={t('list', { defaultValue: 'List' })}
+                >
+                  <IoListOutline />
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
@@ -308,14 +393,14 @@ export default function B2BVariantsGridContent({
       {/* Grid area */}
       {useWindowScroll ? (
         <div className="px-2 sm:px-3 pb-4 pt-3 bg-brand-light">
-          {gridContent}
+          {bodyContent}
         </div>
       ) : (
         <div
           ref={scrollRef}
           className="flex-1 overflow-y-auto overscroll-contain px-2 sm:px-3 pb-4 pt-3 bg-brand-light"
         >
-          {gridContent}
+          {bodyContent}
         </div>
       )}
     </div>

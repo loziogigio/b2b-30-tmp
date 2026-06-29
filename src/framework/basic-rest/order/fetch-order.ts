@@ -3,6 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 
 import { post } from '@framework/utils/httpB2B';
 import { API_ENDPOINTS_B2B } from '@framework/utils/api-endpoints-b2b';
+import { erpApiPath } from '@framework/utils/erp-api-base';
+import { useThemeId } from '@/contexts/tenant.context';
 import {
   transformOrder,
   TransformedOrder,
@@ -20,6 +22,13 @@ export type OrderParams = {
   cause?: string; // CausaleDocDefinitivo (ERP)
   doc_year?: string; // AnnoDocDefinitivo (ERP)
   vincId?: string; // VINC record _id (default theme)
+  // ERP customer context — required for the direct-MyMB (time) detail flow,
+  // which re-reads the order from GetTestateConInfoConsegna to find its rows.
+  customer_code?: string;
+  address_code?: string;
+  type?: string;
+  date_from?: string;
+  date_to?: string;
 };
 
 function toErpPayload(params: OrderParams) {
@@ -27,12 +36,18 @@ function toErpPayload(params: OrderParams) {
     NumeroDocDefinitivo: params.doc_number,
     CausaleDocDefinitivo: params.cause,
     AnnoDocDefinitivo: params.doc_year,
+    customer_code: params.customer_code,
+    address_code: params.address_code,
+    type: params.type,
+    date_from: params.date_from,
+    date_to: params.date_to,
     ext_call: true,
   };
 }
 
 export async function fetchOrderDetails(
   params: OrderParams,
+  theme?: string,
 ): Promise<TransformedOrder> {
   // VINC detail by _id (default theme)
   if (params.vincId) {
@@ -47,10 +62,27 @@ export async function fetchOrderDetails(
   }
 
   const payload = toErpPayload(params);
-  const res = await post<RawOrderResponse>(
-    API_ENDPOINTS_B2B.GET_ORDER_DETAIL,
-    payload,
-  );
+
+  // time theme → in-app direct-ERP route (/api/erp/get_order_detail), mirroring
+  // the order list. Other themes → legacy proxy hub (post() prefixes
+  // /api/proxy/b2b → the Drupal-style wrapper/get_order_detail).
+  let res: RawOrderResponse;
+  if (theme === 'time') {
+    const httpRes = await fetch(erpApiPath('time', '/erp/get_order_detail'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!httpRes.ok) {
+      throw new Error('Order not found or ERP error.');
+    }
+    res = await httpRes.json();
+  } else {
+    res = await post<RawOrderResponse>(
+      API_ENDPOINTS_B2B.GET_ORDER_DETAIL,
+      payload,
+    );
+  }
 
   if (!res?.success || !res?.message) {
     // Keep consistent with your product code error handling
@@ -60,9 +92,11 @@ export async function fetchOrderDetails(
   return transformOrder(res);
 }
 
-export const useOrderDetailsQuery = (params: OrderParams, enabled = true) =>
-  useQuery<TransformedOrder, Error>({
-    queryKey: [API_ENDPOINTS_B2B.GET_ORDER_DETAIL, params],
-    queryFn: () => fetchOrderDetails(params),
+export const useOrderDetailsQuery = (params: OrderParams, enabled = true) => {
+  const theme = useThemeId();
+  return useQuery<TransformedOrder, Error>({
+    queryKey: [API_ENDPOINTS_B2B.GET_ORDER_DETAIL, theme, params],
+    queryFn: () => fetchOrderDetails(params, theme),
     enabled,
   });
+};

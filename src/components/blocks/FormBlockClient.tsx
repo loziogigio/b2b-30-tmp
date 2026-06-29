@@ -194,7 +194,7 @@ export default function FormBlockClient({ config, blockId, pageSlug }: Props) {
       <button
         type="submit"
         disabled={isSubmitting}
-        className="rounded-md bg-brand-600 px-4 py-2 text-white disabled:opacity-50"
+        className="rounded-md bg-brand px-4 py-2 text-white transition-colors hover:bg-brand/90 disabled:opacity-50"
       >
         {isSubmitting ? '...' : (config.submit_button_text ?? 'Submit')}
       </button>

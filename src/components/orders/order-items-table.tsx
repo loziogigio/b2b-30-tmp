@@ -227,7 +227,7 @@ export default function OrderItemsTable({
                   </div>
 
                   <div className="flex items-center justify-center text-sm">
-                    {it.delivered_in_price}
+                    {formatPriceIt(it.ordered_in_price, decimals)}
                   </div>
 
                   <div

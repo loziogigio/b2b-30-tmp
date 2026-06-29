@@ -92,7 +92,7 @@ export default function TimeCart({ lang }: { lang: string }) {
         {!hidePrices && !isEmpty && (
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-semibold text-[var(--time-gray-400)] uppercase tracking-[0.06em]">
-              Subtotale
+              {t('cart-subtotal', { defaultValue: 'Subtotale' })}
             </span>
             <span className="text-lg font-black text-[var(--time-dark)] font-[var(--font-display)] tabular-nums">
               {cartTotal}
@@ -105,7 +105,7 @@ export default function TimeCart({ lang }: { lang: string }) {
           onClick={closeDrawer}
           className="flex w-full items-center justify-center h-11 rounded-[var(--radius-btn)] bg-[var(--time-dark)] text-white text-[13px] font-bold transition-colors hover:bg-[var(--time-red)]"
         >
-          VAI AL CARRELLO
+          {t('cart-go-to-cart', { defaultValue: 'VAI AL CARRELLO' })}
         </Link>
       </div>
 

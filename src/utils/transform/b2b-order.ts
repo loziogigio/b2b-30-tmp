@@ -158,6 +158,9 @@ export function transformOrderItem(row: RawOrderItem): TransformedOrderItem {
     ordered_in_quantity: row.quantita.ordinato,
     delivered_in_price: row.valore.consegnato,
     ordered_in_price: row.valore.ordinato,
+    // The ERP article code is the PIM entity_code — set it so
+    // useEnrichedOrderItems can batch-fetch the product image from PIM.
+    entityCode: row.codice_interno_articolo || row.articolo || undefined,
   };
 }
 

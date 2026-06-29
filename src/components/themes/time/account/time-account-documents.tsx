@@ -138,7 +138,7 @@ export default function TimeAccountDocuments({
                 )}
                 onClick={() => setTab('F')}
               >
-                Fatture
+                {t('documents-tab-invoices', { defaultValue: 'Fatture' })}
               </button>
               <button
                 type="button"
@@ -150,7 +150,7 @@ export default function TimeAccountDocuments({
                 )}
                 onClick={() => setTab('DDT')}
               >
-                DDT
+                {t('doc-type-ddt', { defaultValue: 'DDT' })}
               </button>
             </div>
 
@@ -167,7 +167,7 @@ export default function TimeAccountDocuments({
 
           {/* Date range */}
           <div className="flex items-center gap-2 text-xs text-[var(--time-gray-500)]">
-            <span>Da</span>
+            <span>{t('text-from', { defaultValue: 'Da' })}</span>
             <input
               type="date"
               value={from}
@@ -176,7 +176,7 @@ export default function TimeAccountDocuments({
               }
               className="h-9 rounded-[var(--radius-btn)] border border-[var(--time-gray-200)] px-2 text-[12px] font-[var(--font-body)]"
             />
-            <span>A</span>
+            <span>{t('text-to', { defaultValue: 'A' })}</span>
             <input
               type="date"
               value={to}
@@ -188,7 +188,7 @@ export default function TimeAccountDocuments({
               onClick={() => setRange(lastMonthRange())}
               className="h-9 rounded-[var(--radius-btn)] border border-[var(--time-gray-200)] px-3 text-[12px] font-semibold text-[var(--time-gray-600)] hover:border-[var(--time-dark)] transition-colors"
             >
-              Reset
+              {t('text-reset', { defaultValue: 'Reset' })}
             </button>
           </div>
         </div>
@@ -228,28 +228,36 @@ export default function TimeAccountDocuments({
                 <tr className="text-[10px] font-bold uppercase tracking-[0.06em]">
                   <SortHeader
                     k="destination"
-                    label="Destinazione"
+                    label={t('documents-col-destination', {
+                      defaultValue: 'Destinazione',
+                    })}
                     className="w-[220px] px-[22px] py-3 text-left"
                   />
                   <SortHeader
                     k="date"
-                    label="Data"
+                    label={t('text-date', { defaultValue: 'Data' })}
                     className="w-28 px-3 py-3 text-left"
                   />
                   <SortHeader
                     k="document"
-                    label="Documento"
+                    label={t('deadlines-col-document', {
+                      defaultValue: 'Documento',
+                    })}
                     className="w-40 px-3 py-3 text-left"
                   />
                   <SortHeader
                     k="number"
-                    label="Numero"
+                    label={t('documents-col-number', {
+                      defaultValue: 'Numero',
+                    })}
                     className="w-24 px-3 py-3 text-right"
                   />
                   {!isDDT && (
                     <th className="w-16 px-3 py-3 text-center">PDF</th>
                   )}
-                  <th className="w-20 px-3 py-3 text-center">Barcode</th>
+                  <th className="w-20 px-3 py-3 text-center">
+                    {t('documents-col-barcode', { defaultValue: 'Barcode' })}
+                  </th>
                   {!isDDT && (
                     <th className="w-16 px-3 py-3 text-center">CSV</th>
                   )}

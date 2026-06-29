@@ -296,7 +296,11 @@ export default function TimeAccountDashboard({
                 </div>
                 <div className="flex items-center gap-2">
                   <TimeStatusBadge
-                    label={d.type === 'DDT' ? 'DDT' : 'Fattura'}
+                    label={
+                      d.type === 'DDT'
+                        ? t('doc-type-ddt', { defaultValue: 'DDT' })
+                        : t('doc-type-invoice', { defaultValue: 'Fattura' })
+                    }
                     color={d.type === 'DDT' ? '#059669' : '#2563eb'}
                     bg={
                       d.type === 'DDT'

@@ -41,7 +41,7 @@ const Delivery: React.FC<DeliveryProps> = ({ lang, className }) => {
   return (
     <div className={cn('delivery-address min-w-0', className)}>
       <button
-        className="inline-flex items-center text-sm text-brand-dark tracking-[0.1px] min-w-0"
+        className="inline-flex items-center text-sm text-brand-dark tracking-[0.1px] min-w-0 max-w-full"
         onClick={handleDeliveryView}
         title={label}
       >
@@ -49,7 +49,7 @@ const Delivery: React.FC<DeliveryProps> = ({ lang, className }) => {
         <span className="shrink-0 ltr:pl-1.5 lg:rtl:pr-1.5">
           {t('text-delivery')}:
         </span>
-        <span className="font-semibold text-brand relative top-[1px] ltr:pl-1 rtl:pr-1 truncate">
+        <span className="font-semibold text-brand relative top-[1px] ltr:pl-1 rtl:pr-1 min-w-0 truncate">
           {label}
         </span>
         <span className="shrink-0 ltr:pl-1.5 lg:rtl:pr-1.5">

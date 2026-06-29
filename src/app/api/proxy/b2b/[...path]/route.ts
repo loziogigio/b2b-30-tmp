@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { parseMyMbConnection } from 'vinc-erp';
 import { resolveTenant, isSingleTenant } from '@/lib/tenant';
+import { resolveErpUrl } from '@/lib/erp/factory';
 
 // Default values from .env (used in single-tenant mode)
 const DEFAULT_B2B_API_URL =
@@ -58,15 +59,26 @@ async function proxyRequest(
   // Get tenant-specific configuration
   const config = await getTenantConfig(req);
 
-  // If the configured B2B API URL embeds credentials (e.g. a MyMB connection
-  // string `http://user:pass@host/...`), Node's fetch() rejects the URL. Strip
-  // the credentials into an `Authorization: Basic` header and use the clean
-  // base URL — same handling as the ERP client (parseMyMbConnection).
-  let apiUrl = config.b2bApiUrl;
+  // Resolve the MyMB/B2B base URL the SAME way the ERP client does for order
+  // list (ERP_URL_OVERRIDE → tenant b2bApiUrl → ERP_URL). This keeps every
+  // B2B-proxy call pointed at the same service order list uses and honours the
+  // dev override; in prod (no override) it falls back to the tenant URL.
+  let resolvedUrl = config.b2bApiUrl;
+  try {
+    resolvedUrl = resolveErpUrl(config.b2bApiUrl);
+  } catch {
+    // No ERP override/base configured — keep the resolved b2bApiUrl as-is.
+  }
+
+  // If the resolved URL embeds credentials (e.g. a MyMB connection string
+  // `http://user:pass@host/...`), Node's fetch() rejects the URL. Strip the
+  // credentials into an `Authorization: Basic` header and use the clean base
+  // URL — same handling as the ERP client (parseMyMbConnection).
+  let apiUrl = resolvedUrl;
   let basicAuthHeader: string | undefined;
   try {
-    if (new URL(config.b2bApiUrl).username) {
-      const conn = parseMyMbConnection(config.b2bApiUrl);
+    if (new URL(resolvedUrl).username) {
+      const conn = parseMyMbConnection(resolvedUrl);
       apiUrl = conn.baseUrl;
       basicAuthHeader = conn.authHeader;
     }

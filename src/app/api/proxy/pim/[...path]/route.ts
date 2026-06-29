@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { resolveTenant, isSingleTenant } from '@/lib/tenant';
+import { resolveTenantApiConfig } from '@/lib/tenant';
 
 // ---------------------------------------------------------------------------
 // Category-tree cache (per upstream PIM URL).
@@ -217,68 +217,6 @@ async function maybeExpandSearchBody(
   return JSON.stringify(body);
 }
 
-// Default values from .env (used in single-tenant mode)
-const DEFAULT_PIM_API_URL =
-  process.env.PIM_API_URL || process.env.NEXT_PUBLIC_PIM_API_URL || '';
-
-// Local dev override - set in .env.local to override tenant config from MongoDB
-const PIM_API_URL_OVERRIDE = process.env.PIM_API_URL_OVERRIDE;
-
-const DEFAULT_API_KEY_ID =
-  process.env.API_KEY_ID || process.env.NEXT_PUBLIC_API_KEY_ID;
-const DEFAULT_API_SECRET =
-  process.env.API_SECRET || process.env.NEXT_PUBLIC_API_SECRET;
-
-/**
- * Get tenant configuration for this request
- * - Single-tenant mode: returns .env values
- * - Multi-tenant mode: resolves tenant from hostname header
- */
-async function getTenantConfig(req: NextRequest) {
-  if (isSingleTenant) {
-    return {
-      pimApiUrl: DEFAULT_PIM_API_URL,
-      apiKeyId: DEFAULT_API_KEY_ID,
-      apiSecret: DEFAULT_API_SECRET,
-    };
-  }
-
-  // Multi-tenant: resolve from hostname
-  const hostname =
-    req.headers.get('x-tenant-hostname') ||
-    req.headers.get('host') ||
-    'localhost';
-  const tenant = await resolveTenant(hostname);
-
-  if (!tenant) {
-    console.warn(`[PIM Proxy] No tenant found for hostname: ${hostname}`);
-    // Fallback to .env values
-    return {
-      pimApiUrl: DEFAULT_PIM_API_URL,
-      apiKeyId: DEFAULT_API_KEY_ID,
-      apiSecret: DEFAULT_API_SECRET,
-    };
-  }
-
-  // Log tenant config for debugging
-  if (!tenant.api.pimApiUrl) {
-    console.warn(
-      `[PIM Proxy] Tenant ${tenant.id} missing pimApiUrl, using default`,
-    );
-  }
-  if (!tenant.api.apiKeyId || !tenant.api.apiSecret) {
-    console.warn(`[PIM Proxy] Tenant ${tenant.id} missing API credentials`);
-  }
-
-  return {
-    // PIM_API_URL_OVERRIDE takes precedence (for local dev)
-    pimApiUrl:
-      PIM_API_URL_OVERRIDE || tenant.api.pimApiUrl || DEFAULT_PIM_API_URL,
-    apiKeyId: tenant.api.apiKeyId || DEFAULT_API_KEY_ID,
-    apiSecret: tenant.api.apiSecret || DEFAULT_API_SECRET,
-  };
-}
-
 async function proxyRequest(
   req: NextRequest,
   params: Promise<{ path: string[] }>,
@@ -287,8 +225,17 @@ async function proxyRequest(
   const { path } = await params;
   const pathString = path.join('/');
 
-  // Get tenant-specific configuration
-  const config = await getTenantConfig(req);
+  // Resolve the PIM API target + credentials via the shared helper so every
+  // route reaches the suite the same way (honours PIM_API_URL_OVERRIDE).
+  const config = await resolveTenantApiConfig(req);
+
+  if (!config.pimApiUrl) {
+    console.error('[PIM Proxy] PIM API URL not configured');
+    return NextResponse.json(
+      { error: 'Proxy error', message: 'PIM API not configured' },
+      { status: 500 },
+    );
+  }
 
   // Ensure base URL ends with /
   const baseUrl = config.pimApiUrl.endsWith('/')
