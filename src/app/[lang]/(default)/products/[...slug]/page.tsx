@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { cookies } from 'next/headers';
 import {
   QueryClient,
   dehydrate,
@@ -11,6 +12,7 @@ import { getServerHomeSettings } from '@/lib/home-settings/fetch-server';
 import { fetchProductForSeo } from '@/lib/seo/fetch-product';
 import { serverFetchPimProducts } from '@/lib/pim/server-fetch';
 import { transformPimProducts } from '@framework/product/get-pim-product';
+import { AUTH_COOKIES } from '@/lib/auth/cookies';
 
 // Generate dynamic SEO metadata for product pages
 export async function generateMetadata({
@@ -125,6 +127,11 @@ export default async function Page({
   const search = await searchParams;
   const isPreview = search?.preview === 'true';
 
+  // Forward the visitor's auth state to CS so logged-in users still receive
+  // is_public:false media/dynamic-block elements (guests get them stripped).
+  const cookieStore = await cookies();
+  const isAuthenticated = !!cookieStore.get(AUTH_COOKIES.ACCESS_TOKEN)?.value;
+
   // Join slug segments to handle SKUs with slashes (e.g., po27011/2zc)
   const slug = Array.isArray(slugSegments)
     ? slugSegments.join('/')
@@ -166,6 +173,7 @@ export default async function Page({
           filters: { sku: [slug] },
           group_variants: true,
           include_dynamic_blocks: true,
+          authenticated: isAuthenticated,
         });
         return transformPimProducts(result.results).map((p) => ({
           ...p,

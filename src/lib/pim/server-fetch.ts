@@ -1,6 +1,10 @@
 import { cache } from 'react';
 import { headers } from 'next/headers';
-import { resolveTenant, isSingleTenant } from '@/lib/tenant';
+import {
+  buildTenantApiHeaders,
+  resolveTenant,
+  isSingleTenant,
+} from '@/lib/tenant';
 import { resolveSupportedLang } from '@/app/i18n/settings';
 import { cacheTag, SINGLE_TENANT_ID } from '@/lib/cache/tags';
 
@@ -59,11 +63,7 @@ async function getApiConfig(): Promise<ApiConfig | null> {
 }
 
 function buildHeaders(config: ApiConfig): Record<string, string> {
-  return {
-    'Content-Type': 'application/json',
-    ...(config.apiKeyId && { 'X-API-Key': config.apiKeyId }),
-    ...(config.apiSecret && { 'X-API-Secret': config.apiSecret }),
-  };
+  return buildTenantApiHeaders(config, { includeLegacyApiKeyAlias: true });
 }
 
 // ===============================
@@ -79,6 +79,9 @@ export interface ServerSearchParams {
   group_variants?: boolean;
   facet_fields?: string[];
   include_dynamic_blocks?: boolean;
+  /** When true, tells CS the visitor is authenticated so it does not strip
+   *  is_public:false media / dynamic-block elements. */
+  authenticated?: boolean;
 }
 
 export interface ServerSearchFacetValue {
@@ -122,6 +125,9 @@ export const serverFetchPimProducts = cache(
     // Always request per-product rich content blocks (the BE only attaches them
     // where they exist), so any storefront fetch path gets them without wiring.
     body.include_dynamic_blocks = true;
+    if (params.authenticated) {
+      body.authenticated = true;
+    }
 
     try {
       const response = await fetch(url, {
