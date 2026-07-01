@@ -68,4 +68,18 @@ describe('CartProvider resetCart — Svuota carrello', () => {
 
     expect(deleteCart).toHaveBeenCalledWith('EXPLICIT-9');
   });
+
+  // Post-submit reset: the order is finalised in the ERP (no longer a deletable
+  // draft), so DELETE_CART would 400. deleteServer:false skips the server call
+  // but still clears local state so a fresh cart is provisioned on the next add.
+  it('skips the server delete when deleteServer:false, but still clears local state', async () => {
+    const { result } = renderHook(() => useCart(), { wrapper });
+
+    await act(async () => {
+      await result.current.resetCart(undefined, { deleteServer: false });
+    });
+
+    expect(deleteCart).not.toHaveBeenCalled();
+    expect(setErpStatic).toHaveBeenCalledWith({ vinc_order_id: undefined });
+  });
 });

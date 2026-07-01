@@ -25,7 +25,9 @@ export default function CompleteOrderContent({ lang }: { lang: string }) {
   >(isProcessing ? 'processing' : null);
 
   useEffect(() => {
-    resetCart();
+    // Landing here means the order was already submitted — clear local cart
+    // state only; the server order is finalised and must not be deleted (400).
+    resetCart(undefined, { deleteServer: false });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

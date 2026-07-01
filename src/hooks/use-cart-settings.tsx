@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import {
   DEFAULT_CART_CONFIG,
+  asOrderSuccessPages,
   type CartConfig,
 } from '@/lib/erp/cart-config.types';
 
@@ -11,7 +12,10 @@ import {
  * (backed by the `cart_settings` data model, mirroring the coupon config flow).
  * Returns the defaults (both notes hidden) until the request resolves or on error.
  */
-export function useCartSettings(): { settings: CartConfig; isLoading: boolean } {
+export function useCartSettings(): {
+  settings: CartConfig;
+  isLoading: boolean;
+} {
   const [settings, setSettings] = useState<CartConfig>(DEFAULT_CART_CONFIG);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -29,6 +33,7 @@ export function useCartSettings(): { settings: CartConfig; isLoading: boolean } 
           // Pickup defaults ON: only an explicit `false` hides it, so a missing
           // field keeps the historic "always visible" behaviour.
           showPickup: data?.showPickup !== false,
+          orderSuccessPages: asOrderSuccessPages(data?.orderSuccessPages),
         });
       })
       .catch(() => {

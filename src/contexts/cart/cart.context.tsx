@@ -27,7 +27,10 @@ interface CartProviderState extends State {
   isInCart: (id: Item['id']) => boolean;
   isInStock: (id: Item['id']) => boolean;
   setItemQuantity: (item: Item, quantity: number) => void;
-  resetCart: (idCart?: number | string) => Promise<void>;
+  resetCart: (
+    idCart?: number | string,
+    opts?: { deleteServer?: boolean },
+  ) => Promise<void>;
   hydrateFromServer: (serverItems: Item[], mode?: 'replace' | 'merge') => void;
   getCart: (mode?: 'replace' | 'merge') => Promise<void>;
   setCartSummary: (meta: CartSummary | null) => void;
@@ -211,15 +214,21 @@ export function CartProvider(props: React.PropsWithChildren<any>) {
   // signature in context type: resetCart: (idCart?: number | string) => Promise<void>
 
   const resetCart = React.useCallback(
-    async (idCart?: number | string) => {
+    async (idCart?: number | string, opts?: { deleteServer?: boolean }) => {
       try {
         // "Svuota carrello" calls resetCart() with no id, so resolve the
         // active cart from the summary / ERP context. Without this the
         // backing VINC cart was never deleted and its items re-appeared on
         // the next add. (Don't lean on deleteCart's own fallback: it derives
         // the id from String(idCart), and String(undefined) === "undefined".)
+        //
+        // Post-submit resets pass `deleteServer: false`: the order has been
+        // finalised in the ERP and is no longer a deletable draft, so
+        // DELETE_CART would 400 — we only want to clear local state and let
+        // the next add provision a fresh cart.
+        const deleteServer = opts?.deleteServer !== false;
         const id = idCart ?? state.meta?.orderId ?? ERP_STATIC.vinc_order_id;
-        if (id != null && id !== '') {
+        if (deleteServer && id != null && id !== '') {
           await deleteCart(id);
         }
         // Drop the reference to the now-deleted cart so the re-fetch below and

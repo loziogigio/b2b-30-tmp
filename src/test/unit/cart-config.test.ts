@@ -5,6 +5,10 @@ import {
   DEFAULT_CART_CONFIG,
   fetchCartSettings,
 } from '@/lib/erp/cart-config';
+import {
+  asOrderSuccessPages,
+  resolveOrderSuccessSlug,
+} from '@/lib/erp/cart-config.types';
 
 describe('cart-config (static)', () => {
   const OLD = { ...process.env };
@@ -23,6 +27,7 @@ describe('cart-config (static)', () => {
       showLineNote: false,
       showHeadNote: false,
       showPickup: true,
+      orderSuccessPages: [],
     });
   });
 
@@ -33,6 +38,7 @@ describe('cart-config (static)', () => {
       showLineNote: true,
       showHeadNote: true,
       showPickup: true,
+      orderSuccessPages: [],
     });
   });
 
@@ -43,6 +49,7 @@ describe('cart-config (static)', () => {
       showLineNote: false,
       showHeadNote: false,
       showPickup: true,
+      orderSuccessPages: [],
     });
   });
 
@@ -62,6 +69,7 @@ describe('cart-config (static)', () => {
       showLineNote: true,
       showHeadNote: false,
       showPickup: false,
+      orderSuccessPages: [],
     });
   });
 
@@ -70,8 +78,52 @@ describe('cart-config (static)', () => {
       showLineNote: true,
       showHeadNote: false,
       showPickup: true,
+      orderSuccessPages: [],
     });
     expect(mapCartRecord({})).toEqual(DEFAULT_CART_CONFIG);
+  });
+
+  it('mapCartRecord maps order_success_pages (array_of_objects)', () => {
+    const cfg = mapCartRecord({
+      order_success_pages: [
+        { lang: 'IT', slug: ' ordine-ricevuto ' },
+        { lang: 'en', slug: 'order-received' },
+        { lang: 'fr', slug: '' }, // dropped: empty slug
+        { slug: 'no-lang' }, // dropped: no lang
+      ],
+    });
+    expect(cfg.orderSuccessPages).toEqual([
+      { lang: 'it', slug: 'ordine-ricevuto' },
+      { lang: 'en', slug: 'order-received' },
+    ]);
+  });
+});
+
+describe('order-success redirect helpers', () => {
+  it('asOrderSuccessPages keeps only valid {lang,slug}, trims + lowercases lang', () => {
+    expect(
+      asOrderSuccessPages([
+        { lang: 'DE', slug: 'bestellung-erhalten' },
+        { lang: '', slug: 'x' },
+        { lang: 'es' },
+        'garbage',
+        null,
+      ]),
+    ).toEqual([{ lang: 'de', slug: 'bestellung-erhalten' }]);
+    expect(asOrderSuccessPages(undefined)).toEqual([]);
+    expect(asOrderSuccessPages('nope' as unknown)).toEqual([]);
+  });
+
+  it('resolveOrderSuccessSlug returns the slug for the language, else undefined', () => {
+    const pages = [
+      { lang: 'it', slug: 'ordine-ricevuto' },
+      { lang: 'en', slug: 'order-received' },
+    ];
+    expect(resolveOrderSuccessSlug('it', pages)).toBe('ordine-ricevuto');
+    expect(resolveOrderSuccessSlug('EN', pages)).toBe('order-received');
+    expect(resolveOrderSuccessSlug('fr', pages)).toBeUndefined();
+    expect(resolveOrderSuccessSlug('it', [])).toBeUndefined();
+    expect(resolveOrderSuccessSlug('it', undefined)).toBeUndefined();
   });
 });
 
@@ -85,7 +137,9 @@ describe('cart-config (dynamic)', () => {
     global.fetch = (async () =>
       new Response(
         JSON.stringify({
-          data: { items: [{ data: { show_line_note: true, show_head_note: true } }] },
+          data: {
+            items: [{ data: { show_line_note: true, show_head_note: true } }],
+          },
         }),
         { status: 200 },
       )) as any;
@@ -99,12 +153,15 @@ describe('cart-config (dynamic)', () => {
       showLineNote: true,
       showHeadNote: true,
       showPickup: true,
+      orderSuccessPages: [],
     });
   });
 
   it('falls back to default when the record is absent', async () => {
     global.fetch = (async () =>
-      new Response(JSON.stringify({ data: { items: [] } }), { status: 200 })) as any;
+      new Response(JSON.stringify({ data: { items: [] } }), {
+        status: 200,
+      })) as any;
     const cfg = await fetchCartSettings({
       csBaseUrl: 'http://cs',
       apiKeyId: 'k',

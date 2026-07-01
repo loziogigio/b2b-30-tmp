@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import {
-  resolveCartConfig,
-  DEFAULT_CART_CONFIG,
-} from '@/lib/erp/cart-config';
+import { resolveCartConfig, DEFAULT_CART_CONFIG } from '@/lib/erp/cart-config';
 
 /**
  * GET /api/b2b/cart-settings
@@ -17,6 +14,7 @@ export async function GET(req: NextRequest) {
       showLineNote: cfg.showLineNote,
       showHeadNote: cfg.showHeadNote,
       showPickup: cfg.showPickup,
+      orderSuccessPages: cfg.orderSuccessPages,
     });
   } catch {
     return NextResponse.json(DEFAULT_CART_CONFIG);

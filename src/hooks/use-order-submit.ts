@@ -6,6 +6,8 @@ import { CS_CART } from '@framework/utils/api-endpoints-cs';
 import { ERP_STATIC } from '@framework/utils/static';
 import { useCart } from '@contexts/cart/cart.context';
 import { ensureActiveCart } from '@framework/cart/b2b-cart';
+import { useCartSettings } from '@/hooks/use-cart-settings';
+import { resolveOrderSuccessSlug } from '@/lib/erp/cart-config.types';
 
 // ── Anomaly flag → human-readable label ─────────────────────────────────────
 
@@ -94,6 +96,7 @@ export type SubmitOutcome =
 
 export function useOrderSubmit(lang: string) {
   const { meta, resetCart } = useCart();
+  const { settings: cartSettings } = useCartSettings();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [anomalyResult, setAnomalyResult] = useState<AnomalyResult | null>(
     null,
@@ -144,7 +147,7 @@ export function useOrderSubmit(lang: string) {
 
         // 200 sync success or 202 async
         if (res?.processing) {
-          await resetCart();
+          await resetCart(undefined, { deleteServer: false });
           await ensureActiveCart();
           if (typeof window !== 'undefined') {
             window.location.href = `/${lang}/complete-order?processing=true&order_id=${orderId}`;
@@ -152,11 +155,20 @@ export function useOrderSubmit(lang: string) {
           return { type: 'processing', orderId };
         }
 
-        // Sync success
-        await resetCart();
+        // Sync success. Redirect to the channel's configured per-language CMS
+        // success page when set, else the built-in complete-order page. (The
+        // async `processing` path above always keeps complete-order for its poll.)
+        // The order is finalised, so skip the server cart delete (would 400).
+        await resetCart(undefined, { deleteServer: false });
         await ensureActiveCart();
         if (typeof window !== 'undefined') {
-          window.location.href = `/${lang}/complete-order`;
+          const successSlug = resolveOrderSuccessSlug(
+            lang,
+            cartSettings.orderSuccessPages,
+          );
+          window.location.href = successSlug
+            ? `/${lang}/${successSlug}`
+            : `/${lang}/complete-order`;
         }
         return { type: 'success' };
       } catch (error: any) {
@@ -226,7 +238,7 @@ export function useOrderSubmit(lang: string) {
         setIsSubmitting(false);
       }
     },
-    [getOrderId, lang, resetCart],
+    [getOrderId, lang, resetCart, cartSettings.orderSuccessPages],
   );
 
   const resubmitWithAutofix = useCallback(

@@ -1,5 +1,9 @@
 import type { NextRequest } from 'next/server';
-import { DEFAULT_CART_CONFIG, type CartConfig } from './cart-config.types';
+import {
+  DEFAULT_CART_CONFIG,
+  asOrderSuccessPages,
+  type CartConfig,
+} from './cart-config.types';
 
 /**
  * Cart UI toggles consumed by the time-theme cart/checkout. Mirrors the coupon
@@ -34,6 +38,7 @@ export function resolveCartConfigFromEnv(): CartConfig {
     showLineNote: asBool(process.env.CART_SHOW_LINE_NOTE),
     showHeadNote: asBool(process.env.CART_SHOW_HEAD_NOTE),
     showPickup: asBool(process.env.CART_SHOW_PICKUP, true),
+    orderSuccessPages: [],
   };
 }
 
@@ -47,6 +52,7 @@ export function mapCartRecord(data: Record<string, unknown>): CartConfig {
     showLineNote: asBool(data.show_line_note),
     showHeadNote: asBool(data.show_head_note),
     showPickup: asBool(data.show_pickup, true),
+    orderSuccessPages: asOrderSuccessPages(data.order_success_pages),
   };
 }
 
@@ -106,7 +112,9 @@ interface FetchCartArgs {
  * Phase 2: fetch the channel-scoped `cart_settings` record from Commerce Suite
  * (mirrors fetchCouponSettings). Returns DEFAULT_CART_CONFIG when absent.
  */
-export async function fetchCartSettings(args: FetchCartArgs): Promise<CartConfig> {
+export async function fetchCartSettings(
+  args: FetchCartArgs,
+): Promise<CartConfig> {
   const url = new URL(
     `${args.csBaseUrl.replace(/\/+$/, '')}/api/b2b/data-models/cart_settings/records`,
   );
