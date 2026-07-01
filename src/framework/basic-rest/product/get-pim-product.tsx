@@ -17,14 +17,13 @@ import { ERP_STATIC } from '../utils/static';
 
 /**
  * Returns the customer-context fields the PIM search endpoint uses to
- * resolve `tag_filter` server-side. When the user isn't logged in,
- * customer_code/address_code are still '0' — passing them through
- * lets the BE decide whether to strip packaging_options or apply a
- * default tier; not passing them at all keeps the response stripped.
+ * resolve the pricing tier / tag_filter AND the channel-scoped
+ * user-attribute exclusion rules server-side.
  *
- * Keep this consistent with what the BE search route looks at:
- * route.ts:144-162 reads `body.tag_filter`, `body.customer_code`,
- * `body.address_code` and falls through to a tag resolver.
+ * When no customer is selected, ERP_STATIC still holds the '0' sentinel —
+ * in that case we send NOTHING (no customer_code / address_code), so the BE
+ * treats the request as a guest (packaging_options stripped, no per-user
+ * exclusion applied). We never send the raw '0'.
  */
 function pimCustomerContext(): {
   customer_code?: string;
@@ -343,6 +342,11 @@ export const fetchPimProductList = async (
     text: params.q || params.text || '',
     start: params.start || 0,
     rows: params.rows || params.limit || params.per_page || 12,
+    // Sales channel — scope search to this storefront's channel so the BE can
+    // apply channel-scoped behaviour: the `channels:<code>` product filter AND
+    // the channel-scoped catalog user-attribute exclusion rules (which the BE
+    // skips entirely when no channel is provided). Defaults to 'b2b'.
+    channel: params.channel || 'b2b',
     // Customer context lets the BE pick the right pricelist tier and
     // return tag-filtered packaging_options with inline pricing. Without
     // these, the search route strips packaging_options entirely and the
