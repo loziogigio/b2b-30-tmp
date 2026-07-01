@@ -87,6 +87,7 @@ export default function Counter({
         inputMode="decimal"
         pattern="[0-9]*[.,]?[0-9]*"
         min="0"
+        data-variant={variant}
         value={value}
         onChange={(e) => onChangeValue(e.target.value)}
         onBlur={onCommit}

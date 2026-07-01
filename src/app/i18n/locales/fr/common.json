@@ -730,5 +730,16 @@
     "placeholder": "Code promo",
     "apply": "Appliquer",
     "discountLine": "Remise du coupon"
-  }
+  },
+  "text-back-to-catalog": "Retour au catalogue",
+  "text-status": "État",
+  "text-listino": "PRIX LISTE",
+  "text-view-n-variants": "Voir {{n}} variantes",
+  "text-view-variants": "Voir les variantes",
+  "show-n-variants": "Afficher {{n}} options",
+  "hide-n-variants": "Masquer {{n}} options",
+  "text-availability": "Disponibilité",
+  "text-packaging": "Conditionnement",
+  "catalogue-view-all": "Voir tout",
+  "view-all-products": "Voir tous"
 }

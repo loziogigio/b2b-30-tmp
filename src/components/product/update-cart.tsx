@@ -90,7 +90,18 @@ export default function UpdateCart({ lang, item, className, disabled }: Props) {
   // promo identity for sameLine() on server
   const promo_code = (live as any)?.promo_code ?? 0;
   const promo_row = (live as any)?.promo_row ?? 0;
-  const isPromo = Boolean(promo_code && String(promo_code) !== '0');
+  // Promo detection for the "in cart" red fill. Red means a *real* promo
+  // (promo line or gift), NOT merely a discounted Listino — so we key on
+  // `promo_code` / `__cartMeta.is_promo` (gift || promo_code), deliberately
+  // avoiding the adapter's `isPromo`, which also trips on `unit < list` and
+  // would paint every discounted Listino line red. Fall back to the prop item
+  // in case the live server line dropped the fields on the ERP round-trip.
+  const hasPromoCode = (v: unknown) => Boolean(v && String(v) !== '0');
+  const isPromo =
+    hasPromoCode(promo_code) ||
+    hasPromoCode((item as any)?.promo_code) ||
+    Boolean((live as any)?.__cartMeta?.is_promo) ||
+    Boolean((item as any)?.__cartMeta?.is_promo);
 
   // ---- Local quantity state ----
   // `local` is what the user sees and manipulates. It diverges from server qty

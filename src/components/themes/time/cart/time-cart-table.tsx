@@ -337,7 +337,11 @@ function TimeCartRow({
 
         {/* Quantity */}
         <div className="flex justify-center">
-          <UpdateCart item={item} lang={lang} className="time-stepper" />
+          <UpdateCart
+            item={item}
+            lang={lang}
+            className="time-stepper time-stepper-color"
+          />
         </div>
 
         {/* Line total */}
@@ -433,7 +437,11 @@ function TimeCartRow({
           </button>
         </div>
         <div className="mt-2 pl-[64px]">
-          <UpdateCart item={item} lang={lang} className="time-stepper" />
+          <UpdateCart
+            item={item}
+            lang={lang}
+            className="time-stepper time-stepper-color"
+          />
         </div>
         {showLineNote && (
           <div className="mt-2 pl-[64px]">
@@ -525,8 +533,7 @@ export default function TimeCartTable({
             {t('cart-summary-availability', {
               count: availableCount,
               total: baseRows.length,
-              defaultValue:
-                '{{count}} articoli disponibili · {{total}} totali',
+              defaultValue: '{{count}} articoli disponibili · {{total}} totali',
             })}
           </p>
         </div>
@@ -587,7 +594,9 @@ export default function TimeCartTable({
               <div className="text-[40px] mb-3">🛒</div>
               <div className="text-[15px] font-semibold text-[var(--time-gray-600)]">
                 {baseRows.length === 0
-                  ? t('text-cart-empty', { defaultValue: 'Il carrello è vuoto' })
+                  ? t('text-cart-empty', {
+                      defaultValue: 'Il carrello è vuoto',
+                    })
                   : t('cart-no-results', { defaultValue: 'Nessun risultato' })}
               </div>
               <div className="text-[12px] mt-1">

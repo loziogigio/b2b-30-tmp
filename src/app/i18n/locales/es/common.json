@@ -730,5 +730,16 @@
     "placeholder": "Código de cupón",
     "apply": "Aplicar",
     "discountLine": "Descuento de cupón"
-  }
+  },
+  "text-back-to-catalog": "Volver al catálogo",
+  "text-status": "Estado",
+  "text-listino": "PRECIO LISTA",
+  "text-view-n-variants": "Ver {{n}} variantes",
+  "text-view-variants": "Ver variantes",
+  "show-n-variants": "Mostrar {{n}} opciones",
+  "hide-n-variants": "Ocultar {{n}} opciones",
+  "text-availability": "Disponibilidad",
+  "text-packaging": "Embalaje",
+  "catalogue-view-all": "Ver todo",
+  "view-all-products": "Ver todos"
 }

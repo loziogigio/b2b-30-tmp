@@ -416,7 +416,7 @@ export default function TimeVariantsTable({
                     }
                     variant="venus"
                     lang={lang}
-                    className="time-stepper"
+                    className="time-stepper time-stepper-color"
                     showPlaceholder={false}
                   />
                 )

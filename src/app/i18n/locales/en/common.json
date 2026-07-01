@@ -547,8 +547,8 @@
   "breadcrumb-collections": "Collections",
   "hide-variants": "Hide variants",
   "show-variants": "Show variants",
-  "show-n-variants": "Show {{n}} variants",
-  "hide-n-variants": "Hide {{n}} variants",
+  "show-n-variants": "Show {{n}} options",
+  "hide-n-variants": "Hide {{n}} options",
   "text-view-n-variants": "View {{n}} variants",
   "text-variants": "variants",
   "text-status": "Status",
@@ -742,5 +742,7 @@
   "savedcarts-items-noun_one": "item",
   "savedcarts-items-noun_other": "items",
   "savedcarts-save-current_one": "Save current cart ({{count}} items)",
-  "savedcarts-save-current_other": "Save current cart ({{count}} items)"
+  "savedcarts-save-current_other": "Save current cart ({{count}} items)",
+  "text-view-variants": "View variants",
+  "catalogue-view-all": "View all"
 }

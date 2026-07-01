@@ -807,7 +807,7 @@ const TimeProductDetail: React.FC<{
                 lang={lang}
                 product={data}
                 priceData={erpPrice}
-                className="time-stepper"
+                className="time-stepper time-stepper-color"
                 showPlaceholder={false}
               />
             </div>

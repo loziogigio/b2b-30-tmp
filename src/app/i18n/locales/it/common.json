@@ -742,5 +742,7 @@
   "savedcarts-items-noun_one": "articolo",
   "savedcarts-items-noun_other": "articoli",
   "savedcarts-save-current_one": "Salva carrello corrente ({{count}} art.)",
-  "savedcarts-save-current_other": "Salva carrello corrente ({{count}} art.)"
+  "savedcarts-save-current_other": "Salva carrello corrente ({{count}} art.)",
+  "text-view-variants": "Vedi varianti",
+  "catalogue-view-all": "Vedi tutto"
 }

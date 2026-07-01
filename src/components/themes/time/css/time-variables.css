@@ -195,6 +195,22 @@
   color: var(--time-dark, #16161a) !important;
 }
 
+/* Quantity box "in cart" state (#25) — a loud fill when qty > 0, applied
+ * uniformly across cart, checkout, variants preview and list page: STANDARD
+ * green for a normal line, red for a promo line. The idle (neutral) state stays
+ * the plain white box above; the higher-specificity attribute selector overrides
+ * the neutral `.time-stepper > input` rule.
+ * NB: promo uses a LITERAL red, not --time-red — per tenant --time-red is
+ * remapped to the brand primary, so it would collide with a brand-coloured fill. */
+.time-stepper-color > input[data-variant='green'] {
+  background: #10b981 !important; /* emerald-500 */
+  color: #fff !important;
+}
+.time-stepper-color > input[data-variant='red'] {
+  background: #ef4444 !important; /* red-500 */
+  color: #fff !important;
+}
+
 /* Full-width variant (product card): box spans its container, input grows to
  * fill so the − / number / + are centered across the whole width. */
 .time-stepper-full {

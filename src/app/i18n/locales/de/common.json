@@ -490,5 +490,14 @@
   "orders-total": "Gesamt",
   "text-new-password": "Neues Passwort",
   "FIRST_NAME": "Vorname",
-  "text-save": "Speichern"
+  "text-save": "Speichern",
+  "text-back-to-catalog": "Zurück zum Katalog",
+  "text-status": "Status",
+  "text-listino": "LISTENPREIS",
+  "text-view-n-variants": "{{n}} Varianten ansehen",
+  "text-view-variants": "Varianten ansehen",
+  "show-n-variants": "{{n}} Optionen anzeigen",
+  "hide-n-variants": "{{n}} Optionen ausblenden",
+  "catalogue-view-all": "Alle anzeigen",
+  "view-all-products": "Alle anzeigen"
 }

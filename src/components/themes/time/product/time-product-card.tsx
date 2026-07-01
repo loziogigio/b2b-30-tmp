@@ -312,7 +312,7 @@ export default function TimeProductCard({
                     product={product}
                     priceData={effectivePriceData}
                     showPlaceholder={false}
-                    className="time-stepper"
+                    className="time-stepper time-stepper-color"
                   />
                 ) : isPromoGated ? (
                   <PromoGatedCta

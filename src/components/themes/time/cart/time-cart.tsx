@@ -168,7 +168,7 @@ export default function TimeCart({ lang }: { lang: string }) {
                     <UpdateCart
                       item={item}
                       lang={lang}
-                      className="mt-1 time-stepper"
+                      className="mt-1 time-stepper time-stepper-color"
                     />
                   </div>
 
