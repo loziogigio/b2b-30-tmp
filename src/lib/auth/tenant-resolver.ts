@@ -5,8 +5,9 @@
  * Eliminates duplication of tenant/SSO URL resolution code.
  *
  * URL Resolution Priority:
- * 1. SSO_API_URL_OVERRIDE (local dev only, set in .env.local)
- * 2. NEXT_PUBLIC_SSO_URL (production SSO URL from .env)
+ * 1. SSO_API_URL_OVERRIDE (explicit auth local-dev override)
+ * 2. PIM_API_URL_OVERRIDE (shared local commerce-suite override)
+ * 3. SSO_API_URL / NEXT_PUBLIC_SSO_URL
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -36,10 +37,20 @@ export type TenantResolveResult =
 
 /**
  * Get SSO API URL with consistent priority.
- * Priority: SSO_API_URL > NEXT_PUBLIC_SSO_URL
+ *
+ * In local development the PIM proxy often uses PIM_API_URL_OVERRIDE to call a
+ * locally-running commerce-suite. Auth must use the same suite by default, or
+ * refreshed access tokens can be minted by a different instance than the PIM
+ * proxy calls and user-context API calls will authenticate as tenant-only.
  */
 export function getDefaultSsoApiUrl(): string {
-  return process.env.SSO_API_URL || process.env.NEXT_PUBLIC_SSO_URL || '';
+  return (
+    process.env.SSO_API_URL_OVERRIDE ||
+    process.env.PIM_API_URL_OVERRIDE ||
+    process.env.SSO_API_URL ||
+    process.env.NEXT_PUBLIC_SSO_URL ||
+    ''
+  );
 }
 
 /**
@@ -121,10 +132,6 @@ export async function resolveAuthContext(
 
     tenantId = resolvedTenant.id;
     tenant = resolvedTenant;
-
-    // SSO_API_URL_OVERRIDE for local dev, otherwise use NEXT_PUBLIC_SSO_URL
-    // Note: Don't use tenant.api.pimApiUrl - it may have localhost for dev
-    ssoApiUrl = process.env.SSO_API_URL_OVERRIDE || ssoApiUrl;
   }
 
   // Create pre-configured SSO API client

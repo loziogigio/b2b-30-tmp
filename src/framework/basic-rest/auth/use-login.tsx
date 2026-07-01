@@ -1,7 +1,7 @@
 import { useUI } from '@contexts/ui.context';
-import Cookies from 'js-cookie';
 import { useMutation } from '@tanstack/react-query';
 import { applyVincProfileToErpStatic } from '@framework/utils/static';
+import { setAuthTokensClient } from '@/lib/auth';
 
 export interface LoginInputType {
   email: string;
@@ -63,10 +63,10 @@ export const useLoginMutation = (onSuccessCallback?: () => void) => {
         JSON.stringify(data?.profile, null, 2),
       );
       if (data?.token) {
-        Cookies.set('auth_token', data.token);
-      }
-      if (data?.refresh_token) {
-        Cookies.set('refresh_token', data.refresh_token);
+        setAuthTokensClient({
+          accessToken: data.token,
+          expiresIn: data.expires_in,
+        });
       }
       // Map VINC profile to ERP static state
       applyVincProfileToErpStatic(data?.profile || null);

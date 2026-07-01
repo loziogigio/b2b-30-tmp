@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { resolveTenantApiConfig } from '@/lib/tenant';
+import { buildTenantApiHeaders, resolveTenantApiConfig } from '@/lib/tenant';
 
 export interface EnabledLanguage {
   code: string;
@@ -24,14 +24,9 @@ export async function GET(req: NextRequest) {
       {
         // Languages change rarely; cache briefly to avoid hammering the suite.
         next: { revalidate: 300 },
-        headers: {
-          'Content-Type': 'application/json',
-          'x-auth-method': 'api-key',
-          // The suite admin endpoint authenticates via verifyAPIKeyFromRequest,
-          // which reads `x-api-key-id` + `x-api-secret`.
-          ...(config.apiKeyId && { 'x-api-key-id': config.apiKeyId }),
-          ...(config.apiSecret && { 'x-api-secret': config.apiSecret }),
-        },
+        headers: buildTenantApiHeaders(config, {
+          includeLegacyApiKeyAlias: true,
+        }),
       },
     );
 

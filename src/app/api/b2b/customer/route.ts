@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resolveCsCreds } from '@/lib/profile/cs-creds';
+import { buildTenantApiHeaders } from '@/lib/tenant';
 import {
   csCustomerToProfile,
   type CsCustomerRecord,
@@ -26,12 +27,10 @@ export async function POST(req: NextRequest) {
     const res = await fetch(
       `${creds.csBaseUrl.replace(/\/+$/, '')}/api/b2b/customers/${encodeURIComponent(customerId)}`,
       {
-        headers: {
-          Accept: 'application/json',
-          'x-auth-method': 'api-key',
-          'x-api-key-id': creds.apiKeyId,
-          'x-api-secret': creds.apiSecret,
-        },
+        headers: buildTenantApiHeaders(creds, {
+          contentType: false,
+          includeLegacyApiKeyAlias: true,
+        }),
       },
     );
     if (!res.ok) {

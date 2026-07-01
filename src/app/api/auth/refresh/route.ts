@@ -5,6 +5,8 @@ import {
   getDefaultSsoApiUrl,
   getHostnameFromRequest,
   OAUTH_CONFIG,
+  expireAuthCookieServer,
+  setAuthTokensServer,
 } from '@/lib/auth/server';
 import { AUTH_COOKIES } from '@/lib/auth/cookies';
 
@@ -43,8 +45,6 @@ export async function POST(request: NextRequest) {
 
       if (tenant) {
         tenantId = tenant.id;
-        // SSO_API_URL_OVERRIDE for local dev, otherwise use NEXT_PUBLIC_SSO_URL
-        ssoApiUrl = process.env.SSO_API_URL_OVERRIDE || ssoApiUrl;
       }
     }
 
@@ -119,12 +119,8 @@ export async function POST(request: NextRequest) {
 
       // On 401, clear the httpOnly refresh token cookie so the client stops retrying
       if (tokenResponse.status === 401) {
-        errorResponse.cookies.set(AUTH_COOKIES.REFRESH_TOKEN, '', {
-          path: '/',
+        expireAuthCookieServer(errorResponse, AUTH_COOKIES.REFRESH_TOKEN, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
-          maxAge: 0,
         });
       }
 
@@ -145,17 +141,12 @@ export async function POST(request: NextRequest) {
         { success: false, message: 'tenant_mismatch' },
         { status: 401 },
       );
-      errorResponse.cookies.set(AUTH_COOKIES.REFRESH_TOKEN, '', {
-        path: '/',
+      expireAuthCookieServer(errorResponse, AUTH_COOKIES.REFRESH_TOKEN, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 0,
       });
       return errorResponse;
     }
 
-    const isProduction = process.env.NODE_ENV === 'production';
     const expiresIn = refreshResponse.expires_in || 900;
 
     // Create response with JSON body
@@ -166,44 +157,12 @@ export async function POST(request: NextRequest) {
       expires_in: expiresIn,
     });
 
-    // Also set cookies server-side to ensure httpOnly refresh token is updated
-    // Access token (non-httpOnly so client JS can use it for API calls)
-    response.cookies.set(
-      AUTH_COOKIES.ACCESS_TOKEN,
-      refreshResponse.access_token,
-      {
-        path: '/',
-        httpOnly: false,
-        secure: isProduction,
-        sameSite: 'lax',
-        maxAge: expiresIn,
-      },
-    );
-
-    // Token expiration timestamp for auto-refresh scheduling
-    const expiresAt = Date.now() + expiresIn * 1000;
-    response.cookies.set(AUTH_COOKIES.TOKEN_EXPIRES_AT, String(expiresAt), {
-      path: '/',
-      httpOnly: false,
-      secure: isProduction,
-      sameSite: 'lax',
-      maxAge: expiresIn,
+    // Also set cookies server-side to ensure the httpOnly refresh token is updated.
+    setAuthTokensServer(response, {
+      accessToken: refreshResponse.access_token,
+      refreshToken: refreshResponse.refresh_token,
+      expiresIn,
     });
-
-    // Refresh token (httpOnly for security - client cannot read this)
-    if (refreshResponse.refresh_token) {
-      response.cookies.set(
-        AUTH_COOKIES.REFRESH_TOKEN,
-        refreshResponse.refresh_token,
-        {
-          path: '/',
-          httpOnly: true,
-          secure: isProduction,
-          sameSite: 'lax',
-          maxAge: 60 * 60 * 24 * 7, // 7 days
-        },
-      );
-    }
 
     return response;
   } catch (error) {

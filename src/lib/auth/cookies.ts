@@ -38,6 +38,33 @@ export const AUTH_COOKIES = {
 /** All auth cookies that should be cleared on logout */
 export const ALL_AUTH_COOKIES = Object.values(AUTH_COOKIES);
 
+export const AUTH_COOKIE_MAX_AGE_SECONDS = {
+  ACCESS_TOKEN_FALLBACK: 3600,
+  SESSION: 60 * 60 * 24 * 7,
+  PROFILE_BOOTSTRAP: 60,
+} as const;
+
+interface AuthCookieOptionsInput {
+  httpOnly?: boolean;
+  maxAge?: number;
+  expires?: Date;
+}
+
+export function authCookieOptions({
+  httpOnly = false,
+  maxAge,
+  expires,
+}: AuthCookieOptionsInput = {}) {
+  return {
+    path: '/',
+    httpOnly,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax' as const,
+    ...(maxAge !== undefined && { maxAge }),
+    ...(expires && { expires }),
+  };
+}
+
 // =============================================================================
 // OAUTH CONFIGURATION - Single source of truth for OAuth client credentials
 // =============================================================================
@@ -159,15 +186,25 @@ export function clearAllCookiesClient(): void {
  * Use this in API routes like /api/auth/logout.
  */
 export function clearAuthCookiesServer(response: NextResponse): void {
-  const expiredCookieOptions = {
-    path: '/',
-    expires: new Date(0),
-    maxAge: 0,
-  };
-
   ALL_AUTH_COOKIES.forEach((name) => {
-    response.cookies.set(name, '', expiredCookieOptions);
+    expireAuthCookieServer(response, name);
   });
+}
+
+export function expireAuthCookieServer(
+  response: NextResponse,
+  name: string,
+  options: Pick<AuthCookieOptionsInput, 'httpOnly'> = {},
+): void {
+  response.cookies.set(
+    name,
+    '',
+    authCookieOptions({
+      httpOnly: options.httpOnly,
+      expires: new Date(0),
+      maxAge: 0,
+    }),
+  );
 }
 
 /**
@@ -183,48 +220,45 @@ export function setAuthTokensServer(
     sessionId?: string;
   },
 ): void {
-  const isProduction = process.env.NODE_ENV === 'production';
+  const expiresIn =
+    tokens.expiresIn || AUTH_COOKIE_MAX_AGE_SECONDS.ACCESS_TOKEN_FALLBACK;
 
   // Access token - httpOnly: false so client JS can read it
-  response.cookies.set(AUTH_COOKIES.ACCESS_TOKEN, tokens.accessToken, {
-    path: '/',
-    httpOnly: false,
-    secure: isProduction,
-    sameSite: 'lax',
-    maxAge: tokens.expiresIn || 3600,
-  });
+  response.cookies.set(
+    AUTH_COOKIES.ACCESS_TOKEN,
+    tokens.accessToken,
+    authCookieOptions({ maxAge: expiresIn }),
+  );
 
   // Expiration timestamp for auto-refresh scheduling
-  if (tokens.expiresIn) {
-    const expiresAt = Date.now() + tokens.expiresIn * 1000;
+  if (expiresIn) {
+    const expiresAt = Date.now() + expiresIn * 1000;
     response.cookies.set(AUTH_COOKIES.TOKEN_EXPIRES_AT, String(expiresAt), {
-      path: '/',
-      httpOnly: false,
-      secure: isProduction,
-      sameSite: 'lax',
-      maxAge: tokens.expiresIn,
+      ...authCookieOptions({ maxAge: expiresIn }),
     });
   }
 
   // Refresh token - httpOnly: true for security
   if (tokens.refreshToken) {
-    response.cookies.set(AUTH_COOKIES.REFRESH_TOKEN, tokens.refreshToken, {
-      path: '/',
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-    });
+    response.cookies.set(
+      AUTH_COOKIES.REFRESH_TOKEN,
+      tokens.refreshToken,
+      authCookieOptions({
+        httpOnly: true,
+        maxAge: AUTH_COOKIE_MAX_AGE_SECONDS.SESSION,
+      }),
+    );
   }
 
   // Session ID
   if (tokens.sessionId) {
-    response.cookies.set(AUTH_COOKIES.SESSION_ID, tokens.sessionId, {
-      path: '/',
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-    });
+    response.cookies.set(
+      AUTH_COOKIES.SESSION_ID,
+      tokens.sessionId,
+      authCookieOptions({
+        httpOnly: true,
+        maxAge: AUTH_COOKIE_MAX_AGE_SECONDS.SESSION,
+      }),
+    );
   }
 }

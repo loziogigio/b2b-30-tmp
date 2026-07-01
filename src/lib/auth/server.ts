@@ -23,7 +23,11 @@ export {
 
 // Server-side cookie utilities (uses NextResponse)
 export {
+  AUTH_COOKIES,
+  AUTH_COOKIE_MAX_AGE_SECONDS,
   clearAuthCookiesServer,
+  expireAuthCookieServer,
+  authCookieOptions,
   setAuthTokensServer,
   OAUTH_CONFIG,
 } from './cookies';

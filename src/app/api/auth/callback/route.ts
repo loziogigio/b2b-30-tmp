@@ -1,12 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { resolveTenant, isMultiTenant } from '@/lib/tenant';
 import {
+  AUTH_COOKIES,
+  AUTH_COOKIE_MAX_AGE_SECONDS,
+  authCookieOptions,
   getDefaultSsoApiUrl,
   getHostnameFromRequest,
   getPublicOrigin,
   OAUTH_CONFIG,
+  setAuthTokensServer,
 } from '@/lib/auth/server';
+
+function getPostAuthRedirectUrl(state: string | null, publicOrigin: string) {
+  if (!state) {
+    return new URL('/it', publicOrigin);
+  }
+
+  try {
+    return new URL(decodeURIComponent(state), publicOrigin);
+  } catch {
+    return new URL('/it', publicOrigin);
+  }
+}
 
 /**
  * OAuth callback handler
@@ -34,9 +49,6 @@ export async function GET(request: NextRequest) {
 
     if (tenant) {
       tenantId = tenant.id;
-      // SSO_API_URL_OVERRIDE for local dev, otherwise use NEXT_PUBLIC_SSO_URL
-      // Note: Don't use tenant.api.pimApiUrl - it may have localhost for dev
-      ssoApiUrl = process.env.SSO_API_URL_OVERRIDE || ssoApiUrl;
       console.log('[auth/callback] Tenant resolved:', {
         tenantId,
         ssoApiUrl,
@@ -157,13 +169,14 @@ export async function GET(request: NextRequest) {
 
     const tokenData = await tokenResponse.json();
 
-    // Debug: Log the full token exchange response
-    console.log(
-      '[auth/callback] Token exchange response:',
-      JSON.stringify(tokenData, null, 2),
-    );
-    console.log('[auth/callback] user in response:', tokenData.user);
-    console.log('[auth/callback] user.customers:', tokenData.user?.customers);
+    console.log('[auth/callback] Token exchange response:', {
+      tenantId: tokenData.tenant_id,
+      hasAccessToken: !!tokenData.access_token,
+      hasRefreshToken: !!tokenData.refresh_token,
+      expiresIn: tokenData.expires_in,
+      hasUser: !!tokenData.user,
+      customerCount: tokenData.user?.customers?.length ?? 0,
+    });
 
     // Defense-in-depth: refuse to set auth cookies if the IdP returned tokens
     // for a different tenant than this storefront serves. This prevents a
@@ -178,60 +191,29 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(redirectUrl);
     }
 
-    // Store tokens in cookies
-    const cookieStore = await cookies();
-
-    // Access token - must be 'auth_token' to match getToken() in UI context
     const expiresIn = tokenData.expires_in || 900;
-    cookieStore.set('auth_token', tokenData.access_token, {
-      httpOnly: false, // Needed for client-side JS (getToken uses js-cookie)
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: expiresIn,
-      path: '/',
+    const redirectUrl = getPostAuthRedirectUrl(state, publicOrigin);
+    const response = NextResponse.redirect(redirectUrl);
+
+    setAuthTokensServer(response, {
+      accessToken: tokenData.access_token,
+      refreshToken: tokenData.refresh_token,
+      expiresIn,
+      sessionId: tokenData.session_id,
     });
-
-    // Store token expiration timestamp for client-side auto-refresh
-    const expiresAt = Date.now() + expiresIn * 1000;
-    cookieStore.set('auth_token_expires_at', String(expiresAt), {
-      httpOnly: false, // Client needs to read this for auto-refresh
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: expiresIn,
-      path: '/',
-    });
-
-    // Refresh token
-    if (tokenData.refresh_token) {
-      cookieStore.set('refresh_token', tokenData.refresh_token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 60 * 60 * 24 * 7, // 7 days
-        path: '/',
-      });
-    }
-
-    // Session ID
-    if (tokenData.session_id) {
-      cookieStore.set('session_id', tokenData.session_id, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 60 * 60 * 24 * 7, // 7 days
-        path: '/',
-      });
-    }
 
     // VINC tokens if provided
     if (tokenData.vinc_tokens) {
-      cookieStore.set('vinc_access_token', tokenData.vinc_tokens.access_token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: tokenData.vinc_tokens.expires_in || 3600,
-        path: '/',
-      });
+      response.cookies.set(
+        AUTH_COOKIES.VINC_ACCESS_TOKEN,
+        tokenData.vinc_tokens.access_token,
+        authCookieOptions({
+          httpOnly: true,
+          maxAge:
+            tokenData.vinc_tokens.expires_in ||
+            AUTH_COOKIE_MAX_AGE_SECONDS.ACCESS_TOKEN_FALLBACK,
+        }),
+      );
     }
 
     // If user profile is included in token response, store a minimal slice for
@@ -253,58 +235,48 @@ export async function GET(request: NextRequest) {
           name: c.name,
           business_name: c.business_name,
           // Keep only the first address — that's all applyVincProfileToErpStatic uses
-          addresses: Array.isArray(c.addresses) && c.addresses.length > 0
-            ? [{ id: c.addresses[0].id, erp_address_id: c.addresses[0].erp_address_id }]
-            : [],
+          addresses:
+            Array.isArray(c.addresses) && c.addresses.length > 0
+              ? [
+                  {
+                    id: c.addresses[0].id,
+                    erp_address_id: c.addresses[0].erp_address_id,
+                  },
+                ]
+              : [],
         })),
       };
-      console.log('[auth/callback] Storing minimal user profile (addresses trimmed to first)');
-      cookieStore.set('sso_user_profile', JSON.stringify(minimalProfile), {
-        httpOnly: false, // Client needs to read this
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 60, // Short-lived, just for the redirect handling
-        path: '/',
-      });
+      console.log(
+        '[auth/callback] Storing minimal user profile (addresses trimmed to first)',
+      );
+      response.cookies.set(
+        AUTH_COOKIES.SSO_USER_PROFILE,
+        JSON.stringify(minimalProfile),
+        authCookieOptions({
+          maxAge: AUTH_COOKIE_MAX_AGE_SECONDS.PROFILE_BOOTSTRAP,
+        }),
+      );
     }
 
     // Set flag to indicate profile needs to be fetched on client-side
     // This is necessary because we can't access localStorage from server
-    cookieStore.set('sso_profile_pending', 'true', {
-      httpOnly: false, // Client needs to read this
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60, // Short-lived, just for the redirect
-      path: '/',
-    });
+    response.cookies.set(
+      AUTH_COOKIES.SSO_PROFILE_PENDING,
+      'true',
+      authCookieOptions({
+        maxAge: AUTH_COOKIE_MAX_AGE_SECONDS.PROFILE_BOOTSTRAP,
+      }),
+    );
 
     // Store tenant ID for multi-tenant deployments (used for likes/reminders user ID)
-    cookieStore.set('sso_tenant_id', tenantId, {
-      httpOnly: false, // Client needs to read this for ERP_STATIC
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7 days (same as session)
-      path: '/',
-    });
-
-    // Determine redirect URL
-    let redirectUrl: URL;
-
-    if (state) {
-      // Decode the original URL from state
-      try {
-        const decodedState = decodeURIComponent(state);
-        redirectUrl = new URL(decodedState, publicOrigin);
-      } catch {
-        redirectUrl = new URL('/it', publicOrigin);
-      }
-    } else {
-      // Default redirect
-      redirectUrl = new URL('/it', publicOrigin);
-    }
+    response.cookies.set(
+      AUTH_COOKIES.SSO_TENANT_ID,
+      tenantId,
+      authCookieOptions({ maxAge: AUTH_COOKIE_MAX_AGE_SECONDS.SESSION }),
+    );
 
     // Redirect to the original page or home
-    return NextResponse.redirect(redirectUrl);
+    return response;
   } catch (error) {
     console.error('[auth/callback] Error:', error);
     const redirectUrl = new URL('/it', publicOrigin);

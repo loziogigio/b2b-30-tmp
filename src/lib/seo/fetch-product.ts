@@ -1,6 +1,10 @@
 import { cache } from 'react';
 import { headers } from 'next/headers';
-import { resolveTenant, isSingleTenant } from '@/lib/tenant';
+import {
+  buildTenantApiHeaders,
+  resolveTenant,
+  isSingleTenant,
+} from '@/lib/tenant';
 import { resolveSupportedLang } from '@/app/i18n/settings';
 import { cacheTag, SINGLE_TENANT_ID } from '@/lib/cache/tags';
 
@@ -35,11 +39,10 @@ async function fetchProductWithConfig(config: FetchConfig) {
   try {
     const response = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(apiKeyId && { 'X-API-Key': apiKeyId }),
-        ...(apiSecret && { 'X-API-Secret': apiSecret }),
-      },
+      headers: buildTenantApiHeaders(
+        { apiKeyId, apiSecret },
+        { includeLegacyApiKeyAlias: true },
+      ),
       body: JSON.stringify({
         lang,
         text: '',

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { resolveTenantApiConfig } from '@/lib/tenant';
+import { buildTenantApiHeaders, resolveTenantApiConfig } from '@/lib/tenant';
 
 /**
  * POST /api/b2b/cart/delete
@@ -25,14 +25,11 @@ export async function POST(req: NextRequest) {
       : `${config.pimApiUrl}/`;
     const targetUrl = new URL(`api/b2b/orders/${order_id}`, baseUrl);
 
-    const headers: HeadersInit = {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    };
-    if (config.apiKeyId) headers['X-API-Key'] = config.apiKeyId;
-    if (config.apiSecret) headers['X-API-Secret'] = config.apiSecret;
     const authHeader = req.headers.get('Authorization');
-    if (authHeader) headers['Authorization'] = authHeader;
+    const headers = buildTenantApiHeaders(config, {
+      authorization: authHeader,
+      includeLegacyApiKeyAlias: true,
+    });
 
     const response = await fetch(targetUrl.toString(), {
       method: 'DELETE',

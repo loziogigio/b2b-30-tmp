@@ -67,10 +67,11 @@ export async function refreshAccessToken(): Promise<RefreshResult> {
       };
     }
 
-    // Update cookies with new tokens
+    // The server response owns refresh-token persistence through an httpOnly
+    // Set-Cookie header. Keep client writes limited to readable access-token
+    // state so we do not shadow the httpOnly refresh cookie.
     setAuthTokensClient({
       accessToken: data.token,
-      refreshToken: data.refresh_token,
       expiresIn: data.expires_in,
     });
 

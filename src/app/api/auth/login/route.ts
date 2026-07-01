@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { SSOApiError } from '@/lib/sso-api';
-import { resolveAuthContext } from '@/lib/auth/server';
+import {
+  AUTH_COOKIES,
+  AUTH_COOKIE_MAX_AGE_SECONDS,
+  authCookieOptions,
+  resolveAuthContext,
+  setAuthTokensServer,
+} from '@/lib/auth/server';
 
 export async function POST(request: NextRequest) {
   try {
@@ -48,27 +54,26 @@ export async function POST(request: NextRequest) {
       profile,
     });
 
+    setAuthTokensServer(response, {
+      accessToken: loginResponse.access_token,
+      refreshToken: loginResponse.refresh_token,
+      expiresIn: loginResponse.expires_in,
+      sessionId: loginResponse.session_id,
+    });
+
     // Store VINC tokens in httpOnly cookie for change-password
     if (loginResponse.vinc_tokens) {
       response.cookies.set(
-        'vinc_access_token',
+        AUTH_COOKIES.VINC_ACCESS_TOKEN,
         loginResponse.vinc_tokens.access_token,
-        {
+        authCookieOptions({
           httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
-          maxAge: loginResponse.vinc_tokens.expires_in,
-        },
+          maxAge:
+            loginResponse.vinc_tokens.expires_in ||
+            AUTH_COOKIE_MAX_AGE_SECONDS.ACCESS_TOKEN_FALLBACK,
+        }),
       );
     }
-
-    // Store session_id in cookie
-    response.cookies.set('session_id', loginResponse.session_id, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-    });
 
     return response;
   } catch (error) {

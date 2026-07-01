@@ -2,6 +2,7 @@ import { headers } from 'next/headers';
 import type { MetadataRoute } from 'next';
 import { currentTenantId } from '@/lib/cache/tags';
 import { categoryRootFor } from '@/lib/seo/category-root';
+import { buildTenantApiHeaders } from '@/lib/tenant';
 
 /**
  * vinc-commerce-suite (vcs) SEO client.
@@ -197,15 +198,15 @@ async function suiteHeaders(): Promise<Record<string, string>> {
   const keyId = suiteKeyId();
   const secret = suiteSecret();
   return {
-    'content-type': 'application/json',
-    'x-auth-method': 'api-key',
+    ...buildTenantApiHeaders(
+      { apiKeyId: keyId, apiSecret: secret },
+      { includeLegacyApiKeyAlias: true },
+    ),
     // vcs resolves the tenant from the forwarded host. Its host-resolver reads
     // `x-forwarded-host`/`host`, so forward the tenant host under that name;
     // keep `x-tenant-host` too for forward-compat.
     'x-forwarded-host': host,
     'x-tenant-host': host,
-    ...(keyId && { 'X-API-Key': keyId }),
-    ...(secret && { 'X-API-Secret': secret }),
   };
 }
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { resolveTenantApiConfig } from '@/lib/tenant';
+import { buildTenantApiHeaders, resolveTenantApiConfig } from '@/lib/tenant';
 
 // ---------------------------------------------------------------------------
 // Category-tree cache (per upstream PIM URL).
@@ -248,24 +248,12 @@ async function proxyRequest(
     targetUrl.searchParams.set(key, value);
   });
 
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    Accept: 'application/json',
-  };
-
-  // Inject API credentials server-side (not exposed to client)
-  if (config.apiKeyId) {
-    headers['X-API-Key'] = config.apiKeyId;
-  }
-  if (config.apiSecret) {
-    headers['X-API-Secret'] = config.apiSecret;
-  }
-
   // Forward user's JWT if present (for user-specific requests)
   const authHeader = req.headers.get('Authorization');
-  if (authHeader) {
-    headers['Authorization'] = authHeader;
-  }
+  const headers = buildTenantApiHeaders(config, {
+    authorization: authHeader,
+    includeLegacyApiKeyAlias: true,
+  });
 
   const fetchOptions: RequestInit = {
     method,
@@ -286,12 +274,9 @@ async function proxyRequest(
           (pathString === 'api/search/search' ||
             pathString.endsWith('/search/search'))
         ) {
-          const proxyHeaders: Record<string, string> = {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-          };
-          if (config.apiKeyId) proxyHeaders['X-API-Key'] = config.apiKeyId;
-          if (config.apiSecret) proxyHeaders['X-API-Secret'] = config.apiSecret;
+          const proxyHeaders = buildTenantApiHeaders(config, {
+            includeLegacyApiKeyAlias: true,
+          });
           bodyText = await maybeExpandSearchBody(
             bodyText,
             baseUrl,
@@ -338,11 +323,10 @@ async function proxyRequest(
           data?.data?.facet_results?.promo_type ||
           data?.facet_results?.promo_type;
         if (Array.isArray(promoFacet) && promoFacet.length > 0) {
-          const proxyHeaders: Record<string, string> = {
-            Accept: 'application/json',
-          };
-          if (config.apiKeyId) proxyHeaders['X-API-Key'] = config.apiKeyId;
-          if (config.apiSecret) proxyHeaders['X-API-Secret'] = config.apiSecret;
+          const proxyHeaders = buildTenantApiHeaders(config, {
+            contentType: false,
+            includeLegacyApiKeyAlias: true,
+          });
           // Honour the lang the caller requested so the promo titles match
           // the rest of the response (falls back to env / 'it').
           let lang = process.env.NEXT_PUBLIC_PIM_DEFAULT_LANG || 'it';

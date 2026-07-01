@@ -36,7 +36,6 @@ export async function POST(request: NextRequest) {
       const tenant = await resolveTenant(hostname);
       if (tenant) {
         tenantId = tenant.id;
-        ssoApiUrl = process.env.SSO_API_URL_OVERRIDE || ssoApiUrl;
       }
     }
 

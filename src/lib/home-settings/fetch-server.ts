@@ -1,7 +1,11 @@
 import { cache } from 'react';
 import { headers } from 'next/headers';
 import type { HomeSettings } from '@/lib/home-settings/types';
-import { resolveTenant, isSingleTenant } from '@/lib/tenant';
+import {
+  buildTenantApiHeaders,
+  resolveTenant,
+  isSingleTenant,
+} from '@/lib/tenant';
 import { DEFAULT_HOME_SETTINGS } from '@/lib/home-settings/defaults';
 import {
   mapPortalToHomeSettings,
@@ -71,12 +75,10 @@ async function fetchHomeSettingsWithConfig(
     }
 
     const response = await fetch(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        'x-auth-method': 'api-key',
-        ...(apiKeyId && { 'X-API-Key': apiKeyId }),
-        ...(apiSecret && { 'X-API-Secret': apiSecret }),
-      },
+      headers: buildTenantApiHeaders(
+        { apiKeyId, apiSecret },
+        { includeLegacyApiKeyAlias: true },
+      ),
       next: {
         revalidate: 300,
         tags: [cacheTag('home-settings', tenantId || SINGLE_TENANT_ID)],
@@ -132,7 +134,8 @@ const cachedMultiTenantFetch = cache(
       pimApiUrl,
       apiKeyId: tenant?.api.apiKeyId || DEFAULT_API_KEY_ID,
       apiSecret: tenant?.api.apiSecret || DEFAULT_API_SECRET,
-      tenantId: tenant?.id || process.env.NEXT_PUBLIC_TENANT_ID || SINGLE_TENANT_ID,
+      tenantId:
+        tenant?.id || process.env.NEXT_PUBLIC_TENANT_ID || SINGLE_TENANT_ID,
       lang: lang === 'default' ? undefined : lang,
     });
   },

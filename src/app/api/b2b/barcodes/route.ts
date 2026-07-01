@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resolveCsCreds } from '@/lib/profile/cs-creds';
+import { buildTenantApiHeaders } from '@/lib/tenant';
 
 /**
  * Resolve EAN/barcode for a set of ERP entity codes from PIM.
@@ -8,7 +9,7 @@ import { resolveCsCreds } from '@/lib/profile/cs-creds';
  *
  * The PIM search payload is large (full products), so we keep it server-side
  * and return only the compact entity_code → barcode map. Mirrors the PIM proxy
- * auth (X-API-Key / X-API-Secret against tenant.api.pimApiUrl).
+ * auth against tenant.api.pimApiUrl.
  */
 const CHUNK = 200;
 
@@ -46,12 +47,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ barcodes: {} });
   }
 
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    Accept: 'application/json',
-    'X-API-Key': creds.apiKeyId,
-    'X-API-Secret': creds.apiSecret,
-  };
+  const headers = buildTenantApiHeaders(creds, {
+    includeLegacyApiKeyAlias: true,
+  });
 
   const barcodes: Record<string, string> = {};
 

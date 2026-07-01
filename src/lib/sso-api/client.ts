@@ -231,7 +231,11 @@ export function getSsoApi(): SSOApiClient {
   }
 
   if (!_instance) {
-    const baseUrl = process.env.SSO_API_URL || process.env.PIM_API_URL;
+    const baseUrl =
+      process.env.SSO_API_URL_OVERRIDE ||
+      process.env.PIM_API_URL_OVERRIDE ||
+      process.env.SSO_API_URL ||
+      process.env.PIM_API_URL;
     const tenantId = process.env.NEXT_PUBLIC_TENANT_ID;
 
     if (!baseUrl) {
@@ -265,6 +269,8 @@ export function getSsoApiForTenant(
 ): SSOApiClient {
   const baseUrl =
     tenantConfig.ssoApiUrl ||
+    process.env.SSO_API_URL_OVERRIDE ||
+    process.env.PIM_API_URL_OVERRIDE ||
     process.env.SSO_API_URL ||
     process.env.PIM_API_URL;
 

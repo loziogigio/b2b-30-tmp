@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { resolveTenantApiConfig } from '@/lib/tenant';
+import { buildTenantApiHeaders, resolveTenantApiConfig } from '@/lib/tenant';
 
 export async function POST(req: NextRequest) {
   try {
@@ -38,12 +38,9 @@ export async function POST(req: NextRequest) {
       `${base}/api/b2b/emails/registration-request`,
       {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-auth-method': 'api-key',
-          ...(config.apiKeyId && { 'X-API-Key': config.apiKeyId }),
-          ...(config.apiSecret && { 'X-API-Secret': config.apiSecret }),
-        },
+        headers: buildTenantApiHeaders(config, {
+          includeLegacyApiKeyAlias: true,
+        }),
         body: JSON.stringify({
           ragioneSociale: company_name,
           email,

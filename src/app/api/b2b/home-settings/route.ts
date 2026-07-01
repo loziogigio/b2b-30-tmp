@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { DEFAULT_HOME_SETTINGS } from '@/lib/home-settings/defaults';
-import { resolveTenantApiConfig } from '@/lib/tenant';
+import { buildTenantApiHeaders, resolveTenantApiConfig } from '@/lib/tenant';
 import {
   mapPortalToHomeSettings,
   type PortalPayload,
@@ -18,12 +18,9 @@ export async function GET(req: NextRequest) {
 
     const response = await fetch(upstream, {
       cache: 'no-store',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-auth-method': 'api-key',
-        ...(config.apiKeyId && { 'X-API-Key': config.apiKeyId }),
-        ...(config.apiSecret && { 'X-API-Secret': config.apiSecret }),
-      },
+      headers: buildTenantApiHeaders(config, {
+        includeLegacyApiKeyAlias: true,
+      }),
     });
 
     if (!response.ok) {
