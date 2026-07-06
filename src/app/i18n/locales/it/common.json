@@ -776,5 +776,10 @@
   "order-print-items": "Articoli",
   "order-print-img": "Img",
   "order-print-order-total": "Totale Ordine",
-  "order-print-generated": "Generato automaticamente dal portale clienti"
+  "order-print-generated": "Generato automaticamente dal portale clienti",
+  "text-search": "Cerca",
+  "text-destination": "Destinazione",
+  "orders-status-to-fulfill": "Da evadere",
+  "orders-status-fulfilled": "Evaso",
+  "orders-status-in-acceptance": "In accettazione"
 }

@@ -588,5 +588,10 @@
   "order-print-items": "Artikel",
   "order-print-img": "Bild",
   "order-print-order-total": "Bestellsumme",
-  "order-print-generated": "Automatisch vom Kundenportal generiert"
+  "order-print-generated": "Automatisch vom Kundenportal generiert",
+  "text-search": "Suchen",
+  "text-destination": "Ziel",
+  "orders-status-to-fulfill": "Zu erledigen",
+  "orders-status-fulfilled": "Erledigt",
+  "orders-status-in-acceptance": "In Annahme"
 }

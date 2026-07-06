@@ -774,5 +774,10 @@
   "order-print-items": "Articles",
   "order-print-img": "Img",
   "order-print-order-total": "Total commande",
-  "order-print-generated": "Généré automatiquement par le portail client"
+  "order-print-generated": "Généré automatiquement par le portail client",
+  "text-search": "Rechercher",
+  "text-destination": "Destination",
+  "orders-status-to-fulfill": "À traiter",
+  "orders-status-fulfilled": "Traité",
+  "orders-status-in-acceptance": "En acceptation"
 }

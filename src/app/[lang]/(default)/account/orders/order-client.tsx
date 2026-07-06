@@ -132,6 +132,7 @@ export default function OrderPageClient() {
       {/* Filter */}
       <section className="rounded-2xl bg-white p-6 shadow-sm">
         <OrdersFilter
+          lang={lang}
           initial={initialForFilter}
           destinations={destinationOptions}
           onApply={(payload) =>

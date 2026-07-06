@@ -1,16 +1,9 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'src/app/i18n/client';
 
-type StatusOption = { value: 'T' | 'NE' | 'E' | 'IA'; label: string };
 type DestinationOption = { value: string; label: string };
-
-const STATUS: StatusOption[] = [
-  { value: 'T', label: 'Tutti' },
-  { value: 'NE', label: 'Da evadere' },
-  { value: 'E', label: 'Evaso' },
-  { value: 'IA', label: 'In accettazione' },
-];
 
 // helpers
 function toInputDate(d: Date) {
@@ -50,14 +43,38 @@ type Props = {
   }) => void;
   // optional reset back to last month
   onReset?: () => void;
+  // UI language for label translation
+  lang?: string;
 };
 
 export default function OrdersFilter({
-  destinations = [{ value: '', label: 'Tutti' }],
+  destinations,
   initial,
   onApply,
   onReset,
+  lang = 'it',
 }: Props) {
+  const { t } = useTranslation(lang, 'common');
+  const STATUS = [
+    { value: 'T' as const, label: t('text-all', { defaultValue: 'Tutti' }) },
+    {
+      value: 'NE' as const,
+      label: t('orders-status-to-fulfill', { defaultValue: 'Da evadere' }),
+    },
+    {
+      value: 'E' as const,
+      label: t('orders-status-fulfilled', { defaultValue: 'Evaso' }),
+    },
+    {
+      value: 'IA' as const,
+      label: t('orders-status-in-acceptance', {
+        defaultValue: 'In accettazione',
+      }),
+    },
+  ];
+  const destinationOptions = destinations ?? [
+    { value: '', label: t('text-all', { defaultValue: 'Tutti' }) },
+  ];
   const defaults = useMemo(() => lastMonthRange(), []);
   const [from, setFrom] = useState<string>(initial?.from || '');
   const [to, setTo] = useState<string>(initial?.to || '');
@@ -99,7 +116,7 @@ export default function OrdersFilter({
         {/* Date from */}
         <div className="min-w-[130px]">
           <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-1">
-            Da
+            {t('text-from', { defaultValue: 'Da' })}
           </label>
           <input
             type="date"
@@ -112,7 +129,7 @@ export default function OrdersFilter({
         {/* Date to */}
         <div className="min-w-[130px]">
           <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-1">
-            A
+            {t('text-to', { defaultValue: 'A' })}
           </label>
           <input
             type="date"
@@ -125,7 +142,7 @@ export default function OrdersFilter({
         {/* Status */}
         <div className="min-w-[120px]">
           <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-1">
-            Stato
+            {t('text-status', { defaultValue: 'Stato' })}
           </label>
           <select
             className="h-9 w-full rounded border px-2 text-sm"
@@ -143,14 +160,14 @@ export default function OrdersFilter({
         {/* Destination */}
         <div className="min-w-[140px] flex-1">
           <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-1">
-            Destinazione
+            {t('text-destination', { defaultValue: 'Destinazione' })}
           </label>
           <select
             className="h-9 w-full rounded border px-2 text-sm"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
           >
-            {destinations.map((d) => (
+            {destinationOptions.map((d) => (
               <option key={d.value ?? 'all'} value={d.value ?? ''}>
                 {d.label}
               </option>
@@ -164,13 +181,13 @@ export default function OrdersFilter({
             onClick={reset}
             className="h-9 rounded border px-3 text-sm text-gray-700 hover:bg-gray-50"
           >
-            Reset
+            {t('text-reset', { defaultValue: 'Reset' })}
           </button>
           <button
             onClick={apply}
             className="h-9 rounded bg-teal-600 px-4 text-sm font-semibold text-white hover:bg-teal-700"
           >
-            Cerca
+            {t('text-search', { defaultValue: 'Cerca' })}
           </button>
         </div>
       </div>

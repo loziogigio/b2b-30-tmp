@@ -187,6 +187,7 @@ export default function TimeAccountOrders() {
             }
           `}</style>
           <OrdersFilter
+            lang={lang}
             initial={initialForFilter}
             destinations={destinationOptions}
             onApply={(payload) =>
