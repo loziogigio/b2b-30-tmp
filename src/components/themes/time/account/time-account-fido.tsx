@@ -118,20 +118,20 @@ export default function TimeAccountFido({ lang }: TimeAccountFidoProps) {
           <div className="flex items-center gap-3">
             {data.creditLimitTotal > 0 && (
               <TimeStatusBadge
-                label={`Fido: ${money(data.creditLimitTotal)}`}
+                label={`${t('exposition-badge-credit-limit', { defaultValue: 'Fido' })}: ${money(data.creditLimitTotal)}`}
                 color="#7c3aed"
                 bg="rgba(124,58,237,0.08)"
               />
             )}
             {data.differenceTotal > 0 ? (
               <TimeStatusBadge
-                label={`Disponibile: ${money(data.differenceTotal)}`}
+                label={`${t('exposition-badge-available', { defaultValue: 'Disponibile' })}: ${money(data.differenceTotal)}`}
                 color="#059669"
                 bg="rgba(5,150,105,0.08)"
               />
             ) : (
               <TimeStatusBadge
-                label={`Sforamento: ${money(Math.abs(data.differenceTotal))}`}
+                label={`${t('exposition-badge-overrun', { defaultValue: 'Sforamento' })}: ${money(Math.abs(data.differenceTotal))}`}
                 color="#dc2626"
                 bg="rgba(220,38,38,0.08)"
               />

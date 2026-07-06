@@ -92,8 +92,8 @@ export default function TimeAccountDocuments({
       }
       const withLines = { ...r, lines };
       const barcodes = await fetchBarcodes(lines.map((l) => l.entityCode));
-      if (kind === 'excel') downloadDocumentLinesExcel(withLines, barcodes);
-      else openDocumentLinesPrintWindow(withLines, barcodes);
+      if (kind === 'excel') downloadDocumentLinesExcel(withLines, barcodes, t);
+      else openDocumentLinesPrintWindow(withLines, barcodes, t);
     } catch {
       setExportErr(
         t('order-detail-error', {

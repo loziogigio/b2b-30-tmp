@@ -152,7 +152,7 @@ export default function OrderDetailClient({ lang, initialParams }: Props) {
         }).format(new Date()),
       };
 
-      const html = renderOrderPrintHtml(snapshot, { includeImages: true });
+      const html = renderOrderPrintHtml(snapshot, { includeImages: true, t });
       const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const popup = window.open(

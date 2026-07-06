@@ -46,11 +46,16 @@ function toAbsoluteImage(src?: string) {
   return src;
 }
 
+/** Pass the component's `t` to localize labels; defaults to Italian. */
+export type PrintT = (key: string, opts?: { defaultValue?: string }) => string;
+const IT_LABELS: PrintT = (_key, opts) => opts?.defaultValue ?? _key;
+
 export function renderOrderPrintHtml(
   snapshot: OrderExportSnapshot,
-  options: { includeImages?: boolean } = {},
+  options: { includeImages?: boolean; t?: PrintT } = {},
 ): string {
   const includeImages = options.includeImages !== false;
+  const t = options.t ?? IT_LABELS;
   const currency = new Intl.NumberFormat('it-IT', {
     style: 'currency',
     currency: 'EUR',
@@ -273,49 +278,49 @@ export function renderOrderPrintHtml(
 </head>
 <body>
   <header>
-    <h1>Dettaglio Ordine</h1>
+    <h1>${escapeHtml(t('orders-details', { defaultValue: 'Dettaglio Ordine' }))}</h1>
     <div class="subtitle">${escapeHtml(snapshot.orderNumber)}</div>
   </header>
   <div class="actions">
-    <button type="button" onclick="document.body.classList.remove('hide-images'); window.print();">Stampa con immagini</button>
-    <button type="button" class="secondary" onclick="document.body.classList.add('hide-images'); window.print(); window.setTimeout(() => document.body.classList.remove('hide-images'), 100);">Stampa senza immagini</button>
-    <button type="button" class="secondary" onclick="window.close()">Chiudi</button>
+    <button type="button" onclick="document.body.classList.remove('hide-images'); window.print();">${escapeHtml(t('order-print-with-images', { defaultValue: 'Stampa con immagini' }))}</button>
+    <button type="button" class="secondary" onclick="document.body.classList.add('hide-images'); window.print(); window.setTimeout(() => document.body.classList.remove('hide-images'), 100);">${escapeHtml(t('order-print-without-images', { defaultValue: 'Stampa senza immagini' }))}</button>
+    <button type="button" class="secondary" onclick="window.close()">${escapeHtml(t('doc-print-close', { defaultValue: 'Chiudi' }))}</button>
   </div>
   <section class="section-card">
     <div class="order-info">
       <div class="info-item">
-        <label>Numero Ordine</label>
+        <label>${escapeHtml(t('order-detail-number', { defaultValue: 'Numero Ordine' }))}</label>
         <div class="value">${escapeHtml(snapshot.orderNumber)}</div>
       </div>
       <div class="info-item">
-        <label>Data</label>
+        <label>${escapeHtml(t('order-detail-date', { defaultValue: 'Data' }))}</label>
         <div class="value">${escapeHtml(snapshot.orderDate)}</div>
       </div>
       <div class="info-item">
-        <label>Stato</label>
+        <label>${escapeHtml(t('order-detail-status', { defaultValue: 'Stato' }))}</label>
         <div class="value">${escapeHtml(snapshot.status)}</div>
       </div>
       <div class="info-item">
-        <label>Totale</label>
+        <label>${escapeHtml(t('orders-total', { defaultValue: 'Totale' }))}</label>
         <div class="value">${escapeHtml(currency.format(snapshot.total))}</div>
       </div>
     </div>
   </section>
   <section class="section-card">
-    <h2>Indirizzo di Spedizione</h2>
-    <p style="margin: 0; color: #475569;">${escapeHtml(addressLines) || 'Non specificato'}</p>
+    <h2>${escapeHtml(t('orders-shipping-address', { defaultValue: 'Indirizzo di Spedizione' }))}</h2>
+    <p style="margin: 0; color: #475569;">${escapeHtml(addressLines) || escapeHtml(t('order-print-not-specified', { defaultValue: 'Non specificato' }))}</p>
   </section>
   <section class="section-card">
-    <h2>Articoli (${snapshot.items.length})</h2>
+    <h2>${escapeHtml(t('order-print-items', { defaultValue: 'Articoli' }))} (${snapshot.items.length})</h2>
     <table class="items">
       <thead>
         <tr>
-          ${includeImages ? '<th class="image-header">Img</th>' : ''}
-          <th>Articolo</th>
-          <th>Prezzo Unit.</th>
-          <th>Qta Ord.</th>
-          <th>Prezzo</th>
-          <th>Qta Cons.</th>
+          ${includeImages ? `<th class="image-header">${escapeHtml(t('order-print-img', { defaultValue: 'Img' }))}</th>` : ''}
+          <th>${escapeHtml(t('orders-item', { defaultValue: 'Articolo' }))}</th>
+          <th>${escapeHtml(t('orders-unit-price', { defaultValue: 'Prezzo Unit.' }))}</th>
+          <th>${escapeHtml(t('orders-qty-ordered', { defaultValue: 'Qta Ord.' }))}</th>
+          <th>${escapeHtml(t('orders-price', { defaultValue: 'Prezzo' }))}</th>
+          <th>${escapeHtml(t('orders-qty-delivered', { defaultValue: 'Qta Cons.' }))}</th>
         </tr>
       </thead>
       <tbody>
@@ -323,12 +328,12 @@ export function renderOrderPrintHtml(
       </tbody>
     </table>
     <div class="total-row">
-      <span>Totale Ordine</span>
+      <span>${escapeHtml(t('order-print-order-total', { defaultValue: 'Totale Ordine' }))}</span>
       <span>${escapeHtml(currency.format(snapshot.total))}</span>
     </div>
   </section>
   <footer>
-    Generato automaticamente dal portale clienti • ${escapeHtml(snapshot.exportDateLabel)}
+    ${escapeHtml(t('order-print-generated', { defaultValue: 'Generato automaticamente dal portale clienti' }))} • ${escapeHtml(snapshot.exportDateLabel)}
   </footer>
 </body>
 </html>`;

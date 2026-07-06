@@ -35,6 +35,15 @@ function barcodeSvg(value: string): string {
 
 export type BarcodeMap = Record<string, string>;
 
+/**
+ * Minimal translate signature — pass the component's `t` to localize the
+ * generated print/Excel HTML. Defaults to `IT_LABELS`, which returns each
+ * label's Italian `defaultValue`, so callers without a `t` (or the default
+ * theme) keep the original Italian output.
+ */
+export type PrintT = (key: string, opts?: { defaultValue?: string }) => string;
+const IT_LABELS: PrintT = (_key, opts) => opts?.defaultValue ?? _key;
+
 function escapeHtml(value: unknown) {
   return String(value ?? '')
     .replace(/&/g, '&amp;')
@@ -92,9 +101,14 @@ export async function fetchBarcodes(
 export function renderDocumentLinesExcelHtml(
   row: DocumentRow,
   barcodes: BarcodeMap,
+  t: PrintT = IT_LABELS,
 ): string {
   const lines = row.lines ?? [];
-  const title = `${row.doc_type === 'DDT' ? 'DDT' : 'Fattura'} ${row.document}`;
+  const kind =
+    row.doc_type === 'DDT'
+      ? t('doc-print-ddt', { defaultValue: 'DDT' })
+      : t('doc-print-invoice', { defaultValue: 'Fattura' });
+  const title = `${kind} ${row.document}`;
   // mso-number-format:'\@' keeps SKU / barcode as text (no scientific notation).
   const textCell = `style="mso-number-format:'\\@'"`;
 
@@ -116,14 +130,14 @@ export function renderDocumentLinesExcelHtml(
   <table border="1">
     <thead>
       <tr>
-        <th>SKU</th>
-        <th>Prodotto</th>
-        <th>Q.tà x UM</th>
-        <th>Barcode</th>
+        <th>${escapeHtml(t('doc-print-sku', { defaultValue: 'SKU' }))}</th>
+        <th>${escapeHtml(t('doc-print-product', { defaultValue: 'Prodotto' }))}</th>
+        <th>${escapeHtml(t('doc-print-qty-um', { defaultValue: 'Q.tà x UM' }))}</th>
+        <th>${escapeHtml(t('doc-print-barcode', { defaultValue: 'Barcode' }))}</th>
       </tr>
     </thead>
     <tbody>
-      ${body || '<tr><td colspan="4">Nessuna riga</td></tr>'}
+      ${body || `<tr><td colspan="4">${escapeHtml(t('doc-print-no-rows', { defaultValue: 'Nessuna riga' }))}</td></tr>`}
     </tbody>
   </table>
 </body>
@@ -133,9 +147,10 @@ export function renderDocumentLinesExcelHtml(
 export function downloadDocumentLinesExcel(
   row: DocumentRow,
   barcodes: BarcodeMap,
+  t: PrintT = IT_LABELS,
 ): void {
   if (typeof window === 'undefined') return;
-  const html = renderDocumentLinesExcelHtml(row, barcodes);
+  const html = renderDocumentLinesExcelHtml(row, barcodes, t);
   const blob = new Blob(['﻿' + html], {
     type: 'application/vnd.ms-excel;charset=utf-8;',
   });
@@ -154,9 +169,14 @@ export function downloadDocumentLinesExcel(
 export function renderDocumentLinesPdfHtml(
   row: DocumentRow,
   barcodes: BarcodeMap,
+  t: PrintT = IT_LABELS,
 ): string {
   const lines = row.lines ?? [];
-  const title = `${row.doc_type === 'DDT' ? 'DDT' : 'Fattura'} ${row.document}`;
+  const kind =
+    row.doc_type === 'DDT'
+      ? t('doc-print-ddt', { defaultValue: 'DDT' })
+      : t('doc-print-invoice', { defaultValue: 'Fattura' });
+  const title = `${kind} ${row.document}`;
   const exportDateLabel = new Intl.DateTimeFormat('it-IT', {
     dateStyle: 'medium',
     timeStyle: 'short',
@@ -217,31 +237,31 @@ export function renderDocumentLinesPdfHtml(
   <header>
     <h1>${escapeHtml(title)}</h1>
     <div class="subtitle">${escapeHtml(row.destination)}</div>
-    <div class="meta">Data: ${escapeHtml(row.date_label)} &bull; ${lines.length} righe &bull; Data stampa: ${escapeHtml(exportDateLabel)}</div>
+    <div class="meta">${escapeHtml(t('doc-print-date', { defaultValue: 'Data' }))}: ${escapeHtml(row.date_label)} &bull; ${lines.length} ${escapeHtml(t('doc-print-rows', { defaultValue: 'righe' }))} &bull; ${escapeHtml(t('doc-print-print-date', { defaultValue: 'Data stampa' }))}: ${escapeHtml(exportDateLabel)}</div>
   </header>
 
   <div class="actions">
-    <button type="button" onclick="window.print();">Stampa</button>
-    <button type="button" class="secondary" onclick="window.close()">Chiudi</button>
+    <button type="button" onclick="window.print();">${escapeHtml(t('doc-print-print', { defaultValue: 'Stampa' }))}</button>
+    <button type="button" class="secondary" onclick="window.close()">${escapeHtml(t('doc-print-close', { defaultValue: 'Chiudi' }))}</button>
   </div>
 
   <div class="section-card">
     <table>
       <thead>
         <tr>
-          <th>SKU</th>
-          <th>Prodotto</th>
-          <th class="num">Q.tà x UM</th>
-          <th>Barcode</th>
+          <th>${escapeHtml(t('doc-print-sku', { defaultValue: 'SKU' }))}</th>
+          <th>${escapeHtml(t('doc-print-product', { defaultValue: 'Prodotto' }))}</th>
+          <th class="num">${escapeHtml(t('doc-print-qty-um', { defaultValue: 'Q.tà x UM' }))}</th>
+          <th>${escapeHtml(t('doc-print-barcode', { defaultValue: 'Barcode' }))}</th>
         </tr>
       </thead>
       <tbody>
-        ${rowsHtml || '<tr><td colspan="4" style="text-align:center;padding:24px;color:#94a3b8;">Nessuna riga</td></tr>'}
+        ${rowsHtml || `<tr><td colspan="4" style="text-align:center;padding:24px;color:#94a3b8;">${escapeHtml(t('doc-print-no-rows', { defaultValue: 'Nessuna riga' }))}</td></tr>`}
       </tbody>
     </table>
   </div>
 
-  <footer>Documento generato automaticamente &bull; ${escapeHtml(exportDateLabel)}</footer>
+  <footer>${escapeHtml(t('doc-print-auto-generated', { defaultValue: 'Documento generato automaticamente' }))} &bull; ${escapeHtml(exportDateLabel)}</footer>
 </body>
 </html>`;
 }
@@ -277,6 +297,7 @@ function openPrintWindow(html: string): void {
 export function openDocumentLinesPrintWindow(
   row: DocumentRow,
   barcodes: BarcodeMap,
+  t: PrintT = IT_LABELS,
 ): void {
-  openPrintWindow(renderDocumentLinesPdfHtml(row, barcodes));
+  openPrintWindow(renderDocumentLinesPdfHtml(row, barcodes, t));
 }
