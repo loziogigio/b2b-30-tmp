@@ -29,7 +29,10 @@ export declare class MyMbErpClient implements ErpClient {
      *
      * `type` is MyMB's TipoEstrazione (default 'E'; 'T' = open orders). The
      * requested registration-date range is passed straight through — the hub
-     * does NOT override it for type 'T'. Empty `addressCode` defaults to '1'.
+     * does NOT override it for type 'T'. `addressCode` is passed as-is: empty
+     * means ALL of the customer's ship-to addresses (do NOT default it to '1',
+     * which restricts to a single address and hides orders placed under others
+     * — verified against MyMB, matching getInvoices/getDdt).
      */
     getOrders(input: {
         customerCode: string;
@@ -46,6 +49,33 @@ export declare class MyMbErpClient implements ErpClient {
      * MyMB has no single-order detail endpoint.
      */
     getCartRows(idCarrello: number | string): Promise<any[]>;
+    /**
+     * Document line rows — MyMB `GetRigheConInfoConsegna?Causale&Anno&Numero`
+     * (GET). Reads rows straight off the ERP document, so it also covers
+     * historical orders that never went through a web cart (no IDCarrello —
+     * where `getCartRows` comes back empty). `type` is MyMB's TipoEstrazione;
+     * the ERP accepts it empty.
+     */
+    getOrderRows(input: {
+        cause: string;
+        year: number | string;
+        number: number | string;
+        type?: string;
+    }): Promise<any[]>;
+    /**
+     * Document line rows for an invoice (F) or DDT — MyMB
+     * `GetRigheFATTConInfo` / `GetRigheDDTConInfo?Causale&Anno&Numero` (GET).
+     * Both wrap the rows in `…Result.ListaRigheDDTConInfo`. Used to build the
+     * per-line barcode/CSV export for the direct-MyMB (time) documents page,
+     * which has no legacy hub. Row shape matches getOrderRows (captured live).
+     */
+    getDocumentRows(input: {
+        cause: string;
+        year: number | string;
+        number: number | string;
+        docType: 'F' | 'DDT';
+        type?: string;
+    }): Promise<any[]>;
     /** Customer profile — hub `get_client` → MyMB `GetCliente` (GET). */
     getCustomer(customerCode: string): Promise<any>;
     /** Credit exposure — hub `exposition` → MyMB `GetEsposizioneClienteInfo` (GET). */

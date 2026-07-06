@@ -90,6 +90,8 @@ export interface WidgetConfig {
   backgroundColor?: string;
   textColor?: string;
   openInNewTab?: boolean;
+  /** Anchor target saved by the CS header builder ("_self" | "_blank") */
+  target?: string;
 
   // Search bar widget
   placeholder?: string;

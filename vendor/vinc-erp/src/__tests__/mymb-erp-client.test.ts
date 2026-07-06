@@ -156,3 +156,94 @@ describe('MyMbErpClient.getSubstituteItems', () => {
     expect(await client.getSubstituteItems('ART1')).toEqual([]);
   });
 });
+
+describe('MyMbErpClient.getOrderRows', () => {
+  it('calls GetRigheConInfoConsegna with Causale/Anno/Numero and returns the rows', async () => {
+    const f = vi.fn().mockResolvedValue(jsonResponse({
+      GetRigheConInfoConsegnaResult: {
+        ListaRigheConInfoConsegna: [
+          { CodiceArticolo: 'CB1211-0WA.W42', DescrizioneArticolo: 'W /42 I-ROBOX TOP' },
+        ],
+      },
+    }));
+    const client = makeClient(f as unknown as typeof fetch);
+    const rows = await client.getOrderRows({ cause: 'B05', year: '2026', number: '15199938' });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].CodiceArticolo).toBe('CB1211-0WA.W42');
+    expect(f).toHaveBeenCalledOnce();
+    const url = String(f.mock.calls[0][0]);
+    expect(url).toContain('/GetRigheConInfoConsegna');
+    expect(url).toContain('Causale=B05');
+    expect(url).toContain('Anno=2026');
+    expect(url).toContain('Numero=15199938');
+    expect(url).toContain('TipoEstrazione=');
+    expect((f.mock.calls[0][1] as RequestInit).method).toBe('GET');
+  });
+
+  it('returns [] when the result list is missing', async () => {
+    const f = vi.fn().mockResolvedValue(jsonResponse({ GetRigheConInfoConsegnaResult: {} }));
+    const client = makeClient(f as unknown as typeof fetch);
+    expect(await client.getOrderRows({ cause: 'B05', year: 2026, number: 1 })).toEqual([]);
+  });
+});
+
+describe('MyMbErpClient.getDocumentRows', () => {
+  it('DDT → GetRigheDDTConInfo, returns ListaRigheDDTConInfo', async () => {
+    const f = vi.fn().mockResolvedValue(jsonResponse({
+      GetRigheDDTConInfoResult: {
+        ReturnCode: 0,
+        ListaRigheDDTConInfo: [{ CodiceArticolo: '5010770', CodiceInternoArticolo: '525131', Quantita: 10 }],
+      },
+    }));
+    const client = makeClient(f as unknown as typeof fetch);
+    const rows = await client.getDocumentRows({ cause: 'F', year: 2026, number: 75208, docType: 'DDT' });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].CodiceInternoArticolo).toBe('525131');
+    const url = String(f.mock.calls[0][0]);
+    expect(url).toContain('/GetRigheDDTConInfo');
+    expect(url).toContain('Causale=F');
+    expect(url).toContain('Anno=2026');
+    expect(url).toContain('Numero=75208');
+  });
+
+  it('F → GetRigheFATTConInfo (also ListaRigheDDTConInfo)', async () => {
+    const f = vi.fn().mockResolvedValue(jsonResponse({
+      GetRigheFATTConInfoResult: { ReturnCode: 0, ListaRigheDDTConInfo: [{ CodiceArticolo: 'X' }] },
+    }));
+    const client = makeClient(f as unknown as typeof fetch);
+    const rows = await client.getDocumentRows({ cause: 'V1', year: 2026, number: 9, docType: 'F' });
+    expect(rows).toHaveLength(1);
+    expect(String(f.mock.calls[0][0])).toContain('/GetRigheFATTConInfo');
+  });
+
+  it('returns [] when the list is missing', async () => {
+    const f = vi.fn().mockResolvedValue(jsonResponse({ GetRigheDDTConInfoResult: { ReturnCode: 0 } }));
+    const client = makeClient(f as unknown as typeof fetch);
+    expect(await client.getDocumentRows({ cause: 'F', year: 2026, number: 1, docType: 'DDT' })).toEqual([]);
+  });
+});
+
+describe('MyMbErpClient.getOrders', () => {
+  it('passes an empty addressCode through as "" (all addresses), NOT "1"', async () => {
+    const f = vi.fn().mockResolvedValue(jsonResponse({
+      GetTestateConInfoConsegnaResult: { ReturnCode: 0, ListaTestateConInfoConsegna: [{ NumeroDocDefinitivo: 21 }] },
+    }));
+    const client = makeClient(f as unknown as typeof fetch);
+    const rows = await client.getOrders({ customerCode: 'B_850', addressCode: '', type: 'T' });
+    expect(rows).toHaveLength(1);
+    const url = String(f.mock.calls[0][0]);
+    // Defaulting to "1" hid orders placed under other ship-to addresses.
+    expect(url).toContain('CodiceIndirizzo=&'); // empty value, not "1"
+    expect(url).not.toContain('CodiceIndirizzo=1');
+    expect(url).toContain('TipoEstrazione=T');
+  });
+
+  it('forwards an explicit addressCode unchanged', async () => {
+    const f = vi.fn().mockResolvedValue(jsonResponse({
+      GetTestateConInfoConsegnaResult: { ReturnCode: 0, ListaTestateConInfoConsegna: [] },
+    }));
+    const client = makeClient(f as unknown as typeof fetch);
+    await client.getOrders({ customerCode: 'C', addressCode: '7', type: 'E' });
+    expect(String(f.mock.calls[0][0])).toContain('CodiceIndirizzo=7');
+  });
+});

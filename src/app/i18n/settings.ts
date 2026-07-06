@@ -6,9 +6,6 @@ export const languages = [
   'es',
   'pt',
   'fr',
-  'ar',
-  'he',
-  'zh',
 ];
 export const defaultNS = 'common';
 

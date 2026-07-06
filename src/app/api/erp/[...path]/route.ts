@@ -2,12 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { CouponClient } from 'vinc-erp';
 import { getMyMbErpClient } from '@/lib/erp/factory';
 import { resolveCouponConfig } from '@/lib/erp/coupon-config';
-import { buildOrderDetailResponse } from '@utils/transform/erp-order-detail';
+import {
+  buildOrderDetailResponse,
+  buildOrderDetailResponseFromDocRows,
+} from '@utils/transform/erp-order-detail';
+import { mapErpDocRowsToLines } from '@utils/transform/erp-document-lines';
 
 type RouteParams = { params: Promise<{ path: string[] }> };
 
 const COUPON_ENDPOINTS = new Set([
-  'validate_coupon', 'check_coupon_cart', 'submit_coupon', 'verify_promo_item',
+  'validate_coupon',
+  'check_coupon_cart',
+  'submit_coupon',
+  'verify_promo_item',
 ]);
 
 /**
@@ -29,9 +36,15 @@ async function handleCoupon(
 ): Promise<NextResponse> {
   const cfg = await resolveCouponConfig(req);
   if (!cfg.enabled || !cfg.baseUrl) {
-    return NextResponse.json({ status: 'error', message: 'Coupons not enabled' });
+    return NextResponse.json({
+      status: 'error',
+      message: 'Coupons not enabled',
+    });
   }
-  const client = new CouponClient({ baseUrl: cfg.baseUrl, authHeader: cfg.authHeader });
+  const client = new CouponClient({
+    baseUrl: cfg.baseUrl,
+    authHeader: cfg.authHeader,
+  });
   const cliente = erpCustomerCode(body.codiceInternoCliente);
 
   // Call descriptor the order sync uses to apply the coupon onto the MyMB
@@ -46,19 +59,33 @@ async function handleCoupon(
   switch (endpoint) {
     case 'validate_coupon': {
       const data = await client.validateCoupon(cliente, body.codiceCoupon);
-      return NextResponse.json({ status: 'success', data, apply: buildApply(body.codiceCoupon) });
+      return NextResponse.json({
+        status: 'success',
+        data,
+        apply: buildApply(body.codiceCoupon),
+      });
     }
     case 'check_coupon_cart': {
       const info = await client.getCartCoupon(body.id_cart);
       const codice = info?.GetInfoCouponFromDocumentoResult?.m_Item2?.Codice;
       if (!codice) {
-        return NextResponse.json({ status: 'error', message: 'No coupon on cart' });
+        return NextResponse.json({
+          status: 'error',
+          message: 'No coupon on cart',
+        });
       }
       const data = await client.validateCoupon(cliente, codice);
-      return NextResponse.json({ status: 'success', data, apply: buildApply(codice) });
+      return NextResponse.json({
+        status: 'success',
+        data,
+        apply: buildApply(codice),
+      });
     }
     case 'submit_coupon': {
-      const data = await client.submitCoupon(body.idElaborazione, body.codiceCoupon);
+      const data = await client.submitCoupon(
+        body.idElaborazione,
+        body.codiceCoupon,
+      );
       return NextResponse.json({ status: 'success', data });
     }
     case 'verify_promo_item': {
@@ -74,7 +101,10 @@ async function handleCoupon(
       return NextResponse.json({ status: 'success', data });
     }
     default:
-      return NextResponse.json({ status: 'error', message: `Unknown coupon endpoint: ${endpoint}` }, { status: 404 });
+      return NextResponse.json(
+        { status: 'error', message: `Unknown coupon endpoint: ${endpoint}` },
+        { status: 404 },
+      );
   }
 }
 
@@ -94,7 +124,10 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       return await handleCoupon(endpoint, body, req);
     } catch (error) {
       console.error(`[ERP route] coupon ${endpoint} failed:`, error);
-      return NextResponse.json({ status: 'error', message: (error as Error).message }, { status: 502 });
+      return NextResponse.json(
+        { status: 'error', message: (error as Error).message },
+        { status: 502 },
+      );
     }
   }
 
@@ -154,8 +187,46 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
             { status: 404 },
           );
         }
-        const righe = await client.getCartRows(testata.IDCarrello);
-        return NextResponse.json(buildOrderDetailResponse(testata, righe));
+        // Web-created orders carry a usable IDCarrello → GetRigheCarrello.
+        // Historical/ERP-native orders (e.g. B05) never had a web cart, so
+        // that returns nothing — read the rows straight off the document via
+        // GetRigheConInfoConsegna instead.
+        const idCart = Number(testata.IDCarrello) || 0;
+        const righe = idCart > 0 ? await client.getCartRows(idCart) : [];
+        if (righe.length > 0) {
+          return NextResponse.json(buildOrderDetailResponse(testata, righe));
+        }
+        const docRows = await client.getOrderRows({
+          cause: cau,
+          year: anno,
+          number: num,
+        });
+        return NextResponse.json(
+          buildOrderDetailResponseFromDocRows(testata, docRows),
+        );
+      }
+      case 'get_document_rows': {
+        // Per-line rows for an invoice (F) or DDT, for the time-theme
+        // documents page's barcode/CSV export. MyMB has no legacy hub here;
+        // read straight off the document via GetRigheFATT/DDTConInfo, then
+        // map to the DocumentLine[] documents-export.ts consumes.
+        const docType = body.doc_type === 'DDT' ? 'DDT' : 'F';
+        const rows = await client.getDocumentRows({
+          cause: String(
+            body.CausaleDocDefinitivo ?? body.cause ?? body.scope ?? '',
+          ),
+          year: String(
+            body.AnnoDocDefinitivo ?? body.doc_year ?? body.year ?? '',
+          ),
+          number: String(
+            body.NumeroDocDefinitivo ?? body.doc_number ?? body.number ?? '',
+          ),
+          docType,
+        });
+        return NextResponse.json({
+          status: 'success',
+          data: mapErpDocRowsToLines(rows),
+        });
       }
       case 'get_customer': {
         const data = await client.getCustomer(body.customer_code);

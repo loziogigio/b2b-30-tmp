@@ -35,6 +35,10 @@ export function ButtonWidget({ config, lang }: ButtonWidgetProps) {
     ? `/${lang}${config.url}`
     : config.url;
 
+  // The CS header builder saves `target: "_blank"` (ButtonWidgetConfig);
+  // older configs may carry the boolean `openInNewTab`. Honor both.
+  const openInNewTab = config.openInNewTab || config.target === '_blank';
+
   const customStyle: React.CSSProperties = {
     borderRadius: 'var(--radius-btn, 9999px)',
     ...(config.backgroundColor && { backgroundColor: config.backgroundColor }),
@@ -44,8 +48,8 @@ export function ButtonWidget({ config, lang }: ButtonWidgetProps) {
   return (
     <Link
       href={href}
-      target={config.openInNewTab ? '_blank' : undefined}
-      rel={config.openInNewTab ? 'noopener noreferrer' : undefined}
+      target={openInNewTab ? '_blank' : undefined}
+      rel={openInNewTab ? 'noopener noreferrer' : undefined}
       className={cn(
         'inline-flex px-3 py-1.5 md:px-4 md:py-2 text-xs md:text-sm font-semibold transition-colors whitespace-nowrap',
         variantStyles[variant] || variantStyles.outline,

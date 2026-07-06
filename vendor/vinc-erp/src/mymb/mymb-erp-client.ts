@@ -113,7 +113,10 @@ export class MyMbErpClient implements ErpClient {
    *
    * `type` is MyMB's TipoEstrazione (default 'E'; 'T' = open orders). The
    * requested registration-date range is passed straight through — the hub
-   * does NOT override it for type 'T'. Empty `addressCode` defaults to '1'.
+   * does NOT override it for type 'T'. `addressCode` is passed as-is: empty
+   * means ALL of the customer's ship-to addresses (do NOT default it to '1',
+   * which restricts to a single address and hides orders placed under others
+   * — verified against MyMB, matching getInvoices/getDdt).
    */
   async getOrders(input: {
     customerCode: string;
@@ -126,7 +129,7 @@ export class MyMbErpClient implements ErpClient {
     const params: Record<string, unknown> = {
       CodiceInternoCliente: input.customerCode,
       TipoEstrazione: input.type || 'E',
-      CodiceIndirizzo: input.addressCode || '1',
+      CodiceIndirizzo: input.addressCode ?? '',
       IdRiferimentoCliente:
         input.customerRef && input.customerRef !== '0' ? input.customerRef : 0,
     };
@@ -153,6 +156,70 @@ export class MyMbErpClient implements ErpClient {
       params: { IdCarrello: idCarrello },
     });
     return data?.GetRigheCarrelloResult?.ListaRighe ?? [];
+  }
+
+  /**
+   * Document line rows — MyMB `GetRigheConInfoConsegna?Causale&Anno&Numero`
+   * (GET). Reads rows straight off the ERP document, so it also covers
+   * historical orders that never went through a web cart (no IDCarrello —
+   * where `getCartRows` comes back empty). `type` is MyMB's TipoEstrazione;
+   * the ERP accepts it empty.
+   */
+  async getOrderRows(input: {
+    cause: string;
+    year: number | string;
+    number: number | string;
+    type?: string;
+  }): Promise<any[]> {
+    const data = await this.request<any>(
+      MYMB_ENDPOINTS.GET_RIGHE_CON_INFO_CONSEGNA,
+      {
+        method: 'GET',
+        params: {
+          Causale: input.cause,
+          Anno: input.year,
+          Numero: input.number,
+          TipoEstrazione: input.type ?? '',
+        },
+      },
+    );
+    return (
+      data?.GetRigheConInfoConsegnaResult?.ListaRigheConInfoConsegna ?? []
+    );
+  }
+
+  /**
+   * Document line rows for an invoice (F) or DDT — MyMB
+   * `GetRigheFATTConInfo` / `GetRigheDDTConInfo?Causale&Anno&Numero` (GET).
+   * Both wrap the rows in `…Result.ListaRigheDDTConInfo`. Used to build the
+   * per-line barcode/CSV export for the direct-MyMB (time) documents page,
+   * which has no legacy hub. Row shape matches getOrderRows (captured live).
+   */
+  async getDocumentRows(input: {
+    cause: string;
+    year: number | string;
+    number: number | string;
+    docType: 'F' | 'DDT';
+    type?: string;
+  }): Promise<any[]> {
+    const endpoint =
+      input.docType === 'DDT'
+        ? MYMB_ENDPOINTS.GET_RIGHE_DDT_CON_INFO
+        : MYMB_ENDPOINTS.GET_RIGHE_FATT_CON_INFO;
+    const data = await this.request<any>(endpoint, {
+      method: 'GET',
+      params: {
+        Causale: input.cause,
+        Anno: input.year,
+        Numero: input.number,
+        TipoEstrazione: input.type ?? '',
+      },
+    });
+    const resultKey =
+      input.docType === 'DDT'
+        ? 'GetRigheDDTConInfoResult'
+        : 'GetRigheFATTConInfoResult';
+    return data?.[resultKey]?.ListaRigheDDTConInfo ?? [];
   }
 
   /** Customer profile — hub `get_client` → MyMB `GetCliente` (GET). */

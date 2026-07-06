@@ -99,6 +99,11 @@ export default function TimeAccountOrders() {
       date_to: criteria.date_to,
       type: criteria.type,
       ...ERP_STATIC,
+      // Order history spans ALL of the customer's ship-to addresses. The ERP
+      // returns nothing when filtered to a single CodiceIndirizzo (login sets
+      // ERP_STATIC.address_code to one address / '1'); the address filter, when
+      // set, narrows via criteria.address_code (default '' = all).
+      address_code: criteria.address_code,
     },
     true,
   );
@@ -138,9 +143,12 @@ export default function TimeAccountOrders() {
       cause: String(cause),
       doc_year: String(doc_year),
       // ERP context so the direct-MyMB detail flow can re-read the order from
-      // the same GetTestateConInfoConsegna window the list used.
+      // the same GetTestateConInfoConsegna window the list used — same empty
+      // address (all ship-to addresses), so the order is found regardless of
+      // which address it was placed under. Don't fall back to
+      // ERP_STATIC.address_code (a single address → order not found).
       customer_code: (ERP_STATIC as any).customer_code,
-      address_code: criteria.address_code || (ERP_STATIC as any).address_code,
+      address_code: criteria.address_code,
       type: criteria.type,
       date_from: criteria.date_from,
       date_to: criteria.date_to,

@@ -36,10 +36,21 @@ const normalizeFeatureValue = (entry: any) => {
   return '—';
 };
 
+interface BaseFeatureLabels {
+  sku: string;
+  brand: string;
+  availability: string;
+}
+
 const mapProductToComparison = (
   product: Product,
-  priceData?: ErpPriceData,
+  priceData: ErpPriceData | undefined,
   lang: string = 'it',
+  labels: BaseFeatureLabels = {
+    sku: 'SKU',
+    brand: 'Brand',
+    availability: 'Availability',
+  },
 ): ComparisonProduct => {
   // Handle features as either array or object
   let technicalFeatures: ComparisonFeature[] = [];
@@ -102,15 +113,15 @@ const mapProductToComparison = (
 
   const baseFeatures: ComparisonFeature[] = [
     {
-      label: 'SKU',
+      label: labels.sku,
       value: product.sku || '—',
     },
     {
-      label: 'Brand',
+      label: labels.brand,
       value: product.brand?.name || '—',
     },
     {
-      label: 'Availability',
+      label: labels.availability,
       value: getAvailabilityDisplay(priceData),
       highlight: priceData ? Number(priceData.availability) > 0 : false,
     },
@@ -198,6 +209,16 @@ export default function ProductCompareClient({
 
   const erpPricesMap = useProductsPriceMap(flatProducts);
 
+  // Base-feature row labels, translated once per language
+  const featureLabels = useMemo<BaseFeatureLabels>(
+    () => ({
+      sku: t('text-sku', { defaultValue: 'SKU' }),
+      brand: t('text-brand', { defaultValue: 'Brand' }),
+      availability: t('text-availability', { defaultValue: 'Availability' }),
+    }),
+    [t],
+  );
+
   // Map products to comparison format with ERP prices
   const products = useMemo(() => {
     if (!rawProducts?.length) return [];
@@ -223,6 +244,7 @@ export default function ProductCompareClient({
             child,
             priceData,
             lang,
+            featureLabels,
           );
           map.set(child.sku.toLowerCase(), comparisonProduct);
         });
@@ -233,7 +255,12 @@ export default function ProductCompareClient({
         const parentId = String(item?.id ?? '');
         const priceData = erpPricesMap[parentId];
 
-        const comparisonProduct = mapProductToComparison(item, priceData, lang);
+        const comparisonProduct = mapProductToComparison(
+          item,
+          priceData,
+          lang,
+          featureLabels,
+        );
         map.set(item.sku.toLowerCase(), comparisonProduct);
       }
     });
@@ -247,20 +274,31 @@ export default function ProductCompareClient({
     });
 
     return orderedProducts;
-  }, [rawProducts, erpPricesMap, limitedSkus, lang]);
+  }, [rawProducts, erpPricesMap, limitedSkus, lang, featureLabels]);
 
   const hintText = t('text-product-comparison-hint');
 
   const hasProducts = products.length > 0;
 
+  const exportLabels = {
+    sku: featureLabels.sku,
+    product: t('text-product', { defaultValue: 'Product' }),
+    model: t('text-model', { defaultValue: 'Model' }),
+    price: t('text-price', { defaultValue: 'Price' }),
+    availability: featureLabels.availability,
+    specification: t('text-specification', { defaultValue: 'Specification' }),
+    title: t('text-product-comparison', { defaultValue: 'Product Comparison' }),
+    generated: t('text-generated', { defaultValue: 'Generated' }),
+  };
+
   const handleExportExcel = () => {
     if (!hasProducts) return;
-    exportToExcel(products, { hidePrices, priceDecimals });
+    exportToExcel(products, { hidePrices, priceDecimals, labels: exportLabels });
   };
 
   const handleExportPDF = () => {
     if (!hasProducts) return;
-    exportToPDF(products, { hidePrices, priceDecimals });
+    exportToPDF(products, { hidePrices, priceDecimals, labels: exportLabels });
   };
 
   return (

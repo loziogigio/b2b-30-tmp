@@ -92,12 +92,17 @@ export const FiltersB2BItem = ({
 
   const visibleCount = 5;
 
+  // General facets HIDE unselected zero-count values — products the customer
+  // can't see (channel scope, user-exclusion rules) must not leave dead
+  // entries. Selected values stay visible at zero so they can be untoggled.
+  // Spec filters keep zero values visible (muted) so the full spec range at
+  // the same level stays comparable.
   // Sort: selected first, then by count descending, then by label as tiebreaker.
-  // Zero-count items stay visible (rendered muted) so users can see what facet
-  // values exist even when no products match — matches the default template
-  // behavior for `category-navigator` / `groups-navigator`.
   const sortedValues = React.useMemo(() => {
-    return [...values].sort((a, b) => {
+    const visible = isSpecFilter
+      ? values
+      : values.filter((v) => v.count > 0 || formState.includes(v.value));
+    return [...visible].sort((a, b) => {
       const aSelected = formState.includes(a.value);
       const bSelected = formState.includes(b.value);
       if (aSelected && !bSelected) return -1;
@@ -107,7 +112,7 @@ export const FiltersB2BItem = ({
       // Tiebreaker: label alphabetically/numerically
       return a.label.localeCompare(b.label, undefined, { numeric: true });
     });
-  }, [values, formState]);
+  }, [values, formState, isSpecFilter]);
 
   const shownValues = expanded
     ? sortedValues

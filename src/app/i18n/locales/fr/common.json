@@ -741,5 +741,14 @@
   "text-availability": "Disponibilité",
   "text-packaging": "Conditionnement",
   "catalogue-view-all": "Voir tout",
-  "view-all-products": "Voir tous"
+  "view-all-products": "Voir tous",
+  "view-all": "Voir tout",
+  "text-brand": "Marque",
+  "text-generated": "Généré",
+  "orders-agent": "Agent",
+  "orders-notes": "Notes",
+  "orders-payment": "Paiement",
+  "orders-shipping": "Livraison",
+  "orders-subtotal": "Montant imposable",
+  "orders-vat": "TVA"
 }

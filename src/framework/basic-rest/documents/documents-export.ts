@@ -246,12 +246,9 @@ export function renderDocumentLinesPdfHtml(
 </html>`;
 }
 
-export function openDocumentLinesPrintWindow(
-  row: DocumentRow,
-  barcodes: BarcodeMap,
-): void {
+/** Open an HTML string in a print popup, revoking its blob URL on close. */
+function openPrintWindow(html: string): void {
   if (typeof window === 'undefined') return;
-  const html = renderDocumentLinesPdfHtml(row, barcodes);
   const blob = new Blob([html], { type: 'text/html' });
   const url = URL.createObjectURL(blob);
   const popup = window.open(url, '_blank');
@@ -275,4 +272,11 @@ export function openDocumentLinesPrintWindow(
     if (popup.closed) cleanup();
   }, 500);
   fallbackTimer = window.setTimeout(() => cleanup(), 5 * 60 * 1000);
+}
+
+export function openDocumentLinesPrintWindow(
+  row: DocumentRow,
+  barcodes: BarcodeMap,
+): void {
+  openPrintWindow(renderDocumentLinesPdfHtml(row, barcodes));
 }

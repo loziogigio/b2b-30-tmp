@@ -8,6 +8,7 @@ import {
   BOOLEAN_LABELS,
 } from '@framework/utils/filters';
 import { resolveSupportedLang } from '@/app/i18n/settings';
+import { pimCustomerContext } from './get-pim-product';
 import type {
   PimFacetEntity,
   PimFacetValue,
@@ -204,6 +205,12 @@ export const fetchPimFilters = async (
     rows: 5,
     include_faceting: true,
     facet_fields: params.facet_fields || PIM_FACET_FIELDS,
+    // Sales channel + customer context — same fields the product-search
+    // fetcher sends — so the BE applies the channel-scoped user-attribute
+    // exclusion rules to this query too. Without them the facet counts would
+    // include products the logged-in customer can never see in the listing.
+    channel: params.channel || 'b2b',
+    ...pimCustomerContext(),
   };
 
   // Add text search if provided

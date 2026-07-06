@@ -741,5 +741,14 @@
   "text-availability": "Disponibilidad",
   "text-packaging": "Embalaje",
   "catalogue-view-all": "Ver todo",
-  "view-all-products": "Ver todos"
+  "view-all-products": "Ver todos",
+  "view-all": "Ver todo",
+  "text-brand": "Marca",
+  "text-generated": "Generado",
+  "orders-agent": "Agente",
+  "orders-notes": "Notas",
+  "orders-payment": "Pago",
+  "orders-shipping": "Envío",
+  "orders-subtotal": "Base imponible",
+  "orders-vat": "IVA"
 }

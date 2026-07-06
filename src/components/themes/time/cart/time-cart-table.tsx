@@ -1,6 +1,6 @@
 'use client';
 
-import { prefixImageUrl } from '@utils/image-versioning';
+import { cartImageUrl } from '@utils/image-versioning';
 import React, {
   useMemo,
   useState,
@@ -24,6 +24,8 @@ import { useCartSettings } from '@/hooks/use-cart-settings';
 // Per-line note UI on the time-theme checkout is toggled per sales channel via
 // the `cart_settings` data model (useCartSettings → showLineNote). Defaults off.
 
+const NO_IMAGE_SRC = '/assets/placeholders/no-image.jpeg';
+
 // Opens the cart-line item in the product preview modal. The popup itself
 // re-fetches the full PIM product by sku, so we just hand it the cart item
 // with `image` pre-shaped to an object so the placeholder during fetch
@@ -31,10 +33,12 @@ import { useCartSettings } from '@/hooks/use-cart-settings';
 function useOpenCartItemPreview() {
   const { openModal } = useModalAction();
   return (item: any) => {
-    const imgUrl = prefixImageUrl(item?.image, 'gallery_') ?? item?.image ?? '';
+    const imgUrl = cartImageUrl(item?.image);
     const product = {
       ...item,
-      image: imgUrl ? { thumbnail: imgUrl, original: imgUrl } : item?.image,
+      image: imgUrl
+        ? { thumbnail: imgUrl, original: imgUrl }
+        : item?.image || undefined,
     };
     openModal('PRODUCT_VIEW', product);
   };
@@ -140,6 +144,7 @@ function TimeCartRow({
       ? String(promoCodeRaw)
       : '';
   const isAvailable = (item as any).stock !== 0;
+  const imageSrc = cartImageUrl((item as any).image) ?? NO_IMAGE_SRC;
 
   const [showNote, setShowNote] = useState(false);
   const [noteDraft, setNoteDraft] = useState(item.note || '');
@@ -181,11 +186,7 @@ function TimeCartRow({
           className="w-[48px] h-[48px] rounded-[8px] bg-gradient-to-br from-[#f8f9fb] to-[#eef0f4] flex items-center justify-center overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--time-red)]/40"
         >
           <Image
-            src={
-              prefixImageUrl(item?.image, 'gallery_') ??
-              item?.image ??
-              '/assets/placeholders/no-image.jpeg'
-            }
+            src={imageSrc}
             width={48}
             height={48}
             alt={item?.name || ''}
@@ -373,11 +374,7 @@ function TimeCartRow({
             className="w-[52px] h-[52px] shrink-0 rounded-[10px] bg-gradient-to-br from-[#f8f9fb] to-[#eef0f4] overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--time-red)]/40"
           >
             <Image
-              src={
-                prefixImageUrl(item?.image, 'gallery_') ??
-                item?.image ??
-                '/assets/placeholders/no-image.jpeg'
-              }
+              src={imageSrc}
               width={52}
               height={52}
               alt={item?.name || ''}

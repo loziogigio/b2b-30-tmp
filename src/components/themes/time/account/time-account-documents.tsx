@@ -9,8 +9,14 @@ import { lastMonthRange, toErpNumericDate } from '@utils/date-to-erp';
 import {
   useDocumentsListQuery,
   useOpenDocumentAction,
+  fetchDocumentLines,
   type DocumentActionKind,
 } from '@framework/documents/fetch-documents-list';
+import {
+  fetchBarcodes,
+  downloadDocumentLinesExcel,
+  openDocumentLinesPrintWindow,
+} from '@framework/documents/documents-export';
 import {
   TimeCard,
   TimeIconBox,
@@ -60,6 +66,44 @@ export default function TimeAccountDocuments({
     `${r.document}:${kind}`;
   const loadingKey = variables ? keyFor(variables.row, variables.kind) : null;
   const isDDT = tab === 'DDT';
+
+  // Barcode-PDF / CSV: MyMB has no legacy hub here, so fetch the document's
+  // article lines from the ERP on demand, enrich with EAN from PIM, then feed
+  // the shared client-side generator (same as the default theme).
+  const [exportBusy, setExportBusy] = useState<{
+    doc: string;
+    kind: 'pdf' | 'excel';
+  } | null>(null);
+  const [exportErr, setExportErr] = useState<string | null>(null);
+
+  const exportLines = async (r: DocumentRow, kind: 'pdf' | 'excel') => {
+    if (exportBusy) return;
+    setExportBusy({ doc: r.document, kind });
+    setExportErr(null);
+    try {
+      const lines = await fetchDocumentLines(r);
+      if (!lines.length) {
+        setExportErr(
+          t('text-no-document-lines', {
+            defaultValue: 'Nessuna riga disponibile per questo documento.',
+          }),
+        );
+        return;
+      }
+      const withLines = { ...r, lines };
+      const barcodes = await fetchBarcodes(lines.map((l) => l.entityCode));
+      if (kind === 'excel') downloadDocumentLinesExcel(withLines, barcodes);
+      else openDocumentLinesPrintWindow(withLines, barcodes);
+    } catch {
+      setExportErr(
+        t('order-detail-error', {
+          defaultValue: 'Impossibile generare il documento.',
+        }),
+      );
+    } finally {
+      setExportBusy(null);
+    }
+  };
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -218,6 +262,13 @@ export default function TimeAccountDocuments({
           </div>
         </TimeCard>
       )}
+      {exportErr && (
+        <TimeCard className="p-4">
+          <div className="rounded-[var(--radius-btn)] border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
+            {exportErr}
+          </div>
+        </TimeCard>
+      )}
 
       {/* Table */}
       {!isLoading && (
@@ -268,9 +319,11 @@ export default function TimeAccountDocuments({
                   const pdfLoading =
                     loadingKey === keyFor(r, 'pdf') && isPending;
                   const bcLoading =
-                    loadingKey === keyFor(r, 'barcode') && isPending;
+                    exportBusy?.doc === r.document &&
+                    exportBusy?.kind === 'pdf';
                   const csvLoading =
-                    loadingKey === keyFor(r, 'csv') && isPending;
+                    exportBusy?.doc === r.document &&
+                    exportBusy?.kind === 'excel';
 
                   return (
                     <tr
@@ -304,7 +357,7 @@ export default function TimeAccountDocuments({
                       <td className="px-3 py-3 text-center">
                         <button
                           type="button"
-                          onClick={() => openDoc({ kind: 'barcode', row: r })}
+                          onClick={() => exportLines(r, 'pdf')}
                           disabled={bcLoading}
                           className="rounded-[var(--radius-btn)] px-2 py-1 text-[11px] font-semibold text-[var(--time-red)] hover:bg-[rgba(230,57,70,0.06)] disabled:opacity-50"
                         >
@@ -315,7 +368,7 @@ export default function TimeAccountDocuments({
                         <td className="px-3 py-3 text-center">
                           <button
                             type="button"
-                            onClick={() => openDoc({ kind: 'csv', row: r })}
+                            onClick={() => exportLines(r, 'excel')}
                             disabled={csvLoading}
                             className="rounded-[var(--radius-btn)] px-2 py-1 text-[11px] font-semibold text-[var(--time-red)] hover:bg-[rgba(230,57,70,0.06)] disabled:opacity-50"
                           >

@@ -193,7 +193,7 @@ export function GroupsNavigator({ lang, text }: GroupsNavigatorProps) {
   }, [searchParams, lang, effectiveText]);
 
   // Fetch facet counts for groups
-  const { data: groupFacets } = useQuery({
+  const { data: groupFacets, isSuccess: countsLoaded } = useQuery({
     queryKey: ['group-facets', facetQueryParams],
     queryFn: () => fetchPimFilters(facetQueryParams),
     staleTime: 1000 * 60 * 5,
@@ -311,12 +311,20 @@ export function GroupsNavigator({ lang, text }: GroupsNavigatorProps) {
   // Filter rules:
   //   - Keep nodes with a code OR with any descendant carrying a code
   //     (so B2B navigation containers stay drillable).
-  //   - Zero-count branches stay visible (rendered muted) so users can see
-  //     the full taxonomy even when no products match — matches the default
-  //     template's facet behavior.
+  //   - Zero-count branches are hidden once counts are loaded: products the
+  //     customer can't see (channel scope, user-exclusion rules) must not
+  //     leave dead taxonomy entries. Selected branches stay visible so the
+  //     filter can be untoggled. Spec facets (tech-specs-filters) keep their
+  //     own same-level zero handling — this only governs the groups tree.
+  //     Until counts load, everything stays visible to avoid a flash-empty.
   // Sort: selected first, then by count descending, then by label.
   const displayItems = useMemo(() => {
-    const items = baseDisplayItems.filter(hasCodeInSubtree);
+    let items = baseDisplayItems.filter(hasCodeInSubtree);
+    if (countsLoaded) {
+      items = items.filter(
+        (n) => hasSelectedDescendant(n) || getTotalCount(n) > 0,
+      );
+    }
     return [...items].sort((a, b) => {
       const aCode = extractGroupCode(a);
       const bCode = extractGroupCode(b);
@@ -329,7 +337,14 @@ export function GroupsNavigator({ lang, text }: GroupsNavigatorProps) {
       if (bCount !== aCount) return bCount - aCount;
       return a.label.localeCompare(b.label, undefined, { numeric: true });
     });
-  }, [baseDisplayItems, selectedCodes, getTotalCount, hasCodeInSubtree]);
+  }, [
+    baseDisplayItems,
+    selectedCodes,
+    getTotalCount,
+    hasCodeInSubtree,
+    hasSelectedDescendant,
+    countsLoaded,
+  ]);
 
   // Toggle a group code in the URL filter. Selecting a node replaces any
   // selected ancestor/descendant (drill-down/up) — see toggleGroupCode.

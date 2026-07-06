@@ -13,6 +13,9 @@ vi.mock('@/lib/tenant', () => ({
     apiKeyId: 'k',
     apiSecret: 's',
   }),
+  // The route builds tenant auth headers for the upstream fetch; the mock must
+  // provide this export too, otherwise the route throws before calling fetch.
+  buildTenantApiHeaders: () => ({ Accept: 'application/json' }),
 }));
 
 import { GET } from '@/app/api/b2b/home-settings/route';

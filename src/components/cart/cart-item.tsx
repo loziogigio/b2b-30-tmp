@@ -8,13 +8,15 @@ import usePrice from '@framework/product/use-price';
 import { ROUTES } from '@utils/routes';
 import AddToCart from '@components/product/add-to-cart';
 import UpdateCart from '@components/product/update-cart';
-import { prefixImageUrl } from '@utils/image-versioning';
+import { cartImageUrl } from '@utils/image-versioning';
 import { confirmAction } from '@utils/toast-confirm';
 
 type CartItemProps = {
   item: any;
   lang: string;
 };
+
+const NO_IMAGE_SRC = '/assets/placeholders/no-image.jpeg';
 
 const getUnitNet = (it: any) =>
   Number(
@@ -48,6 +50,7 @@ const CartItem: React.FC<CartItemProps> = ({ lang, item }) => {
   const productHref = skuValue
     ? `/${normalizedLang}${ROUTES.PRODUCT}?sku=${skuValue}`
     : `/${normalizedLang}${ROUTES.PRODUCT}`;
+  const imageSrc = cartImageUrl(item?.image) ?? NO_IMAGE_SRC;
 
   return (
     <div
@@ -57,11 +60,7 @@ const CartItem: React.FC<CartItemProps> = ({ lang, item }) => {
       {/* image + quick remove */}
       <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-md ring-1 ring-gray-200">
         <Image
-          src={
-            prefixImageUrl(item?.image, 'gallery_') ??
-            item?.image ??
-            '/assets/placeholders/no-image.jpeg'
-          }
+          src={imageSrc}
           width={64}
           height={64}
           loading="eager"

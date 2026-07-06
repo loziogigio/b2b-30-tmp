@@ -25,7 +25,7 @@ import { ERP_STATIC } from '../utils/static';
  * treats the request as a guest (packaging_options stripped, no per-user
  * exclusion applied). We never send the raw '0'.
  */
-function pimCustomerContext(): {
+export function pimCustomerContext(): {
   customer_code?: string;
   address_code?: string;
 } {

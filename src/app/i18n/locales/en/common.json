@@ -744,5 +744,13 @@
   "savedcarts-save-current_one": "Save current cart ({{count}} items)",
   "savedcarts-save-current_other": "Save current cart ({{count}} items)",
   "text-view-variants": "View variants",
-  "catalogue-view-all": "View all"
+  "catalogue-view-all": "View all",
+  "text-brand": "Brand",
+  "text-generated": "Generated",
+  "orders-agent": "Agent",
+  "orders-notes": "Notes",
+  "orders-payment": "Payment",
+  "orders-shipping": "Shipping",
+  "orders-subtotal": "Taxable amount",
+  "orders-vat": "VAT"
 }

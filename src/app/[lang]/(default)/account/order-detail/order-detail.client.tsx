@@ -84,9 +84,12 @@ export default function OrderDetailClient({ lang, initialParams }: Props) {
       doc_year,
       doc_number,
       // ERP context for the direct-MyMB (time) detail flow — this deep-link
-      // page has no order list to inherit it from, so read it from ERP_STATIC.
+      // page has no order list to inherit it from, so read the customer from
+      // ERP_STATIC. Address stays empty (all ship-to addresses) so the order is
+      // found regardless of which address it was placed under — a single
+      // CodiceIndirizzo (ERP_STATIC.address_code) returns nothing from MyMB.
       customer_code: (ERP_STATIC as any).customer_code,
-      address_code: (ERP_STATIC as any).address_code,
+      address_code: '',
       type: 'T',
     };
   }, [initialParams]);
@@ -108,7 +111,9 @@ export default function OrderDetailClient({ lang, initialParams }: Props) {
       const orderNumber = initialParams.vincId
         ? order.tracking_number || initialParams.vincId
         : `${initialParams.cause}/${initialParams.doc_number}/${initialParams.doc_year}`;
-      const items = (order.items ?? []).map((it) => ({
+      // Use the PIM-enriched items so the printed PDF carries product images
+      // (order.items are imageless until useEnrichedOrderItems fills them).
+      const items = (enrichedItems ?? []).map((it) => ({
         sku: it.sku ?? '',
         name: it.name ?? '',
         image: it.image,
@@ -189,7 +194,7 @@ export default function OrderDetailClient({ lang, initialParams }: Props) {
       alert('Errore durante la stampa.');
       setIsPrinting(false);
     }
-  }, [order, isPrinting, initialParams, lang, t]);
+  }, [order, enrichedItems, isPrinting, initialParams, lang, t]);
 
   if (!params) {
     return (

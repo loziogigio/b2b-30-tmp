@@ -1,5 +1,6 @@
 'use client';
 
+import axios from 'axios';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { get as pimGet, post as pimPost } from '@framework/utils/httpPIM';
 import { CS_CART } from '@framework/utils/api-endpoints-cs';
@@ -30,6 +31,35 @@ export interface ProcessingOrder {
 
 const POLL_INTERVAL = 10_000; // 10 seconds
 
+type HttpErrorSummary = {
+  message: string;
+  status?: number;
+  code?: string;
+  url?: string;
+};
+
+function summarizeHttpError(err: unknown): HttpErrorSummary {
+  if (axios.isAxiosError(err)) {
+    return {
+      message: err.message,
+      status: err.response?.status,
+      code: err.code,
+      url: err.config?.url,
+    };
+  }
+
+  return {
+    message: err instanceof Error ? err.message : String(err),
+  };
+}
+
+function isCanceledRequest(err: unknown): boolean {
+  return (
+    axios.isCancel(err) ||
+    (axios.isAxiosError(err) && err.code === 'ERR_CANCELED')
+  );
+}
+
 // ── Hook ────────────────────────────────────────────────────────────────────
 
 export function useProcessingOrders() {
@@ -48,7 +78,12 @@ export function useProcessingOrders() {
       });
       setOrders(res.orders || []);
     } catch (err) {
-      console.error('[processing-orders] fetch error:', err);
+      if (!isCanceledRequest(err)) {
+        console.warn(
+          '[processing-orders] fetch unavailable:',
+          summarizeHttpError(err),
+        );
+      }
     } finally {
       setIsLoading(false);
     }
@@ -72,7 +107,12 @@ export function useProcessingOrders() {
         ),
       );
     } catch (err) {
-      console.error('[processing-orders] checkStatus error:', err);
+      if (!isCanceledRequest(err)) {
+        console.warn(
+          '[processing-orders] status unavailable:',
+          summarizeHttpError(err),
+        );
+      }
     }
   }, []);
 
@@ -86,7 +126,10 @@ export function useProcessingOrders() {
         await fetchProcessingOrders();
         await getCart('replace');
       } catch (err) {
-        console.error('[processing-orders] revertToCart error:', err);
+        console.error(
+          '[processing-orders] revertToCart error:',
+          summarizeHttpError(err),
+        );
       }
     },
     [fetchProcessingOrders, getCart],
@@ -98,7 +141,10 @@ export function useProcessingOrders() {
         await pimPost(CS_CART.RESUBMIT(orderId), {});
         await fetchProcessingOrders();
       } catch (err) {
-        console.error('[processing-orders] resubmit error:', err);
+        console.error(
+          '[processing-orders] resubmit error:',
+          summarizeHttpError(err),
+        );
       }
     },
     [fetchProcessingOrders],

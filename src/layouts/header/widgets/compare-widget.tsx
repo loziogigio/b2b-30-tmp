@@ -41,7 +41,9 @@ export function CompareWidget({ config, lang }: CompareWidgetProps) {
         ) : null}
       </Link>
       {config?.showLabel && (
-        <span className="mt-1 text-[10px] text-slate-500">Confronta</span>
+        <span className="mt-1 text-[10px] text-slate-500">
+          {t('text-compare', { defaultValue: 'Confronta' })}
+        </span>
       )}
     </div>
   );

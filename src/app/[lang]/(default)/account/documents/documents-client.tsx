@@ -11,7 +11,7 @@ import {
   fetchBarcodes,
   downloadDocumentLinesExcel,
   openDocumentLinesPrintWindow,
-} from './documents-export';
+} from '@framework/documents/documents-export';
 import { BsFiletypePdf, BsFiletypeXlsx } from 'react-icons/bs';
 import { ImSpinner2 } from 'react-icons/im';
 

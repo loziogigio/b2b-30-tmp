@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react';
 import { TransformedOrderItem } from '@utils/transform/b2b-order';
 import cn from 'classnames';
-import { prefixImageUrl } from '@utils/image-versioning';
+import { cartImageUrl } from '@utils/image-versioning';
 import Image from 'next/image';
 import { useTranslation } from 'src/app/i18n/client';
 import { useHomeSettings } from '@/hooks/use-home-settings';
@@ -171,6 +171,7 @@ export default function OrderItemsTable({
                     : 'none';
 
               const isLoadingRow = loadingSku === it.sku;
+              const imageSrc = cartImageUrl(it.image);
               return (
                 <div
                   key={it.id}
@@ -191,9 +192,9 @@ export default function OrderItemsTable({
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md ring-1 ring-gray-200 bg-gray-100">
-                      {it.image ? (
+                      {imageSrc ? (
                         <Image
-                          src={prefixImageUrl(it.image, 'gallery_') ?? it.image}
+                          src={imageSrc}
                           alt={it.name ?? ''}
                           fill
                           className="object-cover"

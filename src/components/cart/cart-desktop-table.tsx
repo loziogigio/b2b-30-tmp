@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import cn from 'classnames';
-import { prefixImageUrl } from '@utils/image-versioning';
+import { cartImageUrl } from '@utils/image-versioning';
 import { Item } from '@contexts/cart/cart.utils';
 import { useCart } from '@contexts/cart/cart.context';
 import PackagingGrid from '@components/product/packaging-grid';
@@ -209,6 +209,7 @@ function CartDesktopRow({
       r?.count_promo ?? (Array.isArray(r?.promos) ? r.promos.length : 0) ?? 0,
     ),
   };
+  const imageSrc = cartImageUrl(r.image);
 
   return (
     <tr
@@ -244,9 +245,9 @@ function CartDesktopRow({
             )}
             title={r.name ?? r.sku ?? 'Product detail'}
           >
-            {r.image ? (
+            {imageSrc ? (
               <Image
-                src={prefixImageUrl(r.image, 'gallery_') ?? r.image}
+                src={imageSrc}
                 alt={r.name ?? ''}
                 fill
                 className="object-cover"

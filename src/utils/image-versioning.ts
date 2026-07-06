@@ -9,15 +9,22 @@
  * Use the helpers below to pick the right variant per context.
  */
 
+function normalizeImageUrl(url: string | undefined | null): string | undefined {
+  if (typeof url !== 'string') return undefined;
+  const trimmed = url.trim();
+  return trimmed || undefined;
+}
+
 /** Insert a size prefix before the filename in a URL. */
 export function prefixImageUrl(
   url: string | undefined | null,
   prefix: 'gallery_' | 'main_',
 ): string | undefined {
-  if (!url) return undefined;
-  const lastSlash = url.lastIndexOf('/');
-  if (lastSlash === -1) return url;
-  return `${url.slice(0, lastSlash + 1)}${prefix}${url.slice(lastSlash + 1)}`;
+  const imageUrl = normalizeImageUrl(url);
+  if (!imageUrl) return undefined;
+  const lastSlash = imageUrl.lastIndexOf('/');
+  if (lastSlash === -1) return imageUrl;
+  return `${imageUrl.slice(0, lastSlash + 1)}${prefix}${imageUrl.slice(lastSlash + 1)}`;
 }
 
 /**
@@ -33,11 +40,13 @@ export function prefixImageUrl(
 export function cartImageUrl(
   url: string | undefined | null,
 ): string | undefined {
-  return prefixImageUrl(url, 'gallery_') ?? url ?? undefined;
+  const imageUrl = normalizeImageUrl(url);
+  return prefixImageUrl(imageUrl, 'gallery_') ?? imageUrl;
 }
 
 export function cardImageUrl(
   url: string | undefined | null,
 ): string | undefined {
-  return prefixImageUrl(url, 'main_') ?? url ?? undefined;
+  const imageUrl = normalizeImageUrl(url);
+  return prefixImageUrl(imageUrl, 'main_') ?? imageUrl;
 }

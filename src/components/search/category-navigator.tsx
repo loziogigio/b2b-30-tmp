@@ -118,11 +118,15 @@ export function CategoryNavigator({
       seen.add(n.id);
       return true;
     });
+    // Hide unselected zero-count nodes — same rule as the general facets
+    // (spec filters keep their own behavior). Selected nodes stay visible
+    // so the filter can be untoggled.
+    items = items.filter((n) => n.count > 0 || selectedIds.includes(n.id));
     return items.sort((a, b) => {
       if (b.count !== a.count) return b.count - a.count;
       return a.label.localeCompare(b.label, undefined, { numeric: true });
     });
-  }, [drilledNode, childrenOf, allNodes]);
+  }, [drilledNode, childrenOf, allNodes, selectedIds]);
 
   // Breadcrumb path = ancestors of drilledNode, climbing parentId chain
   const breadcrumbPath = useMemo<Node[]>(() => {

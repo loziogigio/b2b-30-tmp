@@ -7,6 +7,7 @@ import { useThemeId } from '@/contexts/tenant.context';
 import {
   RawDocumentItem,
   DocumentRow,
+  DocumentLine,
   DocumentsListParams,
 } from '@framework/documents/types-b2b-documents';
 import { transformDocumentsList } from '@utils/transform/b2b-documents-list';
@@ -118,6 +119,36 @@ export const useDocumentsListQuery = (
     refetchOnWindowFocus: false, // don't refetch when user returns to tab
   });
 };
+
+// ---------- RIGHE DOCUMENTO (time theme, per barcode/CSV export) ----------
+/**
+ * Fetch a document's article lines from the ERP for the time theme, so the
+ * per-line barcode/CSV generator (documents-export.ts) can run — the direct-
+ * MyMB tenants have no legacy hub and their document list carries headers
+ * only (row.lines empty). Reads via the in-app /api/erp/get_document_rows
+ * route (GetRigheFATT/DDTConInfo). Returns [] on any failure.
+ */
+export async function fetchDocumentLines(
+  row: DocumentRow,
+): Promise<DocumentLine[]> {
+  try {
+    const res = await fetch(erpApiPath('time', '/erp/get_document_rows'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        doc_type: row.doc_type,
+        CausaleDocDefinitivo: row.scope,
+        AnnoDocDefinitivo: row.year,
+        NumeroDocDefinitivo: row.number_raw,
+      }),
+    });
+    if (!res.ok) return [];
+    const json = await res.json();
+    return Array.isArray(json?.data) ? (json.data as DocumentLine[]) : [];
+  } catch {
+    return [];
+  }
+}
 
 // ---------- AZIONI SUI DOCUMENTI (PDF / BARCODE / CSV) ----------
 export type DocumentActionKind = 'pdf' | 'barcode' | 'csv';

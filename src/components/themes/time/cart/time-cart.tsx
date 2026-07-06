@@ -3,7 +3,7 @@
 import React from 'react';
 import cn from 'classnames';
 import dynamic from 'next/dynamic';
-import { prefixImageUrl } from '@utils/image-versioning';
+import { cartImageUrl } from '@utils/image-versioning';
 import Link from 'next/link';
 import Image from '@components/ui/image';
 import Scrollbar from '@components/ui/scrollbar';
@@ -26,6 +26,8 @@ const money = (n: number) =>
     n,
   );
 
+const NO_IMAGE_SRC = '/assets/placeholders/no-image.jpeg';
+
 const getUnitNet = (it: any) =>
   Number(
     it?.priceDiscount ??
@@ -46,10 +48,12 @@ export default function TimeCart({ lang }: { lang: string }) {
     // The popup detects thin product data and re-fetches by sku, so we
     // just need to hand it the cart item. We still pre-shape `image` as
     // an object so the placeholder/skeleton during the fetch isn't blank.
-    const imgUrl = prefixImageUrl(item?.image, 'gallery_') ?? item?.image ?? '';
+    const imgUrl = cartImageUrl(item?.image);
     const product = {
       ...item,
-      image: imgUrl ? { thumbnail: imgUrl, original: imgUrl } : item?.image,
+      image: imgUrl
+        ? { thumbnail: imgUrl, original: imgUrl }
+        : item?.image || undefined,
     };
     closeDrawer();
     openModal('PRODUCT_VIEW', product);
@@ -116,6 +120,7 @@ export default function TimeCart({ lang }: { lang: string }) {
             {items?.map((item: any, i: number) => {
               const qty = Number(item?.quantity ?? 0);
               const unit = getUnitNet(item);
+              const imageSrc = cartImageUrl(item?.image) ?? NO_IMAGE_SRC;
 
               return (
                 <div
@@ -132,11 +137,7 @@ export default function TimeCart({ lang }: { lang: string }) {
                     className="relative w-[52px] h-[52px] shrink-0 rounded-[var(--radius-btn)] overflow-hidden bg-gradient-to-br from-[var(--time-gray-50)] to-[var(--time-gray-100)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--time-red)]/40"
                   >
                     <Image
-                      src={
-                        prefixImageUrl(item?.image, 'gallery_') ??
-                        item?.image ??
-                        '/assets/placeholders/no-image.jpeg'
-                      }
+                      src={imageSrc}
                       width={52}
                       height={52}
                       loading="eager"

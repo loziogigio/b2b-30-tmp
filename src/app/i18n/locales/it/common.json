@@ -744,5 +744,13 @@
   "savedcarts-save-current_one": "Salva carrello corrente ({{count}} art.)",
   "savedcarts-save-current_other": "Salva carrello corrente ({{count}} art.)",
   "text-view-variants": "Vedi varianti",
-  "catalogue-view-all": "Vedi tutto"
+  "catalogue-view-all": "Vedi tutto",
+  "text-brand": "Marca",
+  "text-generated": "Generato",
+  "orders-agent": "Agente",
+  "orders-notes": "Note",
+  "orders-payment": "Pagamento",
+  "orders-shipping": "Spedizione",
+  "orders-subtotal": "Imponibile",
+  "orders-vat": "IVA"
 }

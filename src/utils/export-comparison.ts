@@ -1,16 +1,46 @@
 // Export utilities for product comparison
 import type { ComparisonProduct } from '@/components/product/ProductComparisonTable';
 
+/** Column/heading labels — pass t()-resolved strings from the caller. */
+export interface ExportLabels {
+  sku: string;
+  product: string;
+  model: string;
+  price: string;
+  availability: string;
+  specification: string;
+  title: string;
+  generated: string;
+}
+
+const DEFAULT_LABELS: ExportLabels = {
+  sku: 'SKU',
+  product: 'Product',
+  model: 'Model',
+  price: 'Price',
+  availability: 'Availability',
+  specification: 'Specification',
+  title: 'Product Comparison',
+  generated: 'Generated',
+};
+
+interface ExportOptions {
+  hidePrices?: boolean;
+  priceDecimals?: number;
+  labels?: Partial<ExportLabels>;
+}
+
 /**
  * Export comparison data to Excel (CSV format)
  */
 export function exportToExcel(
   products: ComparisonProduct[],
-  options?: { hidePrices?: boolean; priceDecimals?: number },
+  options?: ExportOptions,
 ) {
   if (!products.length) return;
   const hp = options?.hidePrices === true;
   const decimals = options?.priceDecimals ?? 2;
+  const L = { ...DEFAULT_LABELS, ...options?.labels };
 
   // Collect all unique feature labels
   const featureLabels = Array.from(
@@ -19,11 +49,11 @@ export function exportToExcel(
 
   // Build CSV header
   const headers = [
-    'SKU',
-    'Product',
-    'Model',
-    ...(hp ? [] : ['Price']),
-    'Availability',
+    L.sku,
+    L.product,
+    L.model,
+    ...(hp ? [] : [L.price]),
+    L.availability,
     ...featureLabels,
   ];
 
@@ -76,11 +106,12 @@ export function exportToExcel(
  */
 export function exportToPDF(
   products: ComparisonProduct[],
-  options?: { hidePrices?: boolean; priceDecimals?: number },
+  options?: ExportOptions,
 ) {
   if (!products.length) return;
   const hp = options?.hidePrices === true;
   const decimals = options?.priceDecimals ?? 2;
+  const L = { ...DEFAULT_LABELS, ...options?.labels };
 
   const esc = (s: string) =>
     s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -92,20 +123,20 @@ export function exportToPDF(
 
   // Build specification rows: [label, ...values]
   const specRows = [
-    ['SKU', ...products.map((p) => p.sku)],
-    ['Model', ...products.map((p) => p.model)],
+    [L.sku, ...products.map((p) => p.sku)],
+    [L.model, ...products.map((p) => p.model)],
     ...(hp
       ? []
       : [
           [
-            'Price',
+            L.price,
             ...products.map((p) => {
               const price = p.priceData?.price_discount || p.priceData?.price;
               return price != null ? `€ ${price.toFixed(decimals)}` : '—';
             }),
           ],
         ]),
-    ['Availability', ...products.map((p) => p.availabilityText || '—')],
+    [L.availability, ...products.map((p) => p.availabilityText || '—')],
     ...featureLabels.map((label) => [
       label,
       ...products.map((product) => {
@@ -126,7 +157,7 @@ export function exportToPDF(
   const html = `<!DOCTYPE html>
 <html><head>
 <meta charset="UTF-8">
-<title>Product Comparison</title>
+<title>${esc(L.title)}</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family: system-ui, -apple-system, sans-serif; padding:20px; color:#1e293b; }
@@ -140,10 +171,10 @@ export function exportToPDF(
   @media print { body { padding:0; } }
 </style>
 </head><body>
-<h1>Product Comparison</h1>
-<p class="timestamp">Generated: ${new Date().toLocaleString()}</p>
+<h1>${esc(L.title)}</h1>
+<p class="timestamp">${esc(L.generated)}: ${new Date().toLocaleString()}</p>
 <table>
-  <thead><tr><th>Specification</th>${headerCells}</tr></thead>
+  <thead><tr><th>${esc(L.specification)}</th>${headerCells}</tr></thead>
   <tbody>${bodyRows}</tbody>
 </table>
 </body></html>`;
