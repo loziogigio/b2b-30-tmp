@@ -16,8 +16,11 @@ export interface ReminderToggleResponse {
 export interface ReminderStatusResponse {
   sku: string;
   has_active_reminder: boolean;
-  product_available: boolean;
+  product_available?: boolean;
   reminder_created_at?: string | null;
+  created_at?: string | null;
+  expires_at?: string | null;
+  status?: 'active' | 'notified' | 'expired' | 'cancelled';
 }
 
 export interface BulkReminderStatusResponse {
@@ -25,8 +28,11 @@ export interface BulkReminderStatusResponse {
   reminder_statuses: Array<{
     sku: string;
     has_active_reminder: boolean;
-    product_available: boolean;
+    product_available?: boolean;
     reminder_created_at?: string | null;
+    created_at?: string | null;
+    expires_at?: string | null;
+    status?: 'active' | 'notified' | 'expired' | 'cancelled';
   }>;
 }
 
@@ -67,6 +73,39 @@ const BASE = 'api/b2b/reminders';
 // Helper to unwrap commerce suite `{ success, data }` envelope
 function unwrap<T>(res: any): T {
   return res?.data ?? res;
+}
+
+function normalizeReminderStatus(status: any): ReminderStatusResponse {
+  return {
+    ...status,
+    has_active_reminder: !!status?.has_active_reminder,
+    product_available: status?.product_available,
+    reminder_created_at:
+      status?.reminder_created_at ?? status?.created_at ?? null,
+    created_at: status?.created_at ?? status?.reminder_created_at ?? null,
+    expires_at: status?.expires_at ?? null,
+  };
+}
+
+function normalizeUserReminders(
+  data: any,
+  page: number,
+  pageSize: number,
+): UserRemindersResponse {
+  const reminders = Array.isArray(data?.reminders)
+    ? data.reminders.map((reminder: UserRemindersItem) => ({
+        ...reminder,
+        is_active: reminder.is_active ?? reminder.status === 'active',
+      }))
+    : [];
+
+  return {
+    reminders,
+    total_count: data?.total_count ?? reminders.length,
+    page: data?.page ?? page,
+    page_size: data?.page_size ?? pageSize,
+    has_next: data?.has_next ?? false,
+  };
 }
 
 // ============================================
@@ -111,7 +150,7 @@ export async function getReminderStatus(
   sku: string,
 ): Promise<ReminderStatusResponse> {
   const res = await get<any>(`${BASE}/status/${encodeURIComponent(sku)}`);
-  return unwrap<ReminderStatusResponse>(res);
+  return normalizeReminderStatus(unwrap(res));
 }
 
 export async function getBulkReminderStatus(
@@ -123,16 +162,11 @@ export async function getBulkReminderStatus(
   );
 
   if (Array.isArray(data)) {
-    return data;
+    return data.map(normalizeReminderStatus);
   }
 
   if (data && Array.isArray(data.reminder_statuses)) {
-    return data.reminder_statuses.map((status) => ({
-      sku: status.sku,
-      has_active_reminder: status.has_active_reminder,
-      product_available: status.product_available,
-      reminder_created_at: status.reminder_created_at ?? null,
-    }));
+    return data.reminder_statuses.map(normalizeReminderStatus);
   }
 
   return [];
@@ -157,7 +191,7 @@ export async function getUserReminders(
   }
   const qs = new URLSearchParams(params).toString();
   const res = await get<any>(`${BASE}/user?${qs}`);
-  return unwrap<UserRemindersResponse>(res);
+  return normalizeUserReminders(unwrap(res), page, pageSize);
 }
 
 // ============================================

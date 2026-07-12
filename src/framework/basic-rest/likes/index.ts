@@ -16,13 +16,14 @@ export interface LikeToggleResponse {
 
 export interface LikeStatusResponse {
   sku: string;
-  user_id: string;
+  user_id?: string;
   is_liked: boolean;
   total_likes: number;
+  liked_at?: string | null;
 }
 
 export interface BulkLikeStatusResponse {
-  user_id: string;
+  user_id?: string;
   like_statuses: { sku: string; is_liked: boolean; total_likes: number }[];
 }
 
@@ -30,6 +31,7 @@ export interface UserLikesItem {
   sku: string;
   liked_at?: string | null;
   is_active?: boolean;
+  is_liked?: boolean;
 }
 
 export interface UserLikesResponse {
@@ -60,6 +62,7 @@ export interface TrendingProductsPageResponse {
   page: number;
   page_size: number;
   has_next: boolean;
+  period?: string;
 }
 
 export interface LikeAnalyticsResponse {
@@ -82,6 +85,67 @@ function unwrap<T>(res: any): T {
   return res?.data ?? res;
 }
 
+function normalizeUserLikes(
+  data: any,
+  page: number,
+  pageSize: number,
+): UserLikesResponse {
+  const likes = Array.isArray(data?.likes)
+    ? data.likes.map((like: UserLikesItem) => ({
+        ...like,
+        is_active: like.is_active ?? like.is_liked ?? true,
+      }))
+    : [];
+
+  return {
+    likes,
+    total_count: data?.total_count ?? likes.length,
+    page: data?.page ?? page,
+    page_size: data?.page_size ?? pageSize,
+    has_next: data?.has_next ?? false,
+  };
+}
+
+function normalizeBulkLikeStatus(data: any): BulkLikeStatusResponse {
+  const statuses = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.like_statuses)
+      ? data.like_statuses
+      : [];
+
+  return {
+    user_id: data?.user_id,
+    like_statuses: statuses.map((status: any) => ({
+      sku: status.sku,
+      is_liked: !!status.is_liked,
+      total_likes: status.total_likes ?? 0,
+    })),
+  };
+}
+
+function normalizeTrendingPage(
+  data: any,
+  page: number,
+  pageSize: number,
+): TrendingProductsPageResponse {
+  const items = Array.isArray(data?.items)
+    ? data.items
+    : Array.isArray(data?.products)
+      ? data.products
+      : Array.isArray(data)
+        ? data
+        : [];
+
+  return {
+    items,
+    total_count: data?.total_count ?? items.length,
+    page: data?.page ?? page,
+    page_size: data?.page_size ?? pageSize,
+    has_next: data?.has_next ?? false,
+    period: data?.period,
+  };
+}
+
 // ============================================
 // CORE OPERATIONS
 // ============================================
@@ -96,7 +160,7 @@ export async function addLike(
 export async function removeLike(
   sku: string,
 ): Promise<{ success?: boolean; message?: string } | void> {
-  return del(`${BASE}`, { data: { sku } });
+  return del(`${BASE}?${new URLSearchParams({ sku }).toString()}`);
 }
 
 export async function toggleLike(sku: string): Promise<LikeToggleResponse> {
@@ -117,7 +181,7 @@ export async function getBulkLikeStatus(
   skus: string[],
 ): Promise<BulkLikeStatusResponse> {
   const res = await post<any>(`${BASE}/status/bulk`, { skus });
-  return unwrap<BulkLikeStatusResponse>(res);
+  return normalizeBulkLikeStatus(unwrap(res));
 }
 
 // ============================================
@@ -133,7 +197,7 @@ export async function getUserLikes(
     limit: String(pageSize),
   }).toString();
   const res = await get<any>(`${BASE}/user?${qs}`);
-  return unwrap<UserLikesResponse>(res);
+  return normalizeUserLikes(unwrap(res), page, pageSize);
 }
 
 // ============================================
@@ -161,7 +225,7 @@ export async function getTrendingProducts(
     limit: String(limit),
   }).toString();
   const res = await get<any>(`${BASE}/trending?${qs}`);
-  return unwrap<TrendingProductsResponse[]>(res);
+  return normalizeTrendingPage(unwrap(res), 1, limit).items;
 }
 
 export async function getTrendingProductsPage(
@@ -175,7 +239,7 @@ export async function getTrendingProductsPage(
     limit: String(pageSize),
   }).toString();
   const res = await get<any>(`${BASE}/trending?${qs}`);
-  return unwrap<TrendingProductsPageResponse>(res);
+  return normalizeTrendingPage(unwrap(res), page, pageSize);
 }
 
 // ============================================
