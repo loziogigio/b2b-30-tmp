@@ -115,6 +115,7 @@ function saveTabs(tabs: Tab[]) {
 
 export default function SearchTabs({ lang }: { lang: string }) {
   const { t } = useTranslation(lang, 'common');
+  const { isAuthorized } = useUI();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -296,24 +297,28 @@ export default function SearchTabs({ lang }: { lang: string }) {
     <div className="mt-3 mb-2 border-b border-gray-200 overflow-x-auto">
       <div className="flex items-end gap-1 min-w-max">
         {/* Fixed tab: Favorites */}
-        <button
-          className={cn(
-            'mr-2 px-3 py-2 rounded-t-md text-sm border',
-            (searchParams.get('source') || '') === 'likes'
-              ? 'bg-white border border-b-white text-rose-600'
-              : 'bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100',
-          )}
-          onClick={() => {
-            const qs = new URLSearchParams();
-            qs.set('source', 'likes');
-            qs.set('page_size', '12');
-            router.replace(`${pathname}?${qs.toString()}`, { scroll: false });
-          }}
-          title={t('text-wishlist', { defaultValue: 'Preferiti' })}
-        >
-          <HiOutlineHeart className="h-4 w-4 mr-1.5 inline-block" />
-          {t('text-wishlist', { defaultValue: 'Preferiti' })}
-        </button>
+        {mounted && isAuthorized && (
+          <button
+            className={cn(
+              'mr-2 px-3 py-2 rounded-t-md text-sm border',
+              (searchParams.get('source') || '') === 'likes'
+                ? 'bg-white border border-b-white text-rose-600'
+                : 'bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100',
+            )}
+            onClick={() => {
+              const qs = new URLSearchParams();
+              qs.set('source', 'likes');
+              qs.set('page_size', '12');
+              router.replace(`${pathname}?${qs.toString()}`, {
+                scroll: false,
+              });
+            }}
+            title={t('text-wishlist', { defaultValue: 'Preferiti' })}
+          >
+            <HiOutlineHeart className="h-4 w-4 mr-1.5 inline-block" />
+            {t('text-wishlist', { defaultValue: 'Preferiti' })}
+          </button>
+        )}
 
         {tabs.map((t, i) => (
           <div

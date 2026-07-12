@@ -119,7 +119,9 @@ export default function TimeVariantsTable({
         >
           <span>{t('text-model', { defaultValue: 'Modello' })}</span>
           <span>
-            {t('text-availability', { defaultValue: 'Disponibilità' })}
+            {isAuthorized
+              ? t('text-availability', { defaultValue: 'Disponibilità' })
+              : null}
           </span>
           <span>{t('text-packaging', { defaultValue: 'Confezione' })}</span>
           <span style={{ textAlign: 'right' }}>
@@ -151,7 +153,8 @@ export default function TimeVariantsTable({
           : undefined;
 
         const targetSku = String(v.sku ?? sku ?? '').trim();
-        const isFav = targetSku ? likes.isLiked(targetSku) : false;
+        const isFav =
+          isAuthorized && targetSku ? likes.isLiked(targetSku) : false;
         const vImg = v.image?.thumbnail || headerImg;
         const net = netOf(dPrice);
         const list = listOf(dPrice);
@@ -190,29 +193,31 @@ export default function TimeVariantsTable({
                 minWidth: 0,
               }}
             >
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (targetSku) likes.toggle(targetSku);
-                }}
-                title={t('text-wishlist')}
-                style={{
-                  border: 'none',
-                  background: 'transparent',
-                  cursor: 'pointer',
-                  padding: 0,
-                  flexShrink: 0,
-                  color: isFav ? C.red : C.faint,
-                  lineHeight: 0,
-                }}
-              >
-                {isFav ? (
-                  <IoIosHeart size={16} />
-                ) : (
-                  <IoIosHeartEmpty size={16} />
-                )}
-              </button>
+              {isAuthorized && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (targetSku) likes.toggle(targetSku);
+                  }}
+                  title={t('text-wishlist')}
+                  style={{
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    padding: 0,
+                    flexShrink: 0,
+                    color: isFav ? C.red : C.faint,
+                    lineHeight: 0,
+                  }}
+                >
+                  {isFav ? (
+                    <IoIosHeart size={16} />
+                  ) : (
+                    <IoIosHeartEmpty size={16} />
+                  )}
+                </button>
+              )}
               {!isPseudo && (
                 <button
                   type="button"
@@ -287,7 +292,9 @@ export default function TimeVariantsTable({
                 alignItems: 'flex-start',
               }}
             >
-              {vPrice &&
+              {isAuthorized &&
+                vPrice &&
+                vPrice?.availability != null &&
                 (() => {
                   const a = formatTimeAvailability(
                     vPrice,

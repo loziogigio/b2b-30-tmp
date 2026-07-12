@@ -1,5 +1,9 @@
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+
+const mocks = vi.hoisted(() => ({
+  auth: { isAuthorized: true },
+}));
 
 vi.mock('src/app/i18n/client', () => ({
   useTranslation: () => ({
@@ -7,7 +11,7 @@ vi.mock('src/app/i18n/client', () => ({
   }),
 }));
 vi.mock('@contexts/ui.context', () => ({
-  useUI: () => ({ isAuthorized: true, hidePrices: false }),
+  useUI: () => ({ isAuthorized: mocks.auth.isAuthorized, hidePrices: false }),
 }));
 vi.mock('@/hooks/use-home-settings', () => ({
   useHomeSettings: () => ({ settings: { cardStyle: { priceDecimals: 2 } } }),
@@ -61,6 +65,10 @@ const priceMap = {
 } as any;
 
 describe('TimeVariantsTable', () => {
+  beforeEach(() => {
+    mocks.auth.isAuthorized = true;
+  });
+
   it('renders one row per variant with price and add-to-cart', async () => {
     render(
       <TimeVariantsTable
@@ -93,5 +101,23 @@ describe('TimeVariantsTable', () => {
       />,
     );
     expect(screen.queryByText('Modello')).toBeNull();
+  });
+
+  it('hides customer controls and availability for anonymous users', () => {
+    mocks.auth.isAuthorized = false;
+
+    render(
+      <TimeVariantsTable
+        lang="it"
+        parent={parent}
+        variants={[variants[0]]}
+        priceMap={priceMap}
+        fallbackImg="x.jpg"
+      />,
+    );
+
+    expect(screen.queryByTitle('text-wishlist')).toBeNull();
+    expect(screen.queryByText('Disponibilità')).toBeNull();
+    expect(screen.queryByText('Disponibile')).toBeNull();
   });
 });

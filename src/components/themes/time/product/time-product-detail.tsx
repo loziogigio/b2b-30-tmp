@@ -160,7 +160,12 @@ const TimeProductDetail: React.FC<{
     Number(netPrice) > 0;
   const discountTiers = erpPrice?.discount_description || '';
   const hasValidPrice = erpPrice && netPrice != null && Number(netPrice) > 0;
-  const isOutOfStock = erpPrice ? Number(erpPrice.availability) <= 0 : false;
+  const availability = Number(erpPrice?.availability);
+  const hasAvailability =
+    isAuthorized &&
+    erpPrice?.availability != null &&
+    Number.isFinite(availability);
+  const isOutOfStock = hasAvailability && availability <= 0;
   const { settings: catalogSettings } = useCatalogSettings();
   const availInfo = formatTimeAvailability(
     erpPrice,
@@ -542,7 +547,7 @@ const TimeProductDetail: React.FC<{
                 </span>
               </>
             )}
-            {erpPrice && (
+            {hasAvailability && (
               <>
                 <span className="text-xs sm:text-[13px] text-[var(--time-gray-400)] font-medium">
                   {t('text-status', { defaultValue: 'Stato' })}

@@ -134,7 +134,12 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
     ? Math.round((1 - Number(netPrice) / Number(listPrice)) * 100)
     : 0;
   const hasValidPrice = erpPrice && netPrice != null && Number(netPrice) > 0;
-  const isOutOfStock = erpPrice ? Number(erpPrice.availability) <= 0 : false;
+  const availability = Number(erpPrice?.availability);
+  const hasAvailability =
+    isAuthorized &&
+    erpPrice?.availability != null &&
+    Number.isFinite(availability);
+  const isOutOfStock = hasAvailability && availability <= 0;
   const { settings: catalogSettings } = useCatalogSettings();
   const availInfo = formatTimeAvailability(
     erpPrice,
@@ -486,7 +491,7 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
                   </span>
                 </>
               )}
-              {erpPrice && (
+              {hasAvailability && (
                 <>
                   <span className="text-[var(--time-gray-400)] font-medium">
                     {t('text-status', { defaultValue: 'Stato' })}

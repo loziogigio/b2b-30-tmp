@@ -9,8 +9,9 @@
  * <TimeVariantsTable> so the same layout powers the variants quick-view
  * modal's list mode.
  *
- * isAuthorized gates ONLY the quantity stepper; everything else (model,
- * packaging, availability, price) is visible to anonymous visitors.
+ * Customer-specific ERP fields (price, packaging and availability) are loaded
+ * only for authenticated users by the shared pricing hooks. Public product
+ * identity and the variants browser remain available to anonymous visitors.
  */
 
 import { useEffect, useMemo, useState } from 'react';

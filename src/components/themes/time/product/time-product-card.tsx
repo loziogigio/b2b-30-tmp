@@ -123,9 +123,12 @@ export default function TimeProductCard({
     catalogSettings.availabilityDisplay,
     t,
   );
-  const isOutOfStock = effectivePriceData
-    ? Number(effectivePriceData.availability) <= 0
-    : false;
+  const availability = Number(effectivePriceData?.availability);
+  const hasAvailability =
+    isAuthorized &&
+    effectivePriceData?.availability != null &&
+    Number.isFinite(availability);
+  const isOutOfStock = hasAvailability && availability <= 0;
   // Same legacy gating as TimeSearchRow: promo-gated items get the PROMO CTA
   // instead of the inline qty selector, with a cart-total readout next to it.
   const { hasMultiplePromos, isPromoGated, canInlineAdd, cartQty } =
@@ -336,7 +339,7 @@ export default function TimeProductCard({
 
           {/* Full-width separator between the quantity selector and the
               availability + actions block. */}
-          {effectivePriceData && !hasVariants && (
+          {hasAvailability && !hasVariants && (
             <div className="border-t border-[var(--time-gray-100)] pt-2.5 flex flex-col gap-2">
               {/* Availability + promo label — centered */}
               <div className="flex items-center justify-center gap-2 flex-wrap">

@@ -60,18 +60,6 @@ export function useProductPriceData(
   const erpReady =
     enabled && isAuthorized && wantsErp && !override && hasValidErpContext();
 
-  if (process.env.NODE_ENV !== 'production' && entityCode) {
-    console.log('[prices] erpReady:', erpReady, {
-      source,
-      isAuthorized,
-      wantsErp,
-      hasContext: hasValidErpContext(),
-      customer_code: ERP_STATIC.customer_code,
-      address_code: ERP_STATIC.address_code,
-      entityCode,
-    });
-  }
-
   const erpQuery = useQuery({
     queryKey: erpQueryKey([entityCode], quantity, ERP_STATIC),
     queryFn: () =>
@@ -88,22 +76,29 @@ export function useProductPriceData(
   });
 
   return useMemo<ErpPriceData | undefined>(() => {
-    if (override) return override;
+    // Never expose caller-provided/customer-cached ERP data after logout.
+    // Inline mode is public by design; ERP mode is always session-bound.
+    if (override) {
+      if (!isAuthorized && source === 'erp') return undefined;
+      return override;
+    }
     if (!product) return undefined;
 
     const synth = productToErpPriceData(product) ?? undefined;
     if (source === 'inline') return synth;
 
     const erpSlice = entityCode ? erpQuery.data?.[entityCode] : undefined;
-    if (source === 'erp') return erpSlice ?? undefined;
+    if (source === 'erp') {
+      return isAuthorized ? (erpSlice ?? undefined) : undefined;
+    }
 
     // hybrid: synth as base, ERP overrides win for customer-specific
     // fields (net_price, discount, availability, label action, …).
     // Until ERP resolves we still render the synth so paint is instant;
     // if ERP fails the synth simply stays the source of truth.
-    if (!erpSlice) return synth;
+    if (!isAuthorized || !erpSlice) return synth;
     return synth ? { ...synth, ...erpSlice } : erpSlice;
-  }, [override, product, source, entityCode, erpQuery.data]);
+  }, [override, product, source, entityCode, erpQuery.data, isAuthorized]);
 }
 
 /**
@@ -181,22 +176,23 @@ export function useProductsPriceMap(
     }
 
     // ERP pass — overlay when mode is erp/hybrid and data is available.
-    if (wantsErp && erpQuery.data) {
+    if (isAuthorized && wantsErp && erpQuery.data) {
       for (const [code, slice] of Object.entries(erpQuery.data)) {
         const base = out[code];
         out[code] = base ? { ...base, ...slice } : slice;
       }
     }
 
-    // Caller overrides win unconditionally.
-    if (overrideMap) {
+    // An ERP/hybrid override may contain a previously cached customer slice.
+    // Ignore it after logout; public inline overrides remain valid.
+    if (overrideMap && (isAuthorized || !wantsErp)) {
       for (const [code, slice] of Object.entries(overrideMap)) {
         out[code] = slice;
       }
     }
 
     return out;
-  }, [list, source, wantsErp, erpQuery.data, overrideMap]);
+  }, [list, source, wantsErp, erpQuery.data, overrideMap, isAuthorized]);
 }
 
 /**

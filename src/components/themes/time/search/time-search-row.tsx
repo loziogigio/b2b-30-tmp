@@ -78,7 +78,12 @@ export default function TimeSearchRow({
     ? Math.round((1 - Number(netPrice) / Number(listPrice)) * 100)
     : 0;
 
-  const isOutOfStock = priceData ? Number(priceData.availability) <= 0 : false;
+  const availability = Number(priceData?.availability);
+  const hasAvailability =
+    isAuthorized &&
+    priceData?.availability != null &&
+    Number.isFinite(availability);
+  const isOutOfStock = hasAvailability && availability <= 0;
   const { settings: catalogSettings } = useCatalogSettings();
   const availInfo = formatTimeAvailability(
     priceData,
@@ -306,7 +311,7 @@ export default function TimeSearchRow({
           </div>
         )}
 
-        {priceData && !hasVariants && (
+        {hasAvailability && !hasVariants && (
           <div className="flex items-start gap-2 flex-wrap">
             <div className="flex items-center gap-1.5">
               <span
