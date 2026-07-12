@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { AUTH_COOKIES, resolveAuthContext } from '@/lib/auth/server';
 import { buildTenantApiHeaders, resolveTenantApiConfig } from '@/lib/tenant';
 
 // ---------------------------------------------------------------------------
@@ -82,6 +83,84 @@ type PromoCacheEntry = {
 const promoCache = new Map<string, PromoCacheEntry>();
 const PROMO_MAP_TTL_MS = 10 * 60 * 1000;
 const PROMO_HARVEST_ROWS = 50;
+
+type TrustedUserContext = {
+  userId: string;
+  userType: 'b2b_user' | 'portal_user';
+};
+
+function isUserContextPath(pathString: string): boolean {
+  return (
+    pathString === 'api/b2b/likes' ||
+    pathString.startsWith('api/b2b/likes/') ||
+    pathString === 'api/b2b/reminders' ||
+    pathString.startsWith('api/b2b/reminders/')
+  );
+}
+
+function getBearerToken(req: NextRequest): string | null {
+  const authHeader = req.headers.get('Authorization');
+  if (authHeader?.startsWith('Bearer ')) {
+    const token = authHeader.slice(7).trim();
+    return token && token !== 'null' ? token : null;
+  }
+
+  const token = req.cookies.get(AUTH_COOKIES.ACCESS_TOKEN)?.value?.trim();
+  return token && token !== 'null' ? token : null;
+}
+
+async function resolveTrustedUserContext(
+  req: NextRequest,
+  expectedTenantId: string,
+): Promise<TrustedUserContext | null> {
+  const token = getBearerToken(req);
+  if (!token) return null;
+
+  try {
+    const authContext = await resolveAuthContext(req, 'pim-proxy');
+    if (!authContext.success) return null;
+
+    const validation = await authContext.context.ssoApi.validate(token);
+    const authenticated = validation.authenticated ?? validation.active;
+    const tenantId = validation.tenant_id || authContext.context.tenantId;
+    const userId = validation.user?.id || validation.sub;
+
+    if (!authenticated || tenantId !== expectedTenantId || !userId) {
+      return null;
+    }
+
+    return {
+      userId,
+      userType:
+        (validation.user?.customers?.length || 0) > 0
+          ? 'b2b_user'
+          : 'portal_user',
+    };
+  } catch (err) {
+    console.warn(
+      '[PIM Proxy] user context validation failed:',
+      err instanceof Error ? err.message : err,
+    );
+    return null;
+  }
+}
+
+async function attachTrustedUserContext(
+  req: NextRequest,
+  headers: Record<string, string>,
+  tenantId: string,
+): Promise<void> {
+  const userContext = await resolveTrustedUserContext(req, tenantId);
+  if (!userContext) return;
+
+  headers['x-user-id'] = userContext.userId;
+  headers['x-user-type'] = userContext.userType;
+
+  // Backward-compatible alias consumed by older commerce-suite API-key flows.
+  if (userContext.userType === 'b2b_user') {
+    headers['x-customer-id'] = userContext.userId;
+  }
+}
 
 async function getPromoTypeMap(
   baseUrl: string,
@@ -254,6 +333,9 @@ async function proxyRequest(
     authorization: authHeader,
     includeLegacyApiKeyAlias: true,
   });
+  if (isUserContextPath(pathString)) {
+    await attachTrustedUserContext(req, headers, config.tenantId);
+  }
 
   const fetchOptions: RequestInit = {
     method,
