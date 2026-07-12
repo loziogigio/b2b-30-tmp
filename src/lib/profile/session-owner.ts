@@ -20,6 +20,9 @@ export async function sessionOwnedCustomerCodes(
 
   try {
     const validation = await result.context.ssoApi.validate(token);
+    const authenticated = validation.authenticated ?? validation.active;
+    if (!authenticated || !validation.user) return null;
+
     const codes = (validation.user?.customers ?? [])
       .map((c) => c.erp_customer_id)
       .filter((c): c is string => typeof c === 'string' && c.length > 0);

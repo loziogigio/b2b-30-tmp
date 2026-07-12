@@ -1,9 +1,13 @@
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 
-const getMultiplePrices = vi.fn();
+const { getMultiplePrices, sessionOwnedCustomerCodes } = vi.hoisted(() => ({
+  getMultiplePrices: vi.fn(),
+  sessionOwnedCustomerCodes: vi.fn(),
+}));
 vi.mock('@/lib/erp/factory', () => ({
   getMyMbErpClient: vi.fn(async () => ({ getMultiplePrices })),
 }));
+vi.mock('@/lib/profile/session-owner', () => ({ sessionOwnedCustomerCodes }));
 
 import { POST } from '@/app/api/erp/[...path]/route';
 import { NextRequest } from 'next/server';
@@ -17,6 +21,38 @@ function req(path: string, body: unknown) {
 }
 
 describe('POST /api/erp/[...path]', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    sessionOwnedCustomerCodes.mockResolvedValue(new Set(['C']));
+  });
+
+  it('rejects anonymous requests before creating an ERP client', async () => {
+    sessionOwnedCustomerCodes.mockResolvedValue(null);
+    const res = await POST(
+      req('get_multiple_prices', {
+        entity_codes: ['ART1'],
+        customer_code: 'C',
+      }),
+      { params: Promise.resolve({ path: ['get_multiple_prices'] }) },
+    );
+
+    expect(res.status).toBe(401);
+    expect(getMultiplePrices).not.toHaveBeenCalled();
+  });
+
+  it('rejects a customer code not owned by the logged-in session', async () => {
+    const res = await POST(
+      req('get_multiple_prices', {
+        entity_codes: ['ART1'],
+        customer_code: 'OTHER',
+      }),
+      { params: Promise.resolve({ path: ['get_multiple_prices'] }) },
+    );
+
+    expect(res.status).toBe(403);
+    expect(getMultiplePrices).not.toHaveBeenCalled();
+  });
+
   it('dispatches get_multiple_prices and wraps the result in a success envelope', async () => {
     getMultiplePrices.mockResolvedValue({
       ART1: { entity_code: 'ART1', net_price: 9 },

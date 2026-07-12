@@ -7,6 +7,7 @@ import {
   buildOrderDetailResponseFromDocRows,
 } from '@utils/transform/erp-order-detail';
 import { mapErpDocRowsToLines } from '@utils/transform/erp-document-lines';
+import { sessionOwnedCustomerCodes } from '@/lib/profile/session-owner';
 
 type RouteParams = { params: Promise<{ path: string[] }> };
 
@@ -119,6 +120,34 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     body = {};
   }
 
+  // This route holds the tenant's server-side ERP credentials, so a browser
+  // request must never be enough on its own to reach MyMB. Validate the SSO
+  // session and, whenever a customer code is supplied, ensure it belongs to
+  // that session instead of trusting the request body.
+  const ownedCustomerCodes = await sessionOwnedCustomerCodes(req);
+  if (!ownedCustomerCodes) {
+    return NextResponse.json(
+      { status: 'error', message: 'Unauthorized' },
+      { status: 401 },
+    );
+  }
+  if (ownedCustomerCodes.size === 0) {
+    return NextResponse.json(
+      { status: 'error', message: 'No ERP customer assigned' },
+      { status: 403 },
+    );
+  }
+
+  const requestedCustomerCode = String(
+    body.customer_code ?? body.codiceInternoCliente ?? '',
+  ).trim();
+  if (requestedCustomerCode && !ownedCustomerCodes.has(requestedCustomerCode)) {
+    return NextResponse.json(
+      { status: 'error', message: 'Forbidden customer' },
+      { status: 403 },
+    );
+  }
+
   if (COUPON_ENDPOINTS.has(endpoint)) {
     try {
       return await handleCoupon(endpoint, body, req);
@@ -143,9 +172,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
           quantityList: body.quantity_list,
           idCart: body.id_cart,
         };
-        console.log('[ERP prices] request:', JSON.stringify(priceReq));
         const data = await client.getMultiplePrices(priceReq);
-        console.log('[ERP prices] response:', JSON.stringify(data));
         return NextResponse.json({ status: 'success', data });
       }
       case 'get_orders': {
