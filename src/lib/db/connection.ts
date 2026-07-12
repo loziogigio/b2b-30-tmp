@@ -58,7 +58,6 @@ export const connectToDatabase = async (): Promise<Connection> => {
 
   const mongoDb = tenant.database.mongoDb || defaultMongoDb;
 
-  console.log(`[DB] Tenant ${tenant.id} resolved, using database: ${mongoDb}`);
   return getPooledConnection(mongoDb);
 };
 

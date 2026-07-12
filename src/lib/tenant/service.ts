@@ -260,17 +260,7 @@ async function resolveTenantFromDb(
     });
 
     if (doc) {
-      console.log('[TenantService] Found tenant document:', {
-        tenant_id: doc.tenant_id,
-        require_login: doc.require_login,
-        status: doc.status,
-      });
       const tenant = fromDocument(doc);
-      console.log('[TenantService] Converted tenant config:', {
-        id: tenant.id,
-        requireLogin: tenant.requireLogin,
-        isActive: tenant.isActive,
-      });
       setCachedTenant(hostname, tenant);
       return tenant;
     }
