@@ -86,4 +86,16 @@ describe('fetchPimFilters — channel + customer context for user exclusions', (
     const [, body] = mockPost.mock.calls[0];
     expect(body.channel).toBe('b2c');
   });
+
+  it('passes special-source SKU filters to the PIM search body', async () => {
+    await fetchPimFilters({
+      lang: 'it',
+      'filters-sku': 'CB1729-OWA.W35;CB1729-OWA.W36',
+    });
+
+    const [, body] = mockPost.mock.calls[0];
+    expect(body.filters).toMatchObject({
+      sku: ['CB1729-OWA.W35', 'CB1729-OWA.W36'],
+    });
+  });
 });

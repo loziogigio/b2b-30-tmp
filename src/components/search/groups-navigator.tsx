@@ -50,6 +50,12 @@ interface GroupsNavigatorProps {
    * Falls back to the `text` URL param when omitted.
    */
   text?: string;
+  /**
+   * Additional facet params computed outside the URL, such as the special
+   * source SKU restriction for likes/reminders/trending pages.
+   */
+  extraFilters?: Record<string, any>;
+  enabled?: boolean;
 }
 
 /**
@@ -160,7 +166,12 @@ export function GroupsBreadcrumb({ lang }: { lang: string }) {
   );
 }
 
-export function GroupsNavigator({ lang, text }: GroupsNavigatorProps) {
+export function GroupsNavigator({
+  lang,
+  text,
+  extraFilters,
+  enabled = true,
+}: GroupsNavigatorProps) {
   const { t } = useTranslation(lang, 'common');
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -187,17 +198,21 @@ export function GroupsNavigator({ lang, text }: GroupsNavigatorProps) {
         params[key] = value;
       }
     });
+    for (const [key, value] of Object.entries(extraFilters ?? {})) {
+      if (key === GROUP_PARAM) continue;
+      params[key] = value;
+    }
     if (effectiveText) params.text = effectiveText;
     params.facet_fields = ['attribute_erp_groups_ss'];
     return params;
-  }, [searchParams, lang, effectiveText]);
+  }, [searchParams, lang, effectiveText, extraFilters]);
 
   // Fetch facet counts for groups
   const { data: groupFacets, isSuccess: countsLoaded } = useQuery({
     queryKey: ['group-facets', facetQueryParams],
     queryFn: () => fetchPimFilters(facetQueryParams),
     staleTime: 1000 * 60 * 5,
-    enabled: tree.length > 0,
+    enabled: enabled && tree.length > 0,
   });
 
   // Build code → count map
@@ -394,7 +409,7 @@ export function GroupsNavigator({ lang, text }: GroupsNavigatorProps) {
     router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   }, [searchParams, pathname, router]);
 
-  if (isLoading || tree.length === 0) return null;
+  if (!enabled || isLoading || tree.length === 0) return null;
 
   const normalizeLabel = (s: string) => s.toLowerCase();
 

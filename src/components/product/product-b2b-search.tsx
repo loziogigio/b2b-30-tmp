@@ -25,10 +25,12 @@ import {
 } from 'react-icons/io5';
 import type { ErpPriceData } from '@utils/transform/erp-prices';
 import {
-  getUserLikes as apiGetUserLikes,
-  getTrendingProductsPage as apiGetTrendingPage,
-} from '@framework/likes';
-import { getUserReminders as apiGetUserReminders } from '@framework/reminders';
+  canLoadSpecialSource,
+  fetchSpecialSourceSkuPage,
+  getSpecialSource,
+  parsePimFiltersFromUrlParams,
+} from '@/components/search/special-source';
+import { useUI } from '@contexts/ui.context';
 import React from 'react';
 
 export type ProductCardComponentType = React.ComponentType<{
@@ -63,6 +65,7 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
   cardClassName,
 }) => {
   const { t } = useTranslation(lang, 'common');
+  const { isAuthorized } = useUI();
 
   const router = useRouter();
   const pathname = usePathname();
@@ -102,30 +105,19 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
-  // Build params for PIM API
-  const urlParams: Record<string, string> = {};
-  searchParams.forEach((v, k) => (urlParams[k] = v));
+  const urlParams = useMemo(() => {
+    const params: Record<string, string> = {};
+    searchParams.forEach((value: string, key: string) => {
+      params[key] = value;
+    });
+    return params;
+  }, [searchParams]);
 
   // Transform URL params to PIM API format
   const pimParams = useMemo(() => {
-    const filters: Record<string, any> = {};
-
-    // Extract filters from URL params (filters-xxx -> filters.xxx)
-    for (const [key, value] of Object.entries(urlParams)) {
-      if (key.startsWith('filters-')) {
-        const filterKey = key.replace('filters-', '');
-        // Support semicolon-separated values
-        filters[filterKey] =
-          typeof value === 'string' && value.includes(';')
-            ? value.split(';')
-            : value;
-      }
-    }
-
-    // Add collection filter if provided via prop
-    if (collectionSlug) {
-      filters.collection_slugs = collectionSlug;
-    }
+    const filters = parsePimFiltersFromUrlParams(urlParams, {
+      collectionSlug,
+    });
 
     return {
       lang,
@@ -135,15 +127,18 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
     };
   }, [urlParams, lang, collectionSlug]);
 
-  const source = (searchParams.get('source') || '').toLowerCase();
+  const specialSource = getSpecialSource(searchParams.get('source'));
   const period = (searchParams.get('period') || '7d').toLowerCase();
   const pageSizeParam = Math.min(
     100,
     Math.max(1, Number(searchParams.get('page_size') || 24)),
   );
 
-  const isSpecialSource =
-    source === 'likes' || source === 'trending' || source === 'reminders';
+  const isSpecialSource = !!specialSource;
+  const canLoadCurrentSpecialSource = canLoadSpecialSource(
+    specialSource,
+    isAuthorized,
+  );
 
   // Blank search: no text, no filters, no special source — new empty tab
   const isBlankSearch =
@@ -154,88 +149,44 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
 
   // Extract URL filters for likes/trending queries
   const urlFiltersForSpecialQuery = useMemo(() => {
-    const filters: Record<string, any> = {};
-    for (const [key, value] of Object.entries(urlParams)) {
-      if (key.startsWith('filters-')) {
-        const filterKey = key.replace('filters-', '');
-        filters[filterKey] =
-          typeof value === 'string' && value.includes(';')
-            ? value.split(';')
-            : value;
-      }
-    }
-    return filters;
+    return parsePimFiltersFromUrlParams(urlParams);
   }, [urlParams]);
 
   const specialSourceQuery = useInfiniteQuery({
     queryKey: [
       'search-special',
-      source,
+      specialSource,
       period,
       pageSizeParam,
       lang,
       urlFiltersForSpecialQuery,
     ],
     queryFn: async ({ pageParam = 1 }) => {
-      if (source === 'likes') {
-        const res = await apiGetUserLikes(pageParam, pageSizeParam);
-        const skus = (res?.likes || []).map((l: any) => l.sku).filter(Boolean);
-        if (!skus.length) {
-          return { items: [], nextPage: null };
-        }
-        // Use PIM search with SKU filter + URL filters
-        const result = await fetchPimProductList({
-          lang,
-          filters: { sku: skus, ...urlFiltersForSpecialQuery },
-          rows: skus.length,
-        });
-        const nextPage = res?.has_next ? pageParam + 1 : null;
-        return { items: result.items, nextPage };
-      }
-      if (source === 'reminders') {
-        const res = await apiGetUserReminders(pageParam, pageSizeParam);
-        const skus = (res?.reminders || [])
-          .map((r: any) => r.sku)
-          .filter(Boolean);
-        if (!skus.length) {
-          return { items: [], nextPage: null };
-        }
-        // Use PIM search with SKU filter + URL filters
-        const result = await fetchPimProductList({
-          lang,
-          filters: { sku: skus, ...urlFiltersForSpecialQuery },
-          rows: skus.length,
-        });
-        const nextPage = res?.has_next ? pageParam + 1 : null;
-        return { items: result.items, nextPage };
-      }
-      // trending: paginated response
-      const trendingPage = await apiGetTrendingPage(
+      if (!specialSource) return { items: [], nextPage: null };
+      const page = Number(pageParam);
+      const skuPage = await fetchSpecialSourceSkuPage({
+        source: specialSource,
         period,
-        pageParam,
-        pageSizeParam,
-      );
-      const skus = (trendingPage?.items || [])
-        .map((x: any) => x.sku)
-        .filter(Boolean);
-      if (!skus.length) return { items: [], nextPage: null };
-      // Use PIM search with SKU filter + URL filters
+        page,
+        pageSize: pageSizeParam,
+      });
+      if (!skuPage.skus.length) return { items: [], nextPage: null };
       const result = await fetchPimProductList({
         lang,
-        filters: { sku: skus, ...urlFiltersForSpecialQuery },
-        rows: skus.length,
+        filters: { sku: skuPage.skus, ...urlFiltersForSpecialQuery },
+        rows: skuPage.skus.length,
       });
-      const nextPage = trendingPage?.has_next ? pageParam + 1 : null;
+      const nextPage = skuPage.hasNext ? page + 1 : null;
       return { items: result.items, nextPage };
     },
-    enabled: isSpecialSource,
+    enabled: isSpecialSource && canLoadCurrentSpecialSource,
     getNextPageParam: (lastPage) => lastPage?.nextPage ?? undefined,
     initialPageParam: 1,
   });
 
   const baseQuery = usePimProductListInfiniteQuery(pimParams, {
     groupByParent: true,
-    enabled: !isBlankSearch,
+    enabled: !isBlankSearch && !isSpecialSource,
   });
 
   const data = isBlankSearch
@@ -377,7 +328,7 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
                       key={`row-${target.id}`}
                       lang={lang}
                       product={target}
-                      forceShowReminderToggle={source === 'reminders'}
+                      forceShowReminderToggle={specialSource === 'reminders'}
                     />
                   );
                 }
@@ -387,7 +338,7 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
                     key={`card-${target.id}`}
                     product={target}
                     lang={lang}
-                    forceShowReminderToggle={source === 'reminders'}
+                    forceShowReminderToggle={specialSource === 'reminders'}
                     className={cardClassName}
                   />
                 );

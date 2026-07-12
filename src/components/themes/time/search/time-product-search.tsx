@@ -11,16 +11,18 @@ import {
 } from '@framework/product/get-pim-product';
 import { useMemo, useEffect, useRef, useState } from 'react';
 import {
-  getUserLikes as apiGetUserLikes,
-  getTrendingProductsPage as apiGetTrendingPage,
-} from '@framework/likes';
-import { getUserReminders as apiGetUserReminders } from '@framework/reminders';
+  canLoadSpecialSource,
+  fetchSpecialSourceSkuPage,
+  getSpecialSource,
+  parsePimFiltersFromUrlParams,
+} from '@/components/search/special-source';
 import React from 'react';
 import TimeProductCard from '@components/themes/time/product/time-product-card';
 import TimeProductRow from './time-product-row';
 import { IoGridOutline, IoListOutline } from 'react-icons/io5';
 import { useProductsPriceMap } from '@framework/pricing';
 import { useCatalogSettings } from '@/hooks/use-catalog-settings';
+import { useUI } from '@contexts/ui.context';
 
 interface TimeProductSearchProps {
   lang: string;
@@ -37,6 +39,7 @@ export const TimeProductSearch: FC<TimeProductSearchProps> = ({
   onToggleSidebar,
 }) => {
   const { t } = useTranslation(lang, 'common');
+  const { isAuthorized } = useUI();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -74,22 +77,19 @@ export const TimeProductSearch: FC<TimeProductSearchProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, catalogSettings.defaultView]);
 
-  // Build params for PIM API
-  const urlParams: Record<string, string> = {};
-  searchParams.forEach((v, k) => (urlParams[k] = v));
+  const urlParams = useMemo(() => {
+    const params: Record<string, string> = {};
+    searchParams.forEach((value: string, key: string) => {
+      params[key] = value;
+    });
+    return params;
+  }, [searchParams]);
 
   const pimParams = useMemo(() => {
-    const filters: Record<string, any> = {};
-    for (const [key, value] of Object.entries(urlParams)) {
-      if (key.startsWith('filters-')) {
-        const filterKey = key.replace('filters-', '');
-        filters[filterKey] =
-          typeof value === 'string' && value.includes(';')
-            ? value.split(';')
-            : value;
-      }
-    }
-    if (collectionSlug) filters.collection_slugs = collectionSlug;
+    const filters = parsePimFiltersFromUrlParams(urlParams, {
+      collectionSlug,
+    });
+
     return {
       lang,
       text: urlParams.text || urlParams.q || '',
@@ -98,14 +98,17 @@ export const TimeProductSearch: FC<TimeProductSearchProps> = ({
     };
   }, [urlParams, lang, collectionSlug]);
 
-  const source = (searchParams.get('source') || '').toLowerCase();
+  const specialSource = getSpecialSource(searchParams.get('source'));
   const period = (searchParams.get('period') || '7d').toLowerCase();
   const pageSizeParam = Math.min(
     100,
     Math.max(1, Number(searchParams.get('page_size') || 24)),
   );
-  const isSpecialSource =
-    source === 'likes' || source === 'trending' || source === 'reminders';
+  const isSpecialSource = !!specialSource;
+  const canLoadCurrentSpecialSource = canLoadSpecialSource(
+    specialSource,
+    isAuthorized,
+  );
 
   // The search page is browsable with no text — when nothing is typed and no
   // filter is applied we run the full-catalog query (paginated by PIM). The
@@ -114,96 +117,52 @@ export const TimeProductSearch: FC<TimeProductSearchProps> = ({
   const isBlankSearch = false;
 
   const urlFiltersForSpecialQuery = useMemo(() => {
-    const filters: Record<string, any> = {};
-    for (const [key, value] of Object.entries(urlParams)) {
-      if (key.startsWith('filters-')) {
-        const filterKey = key.replace('filters-', '');
-        filters[filterKey] =
-          typeof value === 'string' && value.includes(';')
-            ? value.split(';')
-            : value;
-      }
-    }
-    return filters;
+    return parsePimFiltersFromUrlParams(urlParams);
   }, [urlParams]);
 
   const specialSourceQuery = useInfiniteQuery({
     queryKey: [
       'search-special',
-      source,
+      specialSource,
       period,
       pageSizeParam,
       lang,
       urlFiltersForSpecialQuery,
     ],
     queryFn: async ({ pageParam = 1 }) => {
-      if (source === 'likes') {
-        const res = await apiGetUserLikes(pageParam, pageSizeParam);
-        const skus = (res?.likes || []).map((l: any) => l.sku).filter(Boolean);
-        if (!skus.length)
-          return { items: [], nextPage: null, total: res?.total_count ?? 0 };
-        const result = await fetchPimProductList({
-          lang,
-          filters: { sku: skus, ...urlFiltersForSpecialQuery },
-          rows: skus.length,
-        });
-        return {
-          items: result.items,
-          nextPage: res?.has_next ? pageParam + 1 : null,
-          total: res?.total_count ?? result.items.length,
-        };
-      }
-      if (source === 'reminders') {
-        const res = await apiGetUserReminders(pageParam, pageSizeParam);
-        const skus = (res?.reminders || [])
-          .map((r: any) => r.sku)
-          .filter(Boolean);
-        if (!skus.length)
-          return { items: [], nextPage: null, total: res?.total_count ?? 0 };
-        const result = await fetchPimProductList({
-          lang,
-          filters: { sku: skus, ...urlFiltersForSpecialQuery },
-          rows: skus.length,
-        });
-        return {
-          items: result.items,
-          nextPage: res?.has_next ? pageParam + 1 : null,
-          total: res?.total_count ?? result.items.length,
-        };
-      }
-      const trendingPage = await apiGetTrendingPage(
+      if (!specialSource) return { items: [], nextPage: null, total: 0 };
+      const page = Number(pageParam);
+      const skuPage = await fetchSpecialSourceSkuPage({
+        source: specialSource,
         period,
-        pageParam,
-        pageSizeParam,
-      );
-      const skus = (trendingPage?.items || [])
-        .map((x: any) => x.sku)
-        .filter(Boolean);
-      if (!skus.length)
+        page,
+        pageSize: pageSizeParam,
+      });
+      if (!skuPage.skus.length)
         return {
           items: [],
           nextPage: null,
-          total: trendingPage?.total_count ?? 0,
+          total: skuPage.totalCount,
         };
       const result = await fetchPimProductList({
         lang,
-        filters: { sku: skus, ...urlFiltersForSpecialQuery },
-        rows: skus.length,
+        filters: { sku: skuPage.skus, ...urlFiltersForSpecialQuery },
+        rows: skuPage.skus.length,
       });
       return {
         items: result.items,
-        nextPage: trendingPage?.has_next ? pageParam + 1 : null,
-        total: trendingPage?.total_count ?? result.items.length,
+        nextPage: skuPage.hasNext ? page + 1 : null,
+        total: skuPage.totalCount || result.items.length,
       };
     },
-    enabled: isSpecialSource,
+    enabled: isSpecialSource && canLoadCurrentSpecialSource,
     getNextPageParam: (lastPage) => lastPage?.nextPage ?? undefined,
     initialPageParam: 1,
   });
 
   const baseQuery = usePimProductListInfiniteQuery(pimParams, {
     groupByParent: true,
-    enabled: !isBlankSearch,
+    enabled: !isBlankSearch && !isSpecialSource,
   });
 
   const data = isSpecialSource ? specialSourceQuery.data : baseQuery.data;
@@ -270,7 +229,8 @@ export const TimeProductSearch: FC<TimeProductSearchProps> = ({
     for (const page of pages) {
       for (const p of page?.items ?? []) {
         const vars = Array.isArray(p.variations) ? p.variations : [];
-        const isSingleVariant = vars.length === 1 && (p.variantCount === 1 || !p.variantCount);
+        const isSingleVariant =
+          vars.length === 1 && (p.variantCount === 1 || !p.variantCount);
         out.push(isSingleVariant ? { ...vars[0], variantCount: 1 } : p);
       }
     }

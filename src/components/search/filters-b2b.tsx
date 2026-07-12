@@ -10,11 +10,6 @@ import {
 } from '@framework/product/get-pim-filters';
 import { FiltersB2BItem } from './filters-b2b-item';
 import { useQuery } from '@tanstack/react-query';
-import {
-  getUserLikes as apiGetUserLikes,
-  getTrendingProductsPage as apiGetTrendingPage,
-} from '@framework/likes';
-import { getUserReminders as apiGetUserReminders } from '@framework/reminders';
 import { ProductTypeBreadcrumb } from './product-type-breadcrumb';
 import { GroupsNavigator, GroupsBreadcrumb } from './groups-navigator';
 import { CategoryNavigator } from './category-navigator';
@@ -30,6 +25,13 @@ import {
   resolveFacetFieldsToFetch,
 } from '@/components/search/facet-order';
 import { useHomeSettings } from '@/hooks/use-home-settings';
+import { useUI } from '@contexts/ui.context';
+import {
+  buildSkuFilterParams,
+  canLoadSpecialSource,
+  fetchSpecialSourceSkus,
+  getSpecialSource,
+} from './special-source';
 
 export const SearchFiltersB2B: React.FC<{
   lang: string;
@@ -46,19 +48,25 @@ export const SearchFiltersB2B: React.FC<{
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
+  const { isAuthorized } = useUI();
   const { settings: homeSettings } = useHomeSettings();
   const facetConfig = homeSettings?.facetConfig;
 
-  const urlParams: Record<string, string> = {};
-  searchParams.forEach((value, key) => {
-    urlParams[key] = value;
-  });
+  const urlParams = React.useMemo(() => {
+    const params: Record<string, string> = {};
+    searchParams.forEach((value: string, key: string) => {
+      params[key] = value;
+    });
+    return params;
+  }, [searchParams]);
 
-  // Check if we're on trending, likes, or reminders page
-  const source = (searchParams.get('source') || '').toLowerCase();
+  const specialSource = getSpecialSource(searchParams.get('source'));
   const period = (searchParams.get('period') || '7d').toLowerCase();
-  const isSpecialSource =
-    source === 'likes' || source === 'trending' || source === 'reminders';
+  const isSpecialSource = !!specialSource;
+  const canLoadCurrentSpecialSource = canLoadSpecialSource(
+    specialSource,
+    isAuthorized,
+  );
 
   // Blank search: no text, no filters, no special source — new empty tab.
   // When `allowBlankSearch` is true (time theme), we never short-circuit so
@@ -76,56 +84,22 @@ export const SearchFiltersB2B: React.FC<{
 
   // Fetch SKUs for likes/trending/reminders pages
   const { data: specialSkus, isLoading: isLoadingSkus } = useQuery({
-    queryKey: ['facet-skus', source, period],
+    queryKey: ['facet-skus', specialSource, period],
     queryFn: async () => {
-      const MAX_PAGE_SIZE = 100; // API limit
-      const MAX_PAGES = 5; // Fetch up to 500 SKUs total for faceting
-      const allSkus: string[] = [];
-
-      if (source === 'likes') {
-        // Fetch multiple pages of likes
-        for (let page = 1; page <= MAX_PAGES; page++) {
-          const res = await apiGetUserLikes(page, MAX_PAGE_SIZE);
-          const skus = (res?.likes || [])
-            .map((l: any) => l.sku)
-            .filter(Boolean);
-          allSkus.push(...skus);
-          if (!res?.has_next) break;
-        }
-        return allSkus;
-      }
-
-      if (source === 'reminders') {
-        // Fetch multiple pages of reminders
-        for (let page = 1; page <= MAX_PAGES; page++) {
-          const res = await apiGetUserReminders(page, MAX_PAGE_SIZE);
-          const skus = (res?.reminders || [])
-            .map((r: any) => r.sku)
-            .filter(Boolean);
-          allSkus.push(...skus);
-          if (!res?.has_next) break;
-        }
-        return allSkus;
-      }
-
-      if (source === 'trending') {
-        // Fetch multiple pages of trending
-        for (let page = 1; page <= MAX_PAGES; page++) {
-          const res = await apiGetTrendingPage(period, page, MAX_PAGE_SIZE);
-          const skus = (res?.items || [])
-            .map((x: any) => x.sku)
-            .filter(Boolean);
-          allSkus.push(...skus);
-          if (!res?.has_next) break;
-        }
-        return allSkus;
-      }
-
-      return [];
+      if (!specialSource) return [];
+      return fetchSpecialSourceSkus({ source: specialSource, period });
     },
-    enabled: isSpecialSource,
+    enabled: isSpecialSource && canLoadCurrentSpecialSource,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
+
+  const specialSkuFilterParams = React.useMemo(() => {
+    return isSpecialSource ? buildSkuFilterParams(specialSkus) : {};
+  }, [isSpecialSource, specialSkus]);
+
+  const canShowSpecialFacets =
+    !isSpecialSource ||
+    (canLoadCurrentSpecialSource && !isLoadingSkus && !!specialSkus?.length);
 
   // Build merged params - same logic as product search
   const mergedParams = React.useMemo(() => {
@@ -140,13 +114,11 @@ export const SearchFiltersB2B: React.FC<{
       facet_fields: resolveFacetFieldsToFetch(facetConfig),
     };
 
-    // Add SKU filter for trending/likes pages (same as product search)
-    if (isSpecialSource && specialSkus?.length) {
-      params['filters-sku'] = specialSkus.join(';');
-    }
+    // Add SKU filter for trending/likes/reminders pages (same as product search)
+    Object.assign(params, specialSkuFilterParams);
 
     return params;
-  }, [urlParams, lang, text, isSpecialSource, specialSkus, facetConfig]);
+  }, [urlParams, lang, text, specialSkuFilterParams, facetConfig]);
 
   const {
     data: filters,
@@ -158,9 +130,7 @@ export const SearchFiltersB2B: React.FC<{
     queryFn: () => fetchPimFilters(mergedParams),
     staleTime: 1000 * 60 * 5, // 5 minutes
     // Don't run facet query when blank search or until SKUs are loaded for special sources
-    enabled:
-      !isBlankSearch &&
-      (!isSpecialSource || (isSpecialSource && !isLoadingSkus)),
+    enabled: !isBlankSearch && canShowSpecialFacets,
   });
 
   // Sticky label map for selected chips: { 'filters-<key>': { value: label } }.
@@ -227,19 +197,17 @@ export const SearchFiltersB2B: React.FC<{
     if (text) f.text = text;
 
     // Copy all filters- params except product_type_code
-    searchParams.forEach((value, key) => {
+    searchParams.forEach((value: string, key: string) => {
       if (key.startsWith('filters-') && key !== 'filters-product_type_code') {
         f[key] = value;
       }
     });
 
-    // Add SKU filter for trending/likes pages (same as main search)
-    if (isSpecialSource && specialSkus?.length) {
-      f['filters-sku'] = specialSkus.join(';');
-    }
+    // Add SKU filter for trending/likes/reminders pages (same as main search)
+    Object.assign(f, specialSkuFilterParams);
 
     return f;
-  }, [searchParams, lang, text, isSpecialSource, specialSkus]);
+  }, [searchParams, lang, text, specialSkuFilterParams]);
 
   // Keep all facets (including product_type_code) in the list — the sidebar
   // render anchors the TIPO PRODOTTO breadcrumb + technical-specs accordion to
@@ -290,9 +258,14 @@ export const SearchFiltersB2B: React.FC<{
           /* Single scrollable area for ALL filters */
           <div className="max-h-[calc(100vh-320px)] overflow-y-auto">
             {/* Groups Navigator - hierarchical menu tree (hidden on blank search) */}
-            {!isBlankSearch && (
+            {!isBlankSearch && canShowSpecialFacets && (
               <>
-                <GroupsNavigator lang={lang} text={text} />
+                <GroupsNavigator
+                  lang={lang}
+                  text={text}
+                  extraFilters={specialSkuFilterParams}
+                  enabled={canShowSpecialFacets}
+                />
                 <hr className="border-border-base mx-4" />
               </>
             )}
