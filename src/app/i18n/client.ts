@@ -27,7 +27,7 @@ i18next
   )
   .init({
     ...getOptions(),
-    lng: runsOnServerSide ? undefined : getOptions().fallbackLng?.[0], // Use fallback language to match server render
+    lng: runsOnServerSide ? undefined : getOptions().fallbackLng, // Use fallback language to match server render
     detection: {
       order: ['path', 'htmlTag', 'cookie', 'navigator'],
     },

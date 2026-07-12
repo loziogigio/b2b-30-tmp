@@ -553,6 +553,8 @@
   "text-variants": "variants",
   "text-status": "Status",
   "text-listino": "LIST PRICE",
+  "text-discount": "Discount",
+  "text-savings": "You save",
   "text-availability": "Availability",
   "text-packaging": "Packaging",
   "text-loading": "Loading…",
