@@ -158,6 +158,7 @@ const transformMediaItem = (item: any, cardStyle?: any) => {
 
 /** Standard vertical spacing between all blocks */
 const BLOCK_SPACING = 'mb-10';
+const TIME_HERO_BANNER_ASPECT_RATIO = '3 / 1';
 
 /**
  * Block layout wrapper — respects `fullWidth` from block config.
@@ -344,6 +345,11 @@ const TimeBlockRenderer: React.FC<TimeBlockRendererProps> = ({
           titleAlignment={titleAlignment}
           lang={lang}
           itemsPerView={heroItemsPerView}
+          aspectRatio={
+            block.config?.aspectRatio || TIME_HERO_BANNER_ASPECT_RATIO
+          }
+          mediaHeight={block.config?.mediaHeight}
+          imageFit={block.config?.imageFit || 'contain'}
         />
       </BlockWrapper>
     );

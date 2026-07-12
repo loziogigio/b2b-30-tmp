@@ -1,5 +1,6 @@
 'use client';
 
+import type { CSSProperties } from 'react';
 import Image from 'next/image';
 import Link from '@components/ui/link';
 import { useHorizontalScroll } from '@components/themes/time/shared/use-horizontal-scroll';
@@ -28,9 +29,22 @@ interface TimeBannerCarouselProps {
   titleAlignment?: 'left' | 'center' | 'right';
   lang: string;
   itemsPerView?: number;
+  aspectRatio?: string;
+  mediaHeight?: string;
+  imageFit?: 'cover' | 'contain';
 }
 
-function BannerSlide({ item, sizes }: { item: BannerItem; sizes: string }) {
+function BannerSlide({
+  item,
+  sizes,
+  mediaStyle,
+  imageFit,
+}: {
+  item: BannerItem;
+  sizes: string;
+  mediaStyle: CSSProperties;
+  imageFit: 'cover' | 'contain';
+}) {
   const href = item.link;
   const linkProps: Record<string, string> = {};
   if (item.openInNewTab) {
@@ -39,11 +53,15 @@ function BannerSlide({ item, sizes }: { item: BannerItem; sizes: string }) {
   }
 
   const imageNode = (
-    <div className="relative w-full overflow-hidden rounded-xl bg-[var(--time-gray-100)] group transition-shadow duration-300 hover:shadow-[0_6px_24px_rgba(0,0,0,0.1)]">
+    <div
+      className="relative w-full overflow-hidden rounded-xl bg-[var(--time-gray-100)] group transition-shadow duration-300 hover:shadow-[0_6px_24px_rgba(0,0,0,0.1)]"
+      style={mediaStyle}
+    >
       {item.videoUrl ? (
         <video
           src={item.videoUrl}
-          className="w-full h-full object-cover"
+          className="absolute inset-0 h-full w-full"
+          style={{ objectFit: imageFit }}
           autoPlay
           muted
           loop
@@ -53,9 +71,9 @@ function BannerSlide({ item, sizes }: { item: BannerItem; sizes: string }) {
         <Image
           src={item.image}
           alt={item.alt || item.title || ''}
-          width={800}
-          height={450}
-          className="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+          fill
+          className="transition-transform duration-300 group-hover:scale-[1.02]"
+          style={{ objectFit: imageFit }}
           sizes={sizes}
         />
       ) : null}
@@ -103,6 +121,9 @@ export default function TimeBannerCarousel({
   title,
   titleAlignment,
   itemsPerView = 3,
+  aspectRatio = '16 / 9',
+  mediaHeight,
+  imageFit = 'cover',
 }: TimeBannerCarouselProps) {
   const {
     scrollRef,
@@ -125,6 +146,9 @@ export default function TimeBannerCarousel({
   const desktopVw = Math.max(1, Math.round(100 / itemsPerView));
   const tabletVw = itemsPerView >= 2 ? 45 : 90;
   const imageSizes = `(max-width: 640px) 90vw, (max-width: 1024px) ${tabletVw}vw, ${desktopVw}vw`;
+  const mediaStyle: CSSProperties = mediaHeight
+    ? { height: mediaHeight }
+    : { aspectRatio };
 
   return (
     <div>
@@ -160,7 +184,12 @@ export default function TimeBannerCarousel({
                 animation: `time-fadeUp 0.4s ease ${0.05 * i}s both`,
               }}
             >
-              <BannerSlide item={item} sizes={imageSizes} />
+              <BannerSlide
+                item={item}
+                sizes={imageSizes}
+                mediaStyle={mediaStyle}
+                imageFit={imageFit}
+              />
             </div>
           ))}
         </div>
