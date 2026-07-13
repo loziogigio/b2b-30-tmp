@@ -2,7 +2,7 @@ import { cache } from 'react';
 import { cookies, headers } from 'next/headers';
 import {
   buildTenantApiHeaders,
-  resolveTenant,
+  withResolvedTenant,
   isSingleTenant,
 } from '@/lib/tenant';
 import { resolveSupportedLang } from '@/app/i18n/settings';
@@ -35,15 +35,23 @@ interface ApiConfig {
   tenantId: string;
 }
 
-/** Resolve PIM API config for the current request */
-async function getApiConfig(): Promise<ApiConfig | null> {
+/**
+ * Run a PIM operation without returning the credential-bearing config across
+ * an async React Server Component boundary. Development Flight payloads may
+ * retain resolved await values, so only the operation's public result leaves
+ * this function.
+ */
+async function withApiConfig<T>(
+  fallback: T,
+  operation: (config: ApiConfig) => Promise<T>,
+): Promise<T> {
   if (isSingleTenant) {
-    return {
+    return operation({
       pimApiUrl: DEFAULT_PIM_API_URL,
       apiKeyId: DEFAULT_API_KEY_ID,
       apiSecret: DEFAULT_API_SECRET,
       tenantId: SINGLE_TENANT_ID,
-    };
+    });
   }
 
   const headersList = await headers();
@@ -52,15 +60,16 @@ async function getApiConfig(): Promise<ApiConfig | null> {
     headersList.get('host') ||
     'localhost';
 
-  const tenant = await resolveTenant(hostname);
-  if (!tenant) return null;
+  return withResolvedTenant(hostname, (tenant) => {
+    if (!tenant) return fallback;
 
-  return {
-    pimApiUrl: PIM_API_URL_OVERRIDE || tenant.api.pimApiUrl,
-    apiKeyId: tenant.api.apiKeyId,
-    apiSecret: tenant.api.apiSecret,
-    tenantId: tenant.id,
-  };
+    return operation({
+      pimApiUrl: PIM_API_URL_OVERRIDE || tenant.api.pimApiUrl,
+      apiKeyId: tenant.api.apiKeyId,
+      apiSecret: tenant.api.apiSecret,
+      tenantId: tenant.id,
+    });
+  });
 }
 
 function buildHeaders(
@@ -120,80 +129,82 @@ export interface ServerSearchResult {
 
 export const serverFetchPimProducts = cache(
   async (params: ServerSearchParams): Promise<ServerSearchResult> => {
-    const config = await getApiConfig();
-    if (!config) return { results: [], total: 0 };
+    return withApiConfig<ServerSearchResult>(
+      { results: [], total: 0 },
+      async (config) => {
+        const url = `${config.pimApiUrl}/api/search/search`;
+        const authorization = await getCurrentSsoAuthorization(
+          params.authenticated === true,
+        );
 
-    const url = `${config.pimApiUrl}/api/search/search`;
-    const authorization = await getCurrentSsoAuthorization(
-      params.authenticated === true,
+        const body: Record<string, any> = {
+          lang: resolveSupportedLang(params.lang),
+          text: params.text || '',
+          start: params.start || 0,
+          rows: params.rows || 12,
+        };
+
+        if (params.filters && Object.keys(params.filters).length > 0) {
+          body.filters = params.filters;
+        }
+        if (params.group_variants) {
+          body.group_variants = true;
+        }
+        if (params.facet_fields) {
+          body.facet_fields = params.facet_fields;
+        }
+        // Always request per-product rich content blocks (the BE only attaches them
+        // where they exist), so any storefront fetch path gets them without wiring.
+        body.include_dynamic_blocks = true;
+
+        try {
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: buildHeaders(config, authorization),
+            body: JSON.stringify(body),
+            ...(authorization
+              ? { cache: 'no-store' as const }
+              : {
+                  next: {
+                    revalidate: 300,
+                    tags: [cacheTag('products', config.tenantId)],
+                  },
+                }),
+          });
+
+          if (!response.ok) return { results: [], total: 0 };
+
+          const data = await response.json();
+          if (!data.success) return { results: [], total: 0 };
+
+          // PIM returns facets under `facet_results` keyed by field name. Each
+          // bucket is `{ value, count, label?, id? }`. We normalize to
+          // `{ value, label, count }` so the renderer is agnostic.
+          const rawFacets: Record<string, any[]> =
+            data.data.facet_results || data.facet_results || {};
+          const facets: Record<string, ServerSearchFacetValue[]> = {};
+          for (const [field, buckets] of Object.entries(rawFacets)) {
+            if (!Array.isArray(buckets)) continue;
+            facets[field] = buckets
+              .map((b: any) => ({
+                value: String(b.value ?? b.id ?? b.code ?? ''),
+                label: b.label || b.name || b.title || undefined,
+                count: Number(b.count ?? b.numFound ?? 0),
+              }))
+              .filter((b) => b.value);
+          }
+
+          return {
+            results: data.data.results || [],
+            total: data.data.numFound ?? data.data.total ?? 0,
+            numFound: data.data.numFound,
+            ...(Object.keys(facets).length ? { facets } : {}),
+          };
+        } catch {
+          return { results: [], total: 0 };
+        }
+      },
     );
-
-    const body: Record<string, any> = {
-      lang: resolveSupportedLang(params.lang),
-      text: params.text || '',
-      start: params.start || 0,
-      rows: params.rows || 12,
-    };
-
-    if (params.filters && Object.keys(params.filters).length > 0) {
-      body.filters = params.filters;
-    }
-    if (params.group_variants) {
-      body.group_variants = true;
-    }
-    if (params.facet_fields) {
-      body.facet_fields = params.facet_fields;
-    }
-    // Always request per-product rich content blocks (the BE only attaches them
-    // where they exist), so any storefront fetch path gets them without wiring.
-    body.include_dynamic_blocks = true;
-
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: buildHeaders(config, authorization),
-        body: JSON.stringify(body),
-        ...(authorization
-          ? { cache: 'no-store' as const }
-          : {
-              next: {
-                revalidate: 300,
-                tags: [cacheTag('products', config.tenantId)],
-              },
-            }),
-      });
-
-      if (!response.ok) return { results: [], total: 0 };
-
-      const data = await response.json();
-      if (!data.success) return { results: [], total: 0 };
-
-      // PIM returns facets under `facet_results` keyed by field name. Each
-      // bucket is `{ value, count, label?, id? }`. We normalize to
-      // `{ value, label, count }` so the renderer is agnostic.
-      const rawFacets: Record<string, any[]> =
-        data.data.facet_results || data.facet_results || {};
-      const facets: Record<string, ServerSearchFacetValue[]> = {};
-      for (const [field, buckets] of Object.entries(rawFacets)) {
-        if (!Array.isArray(buckets)) continue;
-        facets[field] = buckets
-          .map((b: any) => ({
-            value: String(b.value ?? b.id ?? b.code ?? ''),
-            label: b.label || b.name || b.title || undefined,
-            count: Number(b.count ?? b.numFound ?? 0),
-          }))
-          .filter((b) => b.value);
-      }
-
-      return {
-        results: data.data.results || [],
-        total: data.data.numFound ?? data.data.total ?? 0,
-        numFound: data.data.numFound,
-        ...(Object.keys(facets).length ? { facets } : {}),
-      };
-    } catch {
-      return { results: [], total: 0 };
-    }
   },
 );
 
@@ -203,28 +214,27 @@ export const serverFetchPimProducts = cache(
 
 export const serverFetchPimMenu = cache(
   async (location: string = 'header', lang?: string): Promise<any[]> => {
-    const config = await getApiConfig();
-    if (!config) return [];
+    return withApiConfig<any[]>([], async (config) => {
+      const langParam = lang ? `&lang=${encodeURIComponent(lang)}` : '';
+      const url = `${config.pimApiUrl}/api/public/menu?location=${location}${langParam}`;
 
-    const langParam = lang ? `&lang=${encodeURIComponent(lang)}` : '';
-    const url = `${config.pimApiUrl}/api/public/menu?location=${location}${langParam}`;
+      try {
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: buildHeaders(config),
+          next: { revalidate: 300, tags: [cacheTag('menu', config.tenantId)] },
+        });
 
-    try {
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: buildHeaders(config),
-        next: { revalidate: 300, tags: [cacheTag('menu', config.tenantId)] },
-      });
+        if (!response.ok) return [];
 
-      if (!response.ok) return [];
+        const data = await response.json();
+        if (!data.success) return [];
 
-      const data = await response.json();
-      if (!data.success) return [];
-
-      return data.menuItems || [];
-    } catch {
-      return [];
-    }
+        return data.menuItems || [];
+      } catch {
+        return [];
+      }
+    });
   },
 );
 
@@ -234,31 +244,30 @@ export const serverFetchPimMenu = cache(
 
 export const serverFetchPimCategories = cache(
   async (channel?: string): Promise<any[]> => {
-    const config = await getApiConfig();
-    if (!config) return [];
+    return withApiConfig<any[]>([], async (config) => {
+      const qs = channel ? `?channel=${encodeURIComponent(channel)}` : '';
+      const url = `${config.pimApiUrl}/api/public/categories${qs}`;
 
-    const qs = channel ? `?channel=${encodeURIComponent(channel)}` : '';
-    const url = `${config.pimApiUrl}/api/public/categories${qs}`;
+      try {
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: buildHeaders(config),
+          next: {
+            revalidate: 300,
+            tags: [cacheTag('categories', config.tenantId)],
+          },
+        });
 
-    try {
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: buildHeaders(config),
-        next: {
-          revalidate: 300,
-          tags: [cacheTag('categories', config.tenantId)],
-        },
-      });
+        if (!response.ok) return [];
 
-      if (!response.ok) return [];
+        const data = await response.json();
+        if (!data.success) return [];
 
-      const data = await response.json();
-      if (!data.success) return [];
-
-      return data.categories || [];
-    } catch {
-      return [];
-    }
+        return data.categories || [];
+      } catch {
+        return [];
+      }
+    });
   },
 );
 
@@ -267,36 +276,8 @@ export const serverFetchPimCategories = cache(
 // ===============================
 
 export const serverFetchCollections = cache(async (): Promise<any[]> => {
-  const config = await getApiConfig();
-  if (!config) return [];
-
-  const url = `${config.pimApiUrl}/api/public/collections`;
-
-  try {
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: buildHeaders(config),
-      next: {
-        revalidate: 300,
-        tags: [cacheTag('collections', config.tenantId)],
-      },
-    });
-
-    if (!response.ok) return [];
-
-    const data = await response.json();
-    return data.collections || [];
-  } catch {
-    return [];
-  }
-});
-
-export const serverFetchCollectionBySlug = cache(
-  async (slug: string): Promise<any | null> => {
-    const config = await getApiConfig();
-    if (!config) return null;
-
-    const url = `${config.pimApiUrl}/api/public/collections/${slug}`;
+  return withApiConfig<any[]>([], async (config) => {
+    const url = `${config.pimApiUrl}/api/public/collections`;
 
     try {
       const response = await fetch(url, {
@@ -308,13 +289,39 @@ export const serverFetchCollectionBySlug = cache(
         },
       });
 
-      if (!response.ok) return null;
+      if (!response.ok) return [];
 
       const data = await response.json();
-      return data.collection || null;
+      return data.collections || [];
     } catch {
-      return null;
+      return [];
     }
+  });
+});
+
+export const serverFetchCollectionBySlug = cache(
+  async (slug: string): Promise<any | null> => {
+    return withApiConfig<any | null>(null, async (config) => {
+      const url = `${config.pimApiUrl}/api/public/collections/${slug}`;
+
+      try {
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: buildHeaders(config),
+          next: {
+            revalidate: 300,
+            tags: [cacheTag('collections', config.tenantId)],
+          },
+        });
+
+        if (!response.ok) return null;
+
+        const data = await response.json();
+        return data.collection || null;
+      } catch {
+        return null;
+      }
+    });
   },
 );
 
@@ -324,44 +331,47 @@ export const serverFetchCollectionBySlug = cache(
 
 export async function fetchProductSkusForSitemap(
   start: number = 0,
-  rows: number = 10000,
+  rows: number = 100,
   lang: string = 'it',
 ): Promise<{ skus: string[]; total: number }> {
-  const config = await getApiConfig();
-  if (!config) return { skus: [], total: 0 };
+  return withApiConfig<{ skus: string[]; total: number }>(
+    { skus: [], total: 0 },
+    async (config) => {
+      const url = `${config.pimApiUrl}/api/search/search`;
+      const safeRows = Math.min(100, Math.max(1, Math.trunc(rows) || 100));
 
-  const url = `${config.pimApiUrl}/api/search/search`;
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: buildHeaders(config),
+          body: JSON.stringify({
+            lang,
+            text: '',
+            start,
+            rows: safeRows,
+            group_variants: true,
+          }),
+          next: {
+            revalidate: 3600, // 1 hour cache for sitemap
+            tags: [cacheTag('sitemap', config.tenantId)],
+          },
+        });
 
-  try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: buildHeaders(config),
-      body: JSON.stringify({
-        lang,
-        text: '',
-        start,
-        rows,
-        group_variants: true,
-      }),
-      next: {
-        revalidate: 3600, // 1 hour cache for sitemap
-        tags: [cacheTag('sitemap', config.tenantId)],
-      },
-    });
+        if (!response.ok) return { skus: [], total: 0 };
 
-    if (!response.ok) return { skus: [], total: 0 };
+        const data = await response.json();
+        if (!data.success) return { skus: [], total: 0 };
 
-    const data = await response.json();
-    if (!data.success) return { skus: [], total: 0 };
+        const results = data.data.results || [];
+        const skus = results.map((p: any) => p.sku).filter(Boolean) as string[];
 
-    const results = data.data.results || [];
-    const skus = results.map((p: any) => p.sku).filter(Boolean) as string[];
-
-    return {
-      skus,
-      total: data.data.numFound ?? data.data.total ?? 0,
-    };
-  } catch {
-    return { skus: [], total: 0 };
-  }
+        return {
+          skus,
+          total: data.data.numFound ?? data.data.total ?? 0,
+        };
+      } catch {
+        return { skus: [], total: 0 };
+      }
+    },
+  );
 }

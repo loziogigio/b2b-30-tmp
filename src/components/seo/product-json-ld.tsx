@@ -2,21 +2,28 @@
 
 import { Product } from '@framework/types';
 import type { ErpPriceData } from '@utils/transform/erp-prices';
+import { absoluteProductDetailUrl } from '@/lib/seo/product-url';
 
 interface ProductJsonLdProps {
   product: Product;
   priceData?: ErpPriceData;
   lang: string;
+  siteUrl?: string;
+  canonicalUrl?: string;
 }
 
 export default function ProductJsonLd({
   product,
   priceData,
   lang,
+  siteUrl: configuredSiteUrl,
+  canonicalUrl,
 }: ProductJsonLdProps) {
   if (!product) return null;
 
-  const siteUrl = process.env.NEXT_PUBLIC_WEBSITE_URL || '';
+  const siteUrl = configuredSiteUrl || process.env.NEXT_PUBLIC_WEBSITE_URL || '';
+  const productUrl =
+    canonicalUrl || absoluteProductDetailUrl(siteUrl, lang, product) || undefined;
 
   // Get product image
   const productImage =
@@ -51,7 +58,7 @@ export default function ProductJsonLd({
     sku: product.sku,
     mpn: product.sku,
     image: productImage ? [productImage] : undefined,
-    url: `${siteUrl}/${lang}/products/${product.sku}`,
+    url: productUrl,
     brand: product.brand
       ? {
           '@type': 'Brand',
@@ -61,7 +68,7 @@ export default function ProductJsonLd({
     offers: price
       ? {
           '@type': 'Offer',
-          url: `${siteUrl}/${lang}/products/${product.sku}`,
+          url: productUrl,
           priceCurrency: 'EUR',
           price: Number(price).toFixed(2),
           availability,

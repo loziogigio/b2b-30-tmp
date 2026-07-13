@@ -10,6 +10,12 @@ interface ProductDetailWithPreviewProps {
   sku: string;
   serverBlocks: PageBlock[];
   isPreview?: boolean;
+  categoryRoot?: string;
+  siteUrl?: string;
+  canonicalUrl?: string;
+  categoryAncestors?: string[];
+  categoryChannel?: string;
+  suppressProductJsonLd?: boolean;
 }
 
 /**
@@ -21,6 +27,12 @@ export function ProductDetailWithPreview({
   sku,
   serverBlocks,
   isPreview = false,
+  categoryRoot,
+  siteUrl,
+  canonicalUrl,
+  categoryAncestors,
+  categoryChannel,
+  suppressProductJsonLd,
 }: ProductDetailWithPreviewProps) {
   const [isHydrated, setIsHydrated] = useState(false);
 
@@ -83,6 +95,12 @@ export function ProductDetailWithPreview({
                 sku={sku}
                 blocks={blocks}
                 showZoneLabels={isUsingLivePreview}
+                categoryRoot={categoryRoot}
+                siteUrl={siteUrl}
+                canonicalUrl={canonicalUrl}
+                categoryAncestors={categoryAncestors}
+                categoryChannel={categoryChannel}
+                suppressProductJsonLd={suppressProductJsonLd}
               />
             </div>
           </>

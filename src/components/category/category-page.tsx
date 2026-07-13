@@ -20,6 +20,7 @@ import { isEmptyHtml } from '@/lib/html';
 import { extractSearchText } from '@/lib/category-search-text';
 import { useThemeId } from '@/contexts/tenant.context';
 import TimeCatalogueIndex from '@components/themes/time/category/time-catalogue-index';
+import { categoryDetailHref } from '@/lib/seo/category-root';
 
 const NUM_ITEM = 6;
 const MAX_ROWS = 5;
@@ -59,9 +60,11 @@ function pickHeroNode(current: MenuTreeNode | null, pathNodes: MenuTreeNode[]) {
 function CategoryHero({
   node,
   lang,
+  categoryRoot,
 }: {
   node: MenuTreeNode | null;
   lang: string;
+  categoryRoot: string;
 }) {
   if (!node) return null;
 
@@ -80,12 +83,12 @@ function CategoryHero({
 
     // 2) If we have a path array, join segments
     if (node.path && node.path.length) {
-      return `/${lang}/${node.path.map(encodeURIComponent).join('/')}`;
+      return categoryDetailHref(lang, node.path, categoryRoot);
     }
 
     // 3) Fallback to slug
     if (node.slug) {
-      return `/${lang}/${encodeURIComponent(node.slug)}`;
+      return categoryDetailHref(lang, [node.slug], categoryRoot);
     }
 
     // 4) Ultimate fallback
@@ -285,7 +288,7 @@ export default function CategoryPage({
   return (
     <div className="bg-white">
       {/* ⬇️ HERO on top (parent if available, else current) */}
-      <CategoryHero node={heroNode} lang={lang} />
+      <CategoryHero node={heroNode} lang={lang} categoryRoot={categoryRoot} />
 
       {/* Breadcrumbs + title */}
       <Container className="py-2">
@@ -293,6 +296,7 @@ export default function CategoryPage({
           lang={lang}
           categories={pathNodes}
           allLabel={t('all-categories', { defaultValue: 'All Groups' })}
+          categoryRoot={categoryRoot}
           onAllCategoriesClick={() => {
             window.location.href = `/${lang}/${categoryRoot}`;
           }}
@@ -314,7 +318,11 @@ export default function CategoryPage({
             !(current.isGroup && (current.children?.length ?? 0) > 0)
           ) {
             return disableLeafCarousel ? null : (
-              <CategoryLeafCarousel lang={lang} node={current} />
+              <CategoryLeafCarousel
+                lang={lang}
+                node={current}
+                categoryRoot={categoryRoot}
+              />
             );
           }
 
@@ -333,6 +341,7 @@ export default function CategoryPage({
                     parentNode={current}
                     subcategories={current.children}
                     showViewAll={false}
+                    categoryRoot={categoryRoot}
                   />
                 </Container>
               );
@@ -360,13 +369,19 @@ export default function CategoryPage({
                   lang={lang}
                   parentNode={child}
                   isTopLevel={isTopLevel}
+                  categoryRoot={categoryRoot}
                 />
               );
             }
 
             // Otherwise show leaf carousel (products)
             return (
-              <CategoryLeafCarousel key={child.id} lang={lang} node={child} />
+              <CategoryLeafCarousel
+                key={child.id}
+                lang={lang}
+                node={child}
+                categoryRoot={categoryRoot}
+              />
             );
           });
 
@@ -398,9 +413,11 @@ export default function CategoryPage({
 function CategoryLeafCarousel({
   lang,
   node,
+  categoryRoot,
 }: {
   lang: string;
   node: MenuTreeNode;
+  categoryRoot: string;
 }) {
   // Prefer the dedicated PIM category filter (category_ancestors) when the
   // node was produced from the categories tree. Falls back to slug-as-text
@@ -425,7 +442,7 @@ function CategoryLeafCarousel({
         const raw = node.url.startsWith('/') ? node.url : `/${node.url}`;
         return raw;
       })()
-    : `category/${node.path.join('/')}`;
+    : categoryDetailHref(lang, node.path, categoryRoot);
 
   return (
     <Container className="mb-6">

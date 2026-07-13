@@ -7,7 +7,9 @@ vi.mock('@/contexts/tenant.context', () => ({
 }));
 
 vi.mock('@components/themes/time/category/time-catalogue-index', () => ({
-  default: () => <div data-testid="time-catalogue-index" />,
+  default: ({ categoryRoot }: any) => (
+    <div data-testid="time-catalogue-index" data-root={categoryRoot} />
+  ),
 }));
 
 const usePimCategoriesQueryMock = vi.fn();
@@ -30,19 +32,27 @@ vi.mock('@framework/product/get-pim-product', () => ({
 }));
 
 vi.mock('@components/category/category-children-carousel', () => ({
-  default: () => <div data-testid="children-carousel" />,
+  default: ({ categoryRoot }: any) => (
+    <div data-testid="children-carousel" data-root={categoryRoot} />
+  ),
 }));
 vi.mock('@components/category/category-subcategories-grid', () => ({
-  default: () => <div data-testid="subcategories-grid" />,
+  default: ({ categoryRoot }: any) => (
+    <div data-testid="subcategories-grid" data-root={categoryRoot} />
+  ),
 }));
 vi.mock('@components/product/products-carousel', () => ({
-  default: () => <div data-testid="products-carousel" />,
+  default: ({ categorySlug }: any) => (
+    <div data-testid="products-carousel" data-category-slug={categorySlug} />
+  ),
 }));
 vi.mock('@components/cards/banner-card', () => ({
   default: () => <div data-testid="banner-card" />,
 }));
 vi.mock('@components/ui/category-breadcrumb', () => ({
-  default: () => <div data-testid="breadcrumb" />,
+  default: ({ categoryRoot }: any) => (
+    <div data-testid="breadcrumb" data-root={categoryRoot} />
+  ),
 }));
 vi.mock('@components/ui/container', () => ({
   default: ({ children }: any) => <div>{children}</div>,
@@ -107,5 +117,31 @@ describe('CategoryPage theme branch', () => {
     render(<CategoryPage lang="it" slug={[]} />);
     expect(screen.queryByTestId('time-catalogue-index')).toBeNull();
     expect(screen.getByTestId('children-carousel')).toBeInTheDocument();
+  });
+
+  it('threads a custom category root into category navigation', () => {
+    useThemeIdMock.mockReturnValue('default');
+    render(<CategoryPage lang="it" slug={[]} categoryRoot="prodotti" />);
+
+    expect(screen.getByTestId('breadcrumb')).toHaveAttribute(
+      'data-root',
+      'prodotti',
+    );
+    expect(screen.getByTestId('children-carousel')).toHaveAttribute(
+      'data-root',
+      'prodotti',
+    );
+  });
+
+  it('uses the custom category root for a final-leaf carousel URL', () => {
+    useThemeIdMock.mockReturnValue('default');
+    render(
+      <CategoryPage lang="it" slug={['g1', 'l1']} categoryRoot="prodotti" />,
+    );
+
+    expect(screen.getByTestId('products-carousel')).toHaveAttribute(
+      'data-category-slug',
+      '/it/prodotti/g1/l1',
+    );
   });
 });

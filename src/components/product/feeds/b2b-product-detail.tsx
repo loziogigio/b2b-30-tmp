@@ -11,6 +11,12 @@ interface Props {
   lang: string;
   blocks?: PageBlock[];
   showZoneLabels?: boolean;
+  categoryRoot?: string;
+  siteUrl?: string;
+  canonicalUrl?: string;
+  categoryAncestors?: string[];
+  categoryChannel?: string;
+  suppressProductJsonLd?: boolean;
 }
 
 const ThemedProductDetail = getThemedComponent('ProductDetail');
@@ -20,6 +26,12 @@ export default function B2BProductDetail({
   lang,
   blocks = [],
   showZoneLabels = false,
+  categoryRoot,
+  siteUrl,
+  canonicalUrl,
+  categoryAncestors,
+  categoryChannel,
+  suppressProductJsonLd,
 }: Props) {
   const search = { sku };
 
@@ -28,12 +40,21 @@ export default function B2BProductDetail({
       <Divider />
       <div className="pt-6 lg:pt-7">
         <Container>
-          <ProductCategoryBreadcrumb lang={lang} sku={sku} />
+          <ProductCategoryBreadcrumb
+            lang={lang}
+            sku={sku}
+            categoryRoot={categoryRoot}
+            categoryAncestors={categoryAncestors}
+            channel={categoryChannel}
+          />
           <ThemedProductDetail
             lang={lang}
             search={search}
             blocks={blocks}
             showZoneLabels={showZoneLabels}
+            siteUrl={siteUrl}
+            canonicalUrl={canonicalUrl}
+            suppressProductJsonLd={suppressProductJsonLd}
           />
         </Container>
       </div>

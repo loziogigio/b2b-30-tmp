@@ -105,7 +105,11 @@ describe('CustomStyles', () => {
     const html = renderToStaticMarkup(
       <CustomStyles css=".cookie-bar{display:none}" />,
     );
-    expect(html).toBe('<style>.cookie-bar{display:none}</style>');
+    // React 19 may add stylesheet precedence metadata during server rendering;
+    // the custom CSS still has to remain raw inside one style element.
+    expect(html).toMatch(
+      /^<style(?: [^>]*)?>\.cookie-bar\{display:none\}<\/style>$/,
+    );
   });
 
   it('renders nothing for empty/whitespace/undefined CSS', () => {

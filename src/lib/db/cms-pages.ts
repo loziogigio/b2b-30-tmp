@@ -110,7 +110,7 @@ export type CmsPageRegistryEntry = Pick<
 export async function loadCmsPageRegistry(): Promise<CmsPageRegistryEntry[]> {
   const connection = await connectToDatabase();
   const Model = await getB2BPageModelForDb(connection.name);
-  return Model.find({ portal_slug: PORTAL_SLUG, status: 'active' })
+  const pages = await Model.find({ portal_slug: PORTAL_SLUG, status: 'active' })
     .sort({ sort_order: 1 })
     .select({
       slug: 1,
@@ -121,6 +121,22 @@ export async function loadCmsPageRegistry(): Promise<CmsPageRegistryEntry[]> {
       updated_at: 1,
     })
     .lean<CmsPageRegistryEntry[]>();
+
+  if (pages.length === 0) return [];
+
+  // A page record is created before its first content publish. Keep draft-only
+  // pages out of navigation and the local sitemap fallback, matching the flat
+  // page route which only renders `status: published` templates.
+  const TemplateModel = await getHomeTemplateModelForDb(connection.name);
+  const published = await TemplateModel.find({
+    templateId: { $in: pages.map((page) => buildTemplateId(page.slug)) },
+    status: 'published',
+  })
+    .select({ templateId: 1 })
+    .lean<Array<{ templateId: string }>>();
+  const publishedIds = new Set(published.map((entry) => entry.templateId));
+
+  return pages.filter((page) => publishedIds.has(buildTemplateId(page.slug)));
 }
 
 /**

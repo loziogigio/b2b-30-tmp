@@ -8,19 +8,22 @@ import { useTranslation } from 'src/app/i18n/client';
 import type { MenuTreeNode } from '@framework/product/get-pim-menu';
 import Heading from '@components/ui/heading';
 import { CategoryCard } from './category-children-carousel';
+import {
+  categoryDetailHref,
+  DEFAULT_CATEGORY_ROOT,
+} from '@/lib/seo/category-root';
 
 interface ViewAllCardProps {
   lang: string;
-  parentHref?: string;
+  parentHref: string;
 }
 
 function ViewAllCard({ lang, parentHref }: ViewAllCardProps) {
   const { t } = useTranslation(lang, 'common');
-  const href = parentHref || `/${lang}/categorie`;
 
   return (
     <Link
-      href={href}
+      href={parentHref}
       className="flex flex-col items-center justify-center bg-brand rounded-xl p-6 text-white hover:bg-brand/80 transition-colors min-h-[280px]"
     >
       <h3 className="text-2xl md:text-3xl font-bold text-center mb-2">
@@ -45,6 +48,7 @@ interface CategorySubcategoriesGridProps {
   title?: string;
   iconSrc?: string;
   showViewAll?: boolean;
+  categoryRoot?: string;
 }
 
 export default function CategorySubcategoriesGrid({
@@ -54,6 +58,7 @@ export default function CategorySubcategoriesGrid({
   title,
   iconSrc,
   showViewAll = true,
+  categoryRoot = DEFAULT_CATEGORY_ROOT,
 }: CategorySubcategoriesGridProps) {
   const displayTitle = title || parentNode?.label || parentNode?.name || '';
   const displayIcon = iconSrc || parentNode?.category_menu_image || undefined;
@@ -63,8 +68,8 @@ export default function CategorySubcategoriesGrid({
       ? parentNode.url.startsWith('/')
         ? `/${lang}${parentNode.url}`
         : `/${lang}/${parentNode.url}`
-      : `/${lang}/categorie/${parentNode.path.join('/')}`
-    : `/${lang}/categorie`;
+      : categoryDetailHref(lang, parentNode.path, categoryRoot)
+    : categoryDetailHref(lang, [], categoryRoot);
 
   if (!subcategories.length) return null;
 
@@ -94,6 +99,7 @@ export default function CategorySubcategoriesGrid({
             node={node}
             lang={lang}
             isTopLevel={false}
+            categoryRoot={categoryRoot}
           />
         ))}
 

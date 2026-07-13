@@ -3,7 +3,7 @@ import { headers } from 'next/headers';
 import type { HomeSettings } from '@/lib/home-settings/types';
 import {
   buildTenantApiHeaders,
-  resolveTenant,
+  withResolvedTenant,
   isSingleTenant,
 } from '@/lib/tenant';
 import { DEFAULT_HOME_SETTINGS } from '@/lib/home-settings/defaults';
@@ -118,25 +118,20 @@ const cachedSingleTenantFetch = cache((lang: string = 'default') =>
 // arguments), so each language is cached separately. Falls back to 'default'.
 const cachedMultiTenantFetch = cache(
   async (hostname: string, lang: string = 'default') => {
-    const tenant = await resolveTenant(hostname);
+    return withResolvedTenant(hostname, (tenant) => {
+      // Keep the private API credentials inside the operation. Only fetched,
+      // browser-safe home settings cross the React async boundary.
+      const pimApiUrl = PIM_API_URL_OVERRIDE || tenant?.api.pimApiUrl;
+      if (!pimApiUrl) return null;
 
-    // Honour PIM_API_URL_OVERRIDE for local dev (mirrors resolveTenantApiConfig):
-    // when set, fetch home-settings from the override URL even if the hostname
-    // didn't resolve to a tenant, falling back to .env credentials. Without an
-    // override and no resolved tenant, return null → DEFAULT_HOME_SETTINGS
-    // (unchanged production behaviour).
-    const pimApiUrl = PIM_API_URL_OVERRIDE || tenant?.api.pimApiUrl;
-    if (!pimApiUrl) {
-      return null;
-    }
-
-    return fetchHomeSettingsWithConfig({
-      pimApiUrl,
-      apiKeyId: tenant?.api.apiKeyId || DEFAULT_API_KEY_ID,
-      apiSecret: tenant?.api.apiSecret || DEFAULT_API_SECRET,
-      tenantId:
-        tenant?.id || process.env.NEXT_PUBLIC_TENANT_ID || SINGLE_TENANT_ID,
-      lang: lang === 'default' ? undefined : lang,
+      return fetchHomeSettingsWithConfig({
+        pimApiUrl,
+        apiKeyId: tenant?.api.apiKeyId || DEFAULT_API_KEY_ID,
+        apiSecret: tenant?.api.apiSecret || DEFAULT_API_SECRET,
+        tenantId:
+          tenant?.id || process.env.NEXT_PUBLIC_TENANT_ID || SINGLE_TENANT_ID,
+        lang: lang === 'default' ? undefined : lang,
+      });
     });
   },
 );

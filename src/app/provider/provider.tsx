@@ -7,14 +7,20 @@ import { HomeSettingsProvider } from '@/contexts/home-settings.context';
 import { CompareProvider } from '@/contexts/compare/compare.context';
 import { TenantProvider } from '@/contexts/tenant.context';
 import { PushNotificationsProvider } from '@/contexts/push-notifications';
+import { CategoryRootProvider } from '@/contexts/category-root.context';
 import type { HomeSettings } from '@/lib/home-settings/types';
 import type { TenantPublicInfo } from '@/lib/tenant/types';
+import {
+  DEFAULT_CATEGORY_ROOT,
+  type CategoryRootMap,
+} from '@/lib/seo/category-root';
 
 interface ProvidersProps extends React.PropsWithChildren {
   initialHomeSettings: HomeSettings | null;
   lang: string;
   tenant?: TenantPublicInfo;
   isMultiTenant?: boolean;
+  categoryRoots?: CategoryRootMap;
 }
 
 function Providers({
@@ -23,6 +29,7 @@ function Providers({
   lang,
   tenant,
   isMultiTenant = false,
+  categoryRoots = { default: DEFAULT_CATEGORY_ROOT },
 }: ProvidersProps) {
   const queryClientRef = React.useRef<any>(null);
   if (!queryClientRef.current) {
@@ -37,23 +44,22 @@ function Providers({
     requireLogin: process.env.NEXT_PUBLIC_REQUIRE_LOGIN === 'true',
   };
 
-  // Debug logging for tenant config
-  console.log('[Providers] Received tenant prop:', tenant);
-  console.log('[Providers] Final tenantInfo:', tenantInfo);
-  console.log('[Providers] isMultiTenant:', isMultiTenant);
-
   return (
     <Provider>
       <QueryClientProvider client={queryClientRef.current}>
         <TenantProvider tenant={tenantInfo} isMultiTenant={isMultiTenant}>
-          <HomeSettingsProvider
-            lang={lang}
-            initialSettings={initialHomeSettings}
-          >
-            <CompareProvider>
-              <PushNotificationsProvider>{children}</PushNotificationsProvider>
-            </CompareProvider>
-          </HomeSettingsProvider>
+          <CategoryRootProvider categoryRoots={categoryRoots}>
+            <HomeSettingsProvider
+              lang={lang}
+              initialSettings={initialHomeSettings}
+            >
+              <CompareProvider>
+                <PushNotificationsProvider>
+                  {children}
+                </PushNotificationsProvider>
+              </CompareProvider>
+            </HomeSettingsProvider>
+          </CategoryRootProvider>
         </TenantProvider>
         {/* <ReactQueryDevtools initialIsOpen={false} /> */}
       </QueryClientProvider>

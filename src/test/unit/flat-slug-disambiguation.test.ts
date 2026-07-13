@@ -18,9 +18,21 @@ vi.mock('@/lib/db/cms-pages', () => ({
 }));
 vi.mock('@/lib/vcs/seo', () => ({
   resolveProduct: (...a: any[]) => resolveProductMock(...a),
+  getSeoConfig: vi.fn(async () => ({
+    siteUrl: 'https://b2b.example.com',
+    channel: 'b2b',
+    categoryRoot: { default: 'categorie', it: 'prodotti' },
+    robots: {},
+  })),
+  canonicalSiteUrl: (config: any) => config.siteUrl,
+  categoryRootForLang: (config: any, lang: string) =>
+    config.categoryRoot[lang] || config.categoryRoot.default,
 }));
 vi.mock('next/navigation', () => ({
   notFound: () => notFoundMock(),
+}));
+vi.mock('next/headers', () => ({
+  cookies: vi.fn(async () => ({ get: () => undefined })),
 }));
 
 // Product-render collaborators — stubbed so default-export rendering is inert.

@@ -11,6 +11,8 @@ import {
 } from '@framework/product/get-pim-menu';
 import useWindowSize from '@utils/use-window-size';
 import { slugify } from '@utils/slugify';
+import { useCategoryRoot } from '@/contexts/category-root.context';
+import { categoryDetailHref, categoryMenuHref } from '@/lib/seo/category-root';
 
 function NodeIcon({ src, alt }: { src?: string | null; alt: string }) {
   if (!src) return null;
@@ -31,6 +33,7 @@ interface MenuProps {
   className?: string;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  categoryRoot?: string;
   renderTrigger?: (props: {
     onClick: () => void;
     open: boolean;
@@ -51,20 +54,22 @@ const normalizeLabel = (s?: string) => (s ?? '').toLowerCase();
 function categoryHrefFromPath(
   lang: string,
   branch: MenuTreeNode[],
+  categoryRoot: string,
   tail?: MenuTreeNode,
 ) {
-  // Use the tail's pre-built path if available (already slugified)
-  if (tail?.path?.length) {
-    return `/${lang}/categorie/${tail.path.join('/')}`;
-  }
-  // Fallback: build from branch + tail using slugified names
-  const segments = [
-    ...branch.map((n) => n.slug || slugify(n.name || n.label || String(n.id))),
-    ...(tail
-      ? [tail.slug || slugify(tail.name || tail.label || String(tail.id))]
-      : []),
-  ];
-  return `/${lang}/categorie/${segments.join('/')}`;
+  const destination = tail ?? branch[branch.length - 1];
+  const path = destination?.path?.length
+    ? destination.path
+    : [
+        ...branch.map(
+          (node) =>
+            node.slug || slugify(node.name || node.label || String(node.id)),
+        ),
+        ...(tail
+          ? [tail.slug || slugify(tail.name || tail.label || String(tail.id))]
+          : []),
+      ];
+  return categoryMenuHref(lang, path, categoryRoot, destination?.url);
 }
 
 const B2BHeaderMenu: React.FC<MenuProps> = ({
@@ -73,9 +78,12 @@ const B2BHeaderMenu: React.FC<MenuProps> = ({
   className,
   open: controlledOpen,
   onOpenChange,
+  categoryRoot: categoryRootOverride,
   renderTrigger,
 }) => {
   const { t } = useTranslation(lang, 'menu');
+  const providerCategoryRoot = useCategoryRoot(lang);
+  const categoryRoot = categoryRootOverride || providerCategoryRoot;
   const { width } = useWindowSize();
   const isMobile = (width ?? 0) < 768;
 
@@ -329,7 +337,7 @@ const B2BHeaderMenu: React.FC<MenuProps> = ({
             {path.length === 0 && (
               <li>
                 <Link
-                  href={`/${lang}/categorie`}
+                  href={categoryDetailHref(lang, [], categoryRoot)}
                   className="block px-4 h-11 leading-[44px] text-[14px] font-medium text-brand hover:bg-brand/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 truncate border-b border-gray-100"
                   title={t('see-all-categories', {
                     defaultValue: 'See all groups',
@@ -352,7 +360,7 @@ const B2BHeaderMenu: React.FC<MenuProps> = ({
                   const hasChildren = (current.children?.length ?? 0) > 0;
 
                   const href = hasChildren
-                    ? categoryHrefFromPath(lang, path) // /{lang}/category/parent/child
+                    ? categoryHrefFromPath(lang, path, categoryRoot)
                     : (current.url as string); // leaf -> external/product listing
 
                   return (
@@ -403,16 +411,12 @@ const B2BHeaderMenu: React.FC<MenuProps> = ({
               }
 
               // leaf: go to its own URL; if missing, fallback to hierarchical category URL
-              let leafHref = categoryHrefFromPath(lang, path, node);
-
-              if (node.url) {
-                const rawUrl = node.url.startsWith('/')
-                  ? node.url
-                  : `/${node.url}`;
-                leafHref = rawUrl.startsWith(`/${lang}/`)
-                  ? rawUrl
-                  : `/${lang}${rawUrl}`;
-              }
+              const leafHref = categoryHrefFromPath(
+                lang,
+                path,
+                categoryRoot,
+                node,
+              );
 
               return (
                 <li key={node.id}>

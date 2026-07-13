@@ -2,7 +2,7 @@ import { cache } from 'react';
 import { headers } from 'next/headers';
 import {
   buildTenantApiHeaders,
-  resolveTenant,
+  withResolvedTenant,
   isSingleTenant,
 } from '@/lib/tenant';
 import { resolveSupportedLang } from '@/app/i18n/settings';
@@ -22,6 +22,7 @@ const DEFAULT_API_KEY_ID =
   process.env.API_KEY_ID || process.env.NEXT_PUBLIC_API_KEY_ID;
 const DEFAULT_API_SECRET =
   process.env.API_SECRET || process.env.NEXT_PUBLIC_API_SECRET;
+const PIM_API_URL_OVERRIDE = process.env.PIM_API_URL_OVERRIDE;
 
 interface FetchConfig {
   pimApiUrl: string;
@@ -37,25 +38,35 @@ async function fetchProductWithConfig(config: FetchConfig) {
   const url = `${pimApiUrl}/api/search/search`;
 
   try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: buildTenantApiHeaders(
-        { apiKeyId, apiSecret },
-        { includeLegacyApiKeyAlias: true },
-      ),
-      body: JSON.stringify({
-        lang,
-        text: '',
-        rows: 1,
-        filters: { sku: [sku] },
-      }),
-      next: { revalidate: 300, tags: [cacheTag('products', tenantId)] },
-    });
+    const search = async (filters: Record<string, string[]>) => {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: buildTenantApiHeaders(
+          { apiKeyId, apiSecret },
+          { includeLegacyApiKeyAlias: true },
+        ),
+        body: JSON.stringify({
+          lang,
+          text: '',
+          rows: 1,
+          filters,
+          group_variants: true,
+          include_dynamic_blocks: true,
+        }),
+        next: { revalidate: 300, tags: [cacheTag('products', tenantId)] },
+      });
 
-    if (!response.ok) return null;
+      if (!response.ok) return null;
+      const data = await response.json();
+      return data.success && data.data?.results?.length ? data : null;
+    };
 
-    const data = await response.json();
-    if (!data.success || !data.data?.results?.length) return null;
+    // A catalog identity can be a concrete SKU or a parent SKU whose actual
+    // indexed documents are its variants. The resolver/sitemap intentionally
+    // expose both, so metadata must follow the same identity contract.
+    const data =
+      (await search({ sku: [sku] })) || (await search({ parent_sku: [sku] }));
+    if (!data) return null;
 
     const product = data.data.results[0];
     // If product has variants, use the first variant
@@ -83,19 +94,19 @@ const cachedFetch = cache(
       });
     }
 
-    // Multi-tenant mode: resolve tenant from hostname
-    const tenant = await resolveTenant(hostname);
-    if (!tenant) {
-      return null;
-    }
+    // Keep registry credentials inside this server-only operation. Only the
+    // final public product result becomes an awaited RSC value.
+    return withResolvedTenant(hostname, (tenant) => {
+      if (!tenant) return null;
 
-    return fetchProductWithConfig({
-      pimApiUrl: tenant.api.pimApiUrl,
-      apiKeyId: tenant.api.apiKeyId,
-      apiSecret: tenant.api.apiSecret,
-      lang,
-      sku,
-      tenantId: tenant.id,
+      return fetchProductWithConfig({
+        pimApiUrl: PIM_API_URL_OVERRIDE || tenant.api.pimApiUrl,
+        apiKeyId: tenant.api.apiKeyId,
+        apiSecret: tenant.api.apiSecret,
+        lang,
+        sku,
+        tenantId: tenant.id,
+      });
     });
   },
 );

@@ -35,7 +35,11 @@ i18next
   });
 
 export function useTranslation(lang: string, ns?: string, options?: object) {
-  const ret = useTranslationOrg(ns, options);
+  // Bind `t` to the route language on the very first server and client render.
+  // The shared i18next singleton can otherwise retain the language of another
+  // concurrent SSR request, producing English HTML for an Italian URL (and a
+  // hydration mismatch once the browser detector corrects it).
+  const ret = useTranslationOrg(ns, { ...(options || {}), lng: lang });
   const { i18n } = ret;
 
   // Use a ref to track if we've initialized the language

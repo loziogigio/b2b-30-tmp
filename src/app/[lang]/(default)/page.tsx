@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers';
+import type { Metadata } from 'next';
 import {
   getLatestHomeTemplateVersion,
   getPublishedHomeTemplate,
@@ -15,6 +16,8 @@ import {
   parseContextCookie,
   type PageContext,
 } from '@/lib/page-context';
+import { getServerHomeSettings } from '@/lib/home-settings/fetch-server';
+import { canonicalSiteUrl, getSeoConfig } from '@/lib/vcs/seo';
 
 // This page depends on external APIs. Force dynamic rendering so Docker/CI builds
 // don't attempt to prerender it at build time.
@@ -22,8 +25,44 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 export const fetchCache = 'force-no-store';
 
-// Home page uses layout's default metadata (branding title)
-// No page-specific metadata needed - inherits from layout
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ lang: string }>;
+}): Promise<Metadata> {
+  const { lang } = await params;
+  const [homeSettings, seoConfig] = await Promise.all([
+    getServerHomeSettings(lang),
+    getSeoConfig(),
+  ]);
+  const brandingTitle = homeSettings.branding?.title || 'VINC - B2B';
+  const metaTags = homeSettings.meta_tags;
+  const siteUrl = canonicalSiteUrl(seoConfig);
+  const canonicalUrl =
+    metaTags?.canonicalUrl || (siteUrl ? `${siteUrl}/${lang}` : undefined);
+  const description =
+    metaTags?.description ||
+    (lang === 'it'
+      ? `Portale B2B ${brandingTitle}`
+      : `${brandingTitle} B2B portal`);
+
+  return {
+    title: { absolute: metaTags?.title || brandingTitle },
+    description,
+    alternates: canonicalUrl ? { canonical: canonicalUrl } : undefined,
+    robots: seoConfig.robots.noindex
+      ? { index: false, follow: false }
+      : { index: true, follow: true },
+    openGraph: {
+      title: metaTags?.ogTitle || metaTags?.title || brandingTitle,
+      description: metaTags?.ogDescription || description,
+      url: canonicalUrl,
+      siteName: metaTags?.ogSiteName || brandingTitle,
+      type: 'website',
+      images: metaTags?.ogImage ? [{ url: metaTags.ogImage }] : [],
+    },
+  };
+}
 
 type HomePageSearchParams = {
   preview?: string | string[];
@@ -53,6 +92,12 @@ export default async function Page({
   searchParams?: Promise<HomePageSearchParams>;
 }) {
   const { lang } = await params;
+  const [homeSettings, seoConfig] = await Promise.all([
+    getServerHomeSettings(lang),
+    getSeoConfig(),
+  ]);
+  const siteUrl = canonicalSiteUrl(seoConfig);
+  const siteName = homeSettings.branding?.title || 'VINC - B2B';
   const search = searchParams ? await searchParams : undefined;
   const previewParam = coerceParam(search?.preview);
   const isPreview = previewParam === 'true';
@@ -113,12 +158,28 @@ export default async function Page({
 
   // Render home page with template blocks (or empty for preview mode)
   return (
-    <HomePageWithPreview
-      lang={lang}
-      serverBlocks={homeTemplate?.blocks || []}
-      isPreview={isPreview}
-      templateTags={homeTemplate?.tags ?? versionTags}
-      matchInfo={homeTemplate?.matchedBy}
-    />
+    <>
+      {siteUrl ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'WebSite',
+              name: siteName,
+              url: `${siteUrl}/${lang}`,
+              inLanguage: lang,
+            }),
+          }}
+        />
+      ) : null}
+      <HomePageWithPreview
+        lang={lang}
+        serverBlocks={homeTemplate?.blocks || []}
+        isPreview={isPreview}
+        templateTags={homeTemplate?.tags ?? versionTags}
+        matchInfo={homeTemplate?.matchedBy}
+      />
+    </>
   );
 }

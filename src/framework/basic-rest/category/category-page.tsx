@@ -12,6 +12,8 @@ import { useTranslation } from 'src/app/i18n/client';
 import ProductsCarousel from '@components/product/products-carousel';
 import { useProductListQuery } from '@framework/product/get-b2b-product';
 import Link from 'next/link';
+import { useCategoryRoot } from '@/contexts/category-root.context';
+import { categoryDetailHref } from '@/lib/seo/category-root';
 
 // Helper to find a node by path in the menu tree
 function findNodeByPath(
@@ -37,6 +39,7 @@ export default function CategoryPage({
   slug: string[];
 }) {
   const { t } = useTranslation(lang, 'common');
+  const categoryRoot = useCategoryRoot(lang);
   const { data, isLoading, isError } = usePimMenuQuery({
     location: 'header',
     lang,
@@ -95,11 +98,16 @@ export default function CategoryPage({
           lang={lang}
           categories={pathNodes}
           allLabel={t('all-categories', { defaultValue: 'All Categories' })}
+          categoryRoot={categoryRoot}
           onAllCategoriesClick={() => {
-            /* navigate to /[lang]/category */ window.location.href = `/${lang}/categorie`;
+            window.location.href = categoryDetailHref(lang, [], categoryRoot);
           }}
           onCategorySelect={(node) => {
-            window.location.href = `/${lang}/categorie/${node.path.join('/')}`;
+            window.location.href = categoryDetailHref(
+              lang,
+              node.path,
+              categoryRoot,
+            );
           }}
         />
 
@@ -113,12 +121,21 @@ export default function CategoryPage({
       {/* Render sub-nodes as carousels */}
       <div className="py-4">
         {children.map((child) => (
-          <CategoryChildCarousel key={child.id} lang={lang} child={child} />
+          <CategoryChildCarousel
+            key={child.id}
+            lang={lang}
+            child={child}
+            categoryRoot={categoryRoot}
+          />
         ))}
 
         {/* Leaf fallback (optional) */}
         {!children.length && current && (
-          <LeafFallback lang={lang} node={current} />
+          <LeafFallback
+            lang={lang}
+            node={current}
+            categoryRoot={categoryRoot}
+          />
         )}
       </div>
     </div>
@@ -128,9 +145,11 @@ export default function CategoryPage({
 function CategoryChildCarousel({
   lang,
   child,
+  categoryRoot,
 }: {
   lang: string;
   child: MenuTreeNode;
+  categoryRoot: string;
 }) {
   // Use the child.slug path, or if your product API needs a code, map slug→code here.
   const codeFromUrl = (() => {
@@ -157,7 +176,7 @@ function CategoryChildCarousel({
     <Container className="mb-6">
       <ProductsCarousel
         sectionHeading={child.label}
-        categorySlug={`/${lang}/categorie/${child.path.join('/')}`}
+        categorySlug={categoryDetailHref(lang, child.path, categoryRoot)}
         products={data}
         loading={isLoading}
         limit={10}
@@ -168,7 +187,7 @@ function CategoryChildCarousel({
       {/* CTA to full child page */}
       <div className="mt-2">
         <Link
-          href={`/${lang}/categorie/${child.path.join('/')}`}
+          href={categoryDetailHref(lang, child.path, categoryRoot)}
           className="text-sm text-blue-600 hover:underline"
         >
           {`See all in ${child.label}`}
@@ -178,7 +197,15 @@ function CategoryChildCarousel({
   );
 }
 
-function LeafFallback({ lang, node }: { lang: string; node: MenuTreeNode }) {
+function LeafFallback({
+  lang,
+  node,
+  categoryRoot,
+}: {
+  lang: string;
+  node: MenuTreeNode;
+  categoryRoot: string;
+}) {
   const codeFromUrl = (() => {
     if (!node.url) return null;
     const qs = node.url.includes('?') ? node.url.split('?')[1] : node.url;
@@ -202,7 +229,7 @@ function LeafFallback({ lang, node }: { lang: string; node: MenuTreeNode }) {
     <Container className="mb-6">
       <ProductsCarousel
         sectionHeading={node.label}
-        categorySlug={`/${lang}/categorie/${node.path.join('/')}`}
+        categorySlug={categoryDetailHref(lang, node.path, categoryRoot)}
         products={data}
         loading={isLoading}
         limit={10}

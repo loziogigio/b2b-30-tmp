@@ -15,8 +15,15 @@ import { getServerHomeSettings } from '@/lib/home-settings/fetch-server';
 import { fetchProductForSeo } from '@/lib/seo/fetch-product';
 import { serverFetchPimProducts } from '@/lib/pim/server-fetch';
 import { transformPimProducts } from '@framework/product/get-pim-product';
-import { resolveProduct, type ResolvedProduct } from '@/lib/vcs/seo';
+import {
+  categoryRootForLang,
+  canonicalSiteUrl,
+  getSeoConfig,
+  resolveProduct,
+  type ResolvedProduct,
+} from '@/lib/vcs/seo';
 import { AUTH_COOKIES } from '@/lib/auth/cookies';
+import { absoluteProductDetailUrl } from '@/lib/seo/product-url';
 
 interface RouteParams {
   params: Promise<{ lang: string; slug: string }>;
@@ -56,17 +63,19 @@ async function productMetadata(
   lang: string,
 ): Promise<Metadata> {
   const sku = resolved.sku;
-  const [product, homeSettings] = await Promise.all([
+  const [product, homeSettings, seoConfig] = await Promise.all([
     fetchProductForSeo(sku, lang),
     getServerHomeSettings(lang),
+    getSeoConfig(),
   ]);
 
   const brandingTitle = homeSettings?.branding?.title || 'VINC - B2B';
-  const siteUrl = (process.env.NEXT_PUBLIC_WEBSITE_URL || '').replace(
-    /\/$/,
-    '',
-  );
-  const canonicalUrl = `${siteUrl}/${lang}/${slug}`;
+  const siteUrl = canonicalSiteUrl(seoConfig);
+  const canonicalUrl =
+    absoluteProductDetailUrl(siteUrl, lang, {
+      slug: resolved.slug || slug,
+      sku,
+    }) || `${siteUrl}/${lang}/${encodeURIComponent(slug)}`;
 
   if (!product) {
     return {
@@ -159,7 +168,7 @@ async function renderProductDetail(
     include_dynamic_blocks: true,
   };
 
-  const [blocks, product] = await Promise.all([
+  const [blocks, product, seoConfig] = await Promise.all([
     (async () => {
       let b = await getProductDetailBlocksNew(sku, sku, false);
       if (!b || b.length === 0) {
@@ -168,13 +177,14 @@ async function renderProductDetail(
       return b;
     })(),
     fetchProductForSeo(sku, lang),
+    getSeoConfig(),
     queryClient.prefetchQuery({
       // Match the client hook's ['pim-search', customerContext, params]
       // shape. SSR cannot read the localStorage customer selection, so it
       // hydrates the neutral context and the client refetches for a selection.
       queryKey: ['pim-search', {}, productQueryParams],
       queryFn: async () => {
-        const result = await serverFetchPimProducts({
+        let result = await serverFetchPimProducts({
           lang,
           rows: 1,
           filters: { sku: [sku] },
@@ -182,6 +192,16 @@ async function renderProductDetail(
           include_dynamic_blocks: true,
           authenticated: isAuthenticated,
         });
+        if (result.results.length === 0) {
+          result = await serverFetchPimProducts({
+            lang,
+            rows: 1,
+            filters: { parent_sku: [sku] },
+            group_variants: true,
+            include_dynamic_blocks: true,
+            authenticated: isAuthenticated,
+          });
+        }
         return transformPimProducts(result.results).map((p) => ({
           ...p,
           variantCount: p.variations?.length || 1,
@@ -190,11 +210,13 @@ async function renderProductDetail(
     }),
   ]);
 
-  const siteUrl = (process.env.NEXT_PUBLIC_WEBSITE_URL || '').replace(
-    /\/$/,
-    '',
-  );
-  const canonicalUrl = `${siteUrl}/${lang}/${slug}`;
+  const siteUrl = canonicalSiteUrl(seoConfig);
+  const canonicalUrl =
+    absoluteProductDetailUrl(siteUrl, lang, {
+      slug: resolved.slug || slug,
+      sku,
+    }) || `${siteUrl}/${lang}/${encodeURIComponent(slug)}`;
+  const categoryRoot = categoryRootForLang(seoConfig, lang);
 
   return (
     <>
@@ -230,6 +252,12 @@ async function renderProductDetail(
           sku={sku}
           serverBlocks={blocks || []}
           isPreview={false}
+          categoryRoot={categoryRoot}
+          siteUrl={siteUrl}
+          canonicalUrl={canonicalUrl}
+          categoryAncestors={resolved.categoryAncestors}
+          categoryChannel={seoConfig.channel}
+          suppressProductJsonLd
         />
       </HydrationBoundary>
     </>

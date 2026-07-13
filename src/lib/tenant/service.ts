@@ -10,8 +10,10 @@ import { MongoClient, Db } from 'mongodb';
 import { isMultiTenant, isSingleTenant, TENANT_CACHE_TTL } from './config';
 import {
   TenantConfig,
+  TenantPublicInfo,
   TenantRequestConfig,
   buildTenantFromEnv,
+  toPublicInfo,
   toRequestConfig,
 } from './types';
 
@@ -238,12 +240,10 @@ function buildHostnameVariations(hostname: string): string[] {
 /**
  * Resolve tenant from hostname by looking up in MongoDB
  */
-async function resolveTenantFromDb(
-  hostname: string,
-): Promise<TenantConfig | null> {
+async function ensureTenantLoadedFromDb(hostname: string): Promise<boolean> {
   // Check cache first
   const cached = getCachedTenant(hostname);
-  if (cached) return cached;
+  if (cached) return true;
 
   try {
     const db = await getRegistryDb();
@@ -253,36 +253,52 @@ async function resolveTenantFromDb(
     const variations = buildHostnameVariations(hostname);
 
     // Look up tenant by any hostname variation
-    const doc = await tenantsCollection.findOne({
-      'domains.hostname': { $in: variations },
-      'domains.is_active': { $ne: false },
-      status: 'active',
-    });
+    // Do not directly await a promise whose resolved value is the raw tenant
+    // document. In development, React Flight records suspended await values in
+    // the RSC debug payload; directly awaiting `findOne()` can therefore expose
+    // registry-only fields (API credentials and database URLs) in the initial
+    // HTML. `forEach()` resolves to void and delivers the document only to this
+    // server-side callback, so the private value never crosses an await boundary.
+    let foundByDomain = false;
+    await tenantsCollection
+      .find({
+        'domains.hostname': { $in: variations },
+        'domains.is_active': { $ne: false },
+        status: 'active',
+      })
+      .limit(1)
+      .forEach((doc) => {
+        setCachedTenant(hostname, fromDocument(doc));
+        foundByDomain = true;
+      });
 
-    if (doc) {
-      const tenant = fromDocument(doc);
-      setCachedTenant(hostname, tenant);
-      return tenant;
+    if (foundByDomain) {
+      return true;
     }
 
     // Try matching subdomain pattern (e.g., "tenant-b2b" from "tenant-b2b.vendereincloud.it")
     const normalizedHostname = hostname.toLowerCase().split(':')[0];
     const subdomain = normalizedHostname.split('.')[0];
     if (subdomain && subdomain !== 'www') {
-      const docBySubdomain = await tenantsCollection.findOne({
-        tenant_id: subdomain,
-        status: 'active',
-      });
+      let foundBySubdomain = false;
+      await tenantsCollection
+        .find({
+          tenant_id: subdomain,
+          status: 'active',
+        })
+        .limit(1)
+        .forEach((doc) => {
+          setCachedTenant(hostname, fromDocument(doc));
+          foundBySubdomain = true;
+        });
 
-      if (docBySubdomain) {
-        const tenant = fromDocument(docBySubdomain);
-        setCachedTenant(hostname, tenant);
-        return tenant;
+      if (foundBySubdomain) {
+        return true;
       }
     }
 
     console.warn(`[TenantService] No tenant found for hostname: ${hostname}`);
-    return null;
+    return false;
   } catch (error) {
     console.error('[TenantService] Error resolving tenant:', error);
     // Registry lookup failed (e.g. transient network blip to the registry
@@ -297,12 +313,70 @@ async function resolveTenantFromDb(
       // Reset the broken registry handle so the next call reconnects.
       registryDb = null;
       registryClient = null;
-      return stale;
+      return true;
     }
     registryDb = null;
     registryClient = null;
-    return null;
+    return false;
   }
+}
+
+/**
+ * Resolve a full tenant config for trusted server-only callers such as route
+ * handlers. React Server Components must use `withResolvedTenant` or
+ * `resolveTenantPublicState` instead: awaiting a promise whose value is the
+ * private config can make that value appear in a development Flight payload.
+ */
+async function resolveTenantFromDb(
+  hostname: string,
+): Promise<TenantConfig | null> {
+  const loaded = await ensureTenantLoadedFromDb(hostname);
+  return loaded ? getStaleTenant(hostname) : null;
+}
+
+/**
+ * Run a server-side operation with the private tenant config without ever
+ * resolving an awaited promise to that config. Only the operation's result
+ * crosses the async boundary, so callers must return a safe final value (for
+ * example fetched products, a theme id, or a database connection), never the
+ * tenant itself.
+ */
+export async function withResolvedTenant<T>(
+  hostname: string,
+  operation: (tenant: TenantConfig | null) => T | Promise<T>,
+): Promise<T> {
+  if (isSingleTenant) {
+    return operation(getSingleTenantConfig());
+  }
+
+  const loaded = await ensureTenantLoadedFromDb(hostname);
+  return operation(loaded ? getStaleTenant(hostname) : null);
+}
+
+export interface ResolvedTenantPublicState {
+  tenant: TenantPublicInfo;
+  isActive: boolean;
+  hasCriticalErrors: boolean;
+}
+
+/** Safe tenant state intended for layouts and other React Server Components. */
+export function resolveTenantPublicState(
+  hostname: string,
+): Promise<ResolvedTenantPublicState | null> {
+  return withResolvedTenant(hostname, (tenant) => {
+    if (!tenant) return null;
+
+    const critical = hasCriticalErrors(tenant);
+    if (critical) {
+      logTenantConfigIssues(tenant, `Tenant: ${tenant.id}`);
+    }
+
+    return {
+      tenant: toPublicInfo(tenant),
+      isActive: tenant.isActive,
+      hasCriticalErrors: critical,
+    };
+  });
 }
 
 /**

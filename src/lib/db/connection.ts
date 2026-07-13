@@ -1,6 +1,6 @@
 import { Connection } from 'mongoose';
 import { headers } from 'next/headers';
-import { resolveTenant, isSingleTenant } from '@/lib/tenant';
+import { withResolvedTenant, isSingleTenant } from '@/lib/tenant';
 import { SINGLE_TENANT_ID } from '@/lib/cache/tags';
 import {
   getPooledConnection,
@@ -47,18 +47,14 @@ export const connectToDatabase = async (): Promise<Connection> => {
     return getPooledConnection(defaultMongoDb);
   }
 
-  const tenant = await resolveTenant(hostname);
-
-  if (!tenant) {
-    console.warn(
-      `[DB] No tenant found for ${hostname}, using default database`,
-    );
-    return getPooledConnection(defaultMongoDb);
-  }
-
-  const mongoDb = tenant.database.mongoDb || defaultMongoDb;
-
-  return getPooledConnection(mongoDb);
+  return withResolvedTenant(hostname, (tenant) => {
+    if (!tenant) {
+      console.warn(
+        `[DB] No tenant found for ${hostname}, using default database`,
+      );
+    }
+    return getPooledConnection(tenant?.database.mongoDb || defaultMongoDb);
+  });
 };
 
 /**
@@ -86,13 +82,12 @@ export const resolveTenantDbTarget = async (): Promise<{
     return { dbName: defaultMongoDb, tenantId: SINGLE_TENANT_ID };
   }
 
-  const tenant = await resolveTenant(hostname);
-  if (!tenant) {
-    return { dbName: defaultMongoDb, tenantId: 'unknown' };
-  }
-
-  return {
-    dbName: tenant.database.mongoDb || defaultMongoDb,
-    tenantId: tenant.id,
-  };
+  return withResolvedTenant(hostname, (tenant) =>
+    tenant
+      ? {
+          dbName: tenant.database.mongoDb || defaultMongoDb,
+          tenantId: tenant.id,
+        }
+      : { dbName: defaultMongoDb, tenantId: 'unknown' },
+  );
 };

@@ -40,6 +40,10 @@ export interface SeoConfigRobots {
 }
 
 export interface SeoConfig {
+  /** Canonical storefront origin supplied by Commerce Suite. */
+  siteUrl?: string;
+  /** Sales channel that owns this portal's product/category tree. */
+  channel?: string;
   /** Per-locale category root segment. `default` falls back to `categorie`. */
   categoryRoot: Record<string, string> & { default: string };
   robots: SeoConfigRobots;
@@ -81,7 +85,10 @@ export const DEFAULT_SEO_CONFIG: SeoConfig = {
   robots: DEFAULT_ROBOTS,
 };
 
-const REVALIDATE_SECONDS = 300;
+// Admin changes normally invalidate these tenant-scoped tags through Redis.
+// Local development often runs without Redis, so avoid a five-minute stale
+// SEO/sitemap window during configuration and E2E work.
+const REVALIDATE_SECONDS = process.env.NODE_ENV === 'development' ? 0 : 300;
 
 // Cache-tag strings below mirror `cacheTag(name, tenantId)` from
 // `@/lib/cache/tags` (`{name}-{tenantId}`), so the existing PIM/sitemap
@@ -94,6 +101,36 @@ const REVALIDATE_SECONDS = 300;
 /** Resolve the per-locale category root, falling back to `categorie`. */
 export function categoryRootForLang(config: SeoConfig, lang: string): string {
   return categoryRootFor(config.categoryRoot, lang);
+}
+
+function httpOrigin(value: unknown): string | undefined {
+  if (typeof value !== 'string' || !value.trim()) return undefined;
+  try {
+    const parsed = new URL(value.trim());
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return undefined;
+    }
+    return parsed.origin;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Resolve one canonical origin for metadata and structured data. Commerce
+ * Suite is authoritative; the legacy environment value remains an outage
+ * fallback for tenants that have not exposed `siteUrl` yet.
+ */
+export function canonicalSiteUrl(
+  config: SeoConfig,
+  fallback = process.env.NEXT_PUBLIC_WEBSITE_URL || '',
+): string {
+  return (
+    httpOrigin(config.siteUrl) ||
+    httpOrigin(config.robots?.sitemapUrl) ||
+    httpOrigin(fallback) ||
+    ''
+  );
 }
 
 /** Coerce an arbitrary payload into a valid `SeoConfig`, merging in defaults. */
@@ -114,7 +151,17 @@ export function normalizeSeoConfig(raw: unknown): SeoConfig {
     disallow: obj.robots?.disallow ?? DEFAULT_ROBOTS.disallow,
     sitemapUrl: obj.robots?.sitemapUrl,
   };
-  return { categoryRoot, robots };
+  const siteUrl = httpOrigin(obj.siteUrl);
+  const channel =
+    typeof obj.channel === 'string' && obj.channel.trim()
+      ? obj.channel.trim()
+      : undefined;
+  return {
+    ...(siteUrl ? { siteUrl } : {}),
+    ...(channel ? { channel } : {}),
+    categoryRoot,
+    robots,
+  };
 }
 
 /** Map vcs sitemap-data into Next's `MetadataRoute.Sitemap`. */
@@ -164,6 +211,10 @@ export function robotsConfigToRoute(
 function suiteBase(): string {
   const raw =
     process.env.VINC_SUITE_API_BASE ||
+    // Keep the SEO/sitemap client on the same local Suite instance as every
+    // other PIM call. Without this, local multi-tenant development silently
+    // falls back to the legacy sitemap even though Suite is available.
+    process.env.PIM_API_URL_OVERRIDE ||
     process.env.PIM_API_PRIVATE_URL ||
     process.env.NEXT_PUBLIC_PIM_API_URL ||
     '';

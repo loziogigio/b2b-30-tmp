@@ -71,7 +71,18 @@ const ProductB2BDetails: React.FC<{
   search: any;
   blocks?: PageBlock[];
   showZoneLabels?: boolean;
-}> = ({ lang, search, blocks = [], showZoneLabels = false }) => {
+  siteUrl?: string;
+  canonicalUrl?: string;
+  suppressProductJsonLd?: boolean;
+}> = ({
+  lang,
+  search,
+  blocks = [],
+  showZoneLabels = false,
+  siteUrl,
+  canonicalUrl,
+  suppressProductJsonLd,
+}) => {
   const { t } = useTranslation(lang, 'common');
   const pathname = useParams();
   const { width } = useWindowSize();
@@ -405,7 +416,15 @@ const ProductB2BDetails: React.FC<{
   return (
     <div className="pt-6 pb-2 md:pt-7">
       {/* JSON-LD Structured Data for SEO */}
-      <ProductJsonLd product={data} priceData={erpPrice} lang={lang} />
+      {!suppressProductJsonLd ? (
+        <ProductJsonLd
+          product={data}
+          priceData={erpPrice}
+          lang={lang}
+          siteUrl={siteUrl}
+          canonicalUrl={canonicalUrl}
+        />
+      ) : null}
 
       {/* Return — back to where the user came from, else the catalog */}
       <button

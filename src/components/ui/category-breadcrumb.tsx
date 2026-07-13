@@ -7,6 +7,10 @@ import { IoChevronForward } from 'react-icons/io5';
 import { HiOutlineHome } from 'react-icons/hi';
 import { useTranslation } from 'src/app/i18n/client';
 import type { MenuTreeNode } from '@utils/transform/b2b-menu-tree';
+import {
+  categoryDetailHref,
+  DEFAULT_CATEGORY_ROOT,
+} from '@/lib/seo/category-root';
 
 interface BreadcrumbNavProps {
   lang: string;
@@ -14,6 +18,7 @@ interface BreadcrumbNavProps {
   onCategorySelect?: (node: MenuTreeNode) => void;
   onAllCategoriesClick?: () => void;
   allLabel?: string;
+  categoryRoot?: string;
 }
 
 const PILL_BASE =
@@ -27,6 +32,7 @@ const CategoryBreadcrumb: React.FC<BreadcrumbNavProps> = ({
   onCategorySelect,
   onAllCategoriesClick,
   allLabel,
+  categoryRoot = DEFAULT_CATEGORY_ROOT,
 }) => {
   const { t } = useTranslation(lang, 'common');
 
@@ -36,7 +42,7 @@ const CategoryBreadcrumb: React.FC<BreadcrumbNavProps> = ({
   const isRoot = categories.length === 0;
 
   const toCategoryHref = (node?: MenuTreeNode) =>
-    node ? `/${lang}/categorie/${node.path.join('/')}` : `/${lang}/categorie`;
+    categoryDetailHref(lang, node?.path ?? [], categoryRoot);
 
   return (
     <nav aria-label="Breadcrumb" className="flex items-center mb-3">

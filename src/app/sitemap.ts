@@ -6,35 +6,45 @@ import {
 } from '@/lib/pim/server-fetch';
 import { getCachedCmsPageRegistry } from '@/lib/db/cms-pages';
 import { slugify } from '@/utils/slugify';
-import { getSitemapData, sitemapDataToRoutes } from '@/lib/vcs/seo';
+import {
+  canonicalSiteUrl,
+  categoryRootForLang,
+  getSeoConfig,
+  getSitemapData,
+  sitemapDataToRoutes,
+} from '@/lib/vcs/seo';
+import { categoryDetailHref } from '@/lib/seo/category-root';
+import { absoluteProductDetailUrl } from '@/lib/seo/product-url';
 
-const PRODUCTS_PER_SITEMAP = 10000;
+// Commerce Suite search intentionally caps a page at 100 rows. Matching that
+// cap keeps fallback offsets contiguous; requesting 10,000 and then advancing
+// by 10,000 silently skipped nearly the entire catalog.
+const PRODUCTS_PER_SITEMAP = 100;
 const LANGUAGES = ['it', 'en'];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // vcs is authoritative for the sitemap (spec D5). Consume its per-tenant
   // entries; fall back to local generation only if vcs is unreachable.
   const vcsData = await getSitemapData();
-  if (vcsData && vcsData.entries.length > 0) {
+  if (vcsData) {
     return sitemapDataToRoutes(vcsData);
   }
   return localSitemap();
 }
 
 async function localSitemap(): Promise<MetadataRoute.Sitemap> {
-  const siteUrl = process.env.NEXT_PUBLIC_WEBSITE_URL || '';
+  const seoConfig = await getSeoConfig();
+  const siteUrl = canonicalSiteUrl(seoConfig);
   if (!siteUrl) return [];
 
   const now = new Date();
   const entries: MetadataRoute.Sitemap = [];
-
   // ===============================
   // Built-in routes (typed segments under app/[lang]/(default)/*)
   // ===============================
   const builtInRoutes = [
     { path: '', changeFrequency: 'daily' as const, priority: 1.0 },
     { path: '/search', changeFrequency: 'daily' as const, priority: 0.8 },
-    { path: '/categorie', changeFrequency: 'weekly' as const, priority: 0.9 },
     { path: '/collections', changeFrequency: 'weekly' as const, priority: 0.8 },
   ];
 
@@ -47,6 +57,16 @@ async function localSitemap(): Promise<MetadataRoute.Sitemap> {
         priority: page.priority,
       });
     }
+    entries.push({
+      url: `${siteUrl}${categoryDetailHref(
+        lang,
+        [],
+        categoryRootForLang(seoConfig, lang),
+      )}`,
+      lastModified: now,
+      changeFrequency: 'weekly',
+      priority: 0.9,
+    });
   }
 
   // ===============================
@@ -107,9 +127,10 @@ async function localSitemap(): Promise<MetadataRoute.Sitemap> {
     const categoryPaths = extractCategoryPaths(topLevel);
 
     for (const lang of LANGUAGES) {
+      const categoryRoot = categoryRootForLang(seoConfig, lang);
       for (const path of categoryPaths) {
         entries.push({
-          url: `${siteUrl}/${lang}/categorie/${path.join('/')}`,
+          url: `${siteUrl}${categoryDetailHref(lang, path, categoryRoot)}`,
           lastModified: now,
           changeFrequency: 'weekly',
           priority: 0.7,
@@ -155,7 +176,9 @@ async function localSitemap(): Promise<MetadataRoute.Sitemap> {
     for (const sku of firstBatch.skus) {
       for (const lang of LANGUAGES) {
         entries.push({
-          url: `${siteUrl}/${lang}/products/${encodeURIComponent(sku)}`,
+          url:
+            absoluteProductDetailUrl(siteUrl, lang, { sku }) ||
+            `${siteUrl}/${lang}`,
           lastModified: now,
           changeFrequency: 'weekly',
           priority: 0.6,
@@ -179,7 +202,9 @@ async function localSitemap(): Promise<MetadataRoute.Sitemap> {
       for (const sku of batch.skus) {
         for (const lang of LANGUAGES) {
           entries.push({
-            url: `${siteUrl}/${lang}/products/${encodeURIComponent(sku)}`,
+            url:
+              absoluteProductDetailUrl(siteUrl, lang, { sku }) ||
+              `${siteUrl}/${lang}`,
             lastModified: now,
             changeFrequency: 'weekly',
             priority: 0.6,

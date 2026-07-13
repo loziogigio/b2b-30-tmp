@@ -5,18 +5,25 @@ import NextLink from 'next/link';
 import { IoChevronForward } from 'react-icons/io5';
 import { HiOutlineHome } from 'react-icons/hi';
 import {
-  usePimMenuQuery,
   findDeepestNodeForCategoryIds,
   buildNodeAncestry,
   type MenuTreeNode,
 } from '@framework/product/get-pim-menu';
+import { usePimCategoriesQuery } from '@framework/product/get-pim-categories';
 import { usePimProductListQuery } from '@framework/product/get-pim-product';
 import { useTranslation } from 'src/app/i18n/client';
 import { useThemeId } from '@/contexts/tenant.context';
+import {
+  categoryDetailHref,
+  DEFAULT_CATEGORY_ROOT,
+} from '@/lib/seo/category-root';
 
 interface Props {
   lang: string;
   sku: string;
+  categoryRoot?: string;
+  categoryAncestors?: string[];
+  channel?: string;
 }
 
 // Default (pill) styling used by most themes.
@@ -32,7 +39,13 @@ const TIME_NEUTRAL =
   'text-[var(--time-gray-500)] hover:text-[var(--time-dark)]';
 const TIME_ACTIVE = 'text-[var(--time-dark)] font-medium cursor-default';
 
-export default function ProductCategoryBreadcrumb({ lang, sku }: Props) {
+export default function ProductCategoryBreadcrumb({
+  lang,
+  sku,
+  categoryRoot = DEFAULT_CATEGORY_ROOT,
+  categoryAncestors,
+  channel,
+}: Props) {
   const { t } = useTranslation(lang, 'common');
   const allLabel = t('all-categories', { defaultValue: 'Tutti i gruppi' });
   const isTime = useThemeId() === 'time';
@@ -43,9 +56,8 @@ export default function ProductCategoryBreadcrumb({ lang, sku }: Props) {
   const iconSize = isTime ? 'text-sm' : 'text-base';
   const sepClass = isTime ? 'text-[var(--time-gray-300)]' : 'text-gray-400';
 
-  const { data: menu } = usePimMenuQuery({
-    location: 'header',
-    lang,
+  const { data: menu } = usePimCategoriesQuery({
+    channel,
     staleTime: 5 * 60 * 1000,
   });
 
@@ -58,11 +70,15 @@ export default function ProductCategoryBreadcrumb({ lang, sku }: Props) {
   const tree: MenuTreeNode[] = useMemo(() => menu?.menuItems ?? [], [menu]);
   const productName: string = product?.name || sku;
   const categoryIds: string[] = useMemo(
-    () =>
-      Array.isArray(product?.category_ancestors)
+    () => {
+      if (Array.isArray(categoryAncestors) && categoryAncestors.length > 0) {
+        return categoryAncestors;
+      }
+      return Array.isArray(product?.category_ancestors)
         ? (product.category_ancestors as string[])
-        : [],
-    [product],
+        : [];
+    },
+    [categoryAncestors, product],
   );
 
   const crumbs: MenuTreeNode[] = useMemo(() => {
@@ -73,7 +89,7 @@ export default function ProductCategoryBreadcrumb({ lang, sku }: Props) {
   }, [tree, categoryIds]);
 
   const toCategoryHref = (node: MenuTreeNode) =>
-    `/${lang}/categorie/${node.path.join('/')}`;
+    categoryDetailHref(lang, node.path, categoryRoot);
 
   return (
     <nav aria-label="Breadcrumb" className="flex items-center mb-3">
@@ -94,7 +110,7 @@ export default function ProductCategoryBreadcrumb({ lang, sku }: Props) {
 
         <li className="shrink-0">
           <NextLink
-            href={`/${lang}/categorie`}
+            href={categoryDetailHref(lang, [], categoryRoot)}
             title={allLabel}
             className={`${base} ${neutral}`}
           >

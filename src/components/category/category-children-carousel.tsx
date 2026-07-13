@@ -7,13 +7,16 @@ import Image from 'next/image';
 import { IoChevronForward, IoChevronBack } from 'react-icons/io5';
 import { useTranslation } from 'src/app/i18n/client';
 import type { MenuTreeNode } from '@framework/product/get-pim-menu';
-import { ROUTES } from '@utils/routes';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import Container from '@components/ui/container';
 import Heading from '@components/ui/heading';
+import {
+  categoryDetailHref,
+  DEFAULT_CATEGORY_ROOT,
+} from '@/lib/seo/category-root';
 
 // Breakpoints for the carousel - show partial item (5.25) to indicate more content
 const carouselBreakpoints = {
@@ -28,12 +31,12 @@ const carouselBreakpoints = {
 };
 
 // Build category URL using pre-slugified path from node
-function buildCategoryHref(lang: string, node: MenuTreeNode): string {
-  if (node.path?.length) {
-    // node.path is already slugified from the PIM transformation
-    return `/${lang}/categorie/${node.path.join('/')}`;
-  }
-  return `/${lang}/categorie`;
+function buildCategoryHref(
+  lang: string,
+  node: MenuTreeNode,
+  categoryRoot: string,
+): string {
+  return categoryDetailHref(lang, node.path ?? [], categoryRoot);
 }
 
 /* =========================
@@ -43,43 +46,36 @@ function buildCategoryHref(lang: string, node: MenuTreeNode): string {
 interface CategoryCardProps {
   node: MenuTreeNode;
   lang: string;
-  /** When true (LEVEL 0), always use category path. When false, leaves use search URL */
+  /** Legacy CMS leaves may use their authored search URL below level 0. */
   isTopLevel?: boolean;
+  categoryRoot?: string;
 }
 
 export function CategoryCard({
   node,
   lang,
   isTopLevel = false,
+  categoryRoot = DEFAULT_CATEGORY_ROOT,
 }: CategoryCardProps) {
   const { t } = useTranslation(lang, 'common');
 
   // Use category's own icon image instead of fetching product (avoids rate limiting)
   const categoryImage = node.category_menu_image || null;
 
-  // At LEVEL 0 (isTopLevel): ALWAYS go to category page
-  // At LEVEL 1+: Leaf categories → product search, non-leaves → category page
-  const categoryPath = buildCategoryHref(lang, node);
+  // PIM categories always stay in the crawlable category tree. Only legacy
+  // CMS menu leaves keep an explicitly-authored search URL.
+  const categoryPath = buildCategoryHref(lang, node, categoryRoot);
   let href = categoryPath;
   let isGoingToSearch = false;
 
   if (!isTopLevel) {
     const isLeaf = !node.children || node.children.length === 0;
     if (isLeaf) {
-      if (node.url) {
+      if (node.url && !node.category_id) {
         // CMS-authored leaf link (e.g. menu nodes carry a /shop?... search URL).
         href = node.url.startsWith('/')
           ? `/${lang}${node.url}`
           : `/${lang}/${node.url}`;
-        isGoingToSearch = true;
-      } else if (node.external_code) {
-        // Categories-tree leaves have no CMS url — send the last leaf to the
-        // faceted search page filtered by its ERP group code. Products are
-        // indexed with their erp-group hierarchy in `attribute_erp_groups_ss`,
-        // so this lands on the product results instead of a category page.
-        href = `/${lang}${ROUTES.SEARCH}?filters-attribute_erp_groups_ss=${encodeURIComponent(
-          node.external_code,
-        )}`;
         isGoingToSearch = true;
       }
     }
@@ -184,6 +180,7 @@ interface CategoryChildrenCarouselProps {
   parentNode: MenuTreeNode;
   /** True when at LEVEL 0 (top-level /category page). Shows max 4 + "Non ti basta?" */
   isTopLevel?: boolean;
+  categoryRoot?: string;
 }
 
 const MAX_CARDS = 4;
@@ -192,6 +189,7 @@ export default function CategoryChildrenCarousel({
   lang,
   parentNode,
   isTopLevel = false,
+  categoryRoot = DEFAULT_CATEGORY_ROOT,
 }: CategoryChildrenCarouselProps) {
   const children = parentNode.children || [];
 
@@ -205,7 +203,7 @@ export default function CategoryChildrenCarousel({
     : children; // Show ALL when inside a category
 
   // "Non ti basta?" ALWAYS goes to category page, never to search
-  const parentHref = buildCategoryHref(lang, parentNode);
+  const parentHref = buildCategoryHref(lang, parentNode, categoryRoot);
 
   const headerImageSrc = parentNode.category_menu_image || undefined;
 
@@ -250,7 +248,12 @@ export default function CategoryChildrenCarousel({
         >
           {displayedChildren.map((child) => (
             <SwiperSlide key={child.id} className="h-auto">
-              <CategoryCard node={child} lang={lang} isTopLevel={isTopLevel} />
+              <CategoryCard
+                node={child}
+                lang={lang}
+                isTopLevel={isTopLevel}
+                categoryRoot={categoryRoot}
+              />
             </SwiperSlide>
           ))}
 

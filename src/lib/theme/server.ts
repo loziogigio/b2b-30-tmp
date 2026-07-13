@@ -1,5 +1,5 @@
 import { headers } from 'next/headers';
-import { resolveTenant, isSingleTenant } from '@/lib/tenant/service';
+import { withResolvedTenant, isSingleTenant } from '@/lib/tenant/service';
 import { buildTenantFromEnv } from '@/lib/tenant/types';
 import { getThemeIdForTenant } from './resolver';
 import type { ThemeId } from './types';
@@ -22,8 +22,9 @@ export async function getThemeIdFromRequest(): Promise<ThemeId> {
     }
     const h = await headers();
     const hostname = h.get('x-tenant-hostname') || h.get('host') || 'localhost';
-    const tenant = await resolveTenant(hostname);
-    return getThemeIdForTenant(tenant?.b2bTheme);
+    return withResolvedTenant(hostname, (tenant) =>
+      getThemeIdForTenant(tenant?.b2bTheme),
+    );
   } catch {
     return 'default';
   }

@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useModalAction } from '@components/common/modal/modal.context';
 import { useCatalogSettings } from './use-catalog-settings';
+import { productDetailHref } from '@/lib/seo/product-url';
 
 /**
  * Single source of truth for "what happens when a product is clicked" on the
@@ -26,10 +27,12 @@ export function useProductOpen(lang: string) {
       openModal('B2B_PRODUCT_VARIANTS_QUICK_VIEW', product);
       return;
     }
-    const sku = product?.sku;
-    if (settings.productOpenMode === 'detail_page' && sku) {
-      router.push(`/${lang}/products/${encodeURIComponent(String(sku))}`);
-      return;
+    if (settings.productOpenMode === 'detail_page') {
+      const href = productDetailHref(lang, product ?? {});
+      if (href) {
+        router.push(href);
+        return;
+      }
     }
     openModal('PRODUCT_VIEW', product);
   };

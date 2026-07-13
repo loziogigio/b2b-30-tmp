@@ -10,16 +10,11 @@ import {
   mergeContexts,
   parseContextCookie,
 } from '@/lib/page-context';
+import { decideCategoryRouting } from '@/lib/seo/category-root';
 import {
-  decideCategoryRouting,
-  parseCategoryRootEnv,
-} from '@/lib/seo/category-root';
-
-// Per-locale category root segment (spec D2/D3). Read once at module load so the
-// Edge middleware stays sync; SSR pages read the authoritative value from vcs.
-const CATEGORY_ROOT_MAP = parseCategoryRootEnv(
-  process.env.NEXT_PUBLIC_CATEGORY_ROOT,
-);
+  resolveCategoryRootMapForHost,
+  tenantHostFromRequest,
+} from '@/lib/seo/category-root-runtime';
 
 acceptLanguage.languages(languages);
 
@@ -134,7 +129,7 @@ const applyCampaignPersistence = (req: NextRequest, res: NextResponse) => {
   return res;
 };
 
-export function middleware(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   // Skip middleware for icon and chrome files
   if (
     req.nextUrl.pathname.includes('icon') ||
@@ -230,12 +225,15 @@ export function middleware(req: NextRequest) {
     return applyCampaignPersistence(req, response);
   }
 
-  // Dynamic category root (spec D2/D3): map the per-tenant public root segment
-  // onto the internal `/categorie` route, and 301 the legacy `/categorie` URL
-  // to the configured root. No-op when the tenant uses the default `categorie`.
+  // Dynamic category root (spec D2/D3): VCS SEO config is authoritative for
+  // this forwarded tenant host. The resolver has a bounded in-memory cache and
+  // request timeout; NEXT_PUBLIC_CATEGORY_ROOT is used only when VCS fails.
+  const categoryRootMap = await resolveCategoryRootMapForHost(
+    tenantHostFromRequest(req),
+  );
   const { rewriteTo, redirectTo } = decideCategoryRouting(
     req.nextUrl.pathname,
-    CATEGORY_ROOT_MAP,
+    categoryRootMap,
   );
   if (redirectTo) {
     const redirectUrl = new URL(`${redirectTo}${req.nextUrl.search}`, req.url);

@@ -14,6 +14,8 @@ import {
   usePimMenuQuery,
   type MenuTreeNode,
 } from '@framework/product/get-pim-menu';
+import { useCategoryRoot } from '@/contexts/category-root.context';
+import { categoryMenuHref } from '@/lib/seo/category-root';
 
 interface InlineMenuProps {
   lang: string;
@@ -22,6 +24,7 @@ interface InlineMenuProps {
   /** Vertical padding utility for the top-level macro items + the Altro
    *  trigger. Defaults to the original `py-4`; themes can tighten the bar. */
   itemPaddingY?: string;
+  categoryRoot?: string;
 }
 
 const HOVER_OPEN_DELAY_MS = 90;
@@ -49,8 +52,11 @@ const B2BInlineCategoryMenu: React.FC<InlineMenuProps> = ({
   channel,
   className,
   itemPaddingY = 'py-4',
+  categoryRoot: categoryRootOverride,
 }) => {
   const { t } = useTranslation(lang, 'menu');
+  const providerCategoryRoot = useCategoryRoot(lang);
+  const categoryRoot = categoryRootOverride || providerCategoryRoot;
   const { data, isLoading, isError } = usePimMenuQuery({
     location: 'header',
     channel,
@@ -62,11 +68,17 @@ const B2BInlineCategoryMenu: React.FC<InlineMenuProps> = ({
 
   const hrefFor = useCallback(
     (node: MenuTreeNode): string => {
-      const url = node.url || node.children?.find((c) => c.url)?.url;
-      if (!url) return '#';
-      return url.startsWith('/') ? `/${lang}${url}` : `/${lang}/${url}`;
+      const target = node.url
+        ? node
+        : (node.children?.find((child) => child.url) ?? node);
+      return categoryMenuHref(
+        lang,
+        target.path?.length ? target.path : node.path,
+        categoryRoot,
+        target.url,
+      );
     },
-    [lang],
+    [categoryRoot, lang],
   );
 
   const [openId, setOpenId] = useState<string | null>(null);

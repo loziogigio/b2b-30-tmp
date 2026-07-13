@@ -19,7 +19,12 @@ import {
   type MenuTreeNode,
 } from '@framework/product/get-pim-menu';
 import { transformPimCategoriesTree } from '@framework/product/get-pim-categories';
-import { getSeoConfig, categoryRootForLang } from '@/lib/vcs/seo';
+import {
+  getSeoConfig,
+  categoryRootForLang,
+  canonicalSiteUrl,
+} from '@/lib/vcs/seo';
+import { categoryDetailHref } from '@/lib/seo/category-root';
 
 /** True for a "leaf" category — one with no sub-categories (so it lists products). */
 function isLeafCategory(node: MenuTreeNode | null): node is MenuTreeNode {
@@ -77,14 +82,11 @@ export async function generateMetadata({
     getServerHomeSettings(lang),
     getSeoConfig(),
   ]);
-  const channel = resolveCategoryChannel(homeSettings);
+  const channel = seoConfig.channel || resolveCategoryChannel(homeSettings);
   const { tree } = await loadCategoryMenu(channel);
 
   const brandingTitle = homeSettings?.branding?.title || 'VINC - B2B';
-  const siteUrl = (process.env.NEXT_PUBLIC_WEBSITE_URL || '').replace(
-    /\/$/,
-    '',
-  );
+  const siteUrl = canonicalSiteUrl(seoConfig);
   const rootLabel = lang === 'it' ? ROOT_LABEL_IT : ROOT_LABEL_EN;
   // Public category root segment per locale (default `categorie`, spec D2/D3).
   const root = categoryRootForLang(seoConfig, lang);
@@ -97,7 +99,7 @@ export async function generateMetadata({
       lang === 'it'
         ? 'Esplora tutti i gruppi di prodotti'
         : 'Explore all product groups';
-    const canonicalUrl = `${siteUrl}/${lang}/${root}`;
+    const canonicalUrl = `${siteUrl}${categoryDetailHref(lang, [], root)}`;
 
     return {
       title: `${rootLabel} | ${brandingTitle}`,
@@ -105,8 +107,8 @@ export async function generateMetadata({
       alternates: {
         canonical: canonicalUrl,
         languages: {
-          it: `${siteUrl}/it/${rootIt}`,
-          en: `${siteUrl}/en/${rootEn}`,
+          it: `${siteUrl}${categoryDetailHref('it', [], rootIt)}`,
+          en: `${siteUrl}${categoryDetailHref('en', [], rootEn)}`,
         },
       },
       openGraph: {
@@ -140,10 +142,11 @@ export async function generateMetadata({
   // non-leaf (or page 1) canonicalises to the bare URL.
   const pageSuffix =
     isLeafCategory(category) && page > 1 ? `?page=${page}` : '';
-  const path = `${root}/${slug.join('/')}`;
-  const pathIt = `${rootIt}/${slug.join('/')}`;
-  const pathEn = `${rootEn}/${slug.join('/')}`;
-  const canonicalUrl = `${siteUrl}/${lang}/${path}${pageSuffix}`;
+  const canonicalUrl = `${siteUrl}${categoryDetailHref(
+    lang,
+    slug,
+    root,
+  )}${pageSuffix}`;
   const categoryImage = category.category_banner_image || '';
   const keywords = [categoryName, ...slug].filter(Boolean);
 
@@ -157,8 +160,8 @@ export async function generateMetadata({
     alternates: {
       canonical: canonicalUrl,
       languages: {
-        it: `${siteUrl}/it/${pathIt}${pageSuffix}`,
-        en: `${siteUrl}/en/${pathEn}${pageSuffix}`,
+        it: `${siteUrl}${categoryDetailHref('it', slug, rootIt)}${pageSuffix}`,
+        en: `${siteUrl}${categoryDetailHref('en', slug, rootEn)}${pageSuffix}`,
       },
     },
     openGraph: {
@@ -210,10 +213,11 @@ export default async function Page({
     getServerHomeSettings(lang),
     getSeoConfig(),
   ]);
-  const channel = resolveCategoryChannel(homeSettings);
+  const channel = seoConfig.channel || resolveCategoryChannel(homeSettings);
   const brandingTitle = homeSettings?.branding?.title || 'VINC - B2B';
   // Public, per-tenant category-root segment (default `categorie`, spec D2/D3).
   const categoryRoot = categoryRootForLang(seoConfig, lang);
+  const siteUrl = canonicalSiteUrl(seoConfig);
   const { raw, tree } = await loadCategoryMenu(channel);
 
   const category: MenuTreeNode | null = slugSegments.length
@@ -226,7 +230,7 @@ export default async function Page({
   // Leaf categories get the server-rendered, paginated SEO product grid;
   // the client CategoryPage then skips its own products carousel.
   const isLeaf = slugSegments.length > 0 && isLeafCategory(category);
-  const basePath = `/${lang}/${categoryRoot}/${slugSegments.join('/')}`;
+  const basePath = categoryDetailHref(lang, slugSegments, categoryRoot);
 
   // Hydrate the tree into React Query for the client CategoryPage component.
   const queryClient = new QueryClient();
@@ -243,6 +247,8 @@ export default async function Page({
         lang={lang}
         rootLabel={rootLabel}
         siteName={brandingTitle}
+        siteUrl={siteUrl}
+        categoryRoot={categoryRoot}
       />
       <HydrationBoundary state={dehydrate(queryClient)}>
         <CategoryPage

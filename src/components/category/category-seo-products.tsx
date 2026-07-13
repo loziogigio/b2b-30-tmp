@@ -22,6 +22,7 @@ import {
   STOCK_STATUS_LABELS,
   BOOLEAN_LABELS,
 } from 'vinc-pim';
+import { productDetailHref } from '@/lib/seo/product-url';
 
 export const CATEGORY_PRODUCTS_PER_PAGE = 24;
 
@@ -286,6 +287,11 @@ export default async function CategorySeoProducts({
                 const stockStatus = (p.stock_status as string) || '';
                 const stockLabel =
                   STOCK_STATUS_LABELS[stockStatus] || stockStatus;
+                const productHref =
+                  productDetailHref(lang, {
+                    slug: p.slug,
+                    sku: p.sku || p.id,
+                  }) || `/${encodeURIComponent(lang)}`;
                 return (
                   <li
                     key={`${sku || 'p'}-${i}`}
@@ -293,10 +299,7 @@ export default async function CategorySeoProducts({
                     itemType="https://schema.org/Product"
                     className="group flex flex-col rounded-lg border border-gray-100 p-3 transition-colors hover:border-brand/40 hover:shadow-sm"
                   >
-                    <Link
-                      href={`/${lang}/products/${encodeURIComponent(sku)}`}
-                      className="flex h-full flex-col"
-                    >
+                    <Link href={productHref} className="flex h-full flex-col">
                       <div className="relative">
                         {img ? (
                           // eslint-disable-next-line @next/next/no-img-element

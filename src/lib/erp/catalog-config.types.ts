@@ -15,8 +15,8 @@ export type CatalogConfig = {
   defaultView: CatalogView;
   /**
    * What a single/simple product click does. `modal` opens the PRODUCT_VIEW
-   * quick view; `detail_page` navigates to /{lang}/products/{sku}. Multi-variant
-   * products always open the variants quick-view modal regardless.
+   * quick view; `detail_page` navigates to /{lang}/{localized-slug-or-sku}.
+   * Multi-variant products always open the variants quick-view modal.
    */
   productOpenMode: ProductOpenMode;
   /**

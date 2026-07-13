@@ -69,7 +69,17 @@ const TimeProductDetail: React.FC<{
   search: any;
   blocks?: PageBlock[];
   showZoneLabels?: boolean;
-}> = ({ lang, search, blocks = [] }) => {
+  siteUrl?: string;
+  canonicalUrl?: string;
+  suppressProductJsonLd?: boolean;
+}> = ({
+  lang,
+  search,
+  blocks = [],
+  siteUrl,
+  canonicalUrl,
+  suppressProductJsonLd,
+}) => {
   const { t } = useTranslation(lang, 'common');
   const onReturn = useProductReturn(lang);
 
@@ -342,7 +352,15 @@ const TimeProductDetail: React.FC<{
 
   return (
     <div className="pt-7 pb-16">
-      <ProductJsonLd product={data} priceData={erpPrice} lang={lang} />
+      {!suppressProductJsonLd ? (
+        <ProductJsonLd
+          product={data}
+          priceData={erpPrice}
+          lang={lang}
+          siteUrl={siteUrl}
+          canonicalUrl={canonicalUrl}
+        />
+      ) : null}
 
       {/* Return — back to where the user came from, else the catalog */}
       <button

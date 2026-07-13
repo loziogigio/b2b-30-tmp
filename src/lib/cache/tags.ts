@@ -6,7 +6,7 @@
  * subscriber). Keep the names in sync with what the PIM publishes.
  */
 import { headers } from 'next/headers';
-import { resolveTenant, isSingleTenant } from '@/lib/tenant';
+import { withResolvedTenant, isSingleTenant } from '@/lib/tenant';
 
 export const CACHE_TAG_NAMES = [
   'home-settings', // branding / header / footer / meta / scripts (portal config)
@@ -41,8 +41,10 @@ export async function currentTenantId(): Promise<string> {
     headersList.get('x-tenant-hostname') ||
     headersList.get('host') ||
     'localhost';
-  const tenant = await resolveTenant(hostname).catch(() => null);
-  return tenant?.id ?? 'unknown';
+  return withResolvedTenant(
+    hostname,
+    (tenant) => tenant?.id ?? 'unknown',
+  ).catch(() => 'unknown');
 }
 
 export function cacheTag(

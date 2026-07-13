@@ -27,9 +27,7 @@ export interface MenuTreeNode {
    *  canonical PIM `category_id`. Lets leaf consumers filter products by
    *  `category_ancestors` instead of doing a slug-as-text search. */
   category_id?: string;
-  /** ERP group code (e.g. "10010001"). Products are indexed with their erp
-   *  group hierarchy in `attribute_erp_groups_ss`, so a leaf links to
-   *  `/search?filters-attribute_erp_groups_ss=<external_code>`. */
+  /** ERP group code (e.g. "10010001"), retained for legacy integrations. */
   external_code?: string | null;
 }
 

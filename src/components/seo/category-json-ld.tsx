@@ -1,4 +1,8 @@
 import type { MenuTreeNode } from '@framework/product/get-pim-menu';
+import {
+  categoryDetailHref,
+  DEFAULT_CATEGORY_ROOT,
+} from '@/lib/seo/category-root';
 
 interface CategoryJsonLdProps {
   /** The matched category node (the breadcrumb leaf), or null on the "all categories" root page. */
@@ -10,16 +14,19 @@ interface CategoryJsonLdProps {
   siteName?: string;
   /** Label for the "all categories" root crumb / page. */
   rootLabel: string;
+  /** Public per-tenant category route segment. */
+  categoryRoot?: string;
+  /** Canonical storefront origin supplied by the portal SEO configuration. */
+  siteUrl?: string;
 }
 
 function categoryUrl(
   siteUrl: string,
   lang: string,
   path: string[] | null,
+  categoryRoot: string,
 ): string {
-  const suffix =
-    path && path.length ? `/${path.map(encodeURIComponent).join('/')}` : '';
-  return `${siteUrl}/${lang}/categorie${suffix}`;
+  return `${siteUrl}${categoryDetailHref(lang, path ?? [], categoryRoot)}`;
 }
 
 /**
@@ -32,20 +39,24 @@ export default function CategoryJsonLd({
   lang,
   siteName,
   rootLabel,
+  categoryRoot = DEFAULT_CATEGORY_ROOT,
+  siteUrl: configuredSiteUrl,
 }: CategoryJsonLdProps) {
-  const siteUrl = (process.env.NEXT_PUBLIC_WEBSITE_URL || '').replace(
+  const siteUrl = (configuredSiteUrl || process.env.NEXT_PUBLIC_WEBSITE_URL || '').replace(
     /\/$/,
     '',
   );
   if (!siteUrl) return null;
 
   const homeUrl = `${siteUrl}/${lang}`;
-  const rootUrl = categoryUrl(siteUrl, lang, null);
+  const rootUrl = categoryUrl(siteUrl, lang, null, categoryRoot);
 
   const name = category
     ? category.label || category.name
     : siteName || rootLabel;
-  const url = category ? categoryUrl(siteUrl, lang, category.path) : rootUrl;
+  const url = category
+    ? categoryUrl(siteUrl, lang, category.path, categoryRoot)
+    : rootUrl;
   const description =
     category?.description
       ?.replace(/<[^>]*>/g, ' ')
@@ -66,7 +77,7 @@ export default function CategoryJsonLd({
     for (const node of ancestry) {
       crumbs.push({
         name: node.label || node.name,
-        url: categoryUrl(siteUrl, lang, node.path),
+        url: categoryUrl(siteUrl, lang, node.path, categoryRoot),
       });
     }
   } else {
@@ -82,7 +93,7 @@ export default function CategoryJsonLd({
       ? subcategories.map((child) => ({
           '@type': 'CollectionPage',
           name: child.label || child.name,
-          url: categoryUrl(siteUrl, lang, child.path),
+          url: categoryUrl(siteUrl, lang, child.path, categoryRoot),
         }))
       : undefined;
 

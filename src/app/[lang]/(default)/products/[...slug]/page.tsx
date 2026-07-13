@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import { cookies } from 'next/headers';
+import { permanentRedirect } from 'next/navigation';
 import {
   QueryClient,
   dehydrate,
@@ -13,6 +14,16 @@ import { fetchProductForSeo } from '@/lib/seo/fetch-product';
 import { serverFetchPimProducts } from '@/lib/pim/server-fetch';
 import { transformPimProducts } from '@framework/product/get-pim-product';
 import { AUTH_COOKIES } from '@/lib/auth/cookies';
+import {
+  absoluteProductDetailUrl,
+  productDetailHref,
+} from '@/lib/seo/product-url';
+import {
+  canonicalSiteUrl,
+  categoryRootForLang,
+  getSeoConfig,
+  resolveProduct,
+} from '@/lib/vcs/seo';
 
 // Generate dynamic SEO metadata for product pages
 export async function generateMetadata({
@@ -25,13 +36,15 @@ export async function generateMetadata({
     ? slugSegments.join('/')
     : slugSegments;
 
-  const [product, homeSettings] = await Promise.all([
+  const [product, homeSettings, seoConfig, resolved] = await Promise.all([
     fetchProductForSeo(sku, lang),
     getServerHomeSettings(lang),
+    getSeoConfig(),
+    resolveProduct(sku, lang),
   ]);
 
   const brandingTitle = homeSettings?.branding?.title || 'VINC - B2B';
-  const siteUrl = process.env.NEXT_PUBLIC_WEBSITE_URL || '';
+  const siteUrl = canonicalSiteUrl(seoConfig);
 
   // Fallback metadata if product not found
   if (!product) {
@@ -54,12 +67,14 @@ export async function generateMetadata({
     product.images?.[0]?.url ||
     '';
 
-  // Canonical points to the flat product slug when available (spec D4),
-  // otherwise the SKU URL stays self-canonical.
-  const productSlug = product.slug as string | undefined;
-  const canonicalUrl = productSlug
-    ? `${siteUrl}/${lang}/${productSlug}`
-    : `${siteUrl}/${lang}/products/${sku}`;
+  // Product detail canonicals are always flat. A locale-specific slug wins;
+  // SKU is the reachable fallback used by the sitemap and slug resolver.
+  const productIdentity = {
+    slug: resolved?.slug || product.slug,
+    sku: resolved?.sku || sku,
+  };
+  const canonicalUrl =
+    absoluteProductDetailUrl(siteUrl, lang, productIdentity) || siteUrl;
 
   // Build keywords from brand, SKU, and product name
   const keywords = [
@@ -75,15 +90,6 @@ export async function generateMetadata({
     keywords: keywords.join(', '),
     alternates: {
       canonical: canonicalUrl,
-      languages: productSlug
-        ? {
-            it: `${siteUrl}/it/${productSlug}`,
-            en: `${siteUrl}/en/${productSlug}`,
-          }
-        : {
-            it: `${siteUrl}/it/products/${sku}`,
-            en: `${siteUrl}/en/products/${sku}`,
-          },
     },
     openGraph: {
       title: `${productName} - ${sku}`,
@@ -137,6 +143,20 @@ export default async function Page({
     ? slugSegments.join('/')
     : slugSegments;
 
+  // Consolidate the legacy nested product route into the canonical flat slug.
+  // Preview remains on this route because the builder depends on its live
+  // postMessage listener and must not be redirected away.
+  const resolved = await resolveProduct(slug, lang);
+  const flatHref = resolved
+    ? productDetailHref(lang, {
+        slug: resolved.slug,
+        sku: resolved.sku,
+      })
+    : null;
+  if (!isPreview && flatHref) {
+    permanentRedirect(flatHref);
+  }
+
   // Fetch blocks and prefetch product data in parallel
   const queryClient = new QueryClient();
 
@@ -148,7 +168,7 @@ export default async function Page({
     include_dynamic_blocks: true,
   };
 
-  const [blocks, product] = await Promise.all([
+  const [blocks, product, seoConfig] = await Promise.all([
     // Fetch page layout blocks
     (async () => {
       let b = await getProductDetailBlocksNew(slug, slug, isPreview);
@@ -164,6 +184,7 @@ export default async function Page({
     })(),
     // Fetch product for JSON-LD
     fetchProductForSeo(slug, lang),
+    getSeoConfig(),
     // Prefetch product data into React Query cache
     queryClient.prefetchQuery({
       // Match the client hook's ['pim-search', customerContext, params]
@@ -171,7 +192,7 @@ export default async function Page({
       // selection lives in browser localStorage.
       queryKey: ['pim-search', {}, productQueryParams],
       queryFn: async () => {
-        const result = await serverFetchPimProducts({
+        let result = await serverFetchPimProducts({
           lang,
           rows: 1,
           filters: { sku: [slug] },
@@ -179,6 +200,16 @@ export default async function Page({
           include_dynamic_blocks: true,
           authenticated: isAuthenticated,
         });
+        if (result.results.length === 0) {
+          result = await serverFetchPimProducts({
+            lang,
+            rows: 1,
+            filters: { parent_sku: [slug] },
+            group_variants: true,
+            include_dynamic_blocks: true,
+            authenticated: isAuthenticated,
+          });
+        }
         return transformPimProducts(result.results).map((p) => ({
           ...p,
           variantCount: p.variations?.length || 1,
@@ -187,7 +218,13 @@ export default async function Page({
     }),
   ]);
 
-  const siteUrl = process.env.NEXT_PUBLIC_WEBSITE_URL || '';
+  const siteUrl = canonicalSiteUrl(seoConfig);
+  const productUrl =
+    absoluteProductDetailUrl(siteUrl, lang, {
+      slug: resolved?.slug || product?.slug,
+      sku: resolved?.sku || slug,
+    }) || siteUrl;
+  const categoryRoot = categoryRootForLang(seoConfig, lang);
 
   return (
     <>
@@ -213,7 +250,7 @@ export default async function Page({
               brand: product.brand
                 ? { '@type': 'Brand', name: product.brand.label }
                 : undefined,
-              url: `${siteUrl}/${lang}/products/${slug}`,
+              url: productUrl,
             }),
           }}
         />
@@ -224,6 +261,12 @@ export default async function Page({
           sku={slug}
           serverBlocks={blocks || []}
           isPreview={isPreview}
+          categoryRoot={categoryRoot}
+          siteUrl={siteUrl}
+          canonicalUrl={productUrl}
+          categoryAncestors={resolved?.categoryAncestors}
+          categoryChannel={seoConfig.channel}
+          suppressProductJsonLd
         />
       </HydrationBoundary>
     </>

@@ -16,15 +16,15 @@ import DemoBanner from '@components/demo/demo-banner';
 import DemoChecklist from '@components/demo/demo-checklist';
 import DemoBrowseTracker from '@components/demo/demo-browse-tracker';
 import { DemoUiEnvProvider } from '@/lib/demo/use-demo-ui';
+import { isMultiTenant, resolveTenantPublicState } from '@/lib/tenant';
 import {
-  resolveTenant,
-  isMultiTenant,
-  hasCriticalErrors,
-  logTenantConfigIssues,
-} from '@/lib/tenant';
-import { toPublicInfo, buildTenantFromEnv } from '@/lib/tenant/types';
+  TenantPublicInfo,
+  toPublicInfo,
+  buildTenantFromEnv,
+} from '@/lib/tenant/types';
 import TenantDisabled from '@components/tenant/tenant-disabled';
 import TenantConfigError from '@components/tenant/tenant-config-error';
+import { getSeoConfig } from '@/lib/vcs/seo';
 
 // external
 import 'react-toastify/dist/ReactToastify.css';
@@ -182,18 +182,22 @@ export default async function RootLayout({
   // to client components via DemoUiEnvProvider below).
   const demoUiEnabled = process.env.DEMO_UI_ENABLED === 'true';
 
-  // Resolve tenant configuration
-  let tenant = null;
+  // Resolve only browser-safe tenant state. The full registry record contains
+  // API/database credentials and must never be the value of an awaited promise
+  // in a React Server Component (development Flight payloads retain those
+  // values for replay/debugging).
+  let tenantPublicInfo: TenantPublicInfo;
+  let tenantTheme: string | undefined;
   if (isMultiTenant) {
     const headersList = await headers();
     const hostname =
       headersList.get('x-tenant-hostname') ||
       headersList.get('host') ||
       'localhost';
-    tenant = await resolveTenant(hostname);
+    const resolved = await resolveTenantPublicState(hostname);
 
     // If tenant not found or not active, show disabled page
-    if (!tenant || !tenant.isActive) {
+    if (!resolved || !resolved.isActive) {
       return (
         <html lang={lang} dir={dir(lang)} suppressHydrationWarning={true}>
           <head />
@@ -205,32 +209,38 @@ export default async function RootLayout({
     }
 
     // Check for critical configuration errors
-    if (hasCriticalErrors(tenant)) {
-      logTenantConfigIssues(tenant, `Tenant: ${tenant.id}`);
+    if (resolved.hasCriticalErrors) {
       return (
         <html lang={lang} dir={dir(lang)} suppressHydrationWarning={true}>
           <head />
           <body suppressHydrationWarning={true}>
             <TenantConfigError
               errorType="invalid_config"
-              details={`Tenant: ${tenant.id}`}
+              details={`Tenant: ${resolved.tenant.id}`}
             />
           </body>
         </html>
       );
     }
+    tenantPublicInfo = resolved.tenant;
+    tenantTheme = resolved.tenant.b2bTheme;
   } else {
     // Single-tenant mode: build tenant from env variables
-    tenant = buildTenantFromEnv();
+    const tenant = buildTenantFromEnv();
+    tenantPublicInfo = toPublicInfo(tenant);
+    tenantTheme = tenant.b2bTheme;
   }
 
-  // Convert to public info for client-side (no secrets)
-  const tenantPublicInfo = toPublicInfo(tenant);
-
   // Resolve theme: tenant config > env var > "default"
-  const themeId = getThemeIdForTenant(tenant.b2bTheme);
+  const themeId = getThemeIdForTenant(tenantTheme);
 
-  const homeSettings = await getServerHomeSettings(lang);
+  // Resolve category routing on the server and hydrate it alongside the other
+  // providers. Header menus can build canonical links on their first render,
+  // with no browser-side SEO-config waterfall.
+  const [homeSettings, seoConfig] = await Promise.all([
+    getServerHomeSettings(lang),
+    getSeoConfig(),
+  ]);
   const branding = homeSettings?.branding ?? {
     title: 'B2B Store',
     primaryColor: '#009f7f',
@@ -279,6 +289,7 @@ export default async function RootLayout({
           lang={lang}
           tenant={tenantPublicInfo}
           isMultiTenant={isMultiTenant}
+          categoryRoots={seoConfig.categoryRoot}
         >
           <ManagedUIContext>
             <DemoUiEnvProvider value={demoUiEnabled}>

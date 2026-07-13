@@ -15,7 +15,9 @@ vi.stubGlobal('fetch', fetchMock);
 import {
   DEFAULT_SEO_CONFIG,
   DEFAULT_ROBOTS,
+  canonicalSiteUrl,
   categoryRootForLang,
+  canonicalSiteUrl,
   normalizeSeoConfig,
   sitemapDataToRoutes,
   robotsConfigToRoute,
@@ -33,6 +35,7 @@ beforeEach(() => {
 
 afterEach(() => {
   delete process.env.VINC_SUITE_API_BASE;
+  delete process.env.PIM_API_URL_OVERRIDE;
 });
 
 const jsonRes = (body: unknown, status = 200) =>
@@ -77,6 +80,45 @@ describe('normalizeSeoConfig', () => {
     const out = normalizeSeoConfig({ robots: { noindex: true } });
     expect(out.robots.noindex).toBe(true);
     expect(out.robots.disallow).toEqual(DEFAULT_ROBOTS.disallow);
+  });
+  it('normalizes the canonical site origin', () => {
+    const out = normalizeSeoConfig({
+      siteUrl: 'https://shop.example.com/path',
+      channel: ' b2b ',
+      robots: { sitemapUrl: 'https://other.example.com/sitemap.xml' },
+    });
+    expect(out.siteUrl).toBe('https://shop.example.com');
+    expect(out.channel).toBe('b2b');
+    expect(canonicalSiteUrl(out, 'http://localhost:3000')).toBe(
+      'https://shop.example.com',
+    );
+  });
+  it('can derive the canonical origin from an older sitemap URL payload', () => {
+    expect(
+      canonicalSiteUrl(
+        normalizeSeoConfig({
+          robots: { sitemapUrl: 'https://shop.example.com/sitemap.xml' },
+        }),
+        'http://localhost:3000',
+      ),
+    ).toBe('https://shop.example.com');
+  });
+});
+
+describe('canonicalSiteUrl', () => {
+  it('derives the tenant origin from the authoritative sitemap URL', () => {
+    expect(
+      canonicalSiteUrl({
+        categoryRoot: { default: 'categorie' },
+        robots: { sitemapUrl: 'https://shop.example.com/sitemap.xml' },
+      }),
+    ).toBe('https://shop.example.com');
+  });
+
+  it('falls back to the deployment URL when Suite does not advertise one', () => {
+    expect(canonicalSiteUrl(DEFAULT_SEO_CONFIG, 'https://fallback.test/')).toBe(
+      'https://fallback.test',
+    );
   });
 });
 
@@ -186,6 +228,20 @@ describe('getSeoConfig', () => {
 });
 
 describe('getSitemapData', () => {
+  it('uses the local PIM override when no dedicated Suite base is set', async () => {
+    delete process.env.VINC_SUITE_API_BASE;
+    process.env.PIM_API_URL_OVERRIDE = 'http://localhost:3001';
+    fetchMock.mockResolvedValueOnce(
+      jsonRes({ baseUrl: 'https://x', langs: ['it'], entries: [] }),
+    );
+
+    await getSitemapData();
+
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      'http://localhost:3001/api/public/b2b/sitemap-data',
+    );
+  });
+
   it('returns parsed data', async () => {
     fetchMock.mockResolvedValueOnce(
       jsonRes({

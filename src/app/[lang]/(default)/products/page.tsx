@@ -5,6 +5,8 @@ import { ProductDetailWithPreview } from '@components/product/ProductDetailWithP
 import { getServerHomeSettings } from '@/lib/home-settings/fetch-server';
 import { fetchProductForSeo } from '@/lib/seo/fetch-product';
 import ProductsPageContent from './products-page-content';
+import { absoluteProductDetailUrl } from '@/lib/seo/product-url';
+import { categoryRootForLang, getSeoConfig } from '@/lib/vcs/seo';
 
 // Generate dynamic SEO metadata for product pages (query param version)
 export async function generateMetadata({
@@ -57,12 +59,11 @@ export async function generateMetadata({
     product.images?.[0]?.url ||
     '';
 
-  // Canonical points to the flat product slug when available (spec D4),
-  // otherwise the SKU query URL stays self-canonical.
-  const productSlug = product.slug as string | undefined;
-  const canonicalUrl = productSlug
-    ? `${siteUrl}/${lang}/${productSlug}`
-    : `${siteUrl}/${lang}/products/${sku}`;
+  // Product detail canonicals are always flat. A locale-specific slug wins;
+  // SKU is the reachable fallback used by the sitemap and slug resolver.
+  const productIdentity = { slug: product.slug, sku };
+  const canonicalUrl =
+    absoluteProductDetailUrl(siteUrl, lang, productIdentity) || siteUrl;
 
   // Build keywords from brand, SKU, and product name
   const keywords = [
@@ -78,15 +79,6 @@ export async function generateMetadata({
     keywords: keywords.join(', '),
     alternates: {
       canonical: canonicalUrl,
-      languages: productSlug
-        ? {
-            it: `${siteUrl}/it/${productSlug}`,
-            en: `${siteUrl}/en/${productSlug}`,
-          }
-        : {
-            it: `${siteUrl}/it/products/${sku}`,
-            en: `${siteUrl}/en/products/${sku}`,
-          },
     },
     openGraph: {
       title: `${productName} - ${sku}`,
@@ -139,11 +131,15 @@ export default async function Page({
 
   // SKU provided via query param - show product detail
   // Try new simplified template matching first (sku/parentSku based)
-  let blocks = await getProductDetailBlocksNew(
-    sku, // productSku
-    sku, // parentSku (fallback to sku for now)
-    isPreview,
-  );
+  const [seoConfig, initialBlocks] = await Promise.all([
+    getSeoConfig(),
+    getProductDetailBlocksNew(
+      sku, // productSku
+      sku, // parentSku (fallback to sku for now)
+      isPreview,
+    ),
+  ]);
+  let blocks = initialBlocks;
 
   // If no blocks found with new system, fallback to old system
   if (!blocks || blocks.length === 0) {
@@ -162,6 +158,7 @@ export default async function Page({
       sku={sku}
       serverBlocks={blocks || []}
       isPreview={isPreview}
+      categoryRoot={categoryRootForLang(seoConfig, lang)}
     />
   );
 }
