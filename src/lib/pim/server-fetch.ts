@@ -1,5 +1,5 @@
 import { cache } from 'react';
-import { headers } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import {
   buildTenantApiHeaders,
   resolveTenant,
@@ -7,6 +7,7 @@ import {
 } from '@/lib/tenant';
 import { resolveSupportedLang } from '@/app/i18n/settings';
 import { cacheTag, SINGLE_TENANT_ID } from '@/lib/cache/tags';
+import { AUTH_COOKIES } from '@/lib/auth/cookies';
 
 /**
  * Server-side PIM API fetch utilities.
@@ -62,8 +63,26 @@ async function getApiConfig(): Promise<ApiConfig | null> {
   };
 }
 
-function buildHeaders(config: ApiConfig): Record<string, string> {
-  return buildTenantApiHeaders(config, { includeLegacyApiKeyAlias: true });
+function buildHeaders(
+  config: ApiConfig,
+  authorization?: string,
+): Record<string, string> {
+  return buildTenantApiHeaders(config, {
+    includeLegacyApiKeyAlias: true,
+    authorization,
+  });
+}
+
+async function getCurrentSsoAuthorization(
+  privateContentRequested: boolean,
+): Promise<string | undefined> {
+  if (!privateContentRequested) return undefined;
+
+  const token = (await cookies()).get(AUTH_COOKIES.ACCESS_TOKEN)?.value?.trim();
+
+  if (!token || token === 'null' || token === 'undefined') return undefined;
+
+  return `Bearer ${token}`;
 }
 
 // ===============================
@@ -79,8 +98,8 @@ export interface ServerSearchParams {
   group_variants?: boolean;
   facet_fields?: string[];
   include_dynamic_blocks?: boolean;
-  /** When true, tells CS the visitor is authenticated so it does not strip
-   *  is_public:false media / dynamic-block elements. */
+  /** Request private product content for the current visitor. This is only a
+   *  request hint: CS receives and validates the visitor's SSO bearer token. */
   authenticated?: boolean;
 }
 
@@ -105,6 +124,9 @@ export const serverFetchPimProducts = cache(
     if (!config) return { results: [], total: 0 };
 
     const url = `${config.pimApiUrl}/api/search/search`;
+    const authorization = await getCurrentSsoAuthorization(
+      params.authenticated === true,
+    );
 
     const body: Record<string, any> = {
       lang: resolveSupportedLang(params.lang),
@@ -125,19 +147,20 @@ export const serverFetchPimProducts = cache(
     // Always request per-product rich content blocks (the BE only attaches them
     // where they exist), so any storefront fetch path gets them without wiring.
     body.include_dynamic_blocks = true;
-    if (params.authenticated) {
-      body.authenticated = true;
-    }
 
     try {
       const response = await fetch(url, {
         method: 'POST',
-        headers: buildHeaders(config),
+        headers: buildHeaders(config, authorization),
         body: JSON.stringify(body),
-        next: {
-          revalidate: 300,
-          tags: [cacheTag('products', config.tenantId)],
-        },
+        ...(authorization
+          ? { cache: 'no-store' as const }
+          : {
+              next: {
+                revalidate: 300,
+                tags: [cacheTag('products', config.tenantId)],
+              },
+            }),
       });
 
       if (!response.ok) return { results: [], total: 0 };

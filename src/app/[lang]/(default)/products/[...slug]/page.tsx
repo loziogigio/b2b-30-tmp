@@ -145,6 +145,7 @@ export default async function Page({
     limit: 1,
     filters: { sku: [slug] },
     group_variants: true,
+    include_dynamic_blocks: true,
   };
 
   const [blocks, product] = await Promise.all([
@@ -165,7 +166,10 @@ export default async function Page({
     fetchProductForSeo(slug, lang),
     // Prefetch product data into React Query cache
     queryClient.prefetchQuery({
-      queryKey: ['pim-search', productQueryParams],
+      // Match the client hook's ['pim-search', customerContext, params]
+      // shape. The server hydrates the neutral context because customer
+      // selection lives in browser localStorage.
+      queryKey: ['pim-search', {}, productQueryParams],
       queryFn: async () => {
         const result = await serverFetchPimProducts({
           lang,

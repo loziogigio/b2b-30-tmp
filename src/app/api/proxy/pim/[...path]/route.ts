@@ -3,7 +3,7 @@ import { AUTH_COOKIES, resolveAuthContext } from '@/lib/auth/server';
 import { buildTenantApiHeaders, resolveTenantApiConfig } from '@/lib/tenant';
 
 // ---------------------------------------------------------------------------
-// Category-tree cache (per upstream PIM URL).
+// Category-tree cache (per tenant + upstream PIM URL).
 // Used by category-search interception to expand non-leaf category_ancestors
 // filters to their L3 leaf descendants — PIM products only carry their
 // leaf in category_ancestors, so filtering by an L1/L2 id directly returns
@@ -27,8 +27,9 @@ const CAT_CACHE_TTL_MS = 10 * 60 * 1000;
 async function getCategoryMap(
   baseUrl: string,
   headers: Record<string, string>,
+  tenantId: string,
 ): Promise<CatMap | null> {
-  const key = baseUrl;
+  const key = `${tenantId}::${baseUrl}`;
   const entry = catCache.get(key);
   if (entry && Date.now() - entry.loadedAt < CAT_CACHE_TTL_MS) return entry.map;
   if (entry?.promise) return entry.promise;
@@ -67,7 +68,7 @@ async function getCategoryMap(
 }
 
 // ---------------------------------------------------------------------------
-// promo_type label cache (keyed by upstream PIM URL + lang).
+// promo_type label cache (keyed by tenant + upstream PIM URL + lang).
 // The PIM facet for `promo_type` ships the bare code (e.g. "LIP") with no
 // friendly label. Products carry `promotions[].label` / `.name` (e.g. "LIFE
 // IN POOL"), so we harvest a code → label map by scanning a small page of
@@ -87,6 +88,10 @@ const PROMO_HARVEST_ROWS = 50;
 type TrustedUserContext = {
   userId: string;
   userType: 'b2b_user' | 'portal_user';
+  customers: Array<{
+    customerCode: string;
+    addressCodes: Set<string>;
+  }>;
 };
 
 function isUserContextPath(pathString: string): boolean {
@@ -95,6 +100,12 @@ function isUserContextPath(pathString: string): boolean {
     pathString.startsWith('api/b2b/likes/') ||
     pathString === 'api/b2b/reminders' ||
     pathString.startsWith('api/b2b/reminders/')
+  );
+}
+
+function isSearchPath(pathString: string): boolean {
+  return (
+    pathString === 'api/search/search' || pathString.endsWith('/search/search')
   );
 }
 
@@ -135,6 +146,23 @@ async function resolveTrustedUserContext(
         (validation.user?.customers?.length || 0) > 0
           ? 'b2b_user'
           : 'portal_user',
+      customers: (validation.user?.customers ?? [])
+        .filter(
+          (customer) =>
+            typeof customer.erp_customer_id === 'string' &&
+            customer.erp_customer_id.length > 0,
+        )
+        .map((customer) => ({
+          customerCode: customer.erp_customer_id,
+          addressCodes: new Set(
+            (customer.addresses ?? [])
+              .map((address) => address.erp_address_id)
+              .filter(
+                (addressCode): addressCode is string =>
+                  typeof addressCode === 'string' && addressCode.length > 0,
+              ),
+          ),
+        })),
     };
   } catch (err) {
     console.warn(
@@ -145,14 +173,10 @@ async function resolveTrustedUserContext(
   }
 }
 
-async function attachTrustedUserContext(
-  req: NextRequest,
+function attachTrustedUserContext(
   headers: Record<string, string>,
-  tenantId: string,
-): Promise<void> {
-  const userContext = await resolveTrustedUserContext(req, tenantId);
-  if (!userContext) return;
-
+  userContext: TrustedUserContext,
+): void {
   headers['x-user-id'] = userContext.userId;
   headers['x-user-type'] = userContext.userType;
 
@@ -162,12 +186,132 @@ async function attachTrustedUserContext(
   }
 }
 
+type TrustedSearchSelection =
+  | {
+      allowed: true;
+      authenticated: boolean;
+      customerCode?: string;
+      addressCode?: string;
+    }
+  | { allowed: false };
+
+/**
+ * Treat the browser-provided pair only as a selection hint. It becomes trusted
+ * customer context after the SSO-validated session proves ownership of both
+ * the customer and address. Anonymous/expired sessions remain guest searches.
+ */
+function resolveTrustedSearchSelection(
+  userContext: TrustedUserContext | null,
+  requestedCustomer: unknown,
+  requestedAddress: unknown,
+): TrustedSearchSelection {
+  const customerCode =
+    typeof requestedCustomer === 'string' ? requestedCustomer.trim() : '';
+  const addressCode =
+    typeof requestedAddress === 'string' ? requestedAddress.trim() : '';
+
+  if (!userContext) {
+    return { allowed: true, authenticated: false };
+  }
+
+  const ownedCustomer = customerCode
+    ? userContext.customers.find(
+        (customer) => customer.customerCode === customerCode,
+      )
+    : undefined;
+
+  if (customerCode && !ownedCustomer) return { allowed: false };
+  if (
+    addressCode &&
+    (!ownedCustomer || !ownedCustomer.addressCodes.has(addressCode))
+  ) {
+    return { allowed: false };
+  }
+
+  // Customer-specific inline pricing requires a complete, owned pair. A valid
+  // user with no active selection is authenticated but receives no price tier.
+  if (ownedCustomer && addressCode) {
+    return {
+      allowed: true,
+      authenticated: true,
+      customerCode: ownedCustomer.customerCode,
+      addressCode,
+    };
+  }
+
+  return { allowed: true, authenticated: true };
+}
+
+function sanitizeSearchBody(
+  bodyText: string,
+  userContext: TrustedUserContext | null,
+): { allowed: true; bodyText: string } | { allowed: false } {
+  let body: Record<string, unknown>;
+  try {
+    body = JSON.parse(bodyText);
+  } catch {
+    return { allowed: true, bodyText };
+  }
+
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return { allowed: true, bodyText };
+  }
+
+  const selection = resolveTrustedSearchSelection(
+    userContext,
+    body.customer_code,
+    body.address_code,
+  );
+  if (!selection.allowed) return selection;
+
+  // These fields affect private visibility or customer-specific price tiers;
+  // never forward their raw browser values.
+  delete body.customer_code;
+  delete body.address_code;
+  delete body.authenticated;
+  delete body.tag_filter;
+
+  if (selection.authenticated) body.authenticated = true;
+  if (selection.customerCode && selection.addressCode) {
+    body.customer_code = selection.customerCode;
+    body.address_code = selection.addressCode;
+  }
+
+  return { allowed: true, bodyText: JSON.stringify(body) };
+}
+
+function sanitizeSearchQuery(
+  url: URL,
+  userContext: TrustedUserContext | null,
+): boolean {
+  const selection = resolveTrustedSearchSelection(
+    userContext,
+    url.searchParams.get('customer_code'),
+    url.searchParams.get('address_code'),
+  );
+  if (!selection.allowed) return false;
+
+  url.searchParams.delete('customer_code');
+  url.searchParams.delete('address_code');
+  url.searchParams.delete('authenticated');
+  url.searchParams.delete('tag_filter');
+
+  if (selection.authenticated) url.searchParams.set('authenticated', 'true');
+  if (selection.customerCode && selection.addressCode) {
+    url.searchParams.set('customer_code', selection.customerCode);
+    url.searchParams.set('address_code', selection.addressCode);
+  }
+
+  return true;
+}
+
 async function getPromoTypeMap(
   baseUrl: string,
   headers: Record<string, string>,
   lang: string,
+  tenantId: string,
 ): Promise<PromoMap> {
-  const cacheKey = `${baseUrl}::${lang}`;
+  const cacheKey = `${tenantId}::${baseUrl}::${lang}`;
   const entry = promoCache.get(cacheKey);
   if (entry && Date.now() - entry.loadedAt < PROMO_MAP_TTL_MS) return entry.map;
   if (entry?.promise) return entry.promise;
@@ -281,6 +425,7 @@ async function maybeExpandSearchBody(
   bodyText: string,
   baseUrl: string,
   headers: Record<string, string>,
+  tenantId: string,
 ): Promise<string> {
   let body: any;
   try {
@@ -290,7 +435,7 @@ async function maybeExpandSearchBody(
   }
   const ca = body?.filters?.category_ancestors;
   if (!ca) return bodyText;
-  const catMap = await getCategoryMap(baseUrl, headers);
+  const catMap = await getCategoryMap(baseUrl, headers, tenantId);
   if (!catMap) return bodyText;
   body.filters.category_ancestors = expandCategoryFilterToLeaves(ca, catMap);
   return JSON.stringify(body);
@@ -323,18 +468,36 @@ async function proxyRequest(
   const targetUrl = new URL(pathString, baseUrl);
 
   // Forward query params
-  req.nextUrl.searchParams.forEach((value, key) => {
+  req.nextUrl.searchParams.forEach((value: string, key: string) => {
     targetUrl.searchParams.set(key, value);
   });
 
-  // Forward user's JWT if present (for user-specific requests)
-  const authHeader = req.headers.get('Authorization');
+  const searchPath = isSearchPath(pathString);
+  const trustedUserContext =
+    isUserContextPath(pathString) || searchPath
+      ? await resolveTrustedUserContext(req, config.tenantId)
+      : null;
+
+  if (
+    searchPath &&
+    method === 'GET' &&
+    !sanitizeSearchQuery(targetUrl, trustedUserContext)
+  ) {
+    return NextResponse.json(
+      { error: 'Forbidden customer context' },
+      { status: 403 },
+    );
+  }
+
+  // Forward the validated user's JWT for Suite-side defense in depth. Browser
+  // sessions normally carry it in an httpOnly cookie rather than a header.
+  const bearerToken = getBearerToken(req);
   const headers = buildTenantApiHeaders(config, {
-    authorization: authHeader,
+    authorization: bearerToken ? `Bearer ${bearerToken}` : null,
     includeLegacyApiKeyAlias: true,
   });
-  if (isUserContextPath(pathString)) {
-    await attachTrustedUserContext(req, headers, config.tenantId);
+  if (trustedUserContext) {
+    attachTrustedUserContext(headers, trustedUserContext);
   }
 
   const fetchOptions: RequestInit = {
@@ -347,15 +510,22 @@ async function proxyRequest(
     try {
       let bodyText = await req.text();
       if (bodyText) {
+        if (method === 'POST' && searchPath) {
+          const sanitized = sanitizeSearchBody(bodyText, trustedUserContext);
+          if (!sanitized.allowed) {
+            return NextResponse.json(
+              { error: 'Forbidden customer context' },
+              { status: 403 },
+            );
+          }
+          bodyText = sanitized.bodyText;
+        }
+
         // For category-aware search calls, rewrite filters.category_ancestors
         // so non-leaf ids (L1/L2) get expanded to their L3 leaf descendants.
         // Products only carry leaves on category_ancestors, so without this
         // expansion clicking a parent category narrows to nothing.
-        if (
-          method === 'POST' &&
-          (pathString === 'api/search/search' ||
-            pathString.endsWith('/search/search'))
-        ) {
+        if (method === 'POST' && searchPath) {
           const proxyHeaders = buildTenantApiHeaders(config, {
             includeLegacyApiKeyAlias: true,
           });
@@ -363,6 +533,7 @@ async function proxyRequest(
             bodyText,
             baseUrl,
             proxyHeaders,
+            config.tenantId,
           );
         }
         fetchOptions.body = bodyText;
@@ -395,12 +566,7 @@ async function proxyRequest(
       // labels harvested from promotions[]. PIM ships the raw codes (SPR /
       // ZZZ / LIP) but products carry the human title — same approach as
       // dfl-b2b/server/api/pim-search.
-      if (
-        method === 'POST' &&
-        response.ok &&
-        (pathString === 'api/search/search' ||
-          pathString.endsWith('/search/search'))
-      ) {
+      if (method === 'POST' && response.ok && searchPath) {
         const promoFacet =
           data?.data?.facet_results?.promo_type ||
           data?.facet_results?.promo_type;
@@ -422,7 +588,12 @@ async function proxyRequest(
           } catch {
             // body wasn't JSON — keep default lang
           }
-          const promoMap = await getPromoTypeMap(baseUrl, proxyHeaders, lang);
+          const promoMap = await getPromoTypeMap(
+            baseUrl,
+            proxyHeaders,
+            lang,
+            config.tenantId,
+          );
           data = enrichPromoFacetLabels(data, promoMap);
         }
       }

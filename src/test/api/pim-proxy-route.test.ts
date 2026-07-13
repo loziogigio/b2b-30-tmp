@@ -83,7 +83,18 @@ describe('PIM proxy route', () => {
       tenant_id: TEST_TENANT_ID,
       user: {
         id: TEST_USER_ID,
-        customers: [{ id: 'customer-1', erp_customer_id: 'B_1184' }],
+        customers: [
+          {
+            id: 'customer-1',
+            erp_customer_id: 'B_1184',
+            addresses: [{ id: 'address-1', erp_address_id: 'ADDR-1' }],
+          },
+          {
+            id: 'customer-2',
+            erp_customer_id: 'B_2200',
+            addresses: [{ id: 'address-2', erp_address_id: 'ADDR-2' }],
+          },
+        ],
       },
     });
     mocks.resolveAuthContext.mockResolvedValue({
@@ -290,4 +301,310 @@ describe('PIM proxy route', () => {
     expect(headers['x-user-id']).toBeUndefined();
     expect(headers['x-user-type']).toBeUndefined();
   });
+
+  it('strips spoofed customer pricing context from an anonymous POST search', async () => {
+    let calledInit: RequestInit | undefined;
+    global.fetch = vi.fn(
+      async (_url: RequestInfo | URL, init?: RequestInit) => {
+        calledInit = init;
+        return new Response(
+          JSON.stringify({ success: true, data: { results: [] } }),
+          {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          },
+        );
+      },
+    ) as typeof fetch;
+
+    const req = new NextRequest(
+      'http://localhost/api/proxy/pim/api/search/search',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lang: 'it',
+          customer_code: 'VICTIM',
+          address_code: 'VICTIM-ADDRESS',
+          authenticated: true,
+          tag_filter: ['vip'],
+        }),
+      },
+    );
+
+    const res = await POST(req, {
+      params: Promise.resolve({ path: ['api', 'search', 'search'] }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(JSON.parse(String(calledInit?.body))).toEqual({ lang: 'it' });
+    expect(mocks.validateToken).not.toHaveBeenCalled();
+  });
+
+  it('downgrades an expired session search to guest context', async () => {
+    mocks.validateToken.mockResolvedValueOnce({
+      authenticated: false,
+      tenant_id: TEST_TENANT_ID,
+    });
+    let calledInit: RequestInit | undefined;
+    global.fetch = vi.fn(
+      async (_url: RequestInfo | URL, init?: RequestInit) => {
+        calledInit = init;
+        return new Response(
+          JSON.stringify({ success: true, data: { results: [] } }),
+          {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          },
+        );
+      },
+    ) as typeof fetch;
+
+    const req = new NextRequest(
+      'http://localhost/api/proxy/pim/api/search/search',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: TEST_BEARER_TOKEN,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          lang: 'it',
+          customer_code: 'B_1184',
+          address_code: 'ADDR-1',
+          authenticated: true,
+        }),
+      },
+    );
+
+    const res = await POST(req, {
+      params: Promise.resolve({ path: ['api', 'search', 'search'] }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(JSON.parse(String(calledInit?.body))).toEqual({ lang: 'it' });
+    const headers = calledInit?.headers as Record<string, string>;
+    expect(headers['x-user-id']).toBeUndefined();
+    expect(headers['x-user-type']).toBeUndefined();
+  });
+
+  it('forwards only an SSO-owned customer/address pair for POST search', async () => {
+    let calledInit: RequestInit | undefined;
+    global.fetch = vi.fn(
+      async (_url: RequestInfo | URL, init?: RequestInit) => {
+        calledInit = init;
+        return new Response(
+          JSON.stringify({ success: true, data: { results: [] } }),
+          {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          },
+        );
+      },
+    ) as typeof fetch;
+
+    const req = new NextRequest(
+      'http://localhost/api/proxy/pim/api/search/search',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: TEST_BEARER_TOKEN,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          lang: 'it',
+          customer_code: 'B_1184',
+          address_code: 'ADDR-1',
+          authenticated: false,
+          tag_filter: ['forged-tier'],
+        }),
+      },
+    );
+
+    const res = await POST(req, {
+      params: Promise.resolve({ path: ['api', 'search', 'search'] }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(JSON.parse(String(calledInit?.body))).toEqual({
+      lang: 'it',
+      authenticated: true,
+      customer_code: 'B_1184',
+      address_code: 'ADDR-1',
+    });
+    expectForwardedSuiteAuth(calledInit?.headers as Record<string, string>);
+  });
+
+  it('forwards the httpOnly access-token cookie as a bearer for Suite verification', async () => {
+    let calledInit: RequestInit | undefined;
+    global.fetch = vi.fn(
+      async (_url: RequestInfo | URL, init?: RequestInit) => {
+        calledInit = init;
+        return new Response(
+          JSON.stringify({ success: true, data: { results: [] } }),
+          {
+            status: 200,
+            headers: { 'content-type': 'application/json' },
+          },
+        );
+      },
+    ) as typeof fetch;
+
+    const req = new NextRequest(
+      'http://localhost/api/proxy/pim/api/search/search',
+      {
+        method: 'POST',
+        headers: {
+          cookie: 'auth_token=user-token',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          lang: 'it',
+          customer_code: 'B_1184',
+          address_code: 'ADDR-1',
+        }),
+      },
+    );
+
+    const res = await POST(req, {
+      params: Promise.resolve({ path: ['api', 'search', 'search'] }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(mocks.validateToken).toHaveBeenCalledWith('user-token');
+    expect((calledInit?.headers as Record<string, string>).Authorization).toBe(
+      TEST_BEARER_TOKEN,
+    );
+  });
+
+  it('rejects a foreign customer/address pair before calling Suite', async () => {
+    global.fetch = vi.fn() as typeof fetch;
+    const req = new NextRequest(
+      'http://localhost/api/proxy/pim/api/search/search',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: TEST_BEARER_TOKEN,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          lang: 'it',
+          customer_code: 'B_9999',
+          address_code: 'ADDR-9',
+        }),
+      },
+    );
+
+    const res = await POST(req, {
+      params: Promise.resolve({ path: ['api', 'search', 'search'] }),
+    });
+
+    expect(res.status).toBe(403);
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('rejects an address that belongs to a different owned customer', async () => {
+    global.fetch = vi.fn() as typeof fetch;
+    const req = new NextRequest(
+      'http://localhost/api/proxy/pim/api/search/search',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: TEST_BEARER_TOKEN,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          lang: 'it',
+          customer_code: 'B_1184',
+          address_code: 'ADDR-2',
+        }),
+      },
+    );
+
+    const res = await POST(req, {
+      params: Promise.resolve({ path: ['api', 'search', 'search'] }),
+    });
+
+    expect(res.status).toBe(403);
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('sanitizes GET search query context with POST-equivalent rules', async () => {
+    let calledUrl = '';
+    global.fetch = vi.fn(async (url: RequestInfo | URL) => {
+      calledUrl = String(url);
+      return new Response(
+        JSON.stringify({ success: true, data: { results: [] } }),
+        {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        },
+      );
+    }) as typeof fetch;
+
+    const anonymous = new NextRequest(
+      'http://localhost/api/proxy/pim/api/search/search?lang=it&customer_code=VICTIM&address_code=A&authenticated=true&tag_filter=vip',
+    );
+    const res = await GET(anonymous, {
+      params: Promise.resolve({ path: ['api', 'search', 'search'] }),
+    });
+
+    expect(res.status).toBe(200);
+    const target = new URL(calledUrl);
+    expect(target.searchParams.get('lang')).toBe('it');
+    expect(target.searchParams.has('customer_code')).toBe(false);
+    expect(target.searchParams.has('address_code')).toBe(false);
+    expect(target.searchParams.has('authenticated')).toBe(false);
+    expect(target.searchParams.has('tag_filter')).toBe(false);
+  });
+
+  it('forwards an owned GET search pair and derives authenticated state', async () => {
+    let calledUrl = '';
+    global.fetch = vi.fn(async (url: RequestInfo | URL) => {
+      calledUrl = String(url);
+      return new Response(
+        JSON.stringify({ success: true, data: { results: [] } }),
+        {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        },
+      );
+    }) as typeof fetch;
+
+    const req = new NextRequest(
+      'http://localhost/api/proxy/pim/api/search/search?lang=it&customer_code=B_1184&address_code=ADDR-1&authenticated=false&tag_filter=forged',
+      { headers: { Authorization: TEST_BEARER_TOKEN } },
+    );
+    const res = await GET(req, {
+      params: Promise.resolve({ path: ['api', 'search', 'search'] }),
+    });
+
+    expect(res.status).toBe(200);
+    const target = new URL(calledUrl);
+    expect(target.searchParams.get('customer_code')).toBe('B_1184');
+    expect(target.searchParams.get('address_code')).toBe('ADDR-1');
+    expect(target.searchParams.get('authenticated')).toBe('true');
+    expect(target.searchParams.has('tag_filter')).toBe(false);
+  });
+
+  it.each([
+    ['foreign customer', 'B_9999', 'ADDR-9'],
+    ['cross-customer address', 'B_1184', 'ADDR-2'],
+  ])(
+    'rejects a %s in GET search before calling Suite',
+    async (_label, customerCode, addressCode) => {
+      global.fetch = vi.fn() as typeof fetch;
+      const req = new NextRequest(
+        `http://localhost/api/proxy/pim/api/search/search?lang=it&customer_code=${customerCode}&address_code=${addressCode}`,
+        { headers: { Authorization: TEST_BEARER_TOKEN } },
+      );
+
+      const res = await GET(req, {
+        params: Promise.resolve({ path: ['api', 'search', 'search'] }),
+      });
+
+      expect(res.status).toBe(403);
+      expect(global.fetch).not.toHaveBeenCalled();
+    },
+  );
 });

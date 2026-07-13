@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
+import { cookies } from 'next/headers';
 import {
   QueryClient,
   dehydrate,
@@ -15,6 +16,7 @@ import { fetchProductForSeo } from '@/lib/seo/fetch-product';
 import { serverFetchPimProducts } from '@/lib/pim/server-fetch';
 import { transformPimProducts } from '@framework/product/get-pim-product';
 import { resolveProduct, type ResolvedProduct } from '@/lib/vcs/seo';
+import { AUTH_COOKIES } from '@/lib/auth/cookies';
 
 interface RouteParams {
   params: Promise<{ lang: string; slug: string }>;
@@ -147,11 +149,14 @@ async function renderProductDetail(
 ) {
   const sku = resolved.sku;
   const queryClient = new QueryClient();
+  const cookieStore = await cookies();
+  const isAuthenticated = !!cookieStore.get(AUTH_COOKIES.ACCESS_TOKEN)?.value;
 
   const productQueryParams = {
     limit: 1,
     filters: { sku: [sku] },
     group_variants: true,
+    include_dynamic_blocks: true,
   };
 
   const [blocks, product] = await Promise.all([
@@ -164,7 +169,10 @@ async function renderProductDetail(
     })(),
     fetchProductForSeo(sku, lang),
     queryClient.prefetchQuery({
-      queryKey: ['pim-search', productQueryParams],
+      // Match the client hook's ['pim-search', customerContext, params]
+      // shape. SSR cannot read the localStorage customer selection, so it
+      // hydrates the neutral context and the client refetches for a selection.
+      queryKey: ['pim-search', {}, productQueryParams],
       queryFn: async () => {
         const result = await serverFetchPimProducts({
           lang,
@@ -172,6 +180,7 @@ async function renderProductDetail(
           filters: { sku: [sku] },
           group_variants: true,
           include_dynamic_blocks: true,
+          authenticated: isAuthenticated,
         });
         return transformPimProducts(result.results).map((p) => ({
           ...p,
