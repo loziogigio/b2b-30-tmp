@@ -157,7 +157,14 @@ describe('cart-config (dynamic)', () => {
     });
   });
 
-  it('falls back to default when the record is absent', async () => {
+  /**
+   * Must be null, NOT DEFAULT_CART_CONFIG. resolveCartConfig does
+   * `dyn ?? envCfg`, so returning a truthy defaults object here would swallow
+   * the `??` and silently kill the env fallback whenever Commerce Suite is
+   * reachable but carries no record — which made CART_SHOW_PICKUP /
+   * CART_SHOW_HEAD_NOTE do nothing. Precedence must be: record → env → defaults.
+   */
+  it('returns null when the record is absent, so the env fallback can apply', async () => {
     global.fetch = (async () =>
       new Response(JSON.stringify({ data: { items: [] } }), {
         status: 200,
@@ -168,10 +175,10 @@ describe('cart-config (dynamic)', () => {
       apiSecret: 's',
       channel: 'b2b',
     });
-    expect(cfg).toEqual(DEFAULT_CART_CONFIG);
+    expect(cfg).toBeNull();
   });
 
-  it('falls back to default on a non-OK response', async () => {
+  it('returns null on a non-OK response, so the env fallback can apply', async () => {
     global.fetch = (async () => new Response('nope', { status: 500 })) as any;
     const cfg = await fetchCartSettings({
       csBaseUrl: 'http://cs',
@@ -179,6 +186,19 @@ describe('cart-config (dynamic)', () => {
       apiSecret: 's',
       channel: 'b2b',
     });
-    expect(cfg).toEqual(DEFAULT_CART_CONFIG);
+    expect(cfg).toBeNull();
+  });
+
+  it('returns null when Commerce Suite is unreachable', async () => {
+    global.fetch = (async () => {
+      throw new Error('ENOTFOUND vinc-cs');
+    }) as any;
+    const cfg = await fetchCartSettings({
+      csBaseUrl: 'http://cs',
+      apiKeyId: 'k',
+      apiSecret: 's',
+      channel: 'b2b',
+    });
+    expect(cfg).toBeNull();
   });
 });

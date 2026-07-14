@@ -78,7 +78,12 @@ describe('catalog-config (dynamic)', () => {
         JSON.stringify({
           data: {
             items: [
-              { data: { default_view: 'list', product_open_mode: 'detail_page' } },
+              {
+                data: {
+                  default_view: 'list',
+                  product_open_mode: 'detail_page',
+                },
+              },
             ],
           },
         }),
@@ -128,19 +133,28 @@ describe('catalog-config (dynamic)', () => {
     });
   });
 
-  it('falls back to default when the record is absent', async () => {
+  /**
+   * Must be null, NOT DEFAULT_CATALOG_CONFIG. resolveCatalogConfig does
+   * `dyn ?? envCfg`, so returning a truthy defaults object here would swallow
+   * the `??` and silently kill the env fallback whenever Commerce Suite is
+   * reachable but carries no record — which made CATALOG_AVAILABILITY_DISPLAY
+   * do nothing. Precedence must be: record → env → defaults.
+   */
+  it('returns null when the record is absent, so the env fallback can apply', async () => {
     global.fetch = (async () =>
-      new Response(JSON.stringify({ data: { items: [] } }), { status: 200 })) as any;
+      new Response(JSON.stringify({ data: { items: [] } }), {
+        status: 200,
+      })) as any;
     const cfg = await fetchCatalogSettings({
       csBaseUrl: 'http://cs',
       apiKeyId: 'k',
       apiSecret: 's',
       channel: 'b2b',
     });
-    expect(cfg).toEqual(DEFAULT_CATALOG_CONFIG);
+    expect(cfg).toBeNull();
   });
 
-  it('falls back to default on a non-OK response', async () => {
+  it('returns null on a non-OK response, so the env fallback can apply', async () => {
     global.fetch = (async () => new Response('nope', { status: 500 })) as any;
     const cfg = await fetchCatalogSettings({
       csBaseUrl: 'http://cs',
@@ -148,6 +162,19 @@ describe('catalog-config (dynamic)', () => {
       apiSecret: 's',
       channel: 'b2b',
     });
-    expect(cfg).toEqual(DEFAULT_CATALOG_CONFIG);
+    expect(cfg).toBeNull();
+  });
+
+  it('returns null when Commerce Suite is unreachable', async () => {
+    global.fetch = (async () => {
+      throw new Error('ENOTFOUND vinc-cs');
+    }) as any;
+    const cfg = await fetchCatalogSettings({
+      csBaseUrl: 'http://cs',
+      apiKeyId: 'k',
+      apiSecret: 's',
+      channel: 'b2b',
+    });
+    expect(cfg).toBeNull();
   });
 });

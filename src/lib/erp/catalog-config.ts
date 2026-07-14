@@ -107,28 +107,39 @@ interface FetchCatalogArgs {
 
 /**
  * Phase 2: fetch the channel-scoped `catalog_settings` record from Commerce
- * Suite (mirrors fetchCartSettings). Returns DEFAULT_CATALOG_CONFIG when absent.
+ * Suite (mirrors fetchCartSettings).
+ *
+ * Returns `null` — NOT the defaults — when the record is absent or the lookup
+ * fails, so `resolveCatalogConfig`'s `dyn ?? envCfg` correctly falls through to
+ * the env config. Returning DEFAULT_CATALOG_CONFIG here would be a truthy
+ * object that swallows `??`, silently killing the env fallback whenever
+ * Commerce Suite is reachable but has no record — which made
+ * CATALOG_AVAILABILITY_DISPLAY do nothing.
  */
 export async function fetchCatalogSettings(
   args: FetchCatalogArgs,
-): Promise<CatalogConfig> {
-  const url = new URL(
-    `${args.csBaseUrl.replace(/\/+$/, '')}/api/b2b/data-models/catalog_settings/records`,
-  );
-  url.searchParams.set('channel', args.channel);
+): Promise<CatalogConfig | null> {
+  try {
+    const url = new URL(
+      `${args.csBaseUrl.replace(/\/+$/, '')}/api/b2b/data-models/catalog_settings/records`,
+    );
+    url.searchParams.set('channel', args.channel);
 
-  const res = await fetch(url.toString(), {
-    headers: {
-      Accept: 'application/json',
-      'x-auth-method': 'api-key',
-      'x-api-key-id': args.apiKeyId,
-      'x-api-secret': args.apiSecret,
-    },
-  });
-  if (!res.ok) return DEFAULT_CATALOG_CONFIG;
+    const res = await fetch(url.toString(), {
+      headers: {
+        Accept: 'application/json',
+        'x-auth-method': 'api-key',
+        'x-api-key-id': args.apiKeyId,
+        'x-api-secret': args.apiSecret,
+      },
+    });
+    if (!res.ok) return null;
 
-  const json: any = await res.json();
-  const record = json?.data?.items?.[0];
-  if (!record?.data) return DEFAULT_CATALOG_CONFIG;
-  return mapCatalogRecord(record.data as Record<string, unknown>);
+    const json: any = await res.json();
+    const record = json?.data?.items?.[0];
+    if (!record?.data) return null;
+    return mapCatalogRecord(record.data as Record<string, unknown>);
+  } catch {
+    return null;
+  }
 }

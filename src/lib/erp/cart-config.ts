@@ -110,28 +110,39 @@ interface FetchCartArgs {
 
 /**
  * Phase 2: fetch the channel-scoped `cart_settings` record from Commerce Suite
- * (mirrors fetchCouponSettings). Returns DEFAULT_CART_CONFIG when absent.
+ * (mirrors fetchCouponSettings).
+ *
+ * Returns `null` — NOT the defaults — when the record is absent or the lookup
+ * fails, so `resolveCartConfig`'s `dyn ?? envCfg` correctly falls through to the
+ * env config. Returning DEFAULT_CART_CONFIG here would be a truthy object that
+ * swallows `??`, silently killing the env fallback whenever Commerce Suite is
+ * reachable but has no record — which made CART_SHOW_PICKUP /
+ * CART_SHOW_HEAD_NOTE do nothing.
  */
 export async function fetchCartSettings(
   args: FetchCartArgs,
-): Promise<CartConfig> {
-  const url = new URL(
-    `${args.csBaseUrl.replace(/\/+$/, '')}/api/b2b/data-models/cart_settings/records`,
-  );
-  url.searchParams.set('channel', args.channel);
+): Promise<CartConfig | null> {
+  try {
+    const url = new URL(
+      `${args.csBaseUrl.replace(/\/+$/, '')}/api/b2b/data-models/cart_settings/records`,
+    );
+    url.searchParams.set('channel', args.channel);
 
-  const res = await fetch(url.toString(), {
-    headers: {
-      Accept: 'application/json',
-      'x-auth-method': 'api-key',
-      'x-api-key-id': args.apiKeyId,
-      'x-api-secret': args.apiSecret,
-    },
-  });
-  if (!res.ok) return DEFAULT_CART_CONFIG;
+    const res = await fetch(url.toString(), {
+      headers: {
+        Accept: 'application/json',
+        'x-auth-method': 'api-key',
+        'x-api-key-id': args.apiKeyId,
+        'x-api-secret': args.apiSecret,
+      },
+    });
+    if (!res.ok) return null;
 
-  const json: any = await res.json();
-  const record = json?.data?.items?.[0];
-  if (!record?.data) return DEFAULT_CART_CONFIG;
-  return mapCartRecord(record.data as Record<string, unknown>);
+    const json: any = await res.json();
+    const record = json?.data?.items?.[0];
+    if (!record?.data) return null;
+    return mapCartRecord(record.data as Record<string, unknown>);
+  } catch {
+    return null;
+  }
 }
