@@ -34,7 +34,14 @@ async function getTenantBits(req: NextRequest) {
     // Prefer an explicit erp_url if ever configured; otherwise use the B2B API
     // URL, which holds the MyMB connection string (with embedded credentials).
     erpUrl: tenant?.api.erpUrl || tenant?.api.b2bApiUrl,
-    csBaseUrl: tenant?.api.pimApiUrl || process.env.PIM_API_URL || '',
+    // PIM_API_URL_OVERRIDE first, mirroring resolveErpUrl above and
+    // resolveTenantApiConfig: the tenant record holds a cluster-internal host
+    // (vinc-cs) that does not resolve from a dev machine.
+    csBaseUrl:
+      process.env.PIM_API_URL_OVERRIDE ||
+      tenant?.api.pimApiUrl ||
+      process.env.PIM_API_URL ||
+      '',
     apiKeyId: tenant?.api.apiKeyId || '',
     apiSecret: tenant?.api.apiSecret || '',
   };

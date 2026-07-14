@@ -73,29 +73,43 @@ interface FetchArgs {
 /**
  * Fetch the singleton `erp_settings` record from Commerce Suite for this tenant
  * (relation_id=_global, channel=b2b) and map it to typed settings. Returns
- * DEFAULT_ERP_SETTINGS if the record is absent.
+ * DEFAULT_ERP_SETTINGS if the record is absent OR unreachable.
+ *
+ * This record is an optional per-tenant OVERRIDE — the defaults reproduce the
+ * legacy behaviour on their own. So it must never be able to take pricing down:
+ * a DNS/network failure here (e.g. the cluster-internal Commerce Suite host not
+ * resolving from a dev machine) previously threw straight out of
+ * getMyMbErpClient and 502'd every price request.
  */
 export async function fetchErpSettings(
   args: FetchArgs,
 ): Promise<MyMbErpSettings> {
-  const url = new URL(
-    `${args.csBaseUrl.replace(/\/+$/, '')}/api/b2b/data-models/erp_settings/records`,
-  );
-  url.searchParams.set('relation_id', '_global');
-  url.searchParams.set('channel', 'b2b');
+  try {
+    const url = new URL(
+      `${args.csBaseUrl.replace(/\/+$/, '')}/api/b2b/data-models/erp_settings/records`,
+    );
+    url.searchParams.set('relation_id', '_global');
+    url.searchParams.set('channel', 'b2b');
 
-  const res = await fetch(url.toString(), {
-    headers: {
-      Accept: 'application/json',
-      'x-auth-method': 'api-key',
-      'x-api-key-id': args.apiKeyId,
-      'x-api-secret': args.apiSecret,
-    },
-  });
-  if (!res.ok) return DEFAULT_ERP_SETTINGS;
+    const res = await fetch(url.toString(), {
+      headers: {
+        Accept: 'application/json',
+        'x-auth-method': 'api-key',
+        'x-api-key-id': args.apiKeyId,
+        'x-api-secret': args.apiSecret,
+      },
+    });
+    if (!res.ok) return DEFAULT_ERP_SETTINGS;
 
-  const json: any = await res.json();
-  const record = json?.data?.items?.[0];
-  if (!record?.data) return DEFAULT_ERP_SETTINGS;
-  return mapErpSettingsRecord(record.data as Record<string, unknown>);
+    const json: any = await res.json();
+    const record = json?.data?.items?.[0];
+    if (!record?.data) return DEFAULT_ERP_SETTINGS;
+    return mapErpSettingsRecord(record.data as Record<string, unknown>);
+  } catch (err) {
+    console.warn(
+      '[erp_settings] unreachable, falling back to defaults:',
+      err instanceof Error ? err.message : err,
+    );
+    return DEFAULT_ERP_SETTINGS;
+  }
 }
