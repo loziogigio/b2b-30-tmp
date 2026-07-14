@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { AddressB2B } from '@framework/acccount/types-b2b-account';
 import { resolveTenantApiConfig } from '@/lib/tenant';
+import { sessionOwnedCustomers } from '@/lib/profile/session-owner';
 
 // PIM API response type
 interface PIMAddressResponse {
@@ -82,8 +83,44 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Resolve the PIM API target via the shared helper so every route reaches
-    // the suite the same way (honours PIM_API_URL_OVERRIDE for local dev).
+    // The address book is customer-scoped data. `customer_id` arrives from the
+    // client, so it must be checked against the SSO-validated session before
+    // it is used — otherwise any caller can read any customer's addresses.
+    const owned = await sessionOwnedCustomers(request);
+    if (!owned) {
+      return NextResponse.json(
+        { success: false, message: 'Not authenticated' },
+        { status: 401 },
+      );
+    }
+
+    const allowedAddressCodes = owned.get(String(customer_id));
+    if (!allowedAddressCodes) {
+      return NextResponse.json(
+        { success: false, message: 'Customer not available for this profile' },
+        { status: 403 },
+      );
+    }
+
+    // Fail closed: an empty allowlist means no address was enabled for this
+    // user in VINC. Returning every address would silently reproduce the bug
+    // this gate exists to fix; returning an empty success would render an
+    // unexplained address-less checkout. Surface it instead.
+    if (allowedAddressCodes.size === 0) {
+      console.warn(
+        '[b2b/addresses] empty address allowlist for customer',
+        customer_id,
+      );
+      return NextResponse.json(
+        {
+          success: false,
+          code: 'NO_ADDRESS_FOR_PROFILE',
+          message: 'No address is associated with this profile',
+        },
+        { status: 403 },
+      );
+    }
+
     const { pimApiUrl, tenantId } = await resolveTenantApiConfig(request);
 
     if (!pimApiUrl) {
@@ -96,12 +133,6 @@ export async function POST(request: NextRequest) {
 
     // Call PIM API to get addresses
     const endpoint = `${pimApiUrl}/api/b2b/addresses`;
-    console.log('[b2b/addresses] Calling PIM API:', {
-      pimApiUrl,
-      tenantId,
-      customer_id,
-      endpoint,
-    });
 
     const response = await fetch(endpoint, {
       method: 'POST',
@@ -130,9 +161,13 @@ export async function POST(request: NextRequest) {
 
     const data = await response.json();
 
-    // Transform to AddressB2B format and sort default address first
+    // Transform to AddressB2B format, keeping only the addresses enabled for
+    // this user, and sort the default address first.
     const addresses = data.addresses || data || [];
     const transformedAddresses = (Array.isArray(addresses) ? addresses : [])
+      .filter((addr: PIMAddressResponse) =>
+        allowedAddressCodes.has(String(addr.id)),
+      )
       .map(transformPimAddress)
       .sort((a, b) => {
         // Default address first

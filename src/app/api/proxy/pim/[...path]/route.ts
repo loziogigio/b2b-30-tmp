@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AUTH_COOKIES, resolveAuthContext } from '@/lib/auth/server';
 import { buildTenantApiHeaders, resolveTenantApiConfig } from '@/lib/tenant';
+import { customerAddressCodes } from '@/lib/profile/session-owner';
 
 // ---------------------------------------------------------------------------
 // Category-tree cache (per tenant + upstream PIM URL).
@@ -154,14 +155,7 @@ async function resolveTrustedUserContext(
         )
         .map((customer) => ({
           customerCode: customer.erp_customer_id,
-          addressCodes: new Set(
-            (customer.addresses ?? [])
-              .map((address) => address.erp_address_id)
-              .filter(
-                (addressCode): addressCode is string =>
-                  typeof addressCode === 'string' && addressCode.length > 0,
-              ),
-          ),
+          addressCodes: customerAddressCodes(customer),
         })),
     };
   } catch (err) {
