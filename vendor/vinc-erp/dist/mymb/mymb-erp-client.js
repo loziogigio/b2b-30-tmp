@@ -4,6 +4,7 @@ exports.MyMbErpClient = void 0;
 const cache_js_1 = require("../cache.js");
 const erp_client_js_1 = require("../erp-client.js");
 const endpoints_js_1 = require("../endpoints.js");
+const cart_closure_js_1 = require("../types/cart-closure.js");
 const transform_js_1 = require("./transform.js");
 const request_js_1 = require("./request.js");
 function ddmmyyyy(d = new Date()) {
@@ -112,6 +113,37 @@ class MyMbErpClient {
             params: { IdCarrello: idCarrello },
         });
         return data?.GetRigheCarrelloResult?.ListaRighe ?? [];
+    }
+    /**
+     * Order-header info for cart closure — MyMB
+     * `GetInfoTestataOrdineXControlloChiusura?IdCarrello=…` (GET).
+     *
+     * This is the ONLY place the ERP exposes its minimum-order rule (IMPMIN):
+     * it is an order-header rule, so it does not appear in GetPrezzaturaMultipla's
+     * per-article promo rows. Mirrors the legacy
+     * `looxb2b_ordine_minimo_spese_trasporto($id_carrello)`.
+     *
+     * NOTE: the ERP resolves the customer from the CART, so `idCarrello` must be a
+     * real ERP cart. An unknown/empty id returns zeros (and `compliant: true`),
+     * which callers must treat as "no minimum configured" rather than "compliant".
+     */
+    async getCartClosureInfo(idCarrello, opts = {}) {
+        const data = await this.request(endpoints_js_1.MYMB_ENDPOINTS.GET_INFO_TESTATA_ORDINE_X_CONTROLLO_CHIUSURA, {
+            method: 'GET',
+            params: {
+                IdCarrello: idCarrello,
+                isApplicaSpeseDiTrasportoSePreviste: opts.applyTransportCosts ?? true,
+                CodicePromozioneSpedizione: opts.shippingPromoCode ?? '',
+            },
+        });
+        const result = data?.GetInfoTestataOrdineXControlloChiusuraResult;
+        if (!result || result.ReturnCode !== 0) {
+            throw new erp_client_js_1.ErpError(`GetInfoTestataOrdineXControlloChiusura error: ${result?.Message ?? 'unknown'}`, {
+                endpoint: endpoints_js_1.MYMB_ENDPOINTS.GET_INFO_TESTATA_ORDINE_X_CONTROLLO_CHIUSURA,
+                returnCode: result?.ReturnCode,
+            });
+        }
+        return (0, cart_closure_js_1.buildCartClosureInfo)(result);
     }
     /**
      * Document line rows — MyMB `GetRigheConInfoConsegna?Causale&Anno&Numero`

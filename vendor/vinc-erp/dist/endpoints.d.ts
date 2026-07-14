@@ -9,6 +9,7 @@ export declare const MYMB_ENDPOINTS: {
     readonly GET_TESTATE_FATT_CON_INFO: "GetTestateFATTConInfo";
     readonly GET_TESTATE_DDT_CON_INFO: "GetTestateDDTConInfo";
     readonly GET_RIGHE_CARRELLO: "GetRigheCarrello";
+    readonly GET_INFO_TESTATA_ORDINE_X_CONTROLLO_CHIUSURA: "GetInfoTestataOrdineXControlloChiusura";
     readonly GET_RIGHE_CON_INFO_CONSEGNA: "GetRigheConInfoConsegna";
     readonly GET_RIGHE_DDT_CON_INFO: "GetRigheDDTConInfo";
     readonly GET_RIGHE_FATT_CON_INFO: "GetRigheFATTConInfo";

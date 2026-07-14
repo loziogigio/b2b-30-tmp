@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.mymbRequest = exports.CouponClient = exports.MYMB_COUPON_ENDPOINTS = exports.buildPriceEntry = exports.getLabelAndCartStatus = exports.getPackagingOptions = exports.MyMbErpClient = exports.parseMyMbConnection = exports.MYMB_ENDPOINTS = exports.NoopCacheAdapter = exports.ErpError = void 0;
+exports.mymbRequest = exports.CouponClient = exports.MYMB_COUPON_ENDPOINTS = exports.buildPriceEntry = exports.getLabelAndCartStatus = exports.getPackagingOptions = exports.MyMbErpClient = exports.parseMyMbConnection = exports.buildCartClosureInfo = exports.MYMB_ENDPOINTS = exports.NoopCacheAdapter = exports.ErpError = void 0;
 var erp_client_js_1 = require("./erp-client.js");
 Object.defineProperty(exports, "ErpError", { enumerable: true, get: function () { return erp_client_js_1.ErpError; } });
 var cache_js_1 = require("./cache.js");
@@ -8,6 +8,8 @@ Object.defineProperty(exports, "NoopCacheAdapter", { enumerable: true, get: func
 // Endpoints
 var endpoints_js_1 = require("./endpoints.js");
 Object.defineProperty(exports, "MYMB_ENDPOINTS", { enumerable: true, get: function () { return endpoints_js_1.MYMB_ENDPOINTS; } });
+var cart_closure_js_1 = require("./types/cart-closure.js");
+Object.defineProperty(exports, "buildCartClosureInfo", { enumerable: true, get: function () { return cart_closure_js_1.buildCartClosureInfo; } });
 // MYMB implementation
 var auth_js_1 = require("./mymb/auth.js");
 Object.defineProperty(exports, "parseMyMbConnection", { enumerable: true, get: function () { return auth_js_1.parseMyMbConnection; } });

@@ -1,6 +1,7 @@
 import type { CacheAdapter } from '../cache.js';
 import type { ErpClient } from '../erp-client.js';
 import type { MyMbErpSettings, MyMbPriceEntry, PriceQuery } from '../types/pricing.js';
+import type { MyMbCartClosureInfo } from '../types/cart-closure.js';
 export interface MyMbErpClientConfig {
     /** Base URL, no userinfo, no trailing slash (from parseMyMbConnection). */
     baseUrl: string;
@@ -49,6 +50,23 @@ export declare class MyMbErpClient implements ErpClient {
      * MyMB has no single-order detail endpoint.
      */
     getCartRows(idCarrello: number | string): Promise<any[]>;
+    /**
+     * Order-header info for cart closure — MyMB
+     * `GetInfoTestataOrdineXControlloChiusura?IdCarrello=…` (GET).
+     *
+     * This is the ONLY place the ERP exposes its minimum-order rule (IMPMIN):
+     * it is an order-header rule, so it does not appear in GetPrezzaturaMultipla's
+     * per-article promo rows. Mirrors the legacy
+     * `looxb2b_ordine_minimo_spese_trasporto($id_carrello)`.
+     *
+     * NOTE: the ERP resolves the customer from the CART, so `idCarrello` must be a
+     * real ERP cart. An unknown/empty id returns zeros (and `compliant: true`),
+     * which callers must treat as "no minimum configured" rather than "compliant".
+     */
+    getCartClosureInfo(idCarrello: number | string, opts?: {
+        applyTransportCosts?: boolean;
+        shippingPromoCode?: string;
+    }): Promise<MyMbCartClosureInfo>;
     /**
      * Document line rows — MyMB `GetRigheConInfoConsegna?Causale&Anno&Numero`
      * (GET). Reads rows straight off the ERP document, so it also covers

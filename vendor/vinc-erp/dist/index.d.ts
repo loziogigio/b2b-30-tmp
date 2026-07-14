@@ -5,6 +5,8 @@ export { NoopCacheAdapter } from './cache.js';
 export { MYMB_ENDPOINTS } from './endpoints.js';
 export type { MyMbEndpoint } from './endpoints.js';
 export type { MyMbErpSettings, PriceQuery, MyMbPriceEntry, ProductLabelAction, NormalizedPackagingOption, } from './types/pricing.js';
+export type { MyMbCartClosureInfo } from './types/cart-closure.js';
+export { buildCartClosureInfo } from './types/cart-closure.js';
 export { parseMyMbConnection } from './mymb/auth.js';
 export type { MyMbConnection } from './mymb/auth.js';
 export { MyMbErpClient } from './mymb/mymb-erp-client.js';

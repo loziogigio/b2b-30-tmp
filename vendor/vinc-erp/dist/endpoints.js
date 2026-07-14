@@ -12,6 +12,7 @@ exports.MYMB_ENDPOINTS = {
     GET_TESTATE_FATT_CON_INFO: 'GetTestateFATTConInfo',
     GET_TESTATE_DDT_CON_INFO: 'GetTestateDDTConInfo',
     GET_RIGHE_CARRELLO: 'GetRigheCarrello',
+    GET_INFO_TESTATA_ORDINE_X_CONTROLLO_CHIUSURA: 'GetInfoTestataOrdineXControlloChiusura',
     GET_RIGHE_CON_INFO_CONSEGNA: 'GetRigheConInfoConsegna',
     GET_RIGHE_DDT_CON_INFO: 'GetRigheDDTConInfo',
     GET_RIGHE_FATT_CON_INFO: 'GetRigheFATTConInfo',
