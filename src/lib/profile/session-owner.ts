@@ -15,9 +15,20 @@ export function customerAddressCodes(customer: {
 }
 
 /**
- * The ERP customers the current session owns, mapped to the set of
- * `erp_address_id`s that were enabled for this user at activation.
- * Derived from the SSO-validated token — NOT from any client-supplied value.
+ * The customers the current session owns, keyed by BOTH identifiers the SSO
+ * token carries for each one:
+ *
+ *   - `erp_customer_id` — the ERP customer code (e.g. "5300"). What the ERP
+ *     routes send as `customer_code`.
+ *   - `id` — the VINC/SSO customer id. What the client holds as
+ *     `ERP_STATIC.vinc_customer_id` and posts to /api/b2b/addresses.
+ *
+ * Callers receive a customer id from the client and cannot know which of the
+ * two it is, so both map to the same address-code set. Keying on only one of
+ * them rejects legitimate requests from the other.
+ *
+ * Both keys come from the SSO-validated token, never from a client-supplied
+ * value, so accepting either is exactly as unforgeable as accepting one.
  * Returns null when there is no valid session (caller should respond 401).
  */
 export async function sessionOwnedCustomers(
@@ -36,9 +47,12 @@ export async function sessionOwnedCustomers(
 
     const owned = new Map<string, Set<string>>();
     for (const customer of validation.user?.customers ?? []) {
-      const code = customer.erp_customer_id;
-      if (typeof code !== 'string' || code.length === 0) continue;
-      owned.set(code, customerAddressCodes(customer));
+      const addressCodes = customerAddressCodes(customer);
+      for (const key of [customer.erp_customer_id, customer.id]) {
+        if (typeof key === 'string' && key.length > 0) {
+          owned.set(key, addressCodes);
+        }
+      }
     }
     return owned;
   } catch {
@@ -48,11 +62,34 @@ export async function sessionOwnedCustomers(
 
 /**
  * The set of ERP customer codes (relation_ids) the current session owns.
+ *
+ * Deliberately derived from `erp_customer_id` only — NOT from the map above,
+ * which is also keyed by the VINC customer id. Callers of this function compare
+ * against ERP customer codes (a record's `relation_id`, a request's
+ * `customer_code`), so admitting VINC ids here would widen what they accept.
+ *
  * Returns null when there is no valid session (caller should respond 401).
  */
 export async function sessionOwnedCustomerCodes(
   req: NextRequest,
 ): Promise<Set<string> | null> {
-  const owned = await sessionOwnedCustomers(req);
-  return owned ? new Set(owned.keys()) : null;
+  const token = (await cookies()).get(AUTH_COOKIES.ACCESS_TOKEN)?.value;
+  if (!token) return null;
+
+  const result = await resolveAuthContext(req, 'validate');
+  if (!result.success) return null;
+
+  try {
+    const validation = await result.context.ssoApi.validate(token);
+    const authenticated = validation.authenticated ?? validation.active;
+    if (!authenticated || !validation.user) return null;
+
+    return new Set(
+      (validation.user?.customers ?? [])
+        .map((c) => c.erp_customer_id)
+        .filter((c): c is string => typeof c === 'string' && c.length > 0),
+    );
+  } catch {
+    return null;
+  }
 }
