@@ -165,29 +165,52 @@ export function mapCSLineItemToItem(li: any): Item {
   } satisfies Item;
 }
 
+/**
+ * Whether the cart clears the ERP's minimum-order threshold.
+ *
+ * The `conforme` flag stored on the order is evaluated by the ERP at
+ * cart-create, when the cart is empty, so it is worthless here — compliance is
+ * derived live from the current net total. A threshold of 0 means "no minimum
+ * configured" and must never block.
+ *
+ * Basis: net total (imponibile), matching TotaliDocumento[0].
+ */
+export function minOrderStatus(
+  totalNet: number,
+  minimumAmount: number,
+): { belowMinimum: boolean; shortfall: number } {
+  if (!(minimumAmount > 0)) return { belowMinimum: false, shortfall: 0 };
+  const shortfall = Math.max(0, minimumAmount - totalNet);
+  return { belowMinimum: shortfall > 0, shortfall };
+}
+
 /** Map a commerce-suite order to CartSummary */
 export function mapCSOrderToSummary(order: any): CartSummary {
   const erpData = order.erp_data || {};
+  // These are the keys the on-cart-create ERP hook actually writes
+  // (from GetInfoTestataOrdineXControlloChiusura). The previous code read
+  // `min_order.minimum_amount` / `close_enable` / `free_shipping_threshold`,
+  // which nothing produces — so the minimum-order threshold never reached the
+  // client and orders below it were accepted.
   const deliveryInfo = erpData.delivery_info || {};
-  const minOrder = deliveryInfo.min_order || {};
-
-  const toBool = (v: any) => v === true || v === 1 || v === '1' || v === 'true';
+  const minimumAmount = num(deliveryInfo.importo_minimo, 0);
 
   return {
     orderId: order.order_id,
     idCart: order.order_id,
     clientId: order.customer_code,
     addressCode: order.shipping_address_code,
-    closeEnable: toBool(deliveryInfo.close_enable),
-    minOrder: minOrder.minimum_amount
-      ? {
-          warning: String(minOrder.warning ?? ''),
-          minimumAmount: num(minOrder.minimum_amount, 0),
-          compliant: toBool(minOrder.compliant),
-        }
-      : undefined,
-    transportCost: num(order.shipping_cost, 0),
-    transportFreeAbove: num(deliveryInfo.free_shipping_threshold, 0),
+    minOrder:
+      minimumAmount > 0
+        ? {
+            warning: String(deliveryInfo.min_order_warning ?? ''),
+            minimumAmount,
+            // Derived live at the point of use — see minOrderStatus().
+            compliant: false,
+          }
+        : undefined,
+    transportCost: num(deliveryInfo.shipping_cost, num(order.shipping_cost, 0)),
+    transportFreeAbove: num(deliveryInfo.importo_minimo_zero_spese, 0),
     totalNet: num(order.subtotal_net, 0),
     totalGross: num(order.subtotal_gross, 0),
     vat: num(order.total_vat, 0),

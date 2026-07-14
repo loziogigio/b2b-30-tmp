@@ -145,6 +145,8 @@
   "text-payment-terms": "Payment terms",
   "text-order-already-submitted": "This order has already been submitted. Reload the page to see the updated status.",
   "text-reload": "Reload",
+  "text-min-order-title": "Minimum order amount not reached",
+  "text-min-order-detail": "Minimum {{min}} — {{missing}} short",
   "text-add-address": "Add Address",
   "text-highlighted-bar": "Claim your online <strong>FREE Delivery or Shipping</strong> today! Expires in",
   "text-share-profile-data": "Share Profile Data",

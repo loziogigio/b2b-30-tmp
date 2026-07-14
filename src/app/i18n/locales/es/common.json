@@ -145,6 +145,8 @@
   "text-payment-terms": "Condiciones de pago",
   "text-order-already-submitted": "Este pedido ya se ha enviado. Vuelva a cargar la página para ver el estado actualizado.",
   "text-reload": "Recargar",
+  "text-min-order-title": "Importe mínimo de pedido no alcanzado",
+  "text-min-order-detail": "Mínimo {{min}} — faltan {{missing}}",
   "text-add-address": "Agregar dirección",
   "text-highlighted-bar": "¡Reclama tu <strong> Entrega o envío GRATUITO en línea</strong> hoy mismo! Caduca en",
   "text-share-profile-data": "Compartir datos de perfil",

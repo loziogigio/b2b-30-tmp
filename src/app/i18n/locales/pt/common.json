@@ -145,6 +145,8 @@
   "text-payment-terms": "Condições de pagamento",
   "text-order-already-submitted": "Esta encomenda já foi submetida. Recarregue a página para ver o estado atualizado.",
   "text-reload": "Recarregar",
+  "text-min-order-title": "Valor mínimo de encomenda não atingido",
+  "text-min-order-detail": "Mínimo {{min}} — faltam {{missing}}",
   "text-add-address": "Adicionar Morada",
   "text-highlighted-bar": "Reclame hoje a sua <strong>Entrega ou Envio GRATUITO</strong> online! Expira em",
   "text-share-profile-data": "Partilhar Dados do Perfil",

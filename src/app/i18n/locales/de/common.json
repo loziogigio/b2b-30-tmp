@@ -456,6 +456,8 @@
   "exposition-col-to-expire": "Fällig werdend",
   "order-status-completed": "Bestellung abgeschlossen",
   "text-reload": "Neu laden",
+  "text-min-order-title": "Mindestbestellwert nicht erreicht",
+  "text-min-order-detail": "Mindestens {{min}} — es fehlen {{missing}}",
   "ADDRESSES": "Adressen",
   "deadlines-col-total": "Gesamt",
   "CHANGE_PASSWORD": "Passwort ändern",

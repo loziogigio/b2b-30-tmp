@@ -16,6 +16,7 @@ import { useCoupon } from '@/hooks/use-coupon';
 import { applyCouponDiscount } from '@/lib/coupon/discount';
 import TimeCouponField from './time-coupon-field';
 import { useCartSettings } from '@/hooks/use-cart-settings';
+import { minOrderStatus } from '@utils/adapter/cart-adapter';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -155,6 +156,9 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
   const doc = meta?.totalDoc ?? 0;
   const savings = gross - net;
 
+  const minimumAmount = meta?.minOrder?.minimumAmount ?? 0;
+  const { belowMinimum, shortfall } = minOrderStatus(net, minimumAmount);
+
   // Active cart/document id for coupon persist + re-display. This tenant's
   // checkout drives the order off meta.orderId / vinc_order_id (the legacy
   // ERP_STATIC.id_cart is the pricing id and is often "0" here), so prefer the
@@ -179,7 +183,11 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
   }, [selectedB2B]);
 
   const canSubmit = Boolean(
-    selectedB2B && deliveryDate && !isSubmitting && totalItems > 0,
+    selectedB2B &&
+      deliveryDate &&
+      !isSubmitting &&
+      totalItems > 0 &&
+      !belowMinimum,
   );
 
   // Carry the validated coupon with the order submit so it travels to MyMB via the
@@ -431,6 +439,23 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
             </span>
           </div>
         </div>
+
+        {belowMinimum && (
+          <div className="mx-6 mb-4 rounded-[var(--radius-btn)] border-[1.5px] border-[var(--time-red)] bg-[rgba(230,57,70,0.06)] px-4 py-3">
+            <p className="text-[13px] font-bold text-[var(--time-red)]">
+              {t('text-min-order-title', {
+                defaultValue: 'Importo minimo d’ordine non raggiunto',
+              })}
+            </p>
+            <p className="mt-1 text-[12px] text-[var(--time-gray-600)] tabular-nums">
+              {t('text-min-order-detail', {
+                defaultValue: 'Minimo {{min}} — mancano {{missing}}',
+                min: money(minimumAmount),
+                missing: money(shortfall),
+              })}
+            </p>
+          </div>
+        )}
 
         {/* CTA */}
         <div className="px-6 pb-6">

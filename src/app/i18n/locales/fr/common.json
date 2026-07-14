@@ -145,6 +145,8 @@
   "text-payment-terms": "Conditions de paiement",
   "text-order-already-submitted": "Cette commande a déjà été soumise. Rechargez la page pour voir le statut mis à jour.",
   "text-reload": "Recharger",
+  "text-min-order-title": "Montant minimum de commande non atteint",
+  "text-min-order-detail": "Minimum {{min}} — il manque {{missing}}",
   "text-add-address": "Ajouter une adresse",
   "text-highlighted-bar": "Profitez dès aujourd'hui de votre <strong>livraison ou expédition GRATUITE</strong> en ligne ! Expire dans",
   "text-share-profile-data": "Partager les données de profil",
