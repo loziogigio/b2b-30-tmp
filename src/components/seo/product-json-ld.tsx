@@ -2,6 +2,7 @@
 
 import { Product } from '@framework/types';
 import type { ErpPriceData } from '@utils/transform/erp-prices';
+import { selectBestPrice } from '@framework/pricing/best-price';
 import { absoluteProductDetailUrl } from '@/lib/seo/product-url';
 
 interface ProductJsonLdProps {
@@ -21,9 +22,12 @@ export default function ProductJsonLd({
 }: ProductJsonLdProps) {
   if (!product) return null;
 
-  const siteUrl = configuredSiteUrl || process.env.NEXT_PUBLIC_WEBSITE_URL || '';
+  const siteUrl =
+    configuredSiteUrl || process.env.NEXT_PUBLIC_WEBSITE_URL || '';
   const productUrl =
-    canonicalUrl || absoluteProductDetailUrl(siteUrl, lang, product) || undefined;
+    canonicalUrl ||
+    absoluteProductDetailUrl(siteUrl, lang, product) ||
+    undefined;
 
   // Get product image
   const productImage =
@@ -32,13 +36,14 @@ export default function ProductJsonLd({
     (product.gallery?.[0] as any)?.original ||
     '';
 
-  // Get price data
-  const anyPD = priceData as any;
+  // Advertise the price we actually charge. `price_discount` carries the ERP's
+  // pre-selected improving_promo, which is not necessarily the price the site
+  // displays or books — a cheaper promo may exist, and the listino itself can
+  // undercut every promo. Structured data must not advertise a price we do not
+  // honour, so it goes through the same selector as the storefront and the cart.
+  const bestPrice = selectBestPrice(priceData);
   const price =
-    anyPD?.price_discount ??
-    anyPD?.net_price ??
-    anyPD?.gross_price ??
-    anyPD?.price_gross;
+    bestPrice.effectivePrice > 0 ? bestPrice.effectivePrice : undefined;
 
   // Availability mapping
   const availability =
