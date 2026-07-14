@@ -18,6 +18,7 @@ export type PriceSlice = Pick<
   | 'is_promo'
   | 'price_discount'
   | 'count_promo'
+  | 'net_price'
 >;
 
 type Props = {
@@ -89,15 +90,13 @@ export default function PriceAndPromo({
   // normalize shapes (support net_price and price_gross too)
   const anyPD = effective as any;
   // Lowest of the listino and any qualifying promo — not the ERP's single
-  // pre-selected improving_promo, which can be dearer than both. Only
-  // applies when `effective` is a real ErpPriceData (carries net_price);
-  // callers that pass a pre-resolved PriceSlice (e.g. the cart line summary,
-  // which only sets price_discount to the cart line's own net unit price)
-  // have nothing to select — read that value as-is.
-  const price_discount =
-    anyPD.net_price != null
-      ? selectBestPrice(effective as ErpPriceData).effectivePrice
-      : anyPD.price_discount;
+  // pre-selected improving_promo, which can be dearer than both. Every
+  // caller sets `net_price` (real ErpPriceData carries its own listino;
+  // synthetic slices like the cart line summary set `net_price` to their
+  // already-resolved unit price with no offers), so this is the single path.
+  const price_discount = selectBestPrice(
+    effective as ErpPriceData,
+  ).effectivePrice;
   const gross_price = anyPD.gross_price ?? anyPD.price_gross;
   const discount_description = anyPD.discount_description;
   const is_promo: boolean = Boolean(anyPD.is_promo);

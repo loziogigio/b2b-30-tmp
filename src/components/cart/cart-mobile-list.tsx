@@ -145,7 +145,7 @@ function CartMobileCard({
   const netUnit = unitNet(r);
   const grossUnit = unitGross(r);
   const priceData: Partial<PriceSlice> = {
-    price_discount: netUnit,
+    net_price: netUnit,
     gross_price: grossUnit > netUnit ? grossUnit : undefined,
     is_promo: isPromo,
     discount_description:
