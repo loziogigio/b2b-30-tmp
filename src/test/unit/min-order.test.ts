@@ -75,4 +75,37 @@ describe('minOrderStatus', () => {
       shortfall: 0,
     });
   });
+
+  // totalNet is a server-side SUM OF LINE TOTALS, so an arithmetically exact
+  // minimum can land a few units of floating-point epsilon away from the
+  // threshold (e.g. 1199.9999999996 instead of 1200). The boundary must be
+  // INCLUSIVE — a cart that is truly at the minimum must never be blocked.
+  it('treats a float-epsilon-below-threshold total as compliant (no float-artifact lockout)', () => {
+    expect(minOrderStatus(1199.9999999996, 1200)).toEqual({
+      belowMinimum: false,
+      shortfall: 0,
+    });
+  });
+
+  it('treats a float-epsilon-above-threshold total as compliant', () => {
+    expect(minOrderStatus(1200.0000000001, 1200)).toEqual({
+      belowMinimum: false,
+      shortfall: 0,
+    });
+  });
+
+  it('a genuine shortfall still blocks and reports a clean 2dp value', () => {
+    expect(minOrderStatus(860, 1200)).toEqual({
+      belowMinimum: true,
+      shortfall: 340,
+    });
+  });
+
+  it('does not block on a sub-cent shortfall', () => {
+    // Short by 0.003 — less than half a cent, so it must round away to 0.
+    expect(minOrderStatus(1199.997, 1200)).toEqual({
+      belowMinimum: false,
+      shortfall: 0,
+    });
+  });
 });

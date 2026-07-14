@@ -180,8 +180,20 @@ export function minOrderStatus(
   minimumAmount: number,
 ): { belowMinimum: boolean; shortfall: number } {
   if (!(minimumAmount > 0)) return { belowMinimum: false, shortfall: 0 };
-  const shortfall = Math.max(0, minimumAmount - totalNet);
-  return { belowMinimum: shortfall > 0, shortfall };
+  // `totalNet` is a server-side SUM OF LINE TOTALS, so a cart that is
+  // arithmetically exactly at the minimum can land a few units of
+  // floating-point epsilon away from it (e.g. 1199.9999999996 instead of
+  // 1200). Money only has 2 decimal places, so compare at CENT granularity:
+  // round both sides to the nearest cent before diffing. This keeps the
+  // boundary inclusive (net == minimum is compliant) and also guarantees the
+  // reported shortfall is a clean 2dp value, not a float artifact.
+  const minimumCents = Math.round(minimumAmount * 100);
+  const totalCents = Math.round(totalNet * 100);
+  const shortfallCents = Math.max(0, minimumCents - totalCents);
+  return {
+    belowMinimum: shortfallCents > 0,
+    shortfall: shortfallCents / 100,
+  };
 }
 
 /** Map a commerce-suite order to CartSummary */
