@@ -186,30 +186,24 @@ describe('selectBestPrice', () => {
 
 describe('promoLabel', () => {
   it('uses the ERP title when there is one', () => {
-    expect(promoLabel({ promo_title: 'Sconto Estate', promo_code: 'P1' })).toBe(
-      'Sconto Estate',
-    );
+    expect(promoLabel({ promo_title: 'Sconto Estate' })).toBe('Sconto Estate');
   });
 
   /**
-   * MyMB frequently ships a promo with a code but a BLANK TitoloPromozione,
-   * which is why promos rendered nameless. The code is always present and is
-   * what the buyer and the back office refer to, so it is the fallback.
+   * Deliberately NO fallback to the promo code. A promo with a blank
+   * TitoloPromozione must render nameless, surfacing the gap rather than
+   * papering over it with an identifier that is not a name — that fix belongs
+   * in MyMB, not here.
    */
-  it('falls back to the promo CODE when the ERP sent no title', () => {
-    expect(promoLabel({ promo_title: '', promo_code: 'IMPMIN' })).toBe(
-      'IMPMIN',
-    );
-    expect(promoLabel({ promo_code: 'P42' })).toBe('P42');
-  });
-
-  it('falls back to the code when the title is an ERP placeholder', () => {
-    expect(promoLabel({ promo_title: '---', promo_code: 'P7' })).toBe('P7');
-  });
-
-  it('returns empty when there is neither a title nor a code', () => {
-    expect(promoLabel({ promo_title: '  ', promo_code: '' })).toBe('');
+  it('renders nothing when the ERP sent no title', () => {
+    expect(promoLabel({ promo_title: '' })).toBe('');
+    expect(promoLabel({})).toBe('');
     expect(promoLabel(undefined)).toBe('');
+  });
+
+  it('renders nothing for an ERP placeholder title', () => {
+    expect(promoLabel({ promo_title: '---' })).toBe('');
+    expect(promoLabel({ promo_title: '  ' })).toBe('');
   });
 });
 
