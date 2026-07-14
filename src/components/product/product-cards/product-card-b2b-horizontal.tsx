@@ -16,6 +16,7 @@ import { useProductPriceData } from '@framework/pricing';
 import { formatAvailability } from '@utils/format-availability';
 import PackagingGrid from '../packaging-grid';
 import PriceAndPromo from '../price-and-promo';
+import { buildCartPriceData } from '../b2b-offer-rows';
 import { IoIosHeart, IoIosHeartEmpty } from 'react-icons/io';
 import { ReminderIcon, ReminderIconFilled } from '@components/icons/app-icons';
 import { useLikes } from '@contexts/likes/likes.context';
@@ -87,12 +88,16 @@ function RenderPopupOrAddToCart({
   }
 
   if (!isAuthorized) return null;
+  // Book the price `PriceAndPromo` shows (selectBestPrice), not the raw
+  // listino `net_price` — see `buildCartPriceData`.
   return (
     <AddToCart
       product={data}
       variant="venus"
       lang={lang}
-      priceData={effectivePriceData}
+      priceData={
+        effectivePriceData ? buildCartPriceData(effectivePriceData) : undefined
+      }
     />
   );
 }

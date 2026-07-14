@@ -162,8 +162,19 @@ const TimeProductDetail: React.FC<{
 
   /* ── Derived price info ── */
   const anyPD = erpPrice as any;
+  // The one price this page shows AND books: min(listino, cheapest qualifying
+  // promo). `price_discount` alone is not it — the ERP flattens its
+  // pre-selected `improving_promo` there, which on a multi-promo SKU (or when
+  // the listino undercuts every promo) is not the price `buildCartPriceData`
+  // charges below.
+  const bestPrice = selectBestPrice(erpPrice);
   const netPrice =
-    anyPD?.price_discount ?? anyPD?.net_price ?? anyPD?.price_gross ?? null;
+    bestPrice.effectivePrice > 0
+      ? bestPrice.effectivePrice
+      : (anyPD?.price_discount ??
+        anyPD?.net_price ??
+        anyPD?.price_gross ??
+        null);
   const listPrice = anyPD?.price_gross ?? anyPD?.gross_price ?? null;
   const hasDiscount =
     netPrice != null &&
@@ -350,9 +361,10 @@ const TimeProductDetail: React.FC<{
   const discountPercent = hasDiscount
     ? Math.round((1 - Number(netPrice) / Number(listPrice)) * 100)
     : 0;
-  const bestPrice = selectBestPrice(erpPrice);
   // The cart must book the price the page shows: substitute the winning promo
   // (or strip the ERP's flattened promo identity when the listino wins).
+  // `bestPrice` is hoisted above the derived-price block — it now drives the
+  // headline too, so display and booking cannot drift apart.
   const cartPriceData = erpPrice ? buildCartPriceData(erpPrice) : undefined;
   const hasPromo = bestPrice.hasPromos || Boolean(data?.has_active_promo);
   // Name the promo that actually sets the price. When the listino undercuts
