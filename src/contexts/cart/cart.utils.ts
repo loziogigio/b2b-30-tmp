@@ -11,9 +11,15 @@ export interface CartSummary {
   addressCode?: string;
   closeEnable?: boolean; // "1" -> true
   minOrder?: {
-    warning: string;
     minimumAmount: number;
-    compliant: boolean;
+    /**
+     * NOT set by the adapter — nothing populates this reliably, so it must
+     * never be trusted. Compliance is derived live via
+     * `minOrderStatus(net, minimumAmount)` (see @utils/adapter/cart-adapter);
+     * that is the only source of truth. Kept optional purely for backward
+     * type-compat with any old persisted snapshots.
+     */
+    compliant?: boolean;
   };
   transportCost: number; // spese_trasporto
   transportFreeAbove: number; // importo_spese_zero

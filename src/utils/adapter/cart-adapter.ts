@@ -215,10 +215,10 @@ export function mapCSOrderToSummary(order: any): CartSummary {
     minOrder:
       minimumAmount > 0
         ? {
-            warning: String(deliveryInfo.min_order_warning ?? ''),
             minimumAmount,
-            // Derived live at the point of use — see minOrderStatus().
-            compliant: false,
+            // `compliant` intentionally omitted: nothing should read a stored
+            // compliance flag here. Derived live at the point of use — see
+            // minOrderStatus().
           }
         : undefined,
     transportCost: num(deliveryInfo.shipping_cost, num(order.shipping_cost, 0)),
