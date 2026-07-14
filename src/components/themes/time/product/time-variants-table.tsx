@@ -18,10 +18,8 @@ import { buildPackagingParts } from '@utils/packaging';
 import { useLikes } from '@contexts/likes/likes.context';
 import { useUI } from '@contexts/ui.context';
 import { useHomeSettings } from '@/hooks/use-home-settings';
-import {
-  buildPromoPriceData,
-  pickImprovingOffer,
-} from '@components/product/b2b-offer-rows';
+import { buildCartPriceData } from '@components/product/b2b-offer-rows';
+import { selectBestPrice } from '@framework/pricing/best-price';
 import { IoIosHeart, IoIosHeartEmpty } from 'react-icons/io';
 import { TimeAlreadyPurchasedBadge } from './time-promo-gated-cta';
 import { C, fmtEuro, listOf, netOf } from './time-row-helpers';
@@ -136,11 +134,11 @@ export default function TimeVariantsTable({
       {variants.map((v, i) => {
         const isPseudo = !!v.__pseudo;
         const vPrice = getVariantPrice(v.id);
-        const matchingOffer = vPrice ? pickImprovingOffer(vPrice) : null;
-        const dPrice =
-          matchingOffer && vPrice
-            ? buildPromoPriceData(vPrice, matchingOffer)
-            : vPrice;
+        // Only substitute the promo when it actually sets the displayed price
+        // (i.e. it beats the listino). When the listino wins, `offer` is null
+        // and buildCartPriceData books the listino that is shown.
+        const matchingOffer = vPrice ? selectBestPrice(vPrice).offer : null;
+        const dPrice = vPrice ? buildCartPriceData(vPrice) : vPrice;
         const promoVariation = matchingOffer
           ? ({
               id: `promo-${matchingOffer.promo_code}-${matchingOffer.promo_row}`,

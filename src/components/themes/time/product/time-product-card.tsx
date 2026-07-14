@@ -11,6 +11,7 @@ import { productPlaceholder } from '@assets/placeholders';
 import { ErpPriceData } from '@utils/transform/erp-prices';
 import { useProductPriceData } from '@framework/pricing';
 import { selectBestPrice } from '@framework/pricing/best-price';
+import { buildCartPriceData } from '@components/product/b2b-offer-rows';
 import { buildPackagingParts } from '@utils/packaging';
 import { useUI } from '@contexts/ui.context';
 import { useTranslation } from 'src/app/i18n/client';
@@ -105,6 +106,11 @@ export default function TimeProductCard({
   // pre-selected improving_promo, which can be dearer than both.
   const best = selectBestPrice(effectivePriceData);
   const netPrice = effectivePriceData ? best.effectivePrice : null;
+  // The cart must book the price the card shows: substitute the winning promo
+  // (or strip the ERP's flattened promo identity when the listino wins).
+  const cartPriceData = effectivePriceData
+    ? buildCartPriceData(effectivePriceData)
+    : undefined;
   const listPrice = anyPD?.price_gross ?? anyPD?.gross_price ?? null;
   const hasDiscount =
     netPrice != null &&
@@ -316,7 +322,7 @@ export default function TimeProductCard({
                   <AddToCart
                     lang={lang}
                     product={product}
-                    priceData={effectivePriceData}
+                    priceData={cartPriceData}
                     showPlaceholder={false}
                     className="time-stepper time-stepper-color"
                   />

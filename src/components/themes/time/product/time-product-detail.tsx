@@ -14,6 +14,7 @@ import { usePimProductListQuery } from '@framework/product/get-pim-product';
 import type { ErpPriceData } from '@utils/transform/erp-prices';
 import { useProductPriceData } from '@framework/pricing';
 import { selectBestPrice } from '@framework/pricing/best-price';
+import { buildCartPriceData } from '@components/product/b2b-offer-rows';
 import { useUI } from '@contexts/ui.context';
 import { useLikes } from '@contexts/likes/likes.context';
 import { useReminders } from '@contexts/reminders/reminders.context';
@@ -350,6 +351,9 @@ const TimeProductDetail: React.FC<{
     ? Math.round((1 - Number(netPrice) / Number(listPrice)) * 100)
     : 0;
   const bestPrice = selectBestPrice(erpPrice);
+  // The cart must book the price the page shows: substitute the winning promo
+  // (or strip the ERP's flattened promo identity when the listino wins).
+  const cartPriceData = erpPrice ? buildCartPriceData(erpPrice) : undefined;
   const hasPromo = bestPrice.hasPromos || Boolean(data?.has_active_promo);
   // Name the promo that actually sets the price. When the listino undercuts
   // every promo the badge still shows (promos exist here), naming the cheapest.
@@ -842,7 +846,7 @@ const TimeProductDetail: React.FC<{
               <AddToCart
                 lang={lang}
                 product={data}
-                priceData={erpPrice}
+                priceData={cartPriceData}
                 className="time-stepper time-stepper-color"
                 showPlaceholder={false}
               />

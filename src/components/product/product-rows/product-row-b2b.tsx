@@ -21,7 +21,7 @@ import { ReminderIcon, ReminderIconFilled } from '@components/icons/app-icons';
 import VariantsFilterBar from './variants-filter-bar';
 import { useProductsPriceMap } from '@framework/pricing';
 import { selectBestPrice } from '@framework/pricing/best-price';
-import { buildPromoPriceData, pickImprovingOffer } from '../b2b-offer-rows';
+import { buildCartPriceData } from '../b2b-offer-rows';
 import LastOrdered from '../last-ordered';
 
 const AddToCart = dynamic(() => import('@components/product/add-to-cart'), {
@@ -364,15 +364,15 @@ export default function ProductRowB2B({
             // Pseudo rows inherit product.id, so the batched price map
             // already covers them — no special case needed.
             const vPrice: ErpPriceData | undefined = getVariantPrice(v.id);
-            // When the listino MV already triggers a promo
-            // (is_improving_promo), swap to the matching offer so packaging /
-            // price / add-to-cart all reflect the promo line. Mirrors the
-            // ProductCardB2B behaviour.
-            const matchingOffer = vPrice ? pickImprovingOffer(vPrice) : null;
-            const dPrice: ErpPriceData | undefined =
-              matchingOffer && vPrice
-                ? buildPromoPriceData(vPrice, matchingOffer)
-                : vPrice;
+            // When a qualifying promo actually sets the displayed price (it
+            // beats the listino), swap to that offer so packaging / price /
+            // add-to-cart all reflect the promo line. When the listino wins,
+            // `offer` is null and buildCartPriceData books the listino.
+            // Mirrors the ProductCardB2B behaviour.
+            const matchingOffer = vPrice ? selectBestPrice(vPrice).offer : null;
+            const dPrice: ErpPriceData | undefined = vPrice
+              ? buildCartPriceData(vPrice)
+              : vPrice;
             const promoVariation = matchingOffer
               ? ({
                   id: `promo-${matchingOffer.promo_code}-${matchingOffer.promo_row}`,

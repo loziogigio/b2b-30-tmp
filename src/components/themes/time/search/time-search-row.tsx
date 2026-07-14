@@ -9,6 +9,7 @@ import { ErpPriceData } from '@utils/transform/erp-prices';
 import { buildPackagingParts } from '@utils/packaging';
 import { useProductPriceData } from '@framework/pricing';
 import { selectBestPrice } from '@framework/pricing/best-price';
+import { buildCartPriceData } from '@components/product/b2b-offer-rows';
 import AddToCart from '@components/product/add-to-cart';
 import { useTranslation } from 'src/app/i18n/client';
 import { useUI } from '@contexts/ui.context';
@@ -70,6 +71,9 @@ export default function TimeSearchRow({
   // pre-selected improving_promo, which can be dearer than both.
   const best = selectBestPrice(priceData);
   const netPrice = priceData ? best.effectivePrice : null;
+  // The cart must book the price the row shows: substitute the winning promo
+  // (or strip the ERP's flattened promo identity when the listino wins).
+  const cartPriceData = priceData ? buildCartPriceData(priceData) : undefined;
   const listPrice = anyPD?.price_gross ?? anyPD?.gross_price ?? null;
   const hasDiscount =
     netPrice != null &&
@@ -351,7 +355,7 @@ export default function TimeSearchRow({
               <AddToCart
                 lang={lang}
                 product={product}
-                priceData={priceData}
+                priceData={cartPriceData}
                 showPlaceholder={false}
                 className="w-full"
               />

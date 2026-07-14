@@ -26,7 +26,7 @@ vi.mock('@components/product/add-to-cart', () => ({
   default: () => <div data-testid="add-to-cart" />,
 }));
 vi.mock('@components/product/b2b-offer-rows', () => ({
-  pickImprovingOffer: () => null,
+  buildCartPriceData: (a: any) => a,
   buildPromoPriceData: (a: any) => a,
 }));
 vi.mock('@utils/packaging', () => ({

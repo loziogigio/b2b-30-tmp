@@ -22,7 +22,7 @@ import {
 import AddToCart from '../add-to-cart';
 import { Eye } from '@components/icons/eye-icon';
 import useWindowSize from '@utils/use-window-size';
-import { buildPromoPriceData, pickImprovingOffer } from '../b2b-offer-rows';
+import { buildCartPriceData } from '../b2b-offer-rows';
 import { useProductPriceData } from '@framework/pricing';
 import { selectBestPrice } from '@framework/pricing/best-price';
 import LastOrdered from '../last-ordered';
@@ -132,17 +132,15 @@ function RenderPopupOrAddToCart({
     );
   }
 
-  // When the listino MV already triggers a promo, swap the priceData for the
-  // matching offer so the cart line is added with the promo price + tier
-  // discounts + promo_code/row, rather than as a flat listino line.
+  // When a qualifying promo actually sets the displayed price (i.e. it beats
+  // the listino), swap the priceData for that offer so the cart line is added
+  // with the promo price + tier discounts + promo_code/row. When the LISTINO
+  // wins, `offer` is null and we book the listino — the very price shown above.
   const matchingOffer = effectivePriceData
-    ? pickImprovingOffer(effectivePriceData)
+    ? selectBestPrice(effectivePriceData).offer
     : null;
   if (matchingOffer && effectivePriceData) {
-    const promoPriceData = buildPromoPriceData(
-      effectivePriceData,
-      matchingOffer,
-    );
+    const promoPriceData = buildCartPriceData(effectivePriceData);
     const variation = {
       id: `promo-${matchingOffer.promo_code}-${matchingOffer.promo_row}`,
       title: matchingOffer.promo_title || `Promo ${matchingOffer.promo_code}`,
@@ -161,12 +159,16 @@ function RenderPopupOrAddToCart({
     );
   }
 
-  // Simple product with valid price - show add to cart
+  // Simple product with valid price - show add to cart. `buildCartPriceData`
+  // strips any flattened promo identity so a listino line is never booked
+  // under a promo code.
   return (
     <AddToCart
       lang={lang}
       product={data}
-      priceData={effectivePriceData}
+      priceData={
+        effectivePriceData ? buildCartPriceData(effectivePriceData) : undefined
+      }
       showPlaceholder={false}
     />
   );

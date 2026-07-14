@@ -16,7 +16,7 @@ import PackagingGrid from './packaging-grid';
 import AddToCart from './add-to-cart';
 import { formatPriceIt } from '@utils/money';
 import { isNetPricePromoType } from '@utils/promo';
-import { cleanTitle, qualifyingOffers } from '@framework/pricing/best-price';
+import { cleanTitle, selectBestPrice } from '@framework/pricing/best-price';
 
 type Props = {
   lang: string;
@@ -28,24 +28,6 @@ type Props = {
  * Build a synthetic ErpPriceData for a single promo line so AddToCart
  * uses the promo's qty step, prices, and code/row.
  */
-/**
- * Pick the best promo offer that the LISTINO's default packaging already
- * triggers (i.e. promo MV ≤ listino default qty step). Mirrors the legacy
- * `is_improving_promo` flow where adding the listino qty automatically applies
- * the promo. Returns null when no offer fits.
- */
-export function pickImprovingOffer(
-  priceData?: ErpPriceData | null,
-): PromoOffer | null {
-  if (!priceData) return null;
-  const matches = qualifyingOffers(priceData);
-  if (!matches.length) return null;
-  // Cheapest qualifying promo.
-  return matches.reduce((best, cur) =>
-    cur.promo_net_price < best.promo_net_price ? cur : best,
-  );
-}
-
 export function buildPromoPriceData(
   base: ErpPriceData,
   offer: PromoOffer,
@@ -108,6 +90,56 @@ export function buildPromoPriceData(
     // with its original catalog qty (not the promo step).
     packaging_options_all: [displayPackaging],
   };
+}
+
+/**
+ * The ErpPriceData an inline `<AddToCart>` must book, so the price the card
+ * CHARGES is the price the card SHOWS.
+ *
+ * The display layer resolves the headline with `selectBestPrice()` —
+ * min(listino, cheapest qualifying promo). The booking layer reads `net_price`
+ * off whatever priceData reaches `<AddToCart>` (see `buildAddPayload`). This
+ * is the single adapter between the two:
+ *
+ * - a qualifying promo wins → substitute it via `buildPromoPriceData`, which
+ *   carries its price, qty step, tier discounts and promo_code/row;
+ * - the LISTINO wins → book the base row. The ERP flattens its pre-selected
+ *   `improving_promo` onto that row (promo_code / promo_row / is_promo /
+ *   discount_extra), so those must be cleared: booking a listino price under a
+ *   promo code — with the promo's extra-discount ladder in discount1..6 — is a
+ *   wrong cart line even when the unit price is right.
+ *
+ * Per-offer PROMO rows do NOT go through here: each books its own specific
+ * offer via `buildPromoPriceData` directly.
+ */
+export function buildCartPriceData(base: ErpPriceData): ErpPriceData {
+  const best = selectBestPrice(base);
+  if (best.source === 'promo' && best.offer) {
+    return buildPromoPriceData(base, best.offer);
+  }
+
+  // Listino wins. Nothing to strip on a product that never carried a promo.
+  const anyBase = base as any;
+  const carriesPromo =
+    best.hasPromos || Boolean(anyBase.is_promo) || Boolean(anyBase.promo);
+  if (!carriesPromo) return base;
+
+  return {
+    ...base,
+    is_promo: false,
+    promo: false,
+    // `undefined` (not '' / 0) so AddToCart's `?? 0` fallback yields the
+    // no-promo sentinel the cart line matcher and the BE expect.
+    promo_code: undefined,
+    promo_row: undefined,
+    promo_price: undefined,
+    promo_title: undefined,
+    start_promo_date: undefined,
+    end_promo_date: undefined,
+    // The flattened promo's extra-discount tiers are merged into the cart
+    // payload's discount1..6 — they belong to the promo we are NOT booking.
+    discount_extra: [],
+  } as ErpPriceData;
 }
 
 export default function B2BOfferRows({ lang, product, priceData }: Props) {
