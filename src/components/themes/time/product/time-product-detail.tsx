@@ -13,6 +13,7 @@ import { useTranslation } from 'src/app/i18n/client';
 import { usePimProductListQuery } from '@framework/product/get-pim-product';
 import type { ErpPriceData } from '@utils/transform/erp-prices';
 import { useProductPriceData } from '@framework/pricing';
+import { selectBestPrice } from '@framework/pricing/best-price';
 import { useUI } from '@contexts/ui.context';
 import { useLikes } from '@contexts/likes/likes.context';
 import { useReminders } from '@contexts/reminders/reminders.context';
@@ -348,7 +349,14 @@ const TimeProductDetail: React.FC<{
   const discountPercent = hasDiscount
     ? Math.round((1 - Number(netPrice) / Number(listPrice)) * 100)
     : 0;
-  const promoLabel = erpPrice?.is_promo || data?.has_active_promo;
+  const bestPrice = selectBestPrice(erpPrice);
+  const hasPromo = bestPrice.hasPromos || Boolean(data?.has_active_promo);
+  // Name the promo that actually sets the price. When the listino undercuts
+  // every promo the badge still shows (promos exist here), naming the cheapest.
+  const promoName =
+    bestPrice.promoTitles[0] ||
+    t('text-on-offer', { defaultValue: 'In offerta' });
+  const extraPromoCount = Math.max(bestPrice.promoTitles.length - 1, 0);
 
   return (
     <div className="pt-7 pb-16">
@@ -390,16 +398,21 @@ const TimeProductDetail: React.FC<{
             </div>
 
             {/* Promo badges */}
-            {((!hidePrices && discountPercent > 0) || promoLabel) && (
-              <div className="absolute top-4 left-4 flex flex-col gap-2 items-start">
+            {((!hidePrices && discountPercent > 0) || hasPromo) && (
+              <div className="absolute top-4 left-4 flex flex-col gap-2 items-start max-w-[75%]">
                 {!hidePrices && discountPercent > 0 && (
                   <span className="bg-[var(--time-red)] text-white text-[13px] font-extrabold px-3.5 py-1.5 rounded-lg font-[family-name:var(--font-body)] tabular-nums">
                     {discountTiers || `-${discountPercent}%`}
                   </span>
                 )}
-                {promoLabel && (
-                  <span className="bg-[var(--time-dark)] text-white text-[11px] sm:text-xs font-bold px-2.5 py-1 rounded-md font-mono tracking-wide uppercase">
-                    DISCOUNT
+                {hasPromo && (
+                  <span className="inline-flex items-center gap-1.5 bg-[var(--time-dark)] text-white text-[11px] sm:text-xs font-bold px-2.5 py-1 rounded-md tracking-wide max-w-full">
+                    <span className="truncate">{promoName}</span>
+                    {extraPromoCount > 0 && (
+                      <span className="shrink-0 rounded bg-white/20 px-1.5 py-[1px] tabular-nums">
+                        +{extraPromoCount}
+                      </span>
+                    )}
                   </span>
                 )}
               </div>
