@@ -271,7 +271,16 @@ function Row({
           {label}
         </span>
         {title ? (
-          <span className="text-[12px] font-bold text-[var(--time-dark)] truncate font-[family-name:var(--font-body)]">
+          <span
+            className={cn(
+              'text-[11px] font-semibold truncate font-[family-name:var(--font-body)]',
+              // Promo name takes the theme's promo accent, matching the end-date
+              // chip beside it so the two read as one unit.
+              isPromo
+                ? 'text-[var(--time-red)]'
+                : 'text-[var(--time-gray-600)]',
+            )}
+          >
             {title}
           </span>
         ) : null}

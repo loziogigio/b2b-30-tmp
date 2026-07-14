@@ -352,7 +352,14 @@ function Row({
           {label}
         </span>
         {title ? (
-          <span className="text-[12px] font-medium text-gray-700 line-clamp-2">
+          <span
+            className={cn(
+              'text-[11px] font-semibold line-clamp-2',
+              // Promo name takes the promo accent, matching the end-date chip
+              // beside it so the two read as one unit.
+              isPromo ? 'text-red-600' : 'text-gray-700',
+            )}
+          >
             {title}
           </span>
         ) : null}
