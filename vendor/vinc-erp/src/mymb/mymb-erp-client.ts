@@ -4,6 +4,8 @@ import type { ErpClient } from '../erp-client.js';
 import { ErpError } from '../erp-client.js';
 import { MYMB_ENDPOINTS } from '../endpoints.js';
 import type { MyMbErpSettings, MyMbPriceEntry, PriceQuery } from '../types/pricing.js';
+import type { MyMbCartClosureInfo } from '../types/cart-closure.js';
+import { buildCartClosureInfo } from '../types/cart-closure.js';
 import { buildPriceEntry } from './transform.js';
 import { mymbRequest } from './request.js';
 
@@ -156,6 +158,49 @@ export class MyMbErpClient implements ErpClient {
       params: { IdCarrello: idCarrello },
     });
     return data?.GetRigheCarrelloResult?.ListaRighe ?? [];
+  }
+
+  /**
+   * Order-header info for cart closure — MyMB
+   * `GetInfoTestataOrdineXControlloChiusura?IdCarrello=…` (GET).
+   *
+   * This is the ONLY place the ERP exposes its minimum-order rule (IMPMIN):
+   * it is an order-header rule, so it does not appear in GetPrezzaturaMultipla's
+   * per-article promo rows. Mirrors the legacy
+   * `looxb2b_ordine_minimo_spese_trasporto($id_carrello)`.
+   *
+   * NOTE: the ERP resolves the customer from the CART, so `idCarrello` must be a
+   * real ERP cart. An unknown/empty id returns zeros (and `compliant: true`),
+   * which callers must treat as "no minimum configured" rather than "compliant".
+   */
+  async getCartClosureInfo(
+    idCarrello: number | string,
+    opts: { applyTransportCosts?: boolean; shippingPromoCode?: string } = {},
+  ): Promise<MyMbCartClosureInfo> {
+    const data = await this.request<any>(
+      MYMB_ENDPOINTS.GET_INFO_TESTATA_ORDINE_X_CONTROLLO_CHIUSURA,
+      {
+        method: 'GET',
+        params: {
+          IdCarrello: idCarrello,
+          isApplicaSpeseDiTrasportoSePreviste:
+            opts.applyTransportCosts ?? true,
+          CodicePromozioneSpedizione: opts.shippingPromoCode ?? '',
+        },
+      },
+    );
+
+    const result = data?.GetInfoTestataOrdineXControlloChiusuraResult;
+    if (!result || result.ReturnCode !== 0) {
+      throw new ErpError(
+        `GetInfoTestataOrdineXControlloChiusura error: ${result?.Message ?? 'unknown'}`,
+        {
+          endpoint: MYMB_ENDPOINTS.GET_INFO_TESTATA_ORDINE_X_CONTROLLO_CHIUSURA,
+          returnCode: result?.ReturnCode,
+        },
+      );
+    }
+    return buildCartClosureInfo(result);
   }
 
   /**

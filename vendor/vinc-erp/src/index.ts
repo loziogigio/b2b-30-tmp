@@ -18,6 +18,8 @@ export type {
   ProductLabelAction,
   NormalizedPackagingOption,
 } from './types/pricing.js';
+export type { MyMbCartClosureInfo } from './types/cart-closure.js';
+export { buildCartClosureInfo } from './types/cart-closure.js';
 
 // MYMB implementation
 export { parseMyMbConnection } from './mymb/auth.js';

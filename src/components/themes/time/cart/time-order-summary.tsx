@@ -17,6 +17,7 @@ import { applyCouponDiscount } from '@/lib/coupon/discount';
 import TimeCouponField from './time-coupon-field';
 import { useCartSettings } from '@/hooks/use-cart-settings';
 import { minOrderStatus } from '@utils/adapter/cart-adapter';
+import { useCartClosureInfo } from '@framework/erp/use-cart-closure';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -156,12 +157,23 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
   const doc = meta?.totalDoc ?? 0;
   const savings = gross - net;
 
-  const minimumAmount = meta?.minOrder?.minimumAmount ?? 0;
+  // The ERP's minimum-order rule (IMPMIN). Ask the ERP directly rather than
+  // relying on erp_data.delivery_info, which only exists when the Windmill
+  // cart-create hook is configured for the tenant. The stored value stays as a
+  // fallback for tenants where that hook does run.
+  const closure = useCartClosureInfo(meta?.orderId);
+  const minimumAmount =
+    closure?.minimumAmount ?? meta?.minOrder?.minimumAmount ?? 0;
+
   // Gate on the RAW `net` (pre-coupon subtotal_net), NOT `discounted.net`.
   // The coupon here is display-only: it's applied by MyMB *after* the order
   // syncs, so the ERP re-checks `importo_minimo` against the pre-coupon
   // subtotal_net. Switching this to `discounted.net` would falsely block
   // legitimate orders that only clear the minimum before the coupon discount.
+  //
+  // Compliance is derived here, NOT read from the ERP's `compliant` flag: that
+  // flag reflects the ERP's own cart, which is only in sync once the order is
+  // pushed. Our net total is the authoritative one at this point.
   const { belowMinimum, shortfall } = minOrderStatus(net, minimumAmount);
 
   // Active cart/document id for coupon persist + re-display. This tenant's
