@@ -135,6 +135,49 @@ describe('selectBestPrice', () => {
     const bare = { entity_code: 'X', net_price: 2 } as ErpPriceData;
     expect(selectBestPrice(bare).effectivePrice).toBe(2);
   });
+
+  it('a missing listino (net_price: 0) must not beat a qualifying promo', () => {
+    // Regression: transformErpPricesResponse maps a missing ERP net_price to
+    // 0. A 0 listino must never "win" over a real promo price.
+    const r = selectBestPrice(priceData(0, [offer({ promo_net_price: 3.95 })]));
+    expect(r).toMatchObject({ effectivePrice: 3.95, source: 'promo' });
+    expect(r.offer?.promo_code).toBe('P1');
+  });
+
+  it('an absent net_price must not beat a qualifying promo', () => {
+    const bare = {
+      entity_code: 'X',
+      packaging_option_default: { qty_x_packaging: 12 } as any,
+      all_promo_offers: [offer({ promo_net_price: 3.95 })],
+    } as ErpPriceData;
+    const r = selectBestPrice(bare);
+    expect(r).toMatchObject({ effectivePrice: 3.95, source: 'promo' });
+  });
+
+  it('a missing listino (net_price: 0) with no promos yields 0, not a crash', () => {
+    const r = selectBestPrice(priceData(0, []));
+    expect(r).toMatchObject({
+      effectivePrice: 0,
+      source: 'listino',
+      hasPromos: false,
+    });
+    expect(r.offer).toBeNull();
+  });
+
+  it('a valid positive listino keeps winning ties and undercutting promos unchanged', () => {
+    // Same as the "paradossalmente" case above, re-asserted alongside the
+    // net_price:0 regression tests to pin down that the fix doesn't touch
+    // the positive-listino path.
+    const undercut = selectBestPrice(
+      priceData(3.5, [offer({ promo_net_price: 3.95 })]),
+    );
+    expect(undercut).toMatchObject({ effectivePrice: 3.5, source: 'listino' });
+
+    const tie = selectBestPrice(
+      priceData(3.95, [offer({ promo_net_price: 3.95 })]),
+    );
+    expect(tie.source).toBe('promo');
+  });
 });
 
 describe('cleanTitle', () => {

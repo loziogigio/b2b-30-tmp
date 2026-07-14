@@ -57,7 +57,13 @@ export function selectBestPrice(priceData?: ErpPriceData | null): BestPrice {
     };
   }
 
-  const listino = Number(priceData.net_price ?? 0);
+  const rawListino = Number(priceData.net_price ?? 0);
+  // A missing/non-positive listino (e.g. the ERP omitted net_price, which
+  // `transformErpPricesResponse` then defaults to 0) is not a real price and
+  // must never "win" against a qualifying promo just by being the lowest
+  // number.
+  const hasListino = Number.isFinite(rawListino) && rawListino > 0;
+  const listino = hasListino ? rawListino : Infinity;
   const allOffers = priceData.all_promo_offers ?? [];
   const hasPromos = allOffers.length > 0;
   const candidates = qualifyingOffers(priceData);
@@ -69,7 +75,9 @@ export function selectBestPrice(priceData?: ErpPriceData | null): BestPrice {
     : null;
 
   // Ties go to the promo, so a badged article always has a promo genuinely
-  // setting its price.
+  // setting its price. When there is no valid listino, any qualifying promo
+  // wins outright (listino is treated as +Infinity, so this reduces to the
+  // same comparison).
   const promoWins =
     cheapest != null && Number(cheapest.promo_net_price) <= listino;
 
@@ -78,7 +86,13 @@ export function selectBestPrice(priceData?: ErpPriceData | null): BestPrice {
     : allOffers;
 
   return {
-    effectivePrice: promoWins ? Number(cheapest!.promo_net_price) : listino,
+    // With no valid listino and no winning promo there's nothing to show;
+    // fall back to 0 rather than the raw (possibly negative/NaN) net_price.
+    effectivePrice: promoWins
+      ? Number(cheapest!.promo_net_price)
+      : hasListino
+        ? rawListino
+        : 0,
     source: promoWins ? 'promo' : 'listino',
     offer: promoWins ? cheapest : null,
     hasPromos,
