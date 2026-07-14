@@ -33,12 +33,13 @@ export function netOf(pd?: ErpPriceData): number | null {
   const best = selectBestPrice(pd).effectivePrice;
   if (Number.isFinite(best) && best > 0) return best;
 
-  // No listino and no qualifying promo: keep the legacy fallback chain so a
-  // gross-only row still renders, and an absent/zero price still yields null.
-  const a = pd as any;
-  const n =
-    a?.price_discount ?? a?.net_price ?? a?.price_gross ?? a?.gross_price;
-  return n != null && Number(n) > 0 ? Number(n) : null;
+  // No listino and no qualifying promo -> NO PRICE. There is no field to fall
+  // back to: the booking layer (`buildCartPriceData`) writes
+  // `net_price = effectivePrice = 0` here, so any number we showed from
+  // `price_discount` / `gross_price` would be a price nothing charges — the row
+  // would display e.g. €3.95 and book a €0 FREE-GOODS line. Return null so the
+  // price is hidden and the add button does not render.
+  return null;
 }
 
 export function listOf(pd?: ErpPriceData): number | null {

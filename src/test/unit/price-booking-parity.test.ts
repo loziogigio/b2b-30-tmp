@@ -437,6 +437,77 @@ describe('the LISTINO row of the offer panels', () => {
   });
 });
 
+/**
+ * A zero effective price is NO PRICE. `buildCartPriceData` books
+ * `net_price = effectivePrice = 0` in that case, so displaying a price from a
+ * stale field the booking layer never reads hands out FREE GOODS.
+ */
+describe('a zero effective price is never displayed from a field nothing books', () => {
+  it('hides the price when the listino is 0 and the only promo does not qualify', () => {
+    // No listino for this customer; the ERP flattened a 3.95 promo onto
+    // price_discount, but that promo needs 10 pieces and MV is 2 -> no qualify.
+    const pd = priceData(
+      0,
+      [
+        offer({
+          promo_code: 'BIG',
+          promo_net_price: 3.95,
+          promo_qty_required: 10,
+        }),
+      ],
+      2,
+      { price_discount: 3.95 } as Partial<ErpPriceData>,
+    );
+
+    expect(selectBestPrice(pd).effectivePrice).toBe(0);
+    // buildCartPriceData would book 0 -> FREE GOODS. So nothing may be shown.
+    expect(bookedPrice(buildCartPriceData(pd))).toBe(0);
+    expect(netOf(pd)).toBeNull();
+    expect(netOf(pd)).not.toBe(3.95);
+  });
+
+  it('hides the price on a gross-only row (net_price 0, no promos)', () => {
+    const pd = priceData(0, [], 1, {
+      price_discount: 0,
+      gross_price: 10,
+      price_gross: 10,
+    } as any);
+
+    expect(selectBestPrice(pd).effectivePrice).toBe(0);
+    expect(bookedPrice(buildCartPriceData(pd))).toBe(0);
+    expect(netOf(pd)).toBeNull();
+    expect(netOf(pd)).not.toBe(10);
+  });
+
+  it('hides the price on a gross-only row that carries no price_discount at all', () => {
+    const pd = priceData(0, [], 1, {
+      price_discount: undefined,
+      gross_price: 10,
+      price_gross: 10,
+    } as any);
+
+    expect(netOf(pd)).toBeNull();
+    expect(netOf(pd)).not.toBe(10);
+  });
+
+  it('still returns null (never 0) when there is no price data at all', () => {
+    expect(netOf(undefined)).toBeNull();
+    expect(
+      netOf(
+        priceData(0, [], 1, {
+          price_discount: 0,
+          gross_price: 0,
+          price_gross: 0,
+        } as any),
+      ),
+    ).toBeNull();
+  });
+
+  it('still returns the real price when there IS one', () => {
+    expect(netOf(priceData(3.5, [], 12))).toBe(3.5);
+  });
+});
+
 /** Regression guard: each PROMO row books ITS OWN promo, not the cheapest. */
 describe('the PROMO rows book their own per-row promo', () => {
   it('books offer B on B’s row even though offer A is cheaper', () => {

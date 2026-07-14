@@ -27,6 +27,7 @@ import cn from 'classnames';
 
 import type { ErpPriceData } from '@utils/transform/erp-prices';
 import { useProductPriceData } from '@framework/pricing';
+import { selectBestPrice } from '@framework/pricing/best-price';
 import { useLikes } from '@contexts/likes/likes.context';
 import { useReminders } from '@contexts/reminders/reminders.context';
 import { useUI } from '@contexts/ui.context';
@@ -203,14 +204,12 @@ const ProductB2BDetails: React.FC<{
   // (on-request / draft) — both cases surface the reminder bell.
   const isOutOfStock = erpPrice ? Number(erpPrice.availability) <= 0 : true;
 
-  // Check if we have a valid price
-  const anyPD = erpPrice as any;
-  const price =
-    anyPD?.price_discount ??
-    anyPD?.net_price ??
-    anyPD?.gross_price ??
-    anyPD?.price_gross;
-  const hasValidPrice = erpPrice && price != null && Number(price) > 0;
+  // Check if we have a valid price. It is the price we'd BOOK — min(listino,
+  // cheapest qualifying promo) — not the ERP's stale `price_discount` ladder:
+  // gating the add button on a number nothing charges books €0 free goods.
+  const hasValidPrice = Boolean(
+    erpPrice && selectBestPrice(erpPrice).effectivePrice > 0,
+  );
 
   const galleryItems = React.useMemo<GalleryImage[]>(() => {
     if (!data) return [];

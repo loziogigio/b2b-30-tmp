@@ -168,13 +168,12 @@ const TimeProductDetail: React.FC<{
   // the listino undercuts every promo) is not the price `buildCartPriceData`
   // charges below.
   const bestPrice = selectBestPrice(erpPrice);
+  // A non-positive effective price is NO PRICE, not a cue to fall back: the
+  // booking layer would book `net_price = effectivePrice = 0` (free goods), so
+  // showing `price_discount` / `price_gross` here would display a number
+  // nothing charges. Hide the price and the add button instead.
   const netPrice =
-    bestPrice.effectivePrice > 0
-      ? bestPrice.effectivePrice
-      : (anyPD?.price_discount ??
-        anyPD?.net_price ??
-        anyPD?.price_gross ??
-        null);
+    bestPrice.effectivePrice > 0 ? bestPrice.effectivePrice : null;
   const listPrice = anyPD?.price_gross ?? anyPD?.gross_price ?? null;
   const hasDiscount =
     netPrice != null &&
