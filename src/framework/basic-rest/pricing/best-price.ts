@@ -20,6 +20,23 @@ export function cleanTitle(raw?: string): string {
 }
 
 /**
+ * What to show as a promo's name.
+ *
+ * `TitoloPromozione` is frequently blank in MyMB — the promo is configured with
+ * a code but no title. Rendering nothing in that case is what made promos look
+ * nameless in the UI. The code (`CodicePromozione`) is always present and is
+ * what the buyer and the back office actually refer to, so it is a far better
+ * fallback than an empty chip or a generic "In offerta".
+ */
+export function promoLabel(offer?: {
+  promo_title?: string;
+  promo_code?: string;
+}): string {
+  if (!offer) return '';
+  return cleanTitle(offer.promo_title) || (offer.promo_code ?? '').trim();
+}
+
+/**
  * The promos the LISTINO's default packaging already triggers — i.e. those
  * whose required qty step is no larger than the default packaging's step.
  * A promo requiring more than the customer would buy by default must not set
@@ -96,6 +113,7 @@ export function selectBestPrice(priceData?: ErpPriceData | null): BestPrice {
     source: promoWins ? 'promo' : 'listino',
     offer: promoWins ? cheapest : null,
     hasPromos,
-    promoTitles: ordered.map((o) => cleanTitle(o.promo_title)).filter(Boolean),
+    // Falls back to the promo CODE when the ERP sent no title — see promoLabel.
+    promoTitles: ordered.map((o) => promoLabel(o)).filter(Boolean),
   };
 }

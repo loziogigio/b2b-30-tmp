@@ -26,7 +26,7 @@ import {
 import AddToCart from '@components/product/add-to-cart';
 import { ROUTES } from '@utils/routes';
 import { NET_PRICE_PROMO_TYPES } from '@utils/promo';
-import { cleanTitle } from '@framework/pricing/best-price';
+import { promoLabel } from '@framework/pricing/best-price';
 
 type Props = {
   lang: string;
@@ -163,7 +163,7 @@ export default function TimeOfferRows({ lang, product, priceData }: Props) {
             key={`${offer.promo_code}-${offer.promo_row}`}
             label={t('text-promo', { defaultValue: 'PROMO' })}
             labelTone="promo"
-            title={cleanTitle(offer.promo_title)}
+            title={promoLabel(offer)}
             endDate={formatYmdToItalian(offer.promo_end_date)}
             product={product}
             priceData={promoPriceData}

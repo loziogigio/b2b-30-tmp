@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { selectBestPrice, cleanTitle } from '@framework/pricing/best-price';
+import {
+  selectBestPrice,
+  cleanTitle,
+  promoLabel,
+} from '@framework/pricing/best-price';
 import type { ErpPriceData, PromoOffer } from '@utils/transform/erp-prices';
 
 const offer = (over: Partial<PromoOffer>): PromoOffer =>
@@ -177,6 +181,35 @@ describe('selectBestPrice', () => {
       priceData(3.95, [offer({ promo_net_price: 3.95 })]),
     );
     expect(tie.source).toBe('promo');
+  });
+});
+
+describe('promoLabel', () => {
+  it('uses the ERP title when there is one', () => {
+    expect(promoLabel({ promo_title: 'Sconto Estate', promo_code: 'P1' })).toBe(
+      'Sconto Estate',
+    );
+  });
+
+  /**
+   * MyMB frequently ships a promo with a code but a BLANK TitoloPromozione,
+   * which is why promos rendered nameless. The code is always present and is
+   * what the buyer and the back office refer to, so it is the fallback.
+   */
+  it('falls back to the promo CODE when the ERP sent no title', () => {
+    expect(promoLabel({ promo_title: '', promo_code: 'IMPMIN' })).toBe(
+      'IMPMIN',
+    );
+    expect(promoLabel({ promo_code: 'P42' })).toBe('P42');
+  });
+
+  it('falls back to the code when the title is an ERP placeholder', () => {
+    expect(promoLabel({ promo_title: '---', promo_code: 'P7' })).toBe('P7');
+  });
+
+  it('returns empty when there is neither a title nor a code', () => {
+    expect(promoLabel({ promo_title: '  ', promo_code: '' })).toBe('');
+    expect(promoLabel(undefined)).toBe('');
   });
 });
 

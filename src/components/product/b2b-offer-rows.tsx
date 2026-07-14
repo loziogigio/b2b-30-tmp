@@ -16,7 +16,7 @@ import PackagingGrid from './packaging-grid';
 import AddToCart from './add-to-cart';
 import { formatPriceIt } from '@utils/money';
 import { isNetPricePromoType } from '@utils/promo';
-import { cleanTitle, selectBestPrice } from '@framework/pricing/best-price';
+import { promoLabel, selectBestPrice } from '@framework/pricing/best-price';
 
 type Props = {
   lang: string;
@@ -257,7 +257,7 @@ export default function B2BOfferRows({ lang, product, priceData }: Props) {
             key={`${offer.promo_code}-${offer.promo_row}`}
             label={t('text-promo', { defaultValue: 'PROMO' })}
             labelTone="promo"
-            title={cleanTitle(offer.promo_title)}
+            title={promoLabel(offer)}
             endDate={formatYmdToItalian(offer.promo_end_date)}
           >
             <PackCol>
