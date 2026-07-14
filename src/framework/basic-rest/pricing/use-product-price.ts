@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { Product } from '@framework/types';
 import { ERP_STATIC, hasValidErpContext } from '@framework/utils/static';
 import { fetchErpPrices } from '@framework/erp/prices';
+import { loadErpPrice } from './erp-price-batcher';
 import type { ErpPriceData } from '@utils/transform/erp-prices';
 import { productToErpPriceData } from '@utils/transform/inline-to-erp';
 
@@ -62,13 +63,19 @@ export function useProductPriceData(
 
   const erpQuery = useQuery({
     queryKey: erpQueryKey([entityCode], quantity, ERP_STATIC),
+    // Goes through the batcher, NOT fetchErpPrices directly: this hook backs
+    // every card/row/popup, so a grid of N products used to fire N separate
+    // `get_multiple_prices` requests at an endpoint that already takes an
+    // array. The batcher coalesces the codes mounted in one render pass into a
+    // single request. The React Query entry stays per-code, so caching and
+    // dedup across components are unchanged — only the network calls merge.
     queryFn: () =>
-      fetchErpPrices({
-        entity_codes: [entityCode],
-        quantity_list: [quantity],
-        id_cart: ERP_STATIC.id_cart,
-        customer_code: ERP_STATIC.customer_code,
-        address_code: ERP_STATIC.address_code,
+      loadErpPrice({
+        entityCode,
+        quantity,
+        idCart: ERP_STATIC.id_cart,
+        customerCode: ERP_STATIC.customer_code,
+        addressCode: ERP_STATIC.address_code,
         theme,
       }),
     enabled: erpReady && Boolean(entityCode),
@@ -87,7 +94,9 @@ export function useProductPriceData(
     const synth = productToErpPriceData(product) ?? undefined;
     if (source === 'inline') return synth;
 
-    const erpSlice = entityCode ? erpQuery.data?.[entityCode] : undefined;
+    // loadErpPrice resolves THIS product's slice directly (the batcher already
+    // demultiplexed the shared response), so there is no map to index into.
+    const erpSlice = entityCode ? erpQuery.data : undefined;
     if (source === 'erp') {
       return isAuthorized ? (erpSlice ?? undefined) : undefined;
     }
