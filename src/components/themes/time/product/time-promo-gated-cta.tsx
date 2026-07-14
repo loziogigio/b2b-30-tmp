@@ -5,6 +5,7 @@ import cn from 'classnames';
 import { IoArrowForwardOutline, IoTimeOutline } from 'react-icons/io5';
 import type { ErpPriceData } from '@utils/transform/erp-prices';
 import { useCart } from '@contexts/cart/cart.context';
+import { selectBestPrice } from '@framework/pricing/best-price';
 
 type TFn = (key: string, opts?: { defaultValue?: string }) => string;
 
@@ -50,10 +51,11 @@ export function usePromoGating(
   priceData: ErpPriceData | undefined,
   product: any,
 ): PromoGating {
-  const anyPD = priceData as any;
-  const netPrice =
-    anyPD?.price_discount ?? anyPD?.net_price ?? anyPD?.price_gross ?? null;
-  const hasValidPrice = !!priceData && netPrice != null && Number(netPrice) > 0;
+  // The gate must agree with the headline: a SKU that shows a price must get
+  // an add button. The old `??` ladder started at `price_discount`, and `??`
+  // does not skip 0 — a SKU with price_discount === 0 but a valid net_price or
+  // promo displayed a price yet got no add button.
+  const hasValidPrice = selectBestPrice(priceData).effectivePrice > 0;
   const canAddToCart = priceData?.product_label_action?.ADD_TO_CART ?? true;
   const isPromo = !!(priceData?.is_promo || priceData?.promo);
   const promoCount = Number(priceData?.count_promo ?? 0);

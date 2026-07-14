@@ -94,12 +94,19 @@ export default function PriceAndPromo({
   // caller sets `net_price` (real ErpPriceData carries its own listino;
   // synthetic slices like the cart line summary set `net_price` to their
   // already-resolved unit price with no offers), so this is the single path.
-  const price_discount = selectBestPrice(
-    effective as ErpPriceData,
-  ).effectivePrice;
+  const best = selectBestPrice(effective as ErpPriceData);
+  const price_discount = best.effectivePrice;
   const gross_price = anyPD.gross_price ?? anyPD.price_gross;
   const discount_description = anyPD.discount_description;
-  const is_promo: boolean = Boolean(anyPD.is_promo);
+  // The promo tint asserts "this headline IS the promo price" — so it must
+  // follow whichever side actually SET the headline, not the ERP's raw
+  // `is_promo` flag. That flag stays true when the listino undercuts every
+  // promo, which painted a correct listino price red as if it were the promo.
+  // Synthetic slices (e.g. cart rows) carry no offers to reason about, so
+  // there we still trust the raw flag.
+  const is_promo: boolean = best.hasPromos
+    ? best.source === 'promo'
+    : Boolean(anyPD.is_promo);
 
   // No valid price - check all price fields
   const hasNoValidPrice =
