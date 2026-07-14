@@ -10,7 +10,7 @@ import {
   type ErpPriceData,
   type PromoOffer,
 } from '@utils/transform/erp-prices';
-import { buildDisplayPackaging, buildPackagingParts } from '@utils/packaging';
+import { buildPackagingParts } from '@utils/packaging';
 import { useTranslation } from 'src/app/i18n/client';
 import { useUI } from '@contexts/ui.context';
 import { useHomeSettings } from '@/hooks/use-home-settings';
@@ -240,10 +240,14 @@ function Row({
     ? (Number(gross) - Number(net)).toFixed(decimals)
     : null;
   const packagingParts = buildPackagingParts(priceData);
-  // From three options up the inline "CRT: 20 · Epal 120: 640 · …" list gets
-  // unwieldy — surface a compact trigger that opens the packaging modal.
-  const packagingOptions = buildDisplayPackaging(priceData);
-  const showPackagingModal = packagingOptions.length >= 3;
+  // The inline row shows the tenant-filtered options (erp_settings
+  // packaging_options_id) — that filter is what it is for. The modal is the
+  // "show everything" escape hatch, so it must gate on, and display, the FULL
+  // list: the filtered array is capped at packaging_options_id.length (2 by
+  // default), which made the old `buildDisplayPackaging(...) >= 3` gate
+  // unreachable on the ERP pricing source.
+  const allPackagingOptions = priceData.packaging_options_all ?? [];
+  const showPackagingModal = allPackagingOptions.length > 3;
 
   return (
     <div
@@ -294,15 +298,15 @@ function Row({
         )}
 
         {showPackagingModal ? (
-          // Three or more packaging options: keep the first two inline and
-          // offer a clickable arrow that opens the full breakdown.
+          // More than three packaging options: keep a compact inline preview
+          // and offer a clickable arrow that opens the full breakdown.
           <button
             type="button"
             onClick={() =>
               openModal('TIME_PACKAGING_VIEW', {
                 sku: product?.sku,
                 name: product?.name,
-                options: packagingOptions,
+                options: allPackagingOptions,
               })
             }
             title={t('text-packaging-items', {
