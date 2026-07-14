@@ -23,6 +23,7 @@ import { buildPromoPriceData } from '@components/product/b2b-offer-rows';
 import AddToCart from '@components/product/add-to-cart';
 import { ROUTES } from '@utils/routes';
 import { NET_PRICE_PROMO_TYPES } from '@utils/promo';
+import { cleanTitle } from '@framework/pricing/best-price';
 
 type Props = {
   lang: string;
@@ -38,12 +39,6 @@ type TFn = (key: string, opts?: { defaultValue?: string }) => string;
 const fmtNum = (v: unknown, decimals: number): string => {
   const n = Number(v);
   return Number.isFinite(n) ? n.toFixed(decimals) : '';
-};
-
-/** Drop placeholder titles ("---", "___", "   ") that ERP sometimes emits. */
-const cleanTitle = (raw?: string): string => {
-  if (!raw) return '';
-  return raw.replace(/[-_\s]/g, '') ? raw.trim() : '';
 };
 
 /**

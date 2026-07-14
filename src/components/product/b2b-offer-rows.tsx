@@ -16,18 +16,12 @@ import PackagingGrid from './packaging-grid';
 import AddToCart from './add-to-cart';
 import { formatPriceIt } from '@utils/money';
 import { isNetPricePromoType } from '@utils/promo';
+import { cleanTitle, qualifyingOffers } from '@framework/pricing/best-price';
 
 type Props = {
   lang: string;
   product: any;
   priceData?: ErpPriceData;
-};
-
-const cleanTitle = (raw?: string) => {
-  if (!raw) return '';
-  // ERP often returns a string of dashes as a placeholder title.
-  const trimmed = raw.replace(/[-_\s]/g, '');
-  return trimmed ? raw.trim() : '';
 };
 
 /**
@@ -44,17 +38,9 @@ export function pickImprovingOffer(
   priceData?: ErpPriceData | null,
 ): PromoOffer | null {
   if (!priceData) return null;
-  const offers = priceData.all_promo_offers ?? [];
-  if (!offers.length) return null;
-  const listinoMv = Math.max(
-    Number(priceData.packaging_option_default?.qty_x_packaging ?? 1),
-    1,
-  );
-  const matches = offers.filter(
-    (o) => Math.max(Number(o.promo_qty_required ?? 0), 1) <= listinoMv,
-  );
+  const matches = qualifyingOffers(priceData);
   if (!matches.length) return null;
-  // Pick the cheapest qualifying promo.
+  // Cheapest qualifying promo.
   return matches.reduce((best, cur) =>
     cur.promo_net_price < best.promo_net_price ? cur : best,
   );
