@@ -157,6 +157,11 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
   const savings = gross - net;
 
   const minimumAmount = meta?.minOrder?.minimumAmount ?? 0;
+  // Gate on the RAW `net` (pre-coupon subtotal_net), NOT `discounted.net`.
+  // The coupon here is display-only: it's applied by MyMB *after* the order
+  // syncs, so the ERP re-checks `importo_minimo` against the pre-coupon
+  // subtotal_net. Switching this to `discounted.net` would falsely block
+  // legitimate orders that only clear the minimum before the coupon discount.
   const { belowMinimum, shortfall } = minOrderStatus(net, minimumAmount);
 
   // Active cart/document id for coupon persist + re-display. This tenant's
