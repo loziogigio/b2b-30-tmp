@@ -1,4 +1,5 @@
 import type { ErpPriceData } from '@utils/transform/erp-prices';
+import { selectBestPrice } from '@framework/pricing/best-price';
 
 /** Time-theme row palette — brand-driven via the time CSS vars, DFL fallbacks. */
 export const C = {
@@ -17,7 +18,23 @@ export const C = {
   amberSoft: '#fff7ed',
 };
 
+/**
+ * The unit price a row DISPLAYS — which must be the one the cart BOOKS.
+ *
+ * Resolved through `selectBestPrice` (= min(listino, cheapest qualifying
+ * promo)), the same seam `buildCartPriceData` books through. Reading
+ * `price_discount` directly is not safe: the ERP flattens its pre-selected
+ * `improving_promo` onto that field, so on a listino-wins row it holds a promo
+ * price we do not charge.
+ */
 export function netOf(pd?: ErpPriceData): number | null {
+  if (!pd) return null;
+
+  const best = selectBestPrice(pd).effectivePrice;
+  if (Number.isFinite(best) && best > 0) return best;
+
+  // No listino and no qualifying promo: keep the legacy fallback chain so a
+  // gross-only row still renders, and an absent/zero price still yields null.
   const a = pd as any;
   const n =
     a?.price_discount ?? a?.net_price ?? a?.price_gross ?? a?.gross_price;

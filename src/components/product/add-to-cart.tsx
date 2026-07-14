@@ -57,7 +57,12 @@ const makeScaler = (step: number, multiple: number) => {
   return { toUnits, fromUnits };
 };
 
-const buildAddPayload = (args: {
+/**
+ * The server cart payload for one add. Exported so the price-booking parity
+ * tests can assert against the REAL booking logic rather than a hand-copy of
+ * it — a copy silently drifts from this and hides wrong-charge bugs.
+ */
+export const buildAddPayload = (args: {
   itemId: string | number;
   qty: number;
   priceData?: ErpPriceData;

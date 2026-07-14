@@ -126,6 +126,15 @@ export function buildCartPriceData(base: ErpPriceData): ErpPriceData {
 
   return {
     ...base,
+    // The ERP flattens its pre-selected `improving_promo` onto `price_discount`,
+    // so on this branch the base row still carries the PROMO's unit price there
+    // while `net_price` holds the listino we are about to book. The display
+    // layer reads `price_discount` (see `netOf`, the detail headline, and the
+    // optimistic cart line in AddToCart) — leaving it stale makes the row SHOW
+    // the promo price on a line CHARGED at the listino. Both fields must state
+    // the one price we book.
+    net_price: best.effectivePrice,
+    price_discount: best.effectivePrice,
     is_promo: false,
     promo: false,
     // `undefined` (not '' / 0) so AddToCart's `?? 0` fallback yields the

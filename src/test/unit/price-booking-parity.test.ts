@@ -4,6 +4,8 @@ import {
   buildCartPriceData,
   buildPromoPriceData,
 } from '@components/product/b2b-offer-rows';
+import { buildAddPayload } from '@components/product/add-to-cart';
+import { netOf } from '@components/themes/time/product/time-row-helpers';
 import type { ErpPriceData, PromoOffer } from '@utils/transform/erp-prices';
 
 /**
@@ -59,12 +61,16 @@ const priceData = (
     ...over,
   }) as ErpPriceData;
 
+/** The REAL cart payload add-to-cart.tsx sends for a given ErpPriceData. */
+const payloadOf = (pd: ErpPriceData) =>
+  buildAddPayload({ itemId: 'SKU1', qty: 1, priceData: pd });
+
 /** What add-to-cart.tsx books as the unit price for a given ErpPriceData. */
-const bookedPrice = (pd: ErpPriceData) => Number(pd.net_price ?? 0);
+const bookedPrice = (pd: ErpPriceData) => payloadOf(pd).price_discount;
 /** What add-to-cart.tsx sends as the promo identity for a given ErpPriceData. */
 const bookedPromo = (pd: ErpPriceData) => ({
-  promo_code: (pd as any).promo_code ?? 0,
-  promo_row: (pd as any).promo_row ?? 0,
+  promo_code: payloadOf(pd).promo_code,
+  promo_row: payloadOf(pd).promo_row,
 });
 
 describe('display/booking parity', () => {
@@ -223,5 +229,114 @@ describe('display/booking parity', () => {
     expect(best.source).toBe('listino');
     expect(bookedPrice(buildCartPriceData(pd))).toBe(best.effectivePrice);
     expect(bookedPrice(buildCartPriceData(pd))).toBe(7.18);
+  });
+});
+
+/**
+ * The ERP flattens its pre-selected `improving_promo` onto `price_discount`,
+ * so a real listino-wins row arrives with `price_discount !== net_price`.
+ * The DISPLAY layer (`netOf`, the detail headline) reads `price_discount`;
+ * the BOOKING layer reads `net_price`. If `buildCartPriceData` leaves the
+ * stale promo on `price_discount`, the row SHOWS 3.95 and CHARGES 3.50.
+ */
+describe('display/booking parity when the ERP flattened a promo onto price_discount', () => {
+  /** Listino 3.50 wins; the ERP still flattened its 3.95 promo onto the row. */
+  const divergent = () =>
+    priceData(
+      3.5,
+      [
+        offer({
+          promo_code: 'A',
+          promo_net_price: 3.95,
+          promo_qty_required: 1,
+        }),
+      ],
+      12,
+      {
+        price_discount: 3.95,
+        is_promo: true,
+        promo: true,
+        promo_code: 'A',
+        promo_row: 1,
+      } as Partial<ErpPriceData>,
+    );
+
+  it('the fixture really does diverge (guards the old blind spot)', () => {
+    const pd = divergent();
+    expect(pd.price_discount).not.toBe(pd.net_price);
+    expect(selectBestPrice(pd).source).toBe('listino');
+    expect(selectBestPrice(pd).effectivePrice).toBe(3.5);
+  });
+
+  it('returns an internally consistent row: net_price === price_discount === effectivePrice', () => {
+    const pd = divergent();
+    const cartPd = buildCartPriceData(pd);
+    const effective = selectBestPrice(pd).effectivePrice;
+
+    expect(cartPd.net_price).toBe(effective);
+    expect(cartPd.price_discount).toBe(effective);
+    expect(cartPd.net_price).toBe(cartPd.price_discount);
+    expect(cartPd.promo_price).toBeUndefined();
+  });
+
+  it('DISPLAYS the price it BOOKS (no 3.95 shown on a line charged 3.50)', () => {
+    const pd = divergent();
+    const cartPd = buildCartPriceData(pd);
+
+    // What the variants table renders for this row...
+    expect(netOf(cartPd)).toBe(3.5);
+    // ...is exactly what the cart line charges.
+    expect(bookedPrice(cartPd)).toBe(3.5);
+    expect(netOf(cartPd)).toBe(bookedPrice(cartPd));
+    expect(netOf(cartPd)).not.toBe(3.95);
+  });
+
+  it('netOf() agrees with the booked price straight off the RAW erp row', () => {
+    // The detail headline and the search rows call netOf on the un-adapted pd.
+    const pd = divergent();
+    expect(netOf(pd)).toBe(selectBestPrice(pd).effectivePrice);
+    expect(netOf(pd)).toBe(bookedPrice(buildCartPriceData(pd)));
+  });
+
+  it('netOf() keeps returning null when there is no price at all', () => {
+    expect(netOf(undefined)).toBeNull();
+    expect(
+      netOf(
+        priceData(0, [], 1, {
+          price_discount: 0,
+          gross_price: 0,
+          price_gross: 0,
+        } as any),
+      ),
+    ).toBeNull();
+  });
+
+  it('the optimistic local cart line shows the booked price', () => {
+    // add-to-cart builds the local line from `price_discount` on the same
+    // object it books `net_price` from (payloadForCart / __cartMeta).
+    const cartPd = buildCartPriceData(divergent());
+    expect(cartPd.price_discount).toBe(bookedPrice(cartPd));
+  });
+
+  it('a promo-wins row stays consistent too', () => {
+    const pd = priceData(
+      7.18,
+      [
+        offer({
+          promo_code: 'A',
+          promo_net_price: 3.95,
+          promo_qty_required: 1,
+        }),
+      ],
+      12,
+      { price_discount: 5.5 } as Partial<ErpPriceData>,
+    );
+    const cartPd = buildCartPriceData(pd);
+    const effective = selectBestPrice(pd).effectivePrice;
+
+    expect(effective).toBe(3.95);
+    expect(cartPd.net_price).toBe(effective);
+    expect(cartPd.price_discount).toBe(effective);
+    expect(netOf(cartPd)).toBe(bookedPrice(cartPd));
   });
 });
