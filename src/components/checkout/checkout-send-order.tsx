@@ -7,12 +7,19 @@ import Heading from '@components/ui/heading';
 import { useTranslation } from 'src/app/i18n/client';
 import { formatAddress } from '@utils/format-address';
 import { useDeliveryAddress } from '@contexts/address/address.context';
+import { useCart } from '@contexts/cart/cart.context';
 import type { AddressB2B } from '@framework/acccount/types-b2b-account';
 import { useOrderSubmit } from '@/hooks/use-order-submit';
 import AnomalyModal from './anomaly-modal';
 import DuplicateSubmitModal from './duplicate-submit-modal';
 import OrderAlreadySubmittedModal from './order-already-submitted-modal';
 import { useCartAnomalies } from '@/contexts/cart-anomalies.context';
+import { minOrderStatus } from '@utils/adapter/cart-adapter';
+
+const money = (n: number) =>
+  new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(
+    n,
+  );
 
 // helpers
 const isWeekend = (d: Date) => d.getDay() === 0 || d.getDay() === 6;
@@ -72,6 +79,15 @@ export default function CheckoutSendOrder({ lang, onSubmit }: Props) {
     clearDuplicateWarning,
   } = useOrderSubmit(lang);
   const { setAnomalies: setSharedAnomalies } = useCartAnomalies();
+  const { meta } = useCart();
+
+  // Same ERP minimum-order gate as the `time` theme checkout
+  // (time-order-summary.tsx) — reuses minOrderStatus() so the arithmetic
+  // isn't duplicated. Gate on the RAW net total (pre-coupon subtotal_net):
+  // that's the basis the ERP re-checks importo_minimo against.
+  const netTotal = meta?.totalNet ?? 0;
+  const minimumAmount = meta?.minOrder?.minimumAmount ?? 0;
+  const { belowMinimum, shortfall } = minOrderStatus(netTotal, minimumAmount);
 
   // Push new anomalies into the shared context so the banner above the cart
   // and the per-row red highlighting pick them up. Do NOT mirror nulls — that
@@ -101,7 +117,7 @@ export default function CheckoutSendOrder({ lang, onSubmit }: Props) {
   const [date] = useState<string>(() => toLocalISODate(nextBusinessDay()));
   const [notes, setNotes] = useState<string>('');
 
-  const canSubmit = Boolean(selected && date && !isSubmitting);
+  const canSubmit = Boolean(selected && date && !isSubmitting && !belowMinimum);
 
   const submitOpts = {
     delivery_date: date,
@@ -159,6 +175,25 @@ export default function CheckoutSendOrder({ lang, onSubmit }: Props) {
           </div>
         )}
       </div>
+
+      {belowMinimum && (
+        <div className="px-2">
+          <div className="rounded-md bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+            <p className="font-semibold">
+              {t('text-min-order-title', {
+                defaultValue: 'Importo minimo d’ordine non raggiunto',
+              })}
+            </p>
+            <p className="mt-1">
+              {t('text-min-order-detail', {
+                defaultValue: 'Minimo {{min}} — mancano {{missing}}',
+                min: money(minimumAmount),
+                missing: money(shortfall),
+              })}
+            </p>
+          </div>
+        </div>
+      )}
 
       {submitError &&
         !anomalyResult &&
