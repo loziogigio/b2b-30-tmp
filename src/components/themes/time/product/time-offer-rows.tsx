@@ -19,7 +19,10 @@ import {
   useModalAction,
   useModalState,
 } from '@components/common/modal/modal.context';
-import { buildPromoPriceData } from '@components/product/b2b-offer-rows';
+import {
+  buildListinoPriceData,
+  buildPromoPriceData,
+} from '@components/product/b2b-offer-rows';
 import AddToCart from '@components/product/add-to-cart';
 import { ROUTES } from '@utils/routes';
 import { NET_PRICE_PROMO_TYPES } from '@utils/promo';
@@ -74,14 +77,13 @@ export default function TimeOfferRows({ lang, product, priceData }: Props) {
   const canAdd = priceData.product_label_action?.ADD_TO_CART !== false;
 
   const baseGross = Number(priceData.gross_price ?? 0);
-  // When promo offers exist, `price_discount`/`net_price` reflect the best deal
-  // (including the promo). The LISTINO row should instead show the listino-only
-  // net price, which the offers expose as `promo_ref_list_price`.
-  const listinoOnlyNet =
-    offers.length > 0
-      ? Number(offers[0].promo_ref_list_price ?? 0)
-      : Number(priceData.price_discount ?? priceData.net_price ?? 0);
-  const baseNet = listinoOnlyNet;
+  // The LISTINO row shows and books the LISTINO — the same object, so display
+  // and booking cannot drift. Neither `price_discount` (the ERP's flattened
+  // pre-selected promo) nor the offers' `promo_ref_list_price` (absent → 0
+  // whenever the ERP omits PrezzoNettoListinoDiRiferimento) is the listino:
+  // `net_price` is.
+  const listinoPriceData = buildListinoPriceData(priceData);
+  const baseNet = Number(listinoPriceData.net_price ?? 0);
   const baseDiscountList = (priceData.discount ?? []).filter(
     (v) => v && v !== 0,
   );
@@ -98,7 +100,7 @@ export default function TimeOfferRows({ lang, product, priceData }: Props) {
         label={t('text-listino', { defaultValue: 'LISTINO' })}
         labelTone="neutral"
         product={product}
-        priceData={priceData}
+        priceData={listinoPriceData}
         decimals={decimals}
         gross={baseGross}
         net={baseNet}
@@ -111,7 +113,7 @@ export default function TimeOfferRows({ lang, product, priceData }: Props) {
               isAuthorized={isAuthorized}
               lang={lang}
               product={product}
-              priceData={priceData}
+              priceData={listinoPriceData}
               disabled={!canAdd}
             />
           ) : (

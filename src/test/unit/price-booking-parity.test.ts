@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { selectBestPrice } from '@framework/pricing/best-price';
 import {
   buildCartPriceData,
+  buildListinoPriceData,
   buildPromoPriceData,
 } from '@components/product/b2b-offer-rows';
 import { buildAddPayload } from '@components/product/add-to-cart';
@@ -338,5 +339,134 @@ describe('display/booking parity when the ERP flattened a promo onto price_disco
     expect(cartPd.net_price).toBe(effective);
     expect(cartPd.price_discount).toBe(effective);
     expect(netOf(cartPd)).toBe(bookedPrice(cartPd));
+  });
+});
+
+/**
+ * The offer panels render a LISTINO row plus one row per promo. The LISTINO row
+ * is the listino BY DEFINITION — it must show and book `net_price`, even when a
+ * promo is cheaper (that promo has its own row). It must never show the ERP's
+ * flattened `price_discount` (a different number), nor book the listino price
+ * under the flattened promo's code / discount ladder.
+ */
+describe('the LISTINO row of the offer panels', () => {
+  /** Listino 3.50; ERP flattened its 3.95 promo 'A' (with tiers 5/2) onto the row. */
+  const divergent = () =>
+    priceData(
+      3.5,
+      [
+        offer({
+          promo_code: 'A',
+          promo_net_price: 3.95,
+          promo_qty_required: 1,
+        }),
+      ],
+      12,
+      {
+        price_discount: 3.95,
+        is_promo: true,
+        promo: true,
+        promo_code: 'A',
+        promo_row: 1,
+        discount_extra: [5, 2],
+      } as Partial<ErpPriceData>,
+    );
+
+  it('states the TRUE listino on both price fields', () => {
+    const listinoPd = buildListinoPriceData(divergent());
+
+    expect(listinoPd.net_price).toBe(3.5);
+    expect(listinoPd.price_discount).toBe(3.5);
+    expect(listinoPd.net_price).toBe(listinoPd.price_discount);
+  });
+
+  it('books the listino WITHOUT the flattened promo identity or its discount ladder', () => {
+    const listinoPd = buildListinoPriceData(divergent());
+    const payload = payloadOf(listinoPd);
+
+    expect(payload.price_discount).toBe(3.5);
+    expect(payload.promo_code).toBe(0);
+    expect(payload.promo_row).toBe(0);
+    // The flattened promo's extra-discount tiers belong to promo 'A', not here.
+    expect(listinoPd.discount_extra).toEqual([]);
+    expect([
+      payload.discount1,
+      payload.discount2,
+      payload.discount3,
+      payload.discount4,
+      payload.discount5,
+      payload.discount6,
+    ]).toEqual([0, 0, 0, 0, 0, 0]);
+    expect(listinoPd.is_promo).toBe(false);
+    expect(listinoPd.promo_price).toBeUndefined();
+  });
+
+  it('DISPLAYS the price it BOOKS (the displayed listino net === the booked one)', () => {
+    const pd = divergent();
+    const listinoPd = buildListinoPriceData(pd);
+    // Both offer panels derive the rendered net from this same object.
+    const displayedNet = Number(listinoPd.net_price ?? 0);
+
+    expect(displayedNet).toBe(bookedPrice(listinoPd));
+    expect(displayedNet).toBe(3.5);
+    // NOT the ERP's stale flattened promo price.
+    expect(displayedNet).not.toBe(3.95);
+  });
+
+  it('keeps showing the LISTINO even when a promo is cheaper (does not collapse into a promo line)', () => {
+    // Promo 'A' at 2.00 beats the 3.50 listino, so selectBestPrice picks it —
+    // but the LISTINO row is still the listino.
+    const pd = priceData(3.5, [
+      offer({ promo_code: 'A', promo_net_price: 2, promo_qty_required: 1 }),
+    ]);
+    expect(selectBestPrice(pd).source).toBe('promo');
+
+    const listinoPd = buildListinoPriceData(pd);
+    expect(listinoPd.net_price).toBe(3.5);
+    expect(bookedPrice(listinoPd)).toBe(3.5);
+    expect(bookedPromo(listinoPd)).toEqual({ promo_code: 0, promo_row: 0 });
+  });
+
+  it('agrees with buildCartPriceData on its listino branch (DRY seam)', () => {
+    // When the listino wins, buildCartPriceData sets net_price = effectivePrice,
+    // which IS base.net_price — the two must produce the same booked price.
+    const pd = divergent();
+    expect(bookedPrice(buildCartPriceData(pd))).toBe(
+      bookedPrice(buildListinoPriceData(pd)),
+    );
+  });
+});
+
+/** Regression guard: each PROMO row books ITS OWN promo, not the cheapest. */
+describe('the PROMO rows book their own per-row promo', () => {
+  it('books offer B on B’s row even though offer A is cheaper', () => {
+    const offerA = offer({
+      promo_code: 'A',
+      promo_row: 1,
+      promo_net_price: 2.5,
+      promo_qty_required: 1,
+    });
+    const offerB = offer({
+      promo_code: 'B',
+      promo_row: 2,
+      promo_net_price: 4.5,
+      promo_qty_required: 1,
+    });
+    const pd = priceData(7.18, [offerA, offerB]);
+
+    // The cheapest qualifying promo is A...
+    expect(selectBestPrice(pd).offer?.promo_code).toBe('A');
+
+    // ...but B's row books B.
+    const rowB = buildPromoPriceData(pd, offerB);
+    expect(rowB.net_price).toBe(offerB.promo_net_price);
+    expect(rowB.price_discount).toBe(4.5);
+    expect(bookedPrice(rowB)).toBe(4.5);
+    expect(bookedPromo(rowB)).toEqual({ promo_code: 'B', promo_row: 2 });
+
+    // And A's row books A.
+    const rowA = buildPromoPriceData(pd, offerA);
+    expect(bookedPrice(rowA)).toBe(2.5);
+    expect(bookedPromo(rowA)).toEqual({ promo_code: 'A', promo_row: 1 });
   });
 });

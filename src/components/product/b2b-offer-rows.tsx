@@ -93,6 +93,51 @@ export function buildPromoPriceData(
 }
 
 /**
+ * The ErpPriceData the LISTINO row of an offer panel must SHOW and BOOK.
+ *
+ * That row is the listino BY DEFINITION — it stays the listino even when a
+ * promo undercuts it (that promo has its own row right below). So the price is
+ * `base.net_price`, never `selectBestPrice().effectivePrice`.
+ *
+ * Two ERP quirks make a naive `{...base}` wrong:
+ *
+ * - `price_discount` is NOT the listino: the ERP flattens its pre-selected
+ *   `improving_promo` onto it, so it holds a promo's unit price. A row that
+ *   displays `price_discount` and books `net_price` shows one number and
+ *   charges another. Both fields must state the one listino price.
+ * - the same flattening leaves `promo_code` / `promo_row` / `is_promo` and the
+ *   promo's `discount_extra` ladder on the base row. Booking a LISTINO price
+ *   under a promo code, with discount1..6 from a promo we are not applying, is
+ *   a wrong cart line even when the unit price is right.
+ */
+export function buildListinoPriceData(base: ErpPriceData): ErpPriceData {
+  const raw = Number(base.net_price ?? 0);
+  // A missing / non-positive / NaN net_price is not a price — normalise to 0,
+  // the same "no listino" value `selectBestPrice` reports as effectivePrice on
+  // its listino branch, so the two stay in agreement.
+  const listino = Number.isFinite(raw) && raw > 0 ? raw : 0;
+
+  return {
+    ...base,
+    net_price: listino,
+    price_discount: listino,
+    is_promo: false,
+    promo: false,
+    // `undefined` (not '' / 0) so AddToCart's `?? 0` fallback yields the
+    // no-promo sentinel the cart line matcher and the BE expect.
+    promo_code: undefined,
+    promo_row: undefined,
+    promo_price: undefined,
+    promo_title: undefined,
+    start_promo_date: undefined,
+    end_promo_date: undefined,
+    // The flattened promo's extra-discount tiers are merged into the cart
+    // payload's discount1..6 — they belong to the promo we are NOT booking.
+    discount_extra: [],
+  } as ErpPriceData;
+}
+
+/**
  * The ErpPriceData an inline `<AddToCart>` must book, so the price the card
  * CHARGES is the price the card SHOWS.
  *
@@ -124,31 +169,10 @@ export function buildCartPriceData(base: ErpPriceData): ErpPriceData {
     best.hasPromos || Boolean(anyBase.is_promo) || Boolean(anyBase.promo);
   if (!carriesPromo) return base;
 
-  return {
-    ...base,
-    // The ERP flattens its pre-selected `improving_promo` onto `price_discount`,
-    // so on this branch the base row still carries the PROMO's unit price there
-    // while `net_price` holds the listino we are about to book. The display
-    // layer reads `price_discount` (see `netOf`, the detail headline, and the
-    // optimistic cart line in AddToCart) — leaving it stale makes the row SHOW
-    // the promo price on a line CHARGED at the listino. Both fields must state
-    // the one price we book.
-    net_price: best.effectivePrice,
-    price_discount: best.effectivePrice,
-    is_promo: false,
-    promo: false,
-    // `undefined` (not '' / 0) so AddToCart's `?? 0` fallback yields the
-    // no-promo sentinel the cart line matcher and the BE expect.
-    promo_code: undefined,
-    promo_row: undefined,
-    promo_price: undefined,
-    promo_title: undefined,
-    start_promo_date: undefined,
-    end_promo_date: undefined,
-    // The flattened promo's extra-discount tiers are merged into the cart
-    // payload's discount1..6 — they belong to the promo we are NOT booking.
-    discount_extra: [],
-  } as ErpPriceData;
+  // On this branch `best.effectivePrice` IS the listino (`base.net_price`), so
+  // the LISTINO adapter states exactly the price we book — reuse it rather than
+  // duplicating the field-stripping rules.
+  return buildListinoPriceData(base);
 }
 
 export default function B2BOfferRows({ lang, product, priceData }: Props) {
@@ -162,7 +186,11 @@ export default function B2BOfferRows({ lang, product, priceData }: Props) {
   const canAdd = priceData.product_label_action?.ADD_TO_CART !== false;
 
   const baseGross = Number(priceData.gross_price ?? 0);
-  const baseNet = Number(priceData.price_discount ?? priceData.net_price ?? 0);
+  // The LISTINO row shows and books the LISTINO — one object, so display and
+  // booking cannot drift. `price_discount` is not it: the ERP flattens its
+  // pre-selected `improving_promo` there.
+  const listinoPriceData = buildListinoPriceData(priceData);
+  const baseNet = Number(listinoPriceData.net_price ?? 0);
 
   // When the ERP flags this product as `is_improving_promo`, the buyer's
   // default packaging already triggers the best promo — adding via the
@@ -201,7 +229,7 @@ export default function B2BOfferRows({ lang, product, priceData }: Props) {
               isAuthorized={isAuthorized}
               lang={lang}
               product={product}
-              priceData={priceData}
+              priceData={listinoPriceData}
               disabled={!canAdd}
             />
           ) : (
