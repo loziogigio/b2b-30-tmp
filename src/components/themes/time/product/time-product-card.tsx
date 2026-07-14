@@ -10,6 +10,7 @@ import { formatTimeAvailability } from './format-time-availability';
 import { productPlaceholder } from '@assets/placeholders';
 import { ErpPriceData } from '@utils/transform/erp-prices';
 import { useProductPriceData } from '@framework/pricing';
+import { selectBestPrice } from '@framework/pricing/best-price';
 import { buildPackagingParts } from '@utils/packaging';
 import { useUI } from '@contexts/ui.context';
 import { useTranslation } from 'src/app/i18n/client';
@@ -100,8 +101,10 @@ export default function TimeProductCard({
     productPlaceholder;
 
   const anyPD = effectivePriceData as any;
-  const netPrice =
-    anyPD?.price_discount ?? anyPD?.net_price ?? anyPD?.price_gross ?? null;
+  // Lowest of the listino and any qualifying promo — not the ERP's single
+  // pre-selected improving_promo, which can be dearer than both.
+  const best = selectBestPrice(effectivePriceData);
+  const netPrice = effectivePriceData ? best.effectivePrice : null;
   const listPrice = anyPD?.price_gross ?? anyPD?.gross_price ?? null;
   const hasDiscount =
     netPrice != null &&

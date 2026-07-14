@@ -32,6 +32,7 @@ import {
 import { useTranslation } from 'src/app/i18n/client';
 import type { ErpPriceData } from '@utils/transform/erp-prices';
 import { useProductPriceData } from '@framework/pricing';
+import { selectBestPrice } from '@framework/pricing/best-price';
 import { usePimProductListQuery } from '@framework/product/get-pim-product';
 import { useLikes } from '@contexts/likes/likes.context';
 import { useReminders } from '@contexts/reminders/reminders.context';
@@ -121,8 +122,10 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
 
   /* ── Derived price info ── */
   const anyPD = erpPrice as any;
-  const netPrice =
-    anyPD?.price_discount ?? anyPD?.net_price ?? anyPD?.price_gross ?? null;
+  // Lowest of the listino and any qualifying promo — not the ERP's single
+  // pre-selected improving_promo, which can be dearer than both.
+  const best = selectBestPrice(erpPrice);
+  const netPrice = erpPrice ? best.effectivePrice : null;
   const listPrice = anyPD?.price_gross ?? anyPD?.gross_price ?? null;
   const hasDiscount =
     netPrice != null &&

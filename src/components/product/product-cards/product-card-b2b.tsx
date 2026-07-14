@@ -24,6 +24,7 @@ import { Eye } from '@components/icons/eye-icon';
 import useWindowSize from '@utils/use-window-size';
 import { buildPromoPriceData, pickImprovingOffer } from '../b2b-offer-rows';
 import { useProductPriceData } from '@framework/pricing';
+import { selectBestPrice } from '@framework/pricing/best-price';
 import LastOrdered from '../last-ordered';
 
 interface RenderPopupOrAddToCartProps {
@@ -106,12 +107,11 @@ function RenderPopupOrAddToCart({
   }
 
   // Check if we have a valid price - if not, don't show add to cart
-  const anyPD = effectivePriceData as any;
-  const price =
-    anyPD?.price_discount ??
-    anyPD?.net_price ??
-    anyPD?.gross_price ??
-    anyPD?.price_gross;
+  // Lowest of the listino and any qualifying promo — not the ERP's single
+  // pre-selected improving_promo, which can be dearer than both.
+  const price = effectivePriceData
+    ? selectBestPrice(effectivePriceData).effectivePrice
+    : null;
   const hasValidPrice =
     effectivePriceData && price != null && Number(price) > 0;
 

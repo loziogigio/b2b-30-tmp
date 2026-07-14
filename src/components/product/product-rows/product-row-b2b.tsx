@@ -20,6 +20,7 @@ import { IoIosHeart, IoIosHeartEmpty } from 'react-icons/io';
 import { ReminderIcon, ReminderIconFilled } from '@components/icons/app-icons';
 import VariantsFilterBar from './variants-filter-bar';
 import { useProductsPriceMap } from '@framework/pricing';
+import { selectBestPrice } from '@framework/pricing/best-price';
 import { buildPromoPriceData, pickImprovingOffer } from '../b2b-offer-rows';
 import LastOrdered from '../last-ordered';
 
@@ -178,14 +179,11 @@ export default function ProductRowB2B({
   const getSortPrice = (v: any): number => {
     const pd = getVariantPrice(v?.id as any);
     if (!pd) return Number.POSITIVE_INFINITY;
-    const anyPD: any = pd;
-    const p =
-      anyPD.price_discount ??
-      anyPD.net_price ??
-      anyPD.price ??
-      anyPD.gross_price;
-    const n = Number(p);
-    return Number.isFinite(n) ? n : Number.POSITIVE_INFINITY;
+    // Same selector that decides the displayed price, so price-asc/desc can't
+    // disagree with what's on screen. No valid price sinks to the bottom of
+    // price-asc and rises to the top of price-desc.
+    const n = selectBestPrice(pd).effectivePrice;
+    return n > 0 ? n : Number.POSITIVE_INFINITY;
   };
   const sortedVariants = useMemo(() => {
     const arr = filteredVariants.slice();
@@ -394,12 +392,11 @@ export default function ProductRowB2B({
               ? Number(vPrice.availability) <= 0
               : true;
             // Check if we have a valid price - same logic as ProductCardB2B
-            const anyPD = dPrice as any;
-            const priceValue =
-              anyPD?.price_discount ??
-              anyPD?.net_price ??
-              anyPD?.gross_price ??
-              anyPD?.price_gross;
+            // Lowest of the listino and any qualifying promo — not the ERP's
+            // single pre-selected improving_promo, which can be dearer than both.
+            const priceValue = dPrice
+              ? selectBestPrice(dPrice).effectivePrice
+              : null;
             const hasValidPrice =
               dPrice && priceValue != null && Number(priceValue) > 0;
             const reminderActive = targetSku

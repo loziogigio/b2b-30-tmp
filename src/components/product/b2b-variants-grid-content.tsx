@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { getThemedComponent } from '@/lib/theme/registry';
 import { useProductsPriceMap } from '@framework/pricing';
+import { selectBestPrice } from '@framework/pricing/best-price';
 import { useThemeId } from '@/contexts/tenant.context';
 import { useCatalogSettings } from '@/hooks/use-catalog-settings';
 import { IoGridOutline, IoListOutline } from 'react-icons/io5';
@@ -120,14 +121,20 @@ export default function B2BVariantsGridContent({
     );
   }, [variants, selectedModels, query]);
 
-  // Prices are inline on each variant (variant.price = pricing.list, post-transform).
-  // Unpriced variants (status !== 'priced') get +Infinity so they sink to the
-  // bottom of price-asc and to the top of price-desc.
+  // One batched ERP request for all visible (filtered) variants — built off
+  // `filtered` rather than `sorted` so the batch key doesn't change (and
+  // re-fetch) merely because the user flips the sort order. Values are keyed
+  // by variant id and are what each card actually renders as its price.
+  const variantPriceMap = useProductsPriceMap(filtered);
+
+  // Same selector that decides the displayed price, applied to the batched
+  // ERP price map, so the price-asc/desc order can't disagree with what's on
+  // screen. Unpriced variants (no price data) get +Infinity so they sink to
+  // the bottom of price-asc and to the top of price-desc.
   const getSortPrice = (variant: any): number => {
-    const list = variant?.pricing?.list;
-    const fallback = variant?.price;
-    const v = list != null ? Number(list) : Number(fallback);
-    return Number.isFinite(v) && v > 0 ? v : Number.POSITIVE_INFINITY;
+    const pd = variantPriceMap[String(variant.id)];
+    const price = selectBestPrice(pd).effectivePrice;
+    return price > 0 ? price : Number.POSITIVE_INFINITY;
   };
 
   const sorted = useMemo(() => {
@@ -161,12 +168,7 @@ export default function B2BVariantsGridContent({
       });
     }
     return copy;
-  }, [filtered, sortKey, isAuthorized, selectedModels]);
-
-  // One batched ERP request for all visible variants. The sentinel {} is passed
-  // when a variant has no price yet (batch loading or no ERP price) so individual
-  // cards don't fire their own requests.
-  const variantPriceMap = useProductsPriceMap(sorted);
+  }, [filtered, sortKey, isAuthorized, selectedModels, variantPriceMap]);
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const parentSku = parent_sku ?? sku;

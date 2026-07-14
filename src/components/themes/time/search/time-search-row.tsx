@@ -8,6 +8,7 @@ import { productPlaceholder } from '@assets/placeholders';
 import { ErpPriceData } from '@utils/transform/erp-prices';
 import { buildPackagingParts } from '@utils/packaging';
 import { useProductPriceData } from '@framework/pricing';
+import { selectBestPrice } from '@framework/pricing/best-price';
 import AddToCart from '@components/product/add-to-cart';
 import { useTranslation } from 'src/app/i18n/client';
 import { useUI } from '@contexts/ui.context';
@@ -65,8 +66,10 @@ export default function TimeSearchRow({
     (product.variantCount && product.variantCount > 1) || variations.length > 1;
 
   const anyPD = priceData as any;
-  const netPrice =
-    anyPD?.price_discount ?? anyPD?.net_price ?? anyPD?.price_gross ?? null;
+  // Lowest of the listino and any qualifying promo — not the ERP's single
+  // pre-selected improving_promo, which can be dearer than both.
+  const best = selectBestPrice(priceData);
+  const netPrice = priceData ? best.effectivePrice : null;
   const listPrice = anyPD?.price_gross ?? anyPD?.gross_price ?? null;
   const hasDiscount =
     netPrice != null &&

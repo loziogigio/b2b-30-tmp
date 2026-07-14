@@ -3,15 +3,13 @@
 
 import React from 'react';
 import cn from 'classnames';
-import {
-  formatPromoDate,
-  type ErpPriceData,
-} from '@utils/transform/erp-prices';
+import { type ErpPriceData } from '@utils/transform/erp-prices';
 import { useUI } from '@contexts/ui.context';
 import { useHomeSettings } from '@/hooks/use-home-settings';
 import { formatPriceIt } from '@utils/money';
 import type { Product } from '@framework/types';
 import { useProductPriceData } from '@framework/pricing';
+import { selectBestPrice } from '@framework/pricing/best-price';
 
 export type PriceSlice = Pick<
   ErpPriceData,
@@ -90,14 +88,19 @@ export default function PriceAndPromo({
 
   // normalize shapes (support net_price and price_gross too)
   const anyPD = effective as any;
-  const price_discount = anyPD.price_discount ?? anyPD.net_price;
+  // Lowest of the listino and any qualifying promo — not the ERP's single
+  // pre-selected improving_promo, which can be dearer than both. Only
+  // applies when `effective` is a real ErpPriceData (carries net_price);
+  // callers that pass a pre-resolved PriceSlice (e.g. the cart line summary,
+  // which only sets price_discount to the cart line's own net unit price)
+  // have nothing to select — read that value as-is.
+  const price_discount =
+    anyPD.net_price != null
+      ? selectBestPrice(effective as ErpPriceData).effectivePrice
+      : anyPD.price_discount;
   const gross_price = anyPD.gross_price ?? anyPD.price_gross;
   const discount_description = anyPD.discount_description;
   const is_promo: boolean = Boolean(anyPD.is_promo);
-  const count_promo: number = Number(anyPD.count_promo ?? 0);
-  const is_improving_promo: boolean = Boolean(anyPD.is_improving_promo);
-  const end_promo_date = anyPD.end_promo_date;
-  const promoEndDisplay = formatPromoDate(end_promo_date);
 
   // No valid price - check all price fields
   const hasNoValidPrice =
