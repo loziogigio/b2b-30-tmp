@@ -290,6 +290,10 @@ export function useOrderSubmit(lang: string) {
     setSubmitError(null);
   }, []);
 
+  const clearSubmitError = useCallback(() => {
+    setSubmitError(null);
+  }, []);
+
   return {
     submitOrder,
     resubmitWithAutofix,
@@ -302,5 +306,6 @@ export function useOrderSubmit(lang: string) {
     clearAnomalies,
     clearDuplicateWarning,
     clearOrderAlreadySubmitted,
+    clearSubmitError,
   };
 }

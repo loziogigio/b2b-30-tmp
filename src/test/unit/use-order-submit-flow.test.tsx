@@ -4,6 +4,7 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 const submitOrder = vi.hoisted(() => vi.fn());
 const resubmitWithAutofix = vi.hoisted(() => vi.fn());
 const confirmDuplicateSubmit = vi.hoisted(() => vi.fn());
+const clearSubmitError = vi.hoisted(() => vi.fn());
 const pimGet = vi.hoisted(() => vi.fn());
 const resetCart = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const ensureActiveCart = vi.hoisted(() => vi.fn().mockResolvedValue('ord-1'));
@@ -21,6 +22,7 @@ vi.mock('@/hooks/use-order-submit', () => ({
     clearAnomalies: vi.fn(),
     clearDuplicateWarning: vi.fn(),
     clearOrderAlreadySubmitted: vi.fn(),
+    clearSubmitError,
   }),
 }));
 vi.mock('@framework/utils/httpPIM', () => ({ get: pimGet }));
@@ -53,6 +55,7 @@ beforeEach(() => {
   submitOrder.mockReset();
   resubmitWithAutofix.mockReset();
   confirmDuplicateSubmit.mockReset();
+  clearSubmitError.mockClear();
   pimGet.mockReset();
   resetCart.mockClear();
   ensureActiveCart.mockClear();
@@ -151,5 +154,17 @@ describe('useOrderSubmitFlow', () => {
       result.current.confirm();
     });
     await waitFor(() => expect(result.current.status).toBe('idle'));
+  });
+
+  it('error outcome clears submitError so the toast does not linger', async () => {
+    submitOrder.mockResolvedValue({ type: 'error', message: 'boom' });
+    const { result } = renderHook(() => useOrderSubmitFlow('it'));
+    act(() => result.current.open(opts));
+    await act(async () => {
+      result.current.confirm();
+    });
+    await waitFor(() => expect(result.current.status).toBe('error'));
+    expect(clearSubmitError).toHaveBeenCalled();
+    expect(result.current.submitError).toBeNull();
   });
 });

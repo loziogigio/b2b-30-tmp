@@ -70,6 +70,8 @@ export function useOrderSubmitFlow(lang: string): OrderSubmitFlowApi {
   const successRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const failRef = useRef(0);
   const startedAtRef = useRef(0);
+  const pollInFlightRef = useRef(false);
+  const doneRef = useRef(false);
 
   const clearInflight = useCallback(() => {
     try {
@@ -122,6 +124,8 @@ export function useOrderSubmitFlow(lang: string): OrderSubmitFlowApi {
 
   const finishSuccess = useCallback(
     async (orderNumber: string | undefined, resetTheCart: boolean) => {
+      if (doneRef.current) return;
+      doneRef.current = true;
       stopPoll();
       stopTick();
       clearInflight();
@@ -134,6 +138,7 @@ export function useOrderSubmitFlow(lang: string): OrderSubmitFlowApi {
           // Non-fatal: the order is placed; a stale local cart self-heals on reload.
         }
       }
+      if (successRef.current) clearTimeout(successRef.current);
       successRef.current = setTimeout(redirectToSuccess, SUCCESS_DWELL_MS);
     },
     [stopPoll, stopTick, clearInflight, resetCart, redirectToSuccess],
@@ -144,6 +149,8 @@ export function useOrderSubmitFlow(lang: string): OrderSubmitFlowApi {
       failRef.current = 0;
       stopPoll();
       pollRef.current = setInterval(async () => {
+        if (pollInFlightRef.current) return;
+        pollInFlightRef.current = true;
         try {
           const res = await pimGet<any>(CS_CART.PROCESSING_STATUS(orderId));
           failRef.current = 0;
@@ -179,6 +186,8 @@ export function useOrderSubmitFlow(lang: string): OrderSubmitFlowApi {
           } else {
             dispatch({ type: 'RECONNECTING', value: true });
           }
+        } finally {
+          pollInFlightRef.current = false;
         }
       }, POLL_INTERVAL_MS);
     },
@@ -206,16 +215,19 @@ export function useOrderSubmitFlow(lang: string): OrderSubmitFlowApi {
         case 'error':
           stopTick();
           dispatch({ type: 'ERROR', message: outcome.message });
+          submit.clearSubmitError();
           return;
       }
     },
-    [finishSuccess, markInflight, startPoll, stopTick],
+    [finishSuccess, markInflight, startPoll, stopTick, submit.clearSubmitError],
   );
 
   const run = useCallback(
     async (fn: (o: SubmitOpts) => Promise<SubmitOutcome>) => {
       const opts = optsRef.current;
       if (!opts) return;
+      doneRef.current = false;
+      pollInFlightRef.current = false;
       dispatch({ type: 'CONFIRM' });
       startTick();
       const outcome = await fn({ ...opts, redirectOnComplete: false });
@@ -250,8 +262,9 @@ export function useOrderSubmitFlow(lang: string): OrderSubmitFlowApi {
     stopTick();
     if (successRef.current) clearTimeout(successRef.current);
     successRef.current = null;
+    submit.clearSubmitError();
     dispatch({ type: 'CANCEL' });
-  }, [stopPoll, stopTick]);
+  }, [stopPoll, stopTick, submit.clearSubmitError]);
 
   const close = cancel;
 

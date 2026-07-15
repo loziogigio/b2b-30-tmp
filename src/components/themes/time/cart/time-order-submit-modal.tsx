@@ -200,7 +200,7 @@ export default function TimeOrderSubmitModal({ lang, flow, recap }: Props) {
             </ul>
 
             <div className="h-1.5 w-full rounded-[var(--radius-btn)] bg-[var(--time-gray-100)] overflow-hidden mb-3">
-              <div className="h-full w-1/2 bg-[var(--time-red)] animate-[shine_1.2s_ease_infinite]" />
+              <div className="h-full w-1/2 bg-[var(--time-red)] animate-pulse" />
             </div>
             <p className="text-[13px] text-center text-[var(--time-gray-600)]">
               {progressCopy}
