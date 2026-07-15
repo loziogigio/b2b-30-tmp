@@ -131,15 +131,27 @@ export function useOrderSubmit(lang: string) {
       setOrderAlreadySubmitted(null);
 
       try {
-        const res = await pimPost<any>(CS_CART.SUBMIT(orderId), {
-          delivery_date: opts.delivery_date,
-          delivery_type: opts.delivery_type,
-          notes: opts.notes,
-          pickup_data: opts.pickup_data,
-          autofix: opts.autofix || undefined,
-          force_duplicate_submit: opts.force_duplicate_submit || undefined,
-          coupon: opts.coupon || undefined,
-        });
+        const res = await pimPost<any>(
+          CS_CART.SUBMIT(orderId),
+          {
+            delivery_date: opts.delivery_date,
+            delivery_type: opts.delivery_type,
+            notes: opts.notes,
+            pickup_data: opts.pickup_data,
+            autofix: opts.autofix || undefined,
+            force_duplicate_submit: opts.force_duplicate_submit || undefined,
+            coupon: opts.coupon || undefined,
+          },
+          // No client timeout on submit. The submit deliberately blocks on the
+          // ERP "before" hook and only returns 202 once the server's own
+          // sync budget is exceeded; that can take longer than the shared
+          // httpPIM 30s default, which would otherwise abort a perfectly
+          // healthy in-flight submit with "timeout of 30000ms exceeded". The
+          // staged progress modal ("leave this page open") + resume-on-reload
+          // cover the wait; the server, not the client, decides when to hand
+          // back 202/processing.
+          { timeout: 0 },
+        );
 
         // Backend occasionally returns HTTP 200 with an error code body when the
         // cart is no longer a draft (e.g. after the ERP batch has finalised it).

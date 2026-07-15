@@ -45,6 +45,13 @@ describe('useOrderSubmit — redirectOnComplete: false', () => {
     expect(outcome).toEqual({ type: 'success', orderNumber: 'N-99' });
     expect(resetCart).not.toHaveBeenCalled();
     expect(ensureActiveCart).not.toHaveBeenCalled();
+    // The submit POST must carry no client timeout — the server decides when
+    // to hand back 202, which can exceed the shared httpPIM 30s default.
+    expect(post).toHaveBeenCalledWith(
+      expect.stringContaining('/submit'),
+      expect.any(Object),
+      expect.objectContaining({ timeout: 0 }),
+    );
   });
 
   it('returns processing without navigating when async', async () => {
