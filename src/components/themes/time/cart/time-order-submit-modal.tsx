@@ -41,7 +41,7 @@ export default function TimeOrderSubmitModal({ lang, flow, recap }: Props) {
   const { t } = useTranslation(lang, 'common');
   const { status } = flow;
 
-  if (status === 'idle' || status === 'anomalies') return null;
+  if (status === 'idle') return null;
 
   const stages: { n: Stage; label: string }[] = [
     { n: 1, label: t('submit-stage-start', { defaultValue: 'Inizio' }) },
