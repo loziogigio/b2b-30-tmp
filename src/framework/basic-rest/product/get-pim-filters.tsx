@@ -28,17 +28,16 @@ function mapFilterKey(key: string): string {
 // ===============================
 // Resolve labels for special fields
 // ===============================
-function resolveLabel(
+export function resolveLabel(
   field: string,
   value: string,
   apiLabel?: string,
-  promoTypeMap?: Record<string, string>,
+  promoLabelMap?: Record<string, string>,
 ): string {
-  // promo_type: prefer the harvested human label (e.g. "LIP" → "LIFE IN POOL")
-  // when we have one; the PIM facet itself ships the bare code without a
-  // user-friendly label.
-  if (field === 'promo_type') {
-    if (promoTypeMap && promoTypeMap[value]) return promoTypeMap[value];
+  // promo_code: prefer the harvested campaign label (e.g. "26-SUMMER" →
+  // "ESTATE 2026"); the PIM facet ships the bare code without a friendly label.
+  if (field === 'promo_code') {
+    if (promoLabelMap && promoLabelMap[value]) return promoLabelMap[value];
     if (apiLabel && apiLabel.trim() !== '' && apiLabel !== value) {
       return apiLabel;
     }
@@ -91,12 +90,12 @@ function harvestSpecUoms(docs: any[] | undefined): Record<string, string> {
 }
 
 // ===============================
-// Harvest promo_type code → label map from product docs.
-// PIM facet returns the bare code (e.g. "LIP") with no friendly label, but
-// products carry promotions[] with both `promo_type` and a `label`/`name`.
-// Mirrors the dfl-b2b server-side enrichment.
+// Harvest promo_code → campaign label map from product docs.
+// The PIM facet returns the bare code (e.g. "26-SUMMER") with no friendly
+// label, but products carry promotions[] with both `promo_code` and a
+// lang-resolved `label`/`name`. First-wins per code.
 // ===============================
-function harvestPromoTypeLabels(
+export function harvestPromoCodeLabels(
   docs: any[] | undefined,
 ): Record<string, string> {
   const map: Record<string, string> = {};
@@ -104,7 +103,7 @@ function harvestPromoTypeLabels(
   for (const doc of docs) {
     const proms = Array.isArray(doc?.promotions) ? doc.promotions : [];
     for (const p of proms) {
-      const code = p?.promo_type;
+      const code = p?.promo_code;
       const label = p?.label || p?.name;
       if (code && label && !map[code]) map[code] = label;
     }
@@ -119,7 +118,7 @@ function transformPimFacets(
   facetResults: Record<string, PimFacetValue[]>,
   lang: string = 'it',
   specUomMap: Record<string, string> = {},
-  promoTypeMap: Record<string, string> = {},
+  promoLabelMap: Record<string, string> = {},
 ): PimTransformedFilter[] {
   if (!facetResults || typeof facetResults !== 'object') return [];
 
@@ -154,7 +153,7 @@ function transformPimFacets(
           }
         }
 
-        const resolved = resolveLabel(field, f.value, label, promoTypeMap);
+        const resolved = resolveLabel(field, f.value, label, promoLabelMap);
         // Append harvested UoM for spec_* fields (idempotent — won't double-suffix).
         const uom = field.startsWith('spec_') ? specUomMap[field] : '';
         const finalLabel =
@@ -232,13 +231,13 @@ export const fetchPimFilters = async (
   const specUomMap = harvestSpecUoms(docs);
   const lang = body.lang || 'it';
 
-  // Promo-type labels: the PIM proxy enriches facet_results.promo_type with
-  // friendly labels (mirrors dfl-b2b's server-side getPromoTypeMap). We still
-  // run the local harvest as a fast path in case proxy enrichment is bypassed
-  // (e.g. tests, direct PIM hits) — both paths feed the same resolveLabel.
-  const promoTypeMap = harvestPromoTypeLabels(docs);
+  // Per-campaign labels: products carry promotions[] with promo_code + a
+  // lang-resolved label. Harvest a code→label map so the promo_code facet
+  // renders "ESTATE 2026" instead of the bare "26-SUMMER". Falls back to the
+  // raw code for campaigns whose products aren't on this result page.
+  const promoLabelMap = harvestPromoCodeLabels(docs);
 
-  return transformPimFacets(facetResults, lang, specUomMap, promoTypeMap);
+  return transformPimFacets(facetResults, lang, specUomMap, promoLabelMap);
 };
 
 // ===============================
