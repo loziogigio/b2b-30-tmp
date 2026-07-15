@@ -10,7 +10,10 @@ import {
   DocumentLine,
   DocumentsListParams,
 } from '@framework/documents/types-b2b-documents';
-import { transformDocumentsList } from '@utils/transform/b2b-documents-list';
+import {
+  transformDocumentsList,
+  buildInvoicePdfUrl,
+} from '@utils/transform/b2b-documents-list';
 import { ERP_STATIC } from '@framework/utils/static';
 import { sourcePolicy } from '@framework/profile/source-policy';
 import { fetchProfileRecords } from '@framework/profile/vinc-profile-client';
@@ -96,7 +99,25 @@ export async function fetchDocumentsList(
 
   if (!Array.isArray(res))
     throw new Error('Unexpected ERP response for documents list.');
-  return transformDocumentsList(res);
+
+  const rows = transformDocumentsList(res);
+  // Time theme: give each invoice row a direct PDF URL to the gated ArxivarIX
+  // stream route so the PDF button opens it (pickDirectUrl('pdf', row) → row.pdf).
+  if (theme === 'time') {
+    return rows.map((row) =>
+      row.doc_type === 'F'
+        ? {
+            ...row,
+            pdf: buildInvoicePdfUrl({
+              customerCode: params.customer_code,
+              addressCode: params.address_code,
+              row,
+            }),
+          }
+        : row,
+    );
+  }
+  return rows;
 }
 
 export const useDocumentsListQuery = (
