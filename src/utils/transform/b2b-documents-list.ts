@@ -12,9 +12,12 @@ function dmyToISO(dmy?: string): string {
 
 /**
  * Build the gated stream URL for an invoice's fiscal PDF (time theme). Points at
- * /api/erp/invoice-pdf, which re-verifies ownership server-side and streams the
- * ArxivarIX PDF. Uses the identifiers already present on the row (scope/year/
- * number_raw) plus the caller-supplied customer/address codes.
+ * /api/erp/invoice-pdf, which re-verifies ownership server-side (re-fetching the
+ * invoice for the customer) and re-derives the ArxivarIX causale/doc type from
+ * that server-verified row before streaming the PDF — it never trusts a
+ * client-supplied cause/docType. The URL therefore only needs to carry the
+ * identifiers required to look up and authorize the invoice: the customer
+ * (+ optional address) and the invoice's year/number.
  */
 export function buildInvoicePdfUrl(args: {
   customerCode: string;
@@ -26,7 +29,6 @@ export function buildInvoicePdfUrl(args: {
   if (args.addressCode) p.set('address_code', args.addressCode);
   p.set('year', String(args.row.year));
   p.set('number', String(args.row.number_raw));
-  p.set('cause', 'VEN');
   return `/api/erp/invoice-pdf?${p.toString()}`;
 }
 

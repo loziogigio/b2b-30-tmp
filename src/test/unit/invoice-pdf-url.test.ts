@@ -27,7 +27,8 @@ describe('buildInvoicePdfUrl', () => {
     expect(u.searchParams.get('address_code')).toBe('2');
     expect(u.searchParams.get('year')).toBe('2026');
     expect(u.searchParams.get('number')).toBe('670');
-    expect(u.searchParams.get('cause')).toBe('VEN');
+    expect(u.searchParams.has('cause')).toBe(false);
+    expect(u.searchParams.has('docType')).toBe(false);
   });
 
   it('omits address_code when absent', () => {
