@@ -127,3 +127,48 @@ describe('openDocument — VINC direct urls', () => {
     expect(post).not.toHaveBeenCalled();
   });
 });
+
+describe('openDocument — PDF fetch-then-open (no JSON error tab)', () => {
+  const invoiceRow = {
+    doc_type: 'F',
+    pdf: '/api/erp/invoice-pdf?customer_code=5300&year=2026&number=670',
+  } as any;
+
+  beforeEach(() => {
+    (URL as any).createObjectURL = vi.fn(() => 'blob:pdf');
+    (URL as any).revokeObjectURL = vi.fn();
+  });
+
+  it('throws the backend message when the PDF is not available, and never navigates the tab to JSON', async () => {
+    const win = { close: vi.fn(), location: { href: '' } };
+    vi.spyOn(window, 'open').mockReturnValue(win as any);
+    global.fetch = vi.fn(async () => ({
+      ok: false,
+      json: async () => ({
+        status: 'error',
+        code: 'document_not_available',
+        message: 'Documento non ancora disponibile in archivio.',
+      }),
+    })) as any;
+
+    await expect(openDocument('pdf', invoiceRow)).rejects.toThrow(
+      'Documento non ancora disponibile in archivio.',
+    );
+    expect(win.close).toHaveBeenCalled(); // reserved tab closed
+    expect(win.location.href).toBe(''); // never pointed at the JSON URL
+  });
+
+  it('opens the fetched PDF blob on success', async () => {
+    const win = { close: vi.fn(), location: { href: '' } };
+    vi.spyOn(window, 'open').mockReturnValue(win as any);
+    global.fetch = vi.fn(async () => ({
+      ok: true,
+      blob: async () => new Blob(['%PDF-1.4'], { type: 'application/pdf' }),
+    })) as any;
+
+    await openDocument('pdf', invoiceRow);
+    expect(URL.createObjectURL).toHaveBeenCalled();
+    expect(win.location.href).toBe('blob:pdf');
+    expect(win.close).not.toHaveBeenCalled();
+  });
+});

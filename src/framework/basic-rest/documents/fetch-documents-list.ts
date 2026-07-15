@@ -217,6 +217,42 @@ export async function fetchDocumentUrl(
   return res.message; // URL assoluto
 }
 
+/**
+ * Open a document URL that streams a PDF (e.g. the gated /api/erp/invoice-pdf
+ * route). Fetches first so we never dump a JSON error page into a new tab: on
+ * success we open the actual PDF blob; on failure we surface the backend's
+ * friendly message (thrown → shown in the page's error banner). A blank tab is
+ * reserved synchronously on click so the browser keeps the user-gesture and
+ * doesn't popup-block the result.
+ */
+async function openPdfUrl(url: string): Promise<void> {
+  if (typeof window === 'undefined') return;
+  const win = window.open('', '_blank'); // reserve tab within the click gesture
+  try {
+    const res = await fetch(url, { credentials: 'same-origin' });
+    if (!res.ok) {
+      win?.close();
+      let message = 'Documento non disponibile.';
+      try {
+        const body = await res.json();
+        if (body?.message) message = body.message;
+      } catch {
+        // non-JSON error body — keep the default message
+      }
+      throw new Error(message);
+    }
+    const blob = await res.blob();
+    const objUrl = URL.createObjectURL(blob);
+    if (win) win.location.href = objUrl;
+    else window.open(objUrl, '_blank', 'noopener,noreferrer');
+    // Revoke after the tab has had time to load the blob.
+    setTimeout(() => URL.revokeObjectURL(objUrl), 60_000);
+  } catch (err) {
+    win?.close();
+    throw err;
+  }
+}
+
 /** Esegue la chiamata e apre in una nuova tab */
 export async function openDocument(
   kind: DocumentActionKind,
@@ -230,8 +266,16 @@ export async function openDocument(
   // VINC rows carry the document URL directly; otherwise use the ERP wrapper.
   const direct = pickDirectUrl(kind, row);
   const url = direct || (await fetchDocumentUrl(kind, row));
+  if (!url) return;
 
-  if (typeof window !== 'undefined' && url) {
+  // PDFs: fetch-then-open so an unavailable document shows a message, not a
+  // raw JSON tab. Other kinds keep the direct open.
+  if (kind === 'pdf') {
+    await openPdfUrl(url);
+    return;
+  }
+
+  if (typeof window !== 'undefined') {
     window.open(url, '_blank', 'noopener,noreferrer');
   }
 }
