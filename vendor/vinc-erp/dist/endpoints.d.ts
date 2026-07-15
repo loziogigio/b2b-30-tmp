@@ -23,4 +23,9 @@ export declare const MYMB_COUPON_ENDPOINTS: {
     readonly GET_PROMOZIONE_BASE_X_ARTICOLO: "GetPromozioneBaseXArticolo";
 };
 export type MyMbCouponEndpoint = (typeof MYMB_COUPON_ENDPOINTS)[keyof typeof MYMB_COUPON_ENDPOINTS];
+/** Raw MYMB ArxivarIX document-archive endpoints (separate connection). */
+export declare const ARXIVAR_ENDPOINTS: {
+    readonly GET_INVOICES_FROM_ARXIVARIX: "GetInvoicesFromArxivarIX";
+};
+export type ArxivarEndpoint = (typeof ARXIVAR_ENDPOINTS)[keyof typeof ARXIVAR_ENDPOINTS];
 //# sourceMappingURL=endpoints.d.ts.map

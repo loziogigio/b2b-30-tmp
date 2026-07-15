@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.MYMB_COUPON_ENDPOINTS = exports.MYMB_ENDPOINTS = void 0;
+exports.ARXIVAR_ENDPOINTS = exports.MYMB_COUPON_ENDPOINTS = exports.MYMB_ENDPOINTS = void 0;
 /** Raw MYMB ERP webservice endpoints (PascalCase, appended to the base URL). */
 exports.MYMB_ENDPOINTS = {
     GET_PREZZATURA_MULTIPLA: 'GetPrezzaturaMultipla',
@@ -23,5 +23,9 @@ exports.MYMB_COUPON_ENDPOINTS = {
     GET_INFO_COUPON_FROM_DOCUMENTO: 'GetInfoCouponFromDocumento',
     UPDATE_TESTATA_DOCUMENTO_CON_COUPON: 'UpdateTestataDocumentoConCoupon',
     GET_PROMOZIONE_BASE_X_ARTICOLO: 'GetPromozioneBaseXArticolo',
+};
+/** Raw MYMB ArxivarIX document-archive endpoints (separate connection). */
+exports.ARXIVAR_ENDPOINTS = {
+    GET_INVOICES_FROM_ARXIVARIX: 'GetInvoicesFromArxivarIX',
 };
 //# sourceMappingURL=endpoints.js.map

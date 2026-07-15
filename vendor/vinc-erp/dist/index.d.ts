@@ -18,4 +18,8 @@ export { CouponClient } from './mymb/coupon-client.js';
 export type { CouponClientConfig, CouponValidation, CartCouponInfo, CouponPersistResult, } from './mymb/coupon-client.js';
 export { mymbRequest } from './mymb/request.js';
 export type { MymbRequestOpts } from './mymb/request.js';
+export { ARXIVAR_ENDPOINTS } from './endpoints.js';
+export type { ArxivarEndpoint } from './endpoints.js';
+export { ArxivarClient } from './mymb/arxivar-client.js';
+export type { ArxivarClientConfig, ArxivarInvoiceResult, GetInvoicePdfInput, } from './mymb/arxivar-client.js';
 //# sourceMappingURL=index.d.ts.map

@@ -44,3 +44,13 @@ export type {
 } from './mymb/coupon-client.js';
 export { mymbRequest } from './mymb/request.js';
 export type { MymbRequestOpts } from './mymb/request.js';
+
+// ArxivarIX document-archive endpoints + client
+export { ARXIVAR_ENDPOINTS } from './endpoints.js';
+export type { ArxivarEndpoint } from './endpoints.js';
+export { ArxivarClient } from './mymb/arxivar-client.js';
+export type {
+  ArxivarClientConfig,
+  ArxivarInvoiceResult,
+  GetInvoicePdfInput,
+} from './mymb/arxivar-client.js';

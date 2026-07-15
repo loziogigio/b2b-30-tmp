@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.mymbRequest = exports.CouponClient = exports.MYMB_COUPON_ENDPOINTS = exports.buildPriceEntry = exports.getLabelAndCartStatus = exports.getPackagingOptions = exports.MyMbErpClient = exports.parseMyMbConnection = exports.buildCartClosureInfo = exports.MYMB_ENDPOINTS = exports.NoopCacheAdapter = exports.ErpError = void 0;
+exports.ArxivarClient = exports.ARXIVAR_ENDPOINTS = exports.mymbRequest = exports.CouponClient = exports.MYMB_COUPON_ENDPOINTS = exports.buildPriceEntry = exports.getLabelAndCartStatus = exports.getPackagingOptions = exports.MyMbErpClient = exports.parseMyMbConnection = exports.buildCartClosureInfo = exports.MYMB_ENDPOINTS = exports.NoopCacheAdapter = exports.ErpError = void 0;
 var erp_client_js_1 = require("./erp-client.js");
 Object.defineProperty(exports, "ErpError", { enumerable: true, get: function () { return erp_client_js_1.ErpError; } });
 var cache_js_1 = require("./cache.js");
@@ -26,4 +26,9 @@ var coupon_client_js_1 = require("./mymb/coupon-client.js");
 Object.defineProperty(exports, "CouponClient", { enumerable: true, get: function () { return coupon_client_js_1.CouponClient; } });
 var request_js_1 = require("./mymb/request.js");
 Object.defineProperty(exports, "mymbRequest", { enumerable: true, get: function () { return request_js_1.mymbRequest; } });
+// ArxivarIX document-archive endpoints + client
+var endpoints_js_3 = require("./endpoints.js");
+Object.defineProperty(exports, "ARXIVAR_ENDPOINTS", { enumerable: true, get: function () { return endpoints_js_3.ARXIVAR_ENDPOINTS; } });
+var arxivar_client_js_1 = require("./mymb/arxivar-client.js");
+Object.defineProperty(exports, "ArxivarClient", { enumerable: true, get: function () { return arxivar_client_js_1.ArxivarClient; } });
 //# sourceMappingURL=index.js.map

@@ -29,3 +29,11 @@ export const MYMB_COUPON_ENDPOINTS = {
 
 export type MyMbCouponEndpoint =
   (typeof MYMB_COUPON_ENDPOINTS)[keyof typeof MYMB_COUPON_ENDPOINTS];
+
+/** Raw MYMB ArxivarIX document-archive endpoints (separate connection). */
+export const ARXIVAR_ENDPOINTS = {
+  GET_INVOICES_FROM_ARXIVARIX: 'GetInvoicesFromArxivarIX',
+} as const;
+
+export type ArxivarEndpoint =
+  (typeof ARXIVAR_ENDPOINTS)[keyof typeof ARXIVAR_ENDPOINTS];
