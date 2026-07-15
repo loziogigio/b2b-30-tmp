@@ -82,10 +82,17 @@ export interface SubmitOpts {
   force_duplicate_submit?: boolean;
   /** Validated coupon applied to the order; carried through to MyMB via the order sync. */
   coupon?: Record<string, unknown> | null;
+  /**
+   * When false, submitOrder performs NO navigation and NO cart reset — it just
+   * returns the outcome (with `orderNumber` on success). The inline flow
+   * controller opts out so it can own polling, cart-reset, and redirect.
+   * Defaults to true, preserving the default-theme checkout behavior.
+   */
+  redirectOnComplete?: boolean;
 }
 
 export type SubmitOutcome =
-  | { type: 'success' }
+  | { type: 'success'; orderNumber?: string }
   | { type: 'processing'; orderId: string }
   | { type: 'anomalies'; result: AnomalyResult }
   | { type: 'duplicate_warning'; warning: DuplicateWarning }
@@ -145,32 +152,40 @@ export function useOrderSubmit(lang: string) {
           return { type: 'already_submitted', message: res?.error };
         }
 
-        // 200 sync success or 202 async
+        const redirect = opts.redirectOnComplete !== false;
+
+        // 202 async — the order is now processing on the ERP.
         if (res?.processing) {
-          await resetCart(undefined, { deleteServer: false });
-          await ensureActiveCart();
-          if (typeof window !== 'undefined') {
-            window.location.href = `/${lang}/complete-order?processing=true&order_id=${orderId}`;
+          if (redirect) {
+            await resetCart(undefined, { deleteServer: false });
+            await ensureActiveCart();
+            if (typeof window !== 'undefined') {
+              window.location.href = `/${lang}/complete-order?processing=true&order_id=${orderId}`;
+            }
           }
           return { type: 'processing', orderId };
         }
 
-        // Sync success. Redirect to the channel's configured per-language CMS
-        // success page when set, else the built-in complete-order page. (The
-        // async `processing` path above always keeps complete-order for its poll.)
-        // The order is finalised, so skip the server cart delete (would 400).
-        await resetCart(undefined, { deleteServer: false });
-        await ensureActiveCart();
-        if (typeof window !== 'undefined') {
-          const successSlug = resolveOrderSuccessSlug(
-            lang,
-            cartSettings.orderSuccessPages,
-          );
-          window.location.href = successSlug
-            ? `/${lang}/${successSlug}`
-            : `/${lang}/complete-order`;
+        // 200 sync success. The order is finalised, so skip the server cart
+        // delete (would 400). When redirect is off, the caller owns cart-reset
+        // and navigation.
+        const orderNumber: string | undefined = res?.order_number
+          ? String(res.order_number)
+          : undefined;
+        if (redirect) {
+          await resetCart(undefined, { deleteServer: false });
+          await ensureActiveCart();
+          if (typeof window !== 'undefined') {
+            const successSlug = resolveOrderSuccessSlug(
+              lang,
+              cartSettings.orderSuccessPages,
+            );
+            window.location.href = successSlug
+              ? `/${lang}/${successSlug}`
+              : `/${lang}/complete-order`;
+          }
         }
-        return { type: 'success' };
+        return { type: 'success', orderNumber };
       } catch (error: any) {
         const status = error?.response?.status;
         const data = error?.response?.data;
