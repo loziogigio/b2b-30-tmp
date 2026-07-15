@@ -9,7 +9,8 @@ import { formatAddress } from '@utils/format-address';
 import { ERP_STATIC } from '@framework/utils/static';
 import { TimeCard } from '@/components/themes/time/account/time-account-primitives';
 import { useTranslation } from 'src/app/i18n/client';
-import { useOrderSubmit } from '@/hooks/use-order-submit';
+import { useOrderSubmitFlow } from '@/hooks/use-order-submit-flow';
+import TimeOrderSubmitModal from './time-order-submit-modal';
 import TimeAnomalyModal from './time-anomaly-modal';
 import DuplicateSubmitModal from '@/components/checkout/duplicate-submit-modal';
 import { useCoupon } from '@/hooks/use-coupon';
@@ -77,21 +78,6 @@ const ArrowRight = () => (
   </svg>
 );
 
-const CheckCircle = () => (
-  <svg
-    width="18"
-    height="18"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={2.5}
-    strokeLinecap="round"
-  >
-    <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
-    <polyline points="22,4 12,14.01 9,11.01" />
-  </svg>
-);
-
 // ── label cls ────────────────────────────────────────────────────────────────
 
 const labelCls =
@@ -111,10 +97,8 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
   const { settings: cartSettings } = useCartSettings();
   const { selected: selectedB2B } = useDeliveryAddress();
   const { data: customer } = useCustomerQuery(true);
+  const flow = useOrderSubmitFlow(lang);
   const {
-    submitOrder,
-    resubmitWithAutofix,
-    confirmDuplicateSubmit,
     isSubmitting,
     anomalyResult,
     duplicateWarning,
@@ -123,7 +107,7 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
     clearAnomalies,
     clearDuplicateWarning,
     clearOrderAlreadySubmitted,
-  } = useOrderSubmit(lang);
+  } = flow;
 
   // ERP_STATIC is hydrated from localStorage on the client only, so any render
   // condition reading it must wait for mount or SSR/client HTML diverges.
@@ -143,7 +127,6 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
     toLocalISODate(nextBusinessDay()),
   );
   const [notes, setNotes] = useState('');
-  const [showConfirm, setShowConfirm] = useState(false);
 
   const availableItems = useMemo(
     () => (items ?? []).filter((i: any) => i.stock !== 0),
@@ -231,10 +214,20 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
     coupon: couponPayload,
   };
 
-  const handleSubmit = async () => {
+  const recap = {
+    deliveryType:
+      deliveryType === 'ritiro'
+        ? t('delivery-pickup', { defaultValue: 'Ritiro' })
+        : t('delivery-shipping', { defaultValue: 'Spedizione' }),
+    deliveryDate,
+    items: totalItems,
+    netTotal: money(discounted.net),
+    total: money(discounted.doc),
+  };
+
+  const openFlow = () => {
     if (!canSubmit) return;
-    await submitOrder(submitOpts);
-    setShowConfirm(false);
+    flow.open(submitOpts);
   };
 
   return (
@@ -477,7 +470,7 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
         {/* CTA */}
         <div className="px-6 pb-6">
           <button
-            onClick={() => setShowConfirm(true)}
+            onClick={openFlow}
             disabled={!canSubmit}
             className={cn(
               'w-full h-[52px] rounded-xl border-none text-[15px] font-extrabold font-[var(--font-display)] tracking-wide flex items-center justify-center gap-2.5 transition-all',
@@ -492,60 +485,8 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
         </div>
       </TimeCard>
 
-      {/* ── Confirmation Modal ──────────────────────────────────────────── */}
-      {showConfirm && (
-        <div
-          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center"
-          onClick={() => setShowConfirm(false)}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-[20px] p-10 max-w-[420px] w-[90%] text-center shadow-2xl animate-[slideUp_0.3s_ease_both]"
-          >
-            <div className="w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center mx-auto mb-5 text-emerald-600">
-              <CheckCircle />
-            </div>
-            <h2 className="text-[22px] font-black text-[var(--time-dark)] font-[var(--font-display)] mb-2">
-              {t('ordersummary-confirm-title', {
-                defaultValue: 'Confermi l’ordine?',
-              })}
-            </h2>
-            <p className="text-[14px] text-[var(--time-gray-500)] mb-2 leading-relaxed">
-              {t('ordersummary-confirm-count', {
-                count: totalItems,
-                defaultValue: '{{count}} articoli per un totale di',
-              })}
-            </p>
-            <div className="text-[34px] font-black text-[var(--time-dark)] font-[var(--font-display)] tabular-nums mb-6">
-              {money(discounted.doc)}
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowConfirm(false)}
-                className="flex-1 h-12 rounded-xl border-[1.5px] border-[var(--time-gray-200)] bg-white text-[14px] font-bold text-[var(--time-gray-600)] font-[var(--font-body)] hover:bg-[var(--time-gray-50)] transition-colors"
-              >
-                {t('text-cancel', { defaultValue: 'Annulla' })}
-              </button>
-              <button
-                onClick={handleSubmit}
-                disabled={isSubmitting}
-                className={cn(
-                  'flex-1 h-12 rounded-xl border-none text-[14px] font-bold text-white font-[var(--font-body)] transition-all shadow-[0_4px_16px_rgba(230,57,70,0.25)]',
-                  isSubmitting
-                    ? 'bg-[var(--time-gray-400)] cursor-not-allowed'
-                    : 'bg-[var(--time-red)] hover:bg-[var(--time-dark)] cursor-pointer',
-                )}
-              >
-                {isSubmitting
-                  ? t('ordersummary-submitting', {
-                      defaultValue: 'Invio in corso...',
-                    })
-                  : t('ordersummary-confirm', { defaultValue: 'Conferma' })}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ── Inline submit flow (confirm → progress → success/error) ────── */}
+      <TimeOrderSubmitModal lang={lang} flow={flow} recap={recap} />
 
       {/* ── Anomaly Modal (422 ERP validation) ─────────────────────────── */}
       {anomalyResult && (
@@ -553,7 +494,7 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
           lang={lang}
           result={anomalyResult}
           isSubmitting={isSubmitting}
-          onAutofix={() => resubmitWithAutofix(submitOpts)}
+          onAutofix={flow.runAutofix}
           onEdit={clearAnomalies}
           onClose={clearAnomalies}
         />
@@ -564,7 +505,7 @@ export default function TimeOrderSummary({ lang }: TimeOrderSummaryProps) {
         <DuplicateSubmitModal
           warning={duplicateWarning}
           isSubmitting={isSubmitting}
-          onConfirm={() => confirmDuplicateSubmit(submitOpts)}
+          onConfirm={flow.confirmDuplicate}
           onCancel={clearDuplicateWarning}
         />
       )}
