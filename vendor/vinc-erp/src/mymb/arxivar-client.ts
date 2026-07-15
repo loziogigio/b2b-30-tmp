@@ -1,5 +1,4 @@
 import { ARXIVAR_ENDPOINTS } from '../endpoints.js';
-import { ErpError } from '../erp-client.js';
 import { mymbRequest } from './request.js';
 
 export interface ArxivarClientConfig {
@@ -38,8 +37,13 @@ export class ArxivarClient {
     this.fetchImpl = config.fetchImpl;
   }
 
-  /** Fetch a fiscal document PDF; returns the base64 `Contenuto`. */
-  async getInvoicePdf(input: GetInvoicePdfInput): Promise<string> {
+  /**
+   * Fetch a fiscal document PDF; returns the base64 `Contenuto`, or `null` when
+   * the archive has no PDF for this document (a valid 200 with empty `Data`).
+   * Transport/HTTP errors still throw (via `mymbRequest`), so callers can tell
+   * "not archived" (null) apart from "archive unreachable" (throw).
+   */
+  async getInvoicePdf(input: GetInvoicePdfInput): Promise<string | null> {
     const res = await mymbRequest<ArxivarInvoiceResult>(
       this.baseUrl,
       this.authHeader,
@@ -55,12 +59,6 @@ export class ArxivarClient {
         fetchImpl: this.fetchImpl,
       },
     );
-    const contenuto = res?.GetInvoicesFromArxivarIXResult?.Data?.[0]?.Contenuto;
-    if (!contenuto) {
-      throw new ErpError('ArxivarIX returned no document content', {
-        endpoint: ARXIVAR_ENDPOINTS.GET_INVOICES_FROM_ARXIVARIX,
-      });
-    }
-    return contenuto;
+    return res?.GetInvoicesFromArxivarIXResult?.Data?.[0]?.Contenuto ?? null;
   }
 }

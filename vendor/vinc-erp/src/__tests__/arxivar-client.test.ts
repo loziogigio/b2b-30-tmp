@@ -34,8 +34,24 @@ describe('ArxivarClient.getInvoicePdf', () => {
     expect(url.searchParams.get('Causale')).toBe('VEN');
   });
 
-  it('throws when Data is empty', async () => {
+  it('returns null when Data is empty (document not archived)', async () => {
     const f = fakeFetch({ GetInvoicesFromArxivarIXResult: { Data: [] } });
-    await expect(new ArxivarClient(cfg(f)).getInvoicePdf({ year: 2026, number: 2 })).rejects.toThrow();
+    await expect(
+      new ArxivarClient(cfg(f)).getInvoicePdf({ year: 2026, number: 2 }),
+    ).resolves.toBeNull();
+  });
+
+  it('returns null when Data is null (document not archived)', async () => {
+    const f = fakeFetch({ GetInvoicesFromArxivarIXResult: { Data: null } });
+    await expect(
+      new ArxivarClient(cfg(f)).getInvoicePdf({ year: 2026, number: 3 }),
+    ).resolves.toBeNull();
+  });
+
+  it('throws on a transport/HTTP error (archive unreachable)', async () => {
+    const f = fakeFetch({}, false); // ok:false -> HTTP 500 -> mymbRequest throws
+    await expect(
+      new ArxivarClient(cfg(f)).getInvoicePdf({ year: 2026, number: 4 }),
+    ).rejects.toThrow();
   });
 });

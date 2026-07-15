@@ -79,14 +79,43 @@ describe('GET /api/erp/invoice-pdf', () => {
     expect(buf.toString('utf8')).toBe('%PDF-1.4 test');
   });
 
-  it('404 when ArxivarIX has no document', async () => {
+  it('404 document_not_available when the archive has no PDF for the invoice', async () => {
     owned.mockResolvedValue(new Set(['B_1']));
     erpClient.getInvoices.mockResolvedValue([
       { year: 2026, number: 670, scope: 'VEN', type: 1 },
     ]);
-    getInvoicePdf.mockRejectedValue(new Error('no content'));
+    getInvoicePdf.mockResolvedValue(null); // 200 from ArxivarIX, empty Data
     const res = await GET(req('customer_code=B_1&year=2026&number=670'));
     expect(res.status).toBe(404);
+    const body = await res.json();
+    expect(body.code).toBe('document_not_available');
+    expect(body.status).toBe('error');
+    expect(typeof body.message).toBe('string');
+  });
+
+  it('502 archive_unreachable when the archive request throws (service down)', async () => {
+    owned.mockResolvedValue(new Set(['B_1']));
+    erpClient.getInvoices.mockResolvedValue([
+      { year: 2026, number: 670, scope: 'VEN', type: 1 },
+    ]);
+    getInvoicePdf.mockRejectedValue(new Error('ECONNREFUSED'));
+    const res = await GET(req('customer_code=B_1&year=2026&number=670'));
+    expect(res.status).toBe(502);
+    const body = await res.json();
+    expect(body.code).toBe('archive_unreachable');
+  });
+
+  it('503 archive_not_configured when no ArxivarIX connection is set', async () => {
+    owned.mockResolvedValue(new Set(['B_1']));
+    erpClient.getInvoices.mockResolvedValue([
+      { year: 2026, number: 670, scope: 'VEN', type: 1 },
+    ]);
+    arxivarCfg.mockResolvedValue({ enabled: false, baseUrl: '', authHeader: '' });
+    const res = await GET(req('customer_code=B_1&year=2026&number=670'));
+    expect(res.status).toBe(503);
+    const body = await res.json();
+    expect(body.code).toBe('archive_not_configured');
+    expect(getInvoicePdf).not.toHaveBeenCalled();
   });
 
   it('binds cause/docType to the verified invoice row, ignoring client-supplied query params (IDOR fix)', async () => {

@@ -5,6 +5,19 @@ import { resolveArxivarConfig } from '@/lib/erp/arxivar-config';
 import { sessionOwnedCustomerCodes } from '@/lib/profile/session-owner';
 import { toErpNumericDate } from '@utils/date-to-erp';
 
+/**
+ * Standard error envelope for this route: a stable machine `code` plus a
+ * human-readable Italian `message` (the storefront is IT). The PDF opens in a
+ * new tab, so the message is what a user could see directly.
+ */
+function errorJson(
+  httpStatus: number,
+  code: string,
+  message: string,
+): NextResponse {
+  return NextResponse.json({ status: 'error', code, message }, { status: httpStatus });
+}
+
 export async function GET(req: NextRequest): Promise<Response> {
   const url = new URL(req.url);
   const q = url.searchParams;
@@ -14,25 +27,16 @@ export async function GET(req: NextRequest): Promise<Response> {
   const number = q.get('number') ?? '';
 
   if (!customerCode || !year || !number) {
-    return NextResponse.json(
-      { status: 'error', message: 'Missing invoice identifiers' },
-      { status: 400 },
-    );
+    return errorJson(400, 'missing_parameters', 'Parametri della fattura mancanti.');
   }
 
   // 1. Session must own the requested customer.
   const owned = await sessionOwnedCustomerCodes(req);
   if (!owned || owned.size === 0) {
-    return NextResponse.json(
-      { status: 'error', message: 'Not authenticated' },
-      { status: 401 },
-    );
+    return errorJson(401, 'not_authenticated', 'Sessione non valida. Effettua di nuovo l’accesso.');
   }
   if (!owned.has(customerCode.trim())) {
-    return NextResponse.json(
-      { status: 'error', message: 'Forbidden' },
-      { status: 403 },
-    );
+    return errorJson(403, 'forbidden', 'Non autorizzato ad accedere a questo documento.');
   }
 
   // 2. The specific invoice must belong to this customer — re-derived server-side,
@@ -59,59 +63,67 @@ export async function GET(req: NextRequest): Promise<Response> {
         )
       : undefined;
     if (!matched) {
-      return NextResponse.json(
-        { status: 'error', message: 'Forbidden' },
-        { status: 403 },
-      );
+      return errorJson(403, 'forbidden', 'Non autorizzato ad accedere a questo documento.');
     }
     matchedInvoice = matched;
   } catch (err) {
     console.error('[invoice-pdf] ownership check failed:', err);
-    return NextResponse.json(
-      { status: 'error', message: 'Upstream error' },
-      { status: 502 },
+    return errorJson(
+      502,
+      'erp_unreachable',
+      'Impossibile verificare il documento in questo momento. Riprova più tardi.',
     );
   }
 
   // 3. Fetch + decode + stream.
   const cfg = await resolveArxivarConfig(req);
   if (!cfg.enabled || !cfg.baseUrl) {
-    return NextResponse.json(
-      { status: 'error', message: 'Invoice archive not configured' },
-      { status: 404 },
+    return errorJson(
+      503,
+      'archive_not_configured',
+      'Servizio archivio documenti non configurato.',
     );
   }
+
+  let base64: string | null;
   try {
     const client = new ArxivarClient({
       baseUrl: cfg.baseUrl,
       authHeader: cfg.authHeader,
     });
-    const base64 = await client.getInvoicePdf({
+    base64 = await client.getInvoicePdf({
       cause: matchedInvoice?.scope || 'VEN',
       year,
       number,
       docType: matchedInvoice?.type ?? undefined,
     });
-    const pdf = Buffer.from(base64, 'base64');
-    if (pdf.length === 0) {
-      return NextResponse.json(
-        { status: 'error', message: 'Empty document' },
-        { status: 404 },
-      );
-    }
-    return new NextResponse(new Uint8Array(pdf), {
-      status: 200,
-      headers: {
-        'content-type': 'application/pdf',
-        'content-disposition': `inline; filename="fattura-${year}-${number}.pdf"`,
-        'cache-control': 'private, no-store',
-      },
-    });
   } catch (err) {
-    console.error('[invoice-pdf] ArxivarIX fetch failed:', err);
-    return NextResponse.json(
-      { status: 'error', message: 'Document not found' },
-      { status: 404 },
+    // Transport/HTTP error talking to the archive — the document may well exist,
+    // the service is just unreachable. Distinct from "not archived".
+    console.error('[invoice-pdf] ArxivarIX request failed:', err);
+    return errorJson(
+      502,
+      'archive_unreachable',
+      'Servizio archivio documenti temporaneamente non disponibile. Riprova più tardi.',
     );
   }
+
+  // The invoice exists in the ERP but has no PDF archived in ArxivarIX (yet).
+  const pdf = base64 ? Buffer.from(base64, 'base64') : null;
+  if (!pdf || pdf.length === 0) {
+    return errorJson(
+      404,
+      'document_not_available',
+      'Documento non ancora disponibile in archivio.',
+    );
+  }
+
+  return new NextResponse(new Uint8Array(pdf), {
+    status: 200,
+    headers: {
+      'content-type': 'application/pdf',
+      'content-disposition': `inline; filename="fattura-${year}-${number}.pdf"`,
+      'cache-control': 'private, no-store',
+    },
+  });
 }

@@ -27,7 +27,12 @@ export declare class ArxivarClient {
     private readonly authHeader;
     private readonly fetchImpl?;
     constructor(config: ArxivarClientConfig);
-    /** Fetch a fiscal document PDF; returns the base64 `Contenuto`. */
-    getInvoicePdf(input: GetInvoicePdfInput): Promise<string>;
+    /**
+     * Fetch a fiscal document PDF; returns the base64 `Contenuto`, or `null` when
+     * the archive has no PDF for this document (a valid 200 with empty `Data`).
+     * Transport/HTTP errors still throw (via `mymbRequest`), so callers can tell
+     * "not archived" (null) apart from "archive unreachable" (throw).
+     */
+    getInvoicePdf(input: GetInvoicePdfInput): Promise<string | null>;
 }
 //# sourceMappingURL=arxivar-client.d.ts.map
