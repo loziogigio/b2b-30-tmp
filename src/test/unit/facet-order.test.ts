@@ -7,6 +7,7 @@ import {
 import {
   DEFAULT_FACET_ORDER,
   PIM_FACET_FIELDS,
+  PIM_FACET_LABELS,
 } from '@/framework/basic-rest/utils/filters';
 
 const raw = [
@@ -124,5 +125,21 @@ describe('resolveFacetFieldsToFetch', () => {
     const out = resolveFacetFieldsToFetch(cfg);
     expect(out).not.toContain('spec_hidden_s');
     expect(out).toContain('attribute_material_s');
+  });
+});
+
+describe('promo_code facet wiring', () => {
+  it('requests promo_code and no longer requests promo_type', () => {
+    expect(PIM_FACET_FIELDS).toContain('promo_code');
+    expect(PIM_FACET_FIELDS).not.toContain('promo_type');
+  });
+
+  it('orders promo_code in the default sidebar, not promo_type', () => {
+    expect(DEFAULT_FACET_ORDER).toContain('promo_code');
+    expect(DEFAULT_FACET_ORDER).not.toContain('promo_type');
+  });
+
+  it('labels promo_code as Promozione', () => {
+    expect(PIM_FACET_LABELS['promo_code']).toBe('Promozione');
   });
 });

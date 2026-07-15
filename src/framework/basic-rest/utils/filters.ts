@@ -14,13 +14,13 @@ const desiredOrder = [
   'product_type_code',
   'attribute_is_new_b',
   'has_active_promo',
-  'promo_type',
+  'promo_code',
   'stock_status',
 ];
 
 // Extra facets the b2b storefront needs but the default vinc-pim list omits.
-// Kept local so we don't have to rebuild the published vinc-pim package.
-const EXTRA_FACET_FIELDS = ['promo_type'];
+// promo_code = per-campaign promotion facet ("Promozione" in the sidebar).
+const EXTRA_FACET_FIELDS = ['promo_code'];
 
 const indexed = new Map(desiredOrder.map((k, i) => [k, i]));
 export const PIM_FACET_FIELDS: string[] = [
@@ -34,7 +34,7 @@ export const PIM_FACET_FIELDS: string[] = [
 
 export const PIM_FACET_LABELS: Record<string, string> = {
   ...DEFAULT_PIM_FACET_LABELS,
-  promo_type: 'Promozione',
+  promo_code: 'Promozione',
 };
 
 export { STOCK_STATUS_LABELS, BOOLEAN_LABELS };
@@ -43,12 +43,12 @@ export { STOCK_STATUS_LABELS, BOOLEAN_LABELS };
 // Mirrors the historical hardcoded sidebar render order:
 // promo → novità → brand → category → product type → stock.
 export const DEFAULT_FACET_ORDER: string[] = [
-  'promo_type',
+  'promo_code',
   'attribute_is_new_b',
   'brand_id',
   'category_ancestors',
   'product_type_code',
   'stock_status',
 ];
-// Facets hidden by default (redundant with promo_type).
+// Facets hidden by default (redundant with promo_code).
 export const DEFAULT_HIDDEN_FACETS: string[] = ['has_active_promo'];
