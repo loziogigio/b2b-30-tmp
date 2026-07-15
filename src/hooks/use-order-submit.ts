@@ -48,9 +48,25 @@ export interface ErpItem {
   [k: string]: any;
 }
 
+/**
+ * A line the ERP could not export (a transient/technical failure), NOT a
+ * price/promo anomaly. Lives in `windmill.modified_data.erp_item_errors`,
+ * separate from `erp_data.anomalies`. `error` is the raw backend reason
+ * (e.g. "Failed after 3 attempts") — kept for logging, never shown verbatim
+ * to the customer; the UI shows a generic "retry / contact us" message.
+ */
+export interface ErpItemError {
+  oarti?: string;
+  line_number?: number;
+  error?: string;
+}
+
 export interface AnomalyResult {
   anomalies: ErpAnomaly[];
   erpItems: ErpItem[];
+  /** ERP export failures (distinct from price/promo anomalies). Optional so
+   *  existing constructors need no change; useOrderSubmit always populates it. */
+  itemErrors?: ErpItemError[];
   errorMessage?: string;
 }
 
@@ -213,12 +229,15 @@ export function useOrderSubmit(lang: string) {
           return { type: 'already_submitted', message: data?.error };
         }
 
-        // 422 — ERP validation rejected. Two possible shapes under the
-        // shared `windmill.modified_data.erp_data` envelope:
-        //   - duplicate_warning → cart already in ordini, confirm to proceed
-        //   - anomalies → promo/listino/articolo issues, retry with autofix
+        // 422 — ERP validation rejected. Shapes under the shared
+        // `windmill.modified_data` envelope:
+        //   - erp_data.duplicate_warning → cart already in ordini, confirm to proceed
+        //   - erp_data.anomalies → promo/listino/articolo issues, retry with autofix
+        //   - erp_item_errors → lines the ERP could not export (transient/technical
+        //     failure); NOT autofixable — the UI offers a retry, not a price update.
         if (status === 422) {
-          const erpData = data?.windmill?.modified_data?.erp_data || {};
+          const modified = data?.windmill?.modified_data || {};
+          const erpData = modified.erp_data || {};
 
           if (erpData.duplicate_warning) {
             const dw = erpData.duplicate_warning;
@@ -239,11 +258,16 @@ export function useOrderSubmit(lang: string) {
           }
 
           const anomalies: ErpAnomaly[] = erpData.anomalies || [];
-          const erpItems: ErpItem[] =
-            data?.windmill?.modified_data?.erp_items || [];
+          const erpItems: ErpItem[] = modified.erp_items || [];
+          const itemErrors: ErpItemError[] = Array.isArray(
+            modified.erp_item_errors,
+          )
+            ? modified.erp_item_errors
+            : [];
           const result: AnomalyResult = {
             anomalies,
             erpItems,
+            itemErrors,
             errorMessage: data?.error,
           };
           setAnomalyResult(result);

@@ -70,4 +70,47 @@ describe('useOrderSubmit — redirectOnComplete: false', () => {
     expect(outcome).toEqual({ type: 'processing', orderId: 'ord-1' });
     expect(resetCart).not.toHaveBeenCalled();
   });
+
+  it('parses erp_item_errors from a 422 (export failure) into result.itemErrors', async () => {
+    post.mockRejectedValue({
+      response: {
+        status: 422,
+        data: {
+          error: '2 articoli non esportati',
+          windmill: {
+            modified_data: {
+              erp_data: { anomalies: [] },
+              erp_item_errors: [
+                {
+                  oarti: '60256',
+                  line_number: 10,
+                  error: 'Failed after 3 attempts',
+                },
+                {
+                  oarti: '52621',
+                  line_number: 20,
+                  error: 'Failed after 3 attempts',
+                },
+              ],
+            },
+          },
+        },
+      },
+    });
+    const { result } = renderHook(() => useOrderSubmit('it'));
+
+    let outcome: any;
+    await act(async () => {
+      outcome = await result.current.submitOrder({
+        delivery_date: '2026-07-16',
+        delivery_type: 'courier',
+        redirectOnComplete: false,
+      });
+    });
+
+    expect(outcome.type).toBe('anomalies');
+    expect(outcome.result.anomalies).toEqual([]);
+    expect(outcome.result.itemErrors).toHaveLength(2);
+    expect(outcome.result.itemErrors[0].oarti).toBe('60256');
+  });
 });
