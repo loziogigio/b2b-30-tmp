@@ -54,7 +54,7 @@ describe('GET /api/erp/invoice-pdf', () => {
   });
 
   it('403 when the (year, number) is not in the customer invoice list', async () => {
-    owned.mockResolvedValue(new Set(['1']));
+    owned.mockResolvedValue(new Set(['B_1']));
     erpClient.getInvoices.mockResolvedValue([{ year: 2026, number: 999 }]);
     const res = await GET(req('customer_code=B_1&year=2026&number=670'));
     expect(res.status).toBe(403);
@@ -62,7 +62,7 @@ describe('GET /api/erp/invoice-pdf', () => {
   });
 
   it('streams application/pdf for an owned invoice', async () => {
-    owned.mockResolvedValue(new Set(['1']));
+    owned.mockResolvedValue(new Set(['B_1']));
     erpClient.getInvoices.mockResolvedValue([
       { year: 2026, number: 670, scope: 'VEN', type: 1 },
     ]);
@@ -80,7 +80,7 @@ describe('GET /api/erp/invoice-pdf', () => {
   });
 
   it('404 when ArxivarIX has no document', async () => {
-    owned.mockResolvedValue(new Set(['1']));
+    owned.mockResolvedValue(new Set(['B_1']));
     erpClient.getInvoices.mockResolvedValue([
       { year: 2026, number: 670, scope: 'VEN', type: 1 },
     ]);
@@ -90,7 +90,7 @@ describe('GET /api/erp/invoice-pdf', () => {
   });
 
   it('binds cause/docType to the verified invoice row, ignoring client-supplied query params (IDOR fix)', async () => {
-    owned.mockResolvedValue(new Set(['1']));
+    owned.mockResolvedValue(new Set(['B_1']));
     // The matched row's real causale is 'VEN', but the client tries to smuggle
     // a different causale/docType via the query string to reach another document.
     erpClient.getInvoices.mockResolvedValue([

@@ -5,13 +5,6 @@ import { resolveArxivarConfig } from '@/lib/erp/arxivar-config';
 import { sessionOwnedCustomerCodes } from '@/lib/profile/session-owner';
 import { toErpNumericDate } from '@utils/date-to-erp';
 
-/** Normalize an ERP customer code to the digits MyMB matches on (e.g. "B_10080" → "10080"). */
-function erpCustomerCode(value: unknown): string {
-  const raw = String(value ?? '');
-  const digits = raw.replace(/\D+/g, '');
-  return digits || raw;
-}
-
 export async function GET(req: NextRequest): Promise<Response> {
   const url = new URL(req.url);
   const q = url.searchParams;
@@ -35,7 +28,7 @@ export async function GET(req: NextRequest): Promise<Response> {
       { status: 401 },
     );
   }
-  if (!owned.has(erpCustomerCode(customerCode))) {
+  if (!owned.has(customerCode.trim())) {
     return NextResponse.json(
       { status: 'error', message: 'Forbidden' },
       { status: 403 },
