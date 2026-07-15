@@ -62,7 +62,7 @@ export function useProductPriceData(
     enabled && isAuthorized && wantsErp && !override && hasValidErpContext();
 
   const erpQuery = useQuery({
-    queryKey: erpQueryKey([entityCode], quantity, ERP_STATIC),
+    queryKey: erpQueryKey('single', [entityCode], quantity, ERP_STATIC),
     // Goes through the batcher, NOT fetchErpPrices directly: this hook backs
     // every card/row/popup, so a grid of N products used to fire N separate
     // `get_multiple_prices` requests at an endpoint that already takes an
@@ -156,7 +156,7 @@ export function useProductsPriceMap(
     hasValidErpContext();
 
   const erpQuery = useQuery({
-    queryKey: erpQueryKey(entityCodes, quantities, ERP_STATIC),
+    queryKey: erpQueryKey('batch', entityCodes, quantities, ERP_STATIC),
     queryFn: () =>
       fetchErpPrices({
         entity_codes: entityCodes,
@@ -208,14 +208,24 @@ export function useProductsPriceMap(
  * Stable React Query key. Includes the customer context so a tenant
  * impersonating a different customer doesn't see cached prices for the
  * previous one.
+ *
+ * `mode` MUST distinguish the two hooks: useProductPriceData caches a single
+ * ErpPriceData *slice*, while useProductsPriceMap caches a *map* of
+ * entity_code → slice. For a one-product batch both would otherwise produce
+ * the exact same key (same codes + qty + ctx) and clobber each other in the
+ * React Query cache — the map hook would then read a bare slice via
+ * `Object.entries` and surface no price (an empty `—` cell). Namespacing the
+ * key by shape keeps the two caches disjoint.
  */
-function erpQueryKey(
+export function erpQueryKey(
+  mode: 'single' | 'batch',
   entityCodes: ReadonlyArray<string>,
   quantities: ReadonlyArray<number> | number,
   ctx: { id_cart: string; customer_code: string; address_code: string },
 ): unknown[] {
   return [
     'erp-prices',
+    mode,
     ctx.customer_code,
     ctx.address_code,
     ctx.id_cart,
