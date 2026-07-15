@@ -63,7 +63,9 @@ describe('GET /api/erp/invoice-pdf', () => {
 
   it('streams application/pdf for an owned invoice', async () => {
     owned.mockResolvedValue(new Set(['1']));
-    erpClient.getInvoices.mockResolvedValue([{ year: 2026, number: 670 }]);
+    erpClient.getInvoices.mockResolvedValue([
+      { year: 2026, number: 670, scope: 'VEN', type: 1 },
+    ]);
     getInvoicePdf.mockResolvedValue(
       Buffer.from('%PDF-1.4 test').toString('base64'),
     );
@@ -79,9 +81,34 @@ describe('GET /api/erp/invoice-pdf', () => {
 
   it('404 when ArxivarIX has no document', async () => {
     owned.mockResolvedValue(new Set(['1']));
-    erpClient.getInvoices.mockResolvedValue([{ year: 2026, number: 670 }]);
+    erpClient.getInvoices.mockResolvedValue([
+      { year: 2026, number: 670, scope: 'VEN', type: 1 },
+    ]);
     getInvoicePdf.mockRejectedValue(new Error('no content'));
     const res = await GET(req('customer_code=B_1&year=2026&number=670'));
     expect(res.status).toBe(404);
+  });
+
+  it('binds cause/docType to the verified invoice row, ignoring client-supplied query params (IDOR fix)', async () => {
+    owned.mockResolvedValue(new Set(['1']));
+    // The matched row's real causale is 'VEN', but the client tries to smuggle
+    // a different causale/docType via the query string to reach another document.
+    erpClient.getInvoices.mockResolvedValue([
+      { year: 2026, number: 670, scope: 'VEN', type: 1 },
+    ]);
+    getInvoicePdf.mockResolvedValue(
+      Buffer.from('%PDF-1.4 test').toString('base64'),
+    );
+    const res = await GET(
+      req('customer_code=B_1&year=2026&number=670&cause=NC&docType=9'),
+    );
+    expect(res.status).toBe(200);
+    expect(getInvoicePdf).toHaveBeenCalledTimes(1);
+    const call = getInvoicePdf.mock.calls[0][0];
+    expect(call.cause).toBe('VEN');
+    expect(call.cause).not.toBe('NC');
+    expect(call.docType).toBe(1);
+    expect(call.year).toBe('2026');
+    expect(call.number).toBe('670');
   });
 });

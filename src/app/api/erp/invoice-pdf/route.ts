@@ -19,8 +19,6 @@ export async function GET(req: NextRequest): Promise<Response> {
   const addressCode = q.get('address_code') ?? '';
   const year = q.get('year') ?? '';
   const number = q.get('number') ?? '';
-  const cause = q.get('cause') || 'VEN';
-  const docType = q.get('docType') ?? undefined;
 
   if (!customerCode || !year || !number) {
     return NextResponse.json(
@@ -47,6 +45,7 @@ export async function GET(req: NextRequest): Promise<Response> {
   // 2. The specific invoice must belong to this customer — re-derived server-side,
   //    never trusted from the client. Re-fetch the customer-scoped invoice list
   //    for the invoice's year and confirm the (year, number) is present.
+  let matchedInvoice: any;
   try {
     const erp = await getMyMbErpClient(req);
     const yearNum = Number(year);
@@ -59,19 +58,20 @@ export async function GET(req: NextRequest): Promise<Response> {
       dateFrom: toErpNumericDate(`${yearNum}-01-01`),
       dateTo: toErpNumericDate(`${yearNum}-12-31`),
     });
-    const ok =
-      Array.isArray(invoices) &&
-      invoices.some(
-        (r: any) =>
-          String(r?.year) === String(year) &&
-          String(r?.number) === String(number),
-      );
-    if (!ok) {
+    const matched = Array.isArray(invoices)
+      ? invoices.find(
+          (r: any) =>
+            String(r?.year) === String(year) &&
+            String(r?.number) === String(number),
+        )
+      : undefined;
+    if (!matched) {
       return NextResponse.json(
         { status: 'error', message: 'Forbidden' },
         { status: 403 },
       );
     }
+    matchedInvoice = matched;
   } catch (err) {
     console.error('[invoice-pdf] ownership check failed:', err);
     return NextResponse.json(
@@ -93,7 +93,12 @@ export async function GET(req: NextRequest): Promise<Response> {
       baseUrl: cfg.baseUrl,
       authHeader: cfg.authHeader,
     });
-    const base64 = await client.getInvoicePdf({ cause, year, number, docType });
+    const base64 = await client.getInvoicePdf({
+      cause: matchedInvoice?.scope || 'VEN',
+      year,
+      number,
+      docType: matchedInvoice?.type ?? undefined,
+    });
     const pdf = Buffer.from(base64, 'base64');
     if (pdf.length === 0) {
       return NextResponse.json(
