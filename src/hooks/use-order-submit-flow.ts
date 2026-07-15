@@ -189,7 +189,7 @@ export function useOrderSubmitFlow(lang: string): OrderSubmitFlowApi {
     async (outcome: SubmitOutcome) => {
       switch (outcome.type) {
         case 'success':
-          await finishSuccess(outcome.orderNumber, false);
+          await finishSuccess(outcome.orderNumber, true);
           return;
         case 'processing':
           markInflight(outcome.orderId);
@@ -248,6 +248,8 @@ export function useOrderSubmitFlow(lang: string): OrderSubmitFlowApi {
   const cancel = useCallback(() => {
     stopPoll();
     stopTick();
+    if (successRef.current) clearTimeout(successRef.current);
+    successRef.current = null;
     dispatch({ type: 'CANCEL' });
   }, [stopPoll, stopTick]);
 

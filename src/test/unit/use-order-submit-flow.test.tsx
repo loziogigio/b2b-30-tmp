@@ -63,6 +63,7 @@ afterEach(() => {
   vi.runOnlyPendingTimers();
   vi.useRealTimers();
   vi.unstubAllGlobals();
+  delete (globalThis as any).jest;
 });
 
 describe('useOrderSubmitFlow', () => {
@@ -84,6 +85,7 @@ describe('useOrderSubmitFlow', () => {
     expect(submitOrder).toHaveBeenCalledWith(
       expect.objectContaining({ redirectOnComplete: false }),
     );
+    expect(resetCart).toHaveBeenCalled();
   });
 
   it('confirm() with 202 → processing, polls phases, completes to success', async () => {
