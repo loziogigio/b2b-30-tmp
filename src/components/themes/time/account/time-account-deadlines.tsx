@@ -8,11 +8,11 @@ import {
 } from '@framework/acccount/fetch-account';
 import { openDeadlinesPrintWindow } from '@/app/[lang]/(default)/account/deadlines/deadlines-export';
 import {
-  TimeCard,
-  TimeIconBox,
-  TimeStatusBadge,
-} from './time-account-primitives';
-import { IconCalendar, IconCheck, IconPrint } from './time-account-icons';
+  groupDeadlineRows,
+  isDeadlineExpired,
+} from '@/utils/transform/group-deadline-rows';
+import { TimeCard } from './time-account-primitives';
+import { IconPrint } from './time-account-icons';
 
 const money = (n?: number) =>
   typeof n === 'number'
@@ -38,7 +38,7 @@ export default function TimeAccountDeadlines({
   const { data, isLoading, isError, error } = usePaymentDeadlineQuery(true);
   const { data: customer } = useCustomerQuery(true);
 
-  const rows = useMemo(() => data?.items ?? [], [data]);
+  const groups = useMemo(() => groupDeadlineRows(data?.items ?? []), [data]);
 
   const handlePrint = () => {
     if (!data) return;
@@ -79,6 +79,10 @@ export default function TimeAccountDeadlines({
       </TimeCard>
     );
   }
+
+  const th =
+    'px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.04em] text-white';
+  const cell = 'px-4 py-3 border-b border-[var(--time-gray-100)]';
 
   return (
     <div className="space-y-5 font-[var(--font-body)]">
@@ -131,82 +135,195 @@ export default function TimeAccountDeadlines({
         </TimeCard>
       )}
 
-      {/* Deadline Rows */}
-      <TimeCard>
-        {rows.map((d, i) => {
-          const isPaid = d.amount <= 0;
-          const isExpired = d.dueDate
-            ? new Date(d.dueDate) < new Date()
-            : false;
-          return (
-            <div
-              key={`${d.document}-${i}`}
-              className="flex items-center justify-between px-[22px] py-4 border-b border-[var(--time-gray-50)] last:border-b-0 hover:bg-[var(--time-gray-50)] transition-colors"
-            >
-              <div className="flex items-center gap-3.5 min-w-0">
-                <TimeIconBox
-                  icon={isPaid ? <IconCheck /> : <IconCalendar />}
-                  color={isPaid ? '#059669' : isExpired ? '#dc2626' : '#2563eb'}
-                  bg={
-                    isPaid
-                      ? 'rgba(5,150,105,0.08)'
-                      : isExpired
-                        ? 'rgba(220,38,38,0.08)'
-                        : 'rgba(37,99,235,0.08)'
-                  }
-                  size={40}
-                />
-                <div className="min-w-0">
-                  <div className="text-[13px] font-semibold text-[var(--time-dark)] truncate">
-                    {d.description}
-                  </div>
-                  <div className="text-[11px] text-[var(--time-gray-400)] mt-0.5">
-                    {d.document && (
-                      <span className="font-[var(--font-mono)] text-[11px]">
+      {/* ===== Desktop/Tablet: two-tier table ===== */}
+      <TimeCard className="hidden sm:block">
+        <div className="max-h-[70vh] overflow-auto">
+          <table className="min-w-[980px] w-full text-[13px]">
+            <thead className="sticky top-0 z-10 bg-[var(--time-dark)]">
+              <tr>
+                <th className={`${th} w-[22%]`}>
+                  {t('deadlines-col-type', { defaultValue: 'Tipo' })}
+                </th>
+                <th className={`${th} w-[5%]`} aria-label="stato" />
+                <th className={`${th} w-[13%]`}>
+                  {t('deadlines-col-date', { defaultValue: 'Data' })}
+                </th>
+                <th className={`${th} w-[14%] text-right`}>
+                  {t('deadlines-col-total', { defaultValue: 'Totale' })}
+                </th>
+                <th className={`${th} w-[18%]`}>
+                  {t('deadlines-col-document', { defaultValue: 'Documento' })}
+                </th>
+                <th className={`${th} w-[13%]`}>
+                  {t('deadlines-col-date', { defaultValue: 'Data' })}
+                </th>
+                <th className={`${th} w-[15%] text-right`}>
+                  {t('deadlines-col-amount', { defaultValue: 'Importo' })}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {groups.map((group, gIdx) => {
+                const expired = isDeadlineExpired(group.header);
+                return [
+                  <tr
+                    key={`header-${gIdx}`}
+                    className="bg-[var(--time-gray-50)] hover:bg-[var(--time-gray-100)] transition-colors"
+                  >
+                    <td
+                      className={`${cell} font-semibold text-[var(--time-dark)]`}
+                    >
+                      {group.header.description}
+                    </td>
+                    <td className={`${cell} text-center`}>
+                      <span
+                        className="inline-block h-2.5 w-2.5 rounded-full"
+                        style={{
+                          backgroundColor: expired ? '#dc2626' : '#059669',
+                        }}
+                        title={
+                          expired
+                            ? t('deadline-status-expired', {
+                                defaultValue: 'Scaduta',
+                              })
+                            : t('deadline-status-due', {
+                                defaultValue: 'In scadenza',
+                              })
+                        }
+                      />
+                    </td>
+                    <td className={`${cell} text-[var(--time-dark)]`}>
+                      {dateLabel(group.header.dueDate)}
+                    </td>
+                    <td
+                      className={`${cell} text-right font-bold tabular-nums ${
+                        group.header.total < 0
+                          ? 'text-red-600'
+                          : 'text-[var(--time-dark)]'
+                      }`}
+                    >
+                      {money(group.header.total)}
+                    </td>
+                    <td className={cell} />
+                    <td className={cell} />
+                    <td className={cell} />
+                  </tr>,
+                  ...group.details.map((d, dIdx) => (
+                    <tr
+                      key={`detail-${gIdx}-${dIdx}`}
+                      className="hover:bg-[var(--time-gray-50)] transition-colors"
+                    >
+                      <td className={cell} />
+                      <td className={cell} />
+                      <td className={cell} />
+                      <td className={cell} />
+                      <td
+                        className={`${cell} font-[var(--font-mono)] text-[var(--time-gray-400)]`}
+                      >
                         {d.document}
-                      </span>
-                    )}
-                    {d.dueDate && ` · ${dateLabel(d.dueDate)}`}
+                      </td>
+                      <td className={`${cell} text-[var(--time-gray-400)]`}>
+                        {dateLabel(d.referenceDate)}
+                      </td>
+                      <td
+                        className={`${cell} text-right tabular-nums ${
+                          d.amount < 0
+                            ? 'text-red-600'
+                            : 'text-[var(--time-dark)]'
+                        }`}
+                      >
+                        {money(d.amount)}
+                      </td>
+                    </tr>
+                  )),
+                ];
+              })}
+
+              {!groups.length && (
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="py-8 text-center text-sm text-[var(--time-gray-400)]"
+                  >
+                    {t('text-no-deadlines', {
+                      defaultValue: 'Nessuna scadenza trovata',
+                    })}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </TimeCard>
+
+      {/* ===== Mobile: one card per group ===== */}
+      <div className="space-y-3 sm:hidden">
+        {groups.map((group, gIdx) => {
+          const expired = isDeadlineExpired(group.header);
+          return (
+            <TimeCard key={`card-${gIdx}`} className="px-4 py-3.5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span
+                    className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: expired ? '#dc2626' : '#059669' }}
+                  />
+                  <div className="min-w-0">
+                    <div className="text-[13px] font-semibold text-[var(--time-dark)] truncate">
+                      {group.header.description}
+                    </div>
+                    <div className="mt-0.5 text-[11px] text-[var(--time-gray-400)]">
+                      {dateLabel(group.header.dueDate)}
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-3 shrink-0 ml-3">
-                <TimeStatusBadge
-                  label={
-                    isPaid
-                      ? t('deadline-status-paid', { defaultValue: 'Pagata' })
-                      : isExpired
-                        ? t('deadline-status-expired', {
-                            defaultValue: 'Scaduta',
-                          })
-                        : t('deadline-status-due', {
-                            defaultValue: 'In scadenza',
-                          })
-                  }
-                  color={isPaid ? '#059669' : isExpired ? '#dc2626' : '#2563eb'}
-                  bg={
-                    isPaid
-                      ? 'rgba(5,150,105,0.08)'
-                      : isExpired
-                        ? 'rgba(220,38,38,0.08)'
-                        : 'rgba(37,99,235,0.08)'
-                  }
-                />
-                <span className="text-base font-extrabold text-[var(--time-dark)] tabular-nums min-w-[90px] text-right">
-                  {money(d.amount)}
+                <span
+                  className={`shrink-0 text-[15px] font-extrabold tabular-nums ${
+                    group.header.total < 0
+                      ? 'text-red-600'
+                      : 'text-[var(--time-dark)]'
+                  }`}
+                >
+                  {money(group.header.total)}
                 </span>
               </div>
-            </div>
+
+              {group.details.length > 0 && (
+                <div className="mt-3 space-y-1.5 border-t border-[var(--time-gray-100)] pt-2.5">
+                  {group.details.map((d, dIdx) => (
+                    <div
+                      key={`m-detail-${dIdx}`}
+                      className="flex items-center justify-between gap-3 text-[12px]"
+                    >
+                      <span className="font-[var(--font-mono)] text-[var(--time-gray-400)] truncate">
+                        {d.document}
+                        {d.referenceDate && ` · ${dateLabel(d.referenceDate)}`}
+                      </span>
+                      <span
+                        className={`shrink-0 tabular-nums ${
+                          d.amount < 0
+                            ? 'text-red-600'
+                            : 'text-[var(--time-dark)]'
+                        }`}
+                      >
+                        {money(d.amount)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </TimeCard>
           );
         })}
-        {rows.length === 0 && (
-          <div className="py-8 text-center text-sm text-[var(--time-gray-400)]">
+
+        {!groups.length && (
+          <TimeCard className="py-8 text-center text-sm text-[var(--time-gray-400)]">
             {t('text-no-deadlines', {
               defaultValue: 'Nessuna scadenza trovata',
             })}
-          </div>
+          </TimeCard>
         )}
-      </TimeCard>
+      </div>
     </div>
   );
 }

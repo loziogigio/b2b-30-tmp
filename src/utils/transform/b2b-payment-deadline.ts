@@ -44,21 +44,19 @@ export function transformPaymentDeadline(
   let totalExpired = 0;
   let totalToExpire = 0;
 
-  // Only sum from header rows (isDueView = true, have total > 0)
+  // Only sum from header rows (isDueView = true). Credit notes carry a
+  // negative total and must still count, both in the general total and in the
+  // expired/to-expire split.
   items.forEach((item) => {
-    if (item.isDueView && item.total > 0) {
-      totalGeneral += item.total;
+    if (!item.isDueView || !item.total) return;
 
-      if (item.dueDate) {
-        const dueDate = new Date(item.dueDate);
-        if (dueDate < today) {
-          totalExpired += item.total;
-        } else {
-          totalToExpire += item.total;
-        }
-      } else {
-        totalToExpire += item.total;
-      }
+    totalGeneral += item.total;
+
+    const dueDate = item.dueDate ? new Date(item.dueDate) : undefined;
+    if (dueDate && dueDate < today) {
+      totalExpired += item.total;
+    } else {
+      totalToExpire += item.total;
     }
   });
 
