@@ -218,11 +218,7 @@ export default function ProductPopup({ lang }: { lang: string }) {
                 </h2>
 
                 {/* Content badges: video / 3D / related — icons supplied by CSS */}
-                <ProductBadges
-                  lang={lang}
-                  product={product as any}
-                  className="mt-2"
-                />
+                <ProductBadges lang={lang} product={product} className="mt-2" />
               </div>
             </div>
 

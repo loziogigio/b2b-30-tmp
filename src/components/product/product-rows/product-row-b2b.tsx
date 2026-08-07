@@ -259,7 +259,7 @@ export default function ProductRowB2B({
               {/* Content badges: video / 3D / related — icons supplied by CSS */}
               <ProductBadges
                 lang={lang}
-                product={product as any}
+                product={product}
                 className="vinc-pbadges--overlay"
               />
             </button>

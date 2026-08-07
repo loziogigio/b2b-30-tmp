@@ -252,6 +252,20 @@ export function transformPimProduct(
     // Per-product rich content — present only when the detail-page fetch requested
     // include_dynamic_blocks; passed straight through for the storefront renderer.
     dynamic_blocks: (raw as any).dynamic_blocks,
+    // Content badges (video / 3D / related). The media flags roll up from the
+    // variants like has_active_promo does, because in grouped mode the card
+    // shows the PARENT and the video/3D of a child is reachable from it.
+    // has_correlations deliberately does NOT roll up: correlations are authored
+    // per entity code (a variant does not inherit its parent's, and symmetrically
+    // a parent does not inherit its variants'), so a rolled-up badge would
+    // promise related products the buyer cannot find on that page.
+    has_video:
+      (raw as any).has_video === true ||
+      raw.variants?.some((v: any) => v.has_video === true) === true,
+    has_3d:
+      (raw as any).has_3d === true ||
+      raw.variants?.some((v: any) => v.has_3d === true) === true,
+    has_correlations: (raw as any).has_correlations === true,
     // "New" flag from PIM (attribute_is_new_b boolean field)
     // Parent is flagged new if itself OR any variant is new
     is_new:

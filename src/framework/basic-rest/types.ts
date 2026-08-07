@@ -118,6 +118,12 @@ export type Product = {
       }>;
   // Per-product rich content blocks (present only when detail fetch requests include_dynamic_blocks)
   dynamic_blocks?: DynamicBlock[];
+  // Content badges stamped by the search API (video / 3D model / related products).
+  // Declared explicitly so they survive the `[key: string]: unknown` index
+  // signature and stay type-checked at the badge call sites.
+  has_video?: boolean;
+  has_3d?: boolean;
+  has_correlations?: boolean;
 };
 export type {
   DynamicBlockSection,

@@ -343,7 +343,7 @@ const ProductCardB2B: React.FC<ProductProps> = ({
         {/* Content badges: video / 3D / related — icons supplied by CSS */}
         <ProductBadges
           lang={lang}
-          product={product as any}
+          product={product}
           className="vinc-pbadges--overlay"
         />
       </div>
