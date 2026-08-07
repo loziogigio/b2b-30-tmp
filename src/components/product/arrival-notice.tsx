@@ -3,7 +3,8 @@
 import cn from 'classnames';
 import { useTranslation } from 'src/app/i18n/client';
 import { useCatalogSettings } from '@/hooks/use-catalog-settings';
-import { formatArrival } from '@utils/arrivals';
+import { arrivalSourceFromPricing, formatArrival } from '@utils/arrivals';
+import { usePricingSource } from '@framework/pricing/use-pricing-source';
 
 interface Props {
   lang: string;
@@ -43,15 +44,16 @@ export function useArrivalLabel(
 ): string | null {
   const { t } = useTranslation(lang, 'common');
   const { settings } = useCatalogSettings();
+  const pricingSource = usePricingSource();
 
   if (typeof availability === 'number' && availability > 0) return null;
 
-  const arrival = formatArrival(
+  const arrival = formatArrival({
     arrivals,
-    settings.arrivalDisplay,
-    undefined,
     erpPriceData,
-  );
+    mode: settings.arrivalDisplay,
+    source: arrivalSourceFromPricing(pricingSource),
+  });
   if (!arrival) return null;
 
   return arrival.mode === 'week'

@@ -11,6 +11,16 @@
 
 export type ArrivalDisplay = 'week' | 'date';
 
+/**
+ * Where arrival dates come from for this channel.
+ *
+ * `erp` — only the ERP's supplier order lines (they are confirmed for THIS
+ * customer). `pim` — only the importer-written `arrivals`, for tenants on
+ * inline pricing with no ERP to ask. `erp_pim` — ERP when it has something,
+ * otherwise PIM.
+ */
+export type ArrivalSource = 'erp_pim' | 'erp' | 'pim';
+
 export interface ProductArrival {
   eta?: string;
   qty?: number;
@@ -19,6 +29,21 @@ export interface ProductArrival {
 /** Coerce an unknown value to an ArrivalDisplay, falling back to the default. */
 export function asArrivalDisplay(v: unknown): ArrivalDisplay {
   return v === 'date' ? 'date' : 'week';
+}
+
+/**
+ * Arrival dates follow the tenant's pricing source — they are not separately
+ * configurable, because they answer the same question: is this tenant's product
+ * data coming from the ERP or from the PIM? A tenant on inline pricing has no
+ * ERP to ask for order lines, and one on ERP pricing has no reason to trust an
+ * importer's copy over live supplier data.
+ */
+export function arrivalSourceFromPricing(
+  pricingSource: 'inline' | 'erp' | 'hybrid' | undefined,
+): ArrivalSource {
+  if (pricingSource === 'erp') return 'erp';
+  if (pricingSource === 'hybrid') return 'erp_pim';
+  return 'pim';
 }
 
 const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/;
@@ -141,18 +166,26 @@ export function pickErpArrival(
  * depending on the channel's `arrival_display` setting. Returns null when there
  * is nothing to say, so callers can render nothing at all.
  */
-export function formatArrival(
-  arrivals: unknown,
-  mode: ArrivalDisplay,
-  today: string = todayIsoDate(),
-  erpPriceData?: any,
-): { mode: ArrivalDisplay; week?: number; date?: string } | null {
-  // The ERP wins when it has something: its dates are supplier-confirmed order
-  // lines for THIS customer, and it states the delivery week itself rather than
-  // leaving us to derive one. The PIM list is the fallback for tenants on
-  // inline pricing, which have no ERP to ask.
-  const erp = pickErpArrival(erpPriceData, today);
-  const next = erp ?? pickNextArrival(arrivals, today);
+export function formatArrival(options: {
+  /** The product's `arrivals` array from the search payload. */
+  arrivals?: unknown;
+  /** ERP price payload, when the tenant has one. */
+  erpPriceData?: any;
+  mode: ArrivalDisplay;
+  source: ArrivalSource;
+  today?: string;
+}): { mode: ArrivalDisplay; week?: number; date?: string } | null {
+  const { arrivals, erpPriceData, mode, source } = options;
+  const today = options.today ?? todayIsoDate();
+
+  // Which sources this channel is allowed to read, in priority order. Under
+  // `erp_pim` the ERP wins when it has something, because its lines are
+  // confirmed for THIS customer and it states the delivery week itself instead
+  // of leaving us to derive one.
+  const erp = source === 'pim' ? null : pickErpArrival(erpPriceData, today);
+  const pim = source === 'erp' ? null : pickNextArrival(arrivals, today);
+
+  const next = erp ?? pim;
   if (!next?.eta) return null;
 
   if (mode === 'date') {

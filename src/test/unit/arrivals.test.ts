@@ -7,6 +7,7 @@ import {
   isoWeekNumber,
   pickErpArrival,
   pickNextArrival,
+  arrivalSourceFromPricing,
 } from '@utils/arrivals';
 
 const TODAY = '2026-08-20';
@@ -140,14 +141,28 @@ describe('formatArrival', () => {
   const pim = [{ eta: '2026-09-02', qty: 5 }];
 
   it('renders the ISO week by default', () => {
-    expect(formatArrival(pim, 'week', TODAY)).toEqual({
+    expect(
+      formatArrival({
+        arrivals: pim,
+        mode: 'week',
+        source: 'erp_pim',
+        today: TODAY,
+      }),
+    ).toEqual({
       mode: 'week',
       week: 36,
     });
   });
 
   it('renders the exact date when asked', () => {
-    expect(formatArrival(pim, 'date', TODAY)).toEqual({
+    expect(
+      formatArrival({
+        arrivals: pim,
+        mode: 'date',
+        source: 'erp_pim',
+        today: TODAY,
+      }),
+    ).toEqual({
       mode: 'date',
       date: '02/09/2026',
     });
@@ -159,7 +174,15 @@ describe('formatArrival', () => {
         order_supplier_available: [{ expected_date: '25/08/2026' }],
       },
     };
-    expect(formatArrival(pim, 'date', TODAY, erp)).toEqual({
+    expect(
+      formatArrival({
+        arrivals: pim,
+        erpPriceData: erp,
+        mode: 'date',
+        source: 'erp_pim',
+        today: TODAY,
+      }),
+    ).toEqual({
       mode: 'date',
       date: '25/08/2026',
     });
@@ -175,14 +198,30 @@ describe('formatArrival', () => {
         ],
       },
     };
-    expect(formatArrival(pim, 'week', TODAY, erp)).toEqual({
+    expect(
+      formatArrival({
+        arrivals: pim,
+        erpPriceData: erp,
+        mode: 'week',
+        source: 'erp_pim',
+        today: TODAY,
+      }),
+    ).toEqual({
       mode: 'week',
       week: 40,
     });
   });
 
   it('falls back to the PIM list when the ERP has nothing', () => {
-    expect(formatArrival(pim, 'week', TODAY, {})).toEqual({
+    expect(
+      formatArrival({
+        arrivals: pim,
+        erpPriceData: {},
+        mode: 'week',
+        source: 'erp_pim',
+        today: TODAY,
+      }),
+    ).toEqual({
       mode: 'week',
       week: 36,
     });
@@ -190,9 +229,17 @@ describe('formatArrival', () => {
 
   it('returns null when neither source has a future date', () => {
     expect(
-      formatArrival([{ eta: '2020-01-01' }], 'week', TODAY, {}),
+      formatArrival({
+        arrivals: [{ eta: '2020-01-01' }],
+        erpPriceData: {},
+        mode: 'week',
+        source: 'erp_pim',
+        today: TODAY,
+      }),
     ).toBeNull();
-    expect(formatArrival(undefined, 'week', TODAY)).toBeNull();
+    expect(
+      formatArrival({ mode: 'week', source: 'erp_pim', today: TODAY }),
+    ).toBeNull();
   });
 });
 
@@ -202,5 +249,68 @@ describe('asArrivalDisplay', () => {
     expect(asArrivalDisplay('week')).toBe('week');
     expect(asArrivalDisplay(undefined)).toBe('week');
     expect(asArrivalDisplay('exact')).toBe('week');
+  });
+});
+
+describe('arrivalSourceFromPricing', () => {
+  it('follows the tenant pricing source rather than a setting of its own', () => {
+    expect(arrivalSourceFromPricing('erp')).toBe('erp');
+    expect(arrivalSourceFromPricing('hybrid')).toBe('erp_pim');
+    expect(arrivalSourceFromPricing('inline')).toBe('pim');
+    // Unknown/absent behaves like inline, matching DEFAULT_PRICING_SOURCE.
+    expect(arrivalSourceFromPricing(undefined)).toBe('pim');
+  });
+});
+
+describe('formatArrival honours the source', () => {
+  const pim = [{ eta: '2026-09-02' }];
+  const erp = {
+    product_label_action: {
+      order_supplier_available: [{ expected_date: '25/08/2026' }],
+    },
+  };
+
+  it('ignores the PIM list on an ERP-priced tenant', () => {
+    expect(
+      formatArrival({
+        arrivals: pim,
+        mode: 'date',
+        source: 'erp',
+        today: TODAY,
+      }),
+    ).toBeNull();
+  });
+
+  it('ignores the ERP payload on an inline-priced tenant', () => {
+    expect(
+      formatArrival({
+        arrivals: pim,
+        erpPriceData: erp,
+        mode: 'date',
+        source: 'pim',
+        today: TODAY,
+      }),
+    ).toEqual({ mode: 'date', date: '02/09/2026' });
+  });
+
+  it('lets the ERP win, then falls back, on a hybrid tenant', () => {
+    expect(
+      formatArrival({
+        arrivals: pim,
+        erpPriceData: erp,
+        mode: 'date',
+        source: 'erp_pim',
+        today: TODAY,
+      }),
+    ).toEqual({ mode: 'date', date: '25/08/2026' });
+    expect(
+      formatArrival({
+        arrivals: pim,
+        erpPriceData: {},
+        mode: 'date',
+        source: 'erp_pim',
+        today: TODAY,
+      }),
+    ).toEqual({ mode: 'date', date: '02/09/2026' });
   });
 });
