@@ -4,6 +4,7 @@ import { Product } from '@framework/types';
 import { API_ENDPOINTS_PIM } from '@framework/utils/api-endpoints-pim';
 import { post } from '@framework/utils/httpPIM';
 import { resolveSupportedLang } from '@/app/i18n/settings';
+import { normalizeEan } from '@utils/ean';
 import type {
   PimProduct,
   PimProductAttribute,
@@ -266,6 +267,11 @@ export function transformPimProduct(
       (raw as any).has_3d === true ||
       raw.variants?.some((v: any) => v.has_3d === true) === true,
     has_correlations: (raw as any).has_correlations === true,
+    // EAN/barcode, flattened from PIM's multi-value shape. Feeds the shelf-label
+    // download on the detail page. A variant carries its own EAN, so this never
+    // rolls up from `raw.variants` — a parent's label must not print a child's
+    // barcode.
+    ean: normalizeEan((raw as any).ean),
     // "New" flag from PIM (attribute_is_new_b boolean field)
     // Parent is flagged new if itself OR any variant is new
     is_new:

@@ -124,6 +124,10 @@ export type Product = {
   has_video?: boolean;
   has_3d?: boolean;
   has_correlations?: boolean;
+  // EAN/barcode, normalised to a single string by the product transform (PIM
+  // stores it multi-value). Declared explicitly for the same reason as the
+  // flags above: the index signature would otherwise type it as `unknown`.
+  ean?: string;
 };
 export type {
   DynamicBlockSection,

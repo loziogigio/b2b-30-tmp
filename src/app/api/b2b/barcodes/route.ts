@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resolveCsCreds } from '@/lib/profile/cs-creds';
 import { buildTenantApiHeaders } from '@/lib/tenant';
+import { normalizeEan } from '@utils/ean';
 
 /**
  * Resolve EAN/barcode for a set of ERP entity codes from PIM.
@@ -12,11 +13,6 @@ import { buildTenantApiHeaders } from '@/lib/tenant';
  * auth against tenant.api.pimApiUrl.
  */
 const CHUNK = 200;
-
-function normalizeEan(ean: unknown): string {
-  const v = Array.isArray(ean) ? ean[0] : ean;
-  return v == null ? '' : String(v).trim();
-}
 
 export async function POST(req: NextRequest) {
   let body: any = {};

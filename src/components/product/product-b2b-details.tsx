@@ -9,7 +9,12 @@ import ThumbnailCarousel from '@components/ui/carousel/thumbnail-carousel';
 import Image from '@components/ui/image';
 import Button from '@components/ui/button';
 import { IoIosHeart, IoIosHeartEmpty, IoIosArrowBack } from 'react-icons/io';
-import { IoArrowRedoOutline } from 'react-icons/io5';
+import { IoArrowRedoOutline, IoBarcodeOutline } from 'react-icons/io5';
+import { normalizeEan } from '@utils/ean';
+import {
+  downloadShelfLabelJpeg,
+  downloadShelfLabelPdf,
+} from '@framework/product/shelf-label';
 import { ReminderIcon, ReminderIconFilled } from '@components/icons/app-icons';
 import {
   HiOutlineSwitchHorizontal,
@@ -197,6 +202,7 @@ const ProductB2BDetails: React.FC<{
   const favorite = isAuthorized && sku ? likes.isLiked(sku) : false;
   const hasReminder = isAuthorized && sku ? reminders.hasReminder(sku) : false;
   const [addToWishlistLoader, setAddToWishlistLoader] = useState(false);
+  const [labelMenuOpen, setLabelMenuOpen] = useState(false);
   const [addToReminderLoader, setAddToReminderLoader] = useState(false);
   const [shareButtonStatus, setShareButtonStatus] = useState(false);
 
@@ -391,6 +397,29 @@ const ProductB2BDetails: React.FC<{
   }
 
   const toggleShare = () => setShareButtonStatus((s) => !s);
+
+  // Shelf label: the EAN is normalised in the product transform, but the detail
+  // page can also be showing a synthetic parent assembled from children, so
+  // normalise defensively here too.
+  const ean = normalizeEan(data?.ean);
+
+  const handleDownloadLabel = (format: 'jpeg' | 'pdf') => {
+    setLabelMenuOpen(false);
+    const input = { name: String(data?.name ?? ''), sku, ean };
+    const ok =
+      format === 'jpeg'
+        ? downloadShelfLabelJpeg(input)
+        : downloadShelfLabelPdf(input);
+    if (!ok) {
+      // Only reachable if the canvas is unavailable or JsBarcode rejected the
+      // value even as CODE128 — tell the user rather than failing silently.
+      alert(
+        t('text-shelf-label-failed', {
+          defaultValue: "Impossibile generare l'etichetta per questo prodotto.",
+        }),
+      );
+    }
+  };
 
   const addToWishlist = async () => {
     try {
@@ -636,6 +665,62 @@ const ProductB2BDetails: React.FC<{
                   {t('text-print')}
                 </span>
               </div>
+
+              {/* Shelf-label download — only offered when the product has an EAN */}
+              {ean && (
+                <div className="flex flex-col items-center relative">
+                  <button
+                    type="button"
+                    onClick={() => setLabelMenuOpen((open) => !open)}
+                    className={cn(
+                      'inline-flex h-10 w-10 items-center justify-center rounded-full border transition-colors',
+                      labelMenuOpen
+                        ? 'border-brand/30 bg-brand/5 text-brand'
+                        : 'border-slate-200 text-slate-600 hover:border-brand hover:text-brand',
+                    )}
+                    aria-haspopup="menu"
+                    aria-expanded={labelMenuOpen}
+                    title={t('text-shelf-label', {
+                      defaultValue: 'Etichetta scaffale',
+                    })}
+                  >
+                    <IoBarcodeOutline className="h-5 w-5" />
+                  </button>
+                  <span className="hidden sm:block mt-1 text-[10px] text-slate-500 text-center whitespace-nowrap">
+                    {t('text-shelf-label', {
+                      defaultValue: 'Etichetta scaffale',
+                    })}
+                  </span>
+
+                  {labelMenuOpen && (
+                    <div
+                      role="menu"
+                      className="absolute z-10 top-full mt-2 ltr:right-0 rtl:left-0 w-44 overflow-hidden rounded-md border border-slate-200 bg-white shadow-lg"
+                    >
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => handleDownloadLabel('jpeg')}
+                        className="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                      >
+                        {t('text-download-jpeg', {
+                          defaultValue: 'Scarica JPEG',
+                        })}
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => handleDownloadLabel('pdf')}
+                        className="block w-full px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                      >
+                        {t('text-download-pdf', {
+                          defaultValue: 'Scarica PDF',
+                        })}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
