@@ -9,6 +9,7 @@
 export type CatalogView = 'grid' | 'list';
 export type ProductOpenMode = 'modal' | 'detail_page';
 export type AvailabilityDisplay = 'in_out' | 'exact';
+export type { ArrivalDisplay } from '@utils/arrivals';
 
 export type CatalogConfig = {
   /** Initial catalog/search layout when the user hasn't chosen one. */
@@ -25,6 +26,13 @@ export type CatalogConfig = {
    * with its dynamic UOM ("Disponibile · 47 PA").
    */
   availabilityDisplay: AvailabilityDisplay;
+  /**
+   * How an out-of-stock item's incoming delivery is phrased. `week` shows the
+   * ISO week ("In arrivo settimana 36"); `date` shows the exact day. Week is
+   * the default: it is the granularity a supplier date actually supports, so a
+   * line slipping by a day or two does not read as a broken promise.
+   */
+  arrivalDisplay: ArrivalDisplay;
 };
 
 /**
@@ -35,6 +43,7 @@ export const DEFAULT_CATALOG_CONFIG: CatalogConfig = {
   defaultView: 'grid',
   productOpenMode: 'modal',
   availabilityDisplay: 'in_out',
+  arrivalDisplay: 'week',
 };
 
 /** Coerce an unknown value to a CatalogView, falling back to the default. */
@@ -51,3 +60,5 @@ export function asProductOpenMode(v: unknown): ProductOpenMode {
 export function asAvailabilityDisplay(v: unknown): AvailabilityDisplay {
   return v === 'exact' ? 'exact' : 'in_out';
 }
+
+export { asArrivalDisplay } from '@utils/arrivals';

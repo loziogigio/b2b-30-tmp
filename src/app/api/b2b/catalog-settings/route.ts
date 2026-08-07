@@ -17,6 +17,7 @@ export async function GET(req: NextRequest) {
       defaultView: cfg.defaultView,
       productOpenMode: cfg.productOpenMode,
       availabilityDisplay: cfg.availabilityDisplay,
+      arrivalDisplay: cfg.arrivalDisplay,
     });
   } catch {
     return NextResponse.json(DEFAULT_CATALOG_CONFIG);

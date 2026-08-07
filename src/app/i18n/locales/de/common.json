@@ -1,4 +1,6 @@
 {
+  "text-arriving-week": "Ankunft KW {{week}}",
+  "text-arriving-date": "Ankunft am {{date}}",
   "breadcrumb-home": "Home",
   "app-heading": "Erleichtern Sie Ihren Online-Shop mit unserer mobilen App",
   "app-description": "Wir bieten hochwertige Filme und die beste Auswahl an Dokumentarfilmen sowie die Möglichkeit, alphabetisch und nach Genres zu stöbern",

@@ -6,6 +6,7 @@ import {
   asCatalogView,
   asProductOpenMode,
   asAvailabilityDisplay,
+  asArrivalDisplay,
   type CatalogConfig,
 } from '@/lib/erp/catalog-config.types';
 
@@ -26,6 +27,7 @@ function loadCatalogSettings(): Promise<CatalogConfig> {
       defaultView: asCatalogView(data?.defaultView),
       productOpenMode: asProductOpenMode(data?.productOpenMode),
       availabilityDisplay: asAvailabilityDisplay(data?.availabilityDisplay),
+      arrivalDisplay: asArrivalDisplay(data?.arrivalDisplay),
     }))
     .catch(() => DEFAULT_CATALOG_CONFIG);
   return cached;

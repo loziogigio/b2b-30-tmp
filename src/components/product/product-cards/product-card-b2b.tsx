@@ -27,6 +27,7 @@ import { useProductPriceData } from '@framework/pricing';
 import { selectBestPrice } from '@framework/pricing/best-price';
 import LastOrdered from '../last-ordered';
 import ProductBadges from '../product-badges';
+import ArrivalNotice from '../arrival-notice';
 
 interface RenderPopupOrAddToCartProps {
   props: { data: Product & { variantCount?: number } };
@@ -521,6 +522,16 @@ const ProductCardB2B: React.FC<ProductProps> = ({
                   // the same wording used when stock hits zero.
                   formatAvailability(0)}
           </span>
+          {/* Out of stock? Say when it comes back. Renders nothing otherwise. */}
+          {!hasMultipleVariants && (
+            <ArrivalNotice
+              lang={lang}
+              arrivals={product.arrivals}
+              availability={effectivePriceData?.availability}
+              erpPriceData={effectivePriceData}
+              className="text-gray-500"
+            />
+          )}
           {effectivePriceData?.buy_did && (
             <span
               className="bg-[#16a34a] text-white text-[9px] sm:text-[10px] font-extrabold px-1.5 py-[1px] rounded uppercase tracking-wide"

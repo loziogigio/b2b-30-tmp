@@ -23,6 +23,7 @@ describe('catalog-config (static)', () => {
       defaultView: 'grid',
       productOpenMode: 'modal',
       availabilityDisplay: 'in_out',
+      arrivalDisplay: 'week',
     });
   });
 
@@ -34,6 +35,7 @@ describe('catalog-config (static)', () => {
       defaultView: 'list',
       productOpenMode: 'detail_page',
       availabilityDisplay: 'exact',
+      arrivalDisplay: 'week',
     });
   });
 
@@ -55,7 +57,23 @@ describe('catalog-config (static)', () => {
       defaultView: 'list',
       productOpenMode: 'detail_page',
       availabilityDisplay: 'exact',
+      arrivalDisplay: 'week',
     });
+  });
+
+  it('mapCatalogRecord reads arrival_display, defaulting to week', () => {
+    // `week` is the default because a supplier date only supports that
+    // granularity — an exact day reads as a promise the ERP cannot keep.
+    expect(mapCatalogRecord({ arrival_display: 'date' }).arrivalDisplay).toBe(
+      'date',
+    );
+    expect(mapCatalogRecord({ arrival_display: 'week' }).arrivalDisplay).toBe(
+      'week',
+    );
+    expect(mapCatalogRecord({}).arrivalDisplay).toBe('week');
+    expect(
+      mapCatalogRecord({ arrival_display: 'nonsense' }).arrivalDisplay,
+    ).toBe('week');
   });
 
   it('mapCatalogRecord defaults unknown/missing fields', () => {
@@ -99,6 +117,7 @@ describe('catalog-config (dynamic)', () => {
       defaultView: 'list',
       productOpenMode: 'detail_page',
       availabilityDisplay: 'in_out',
+      arrivalDisplay: 'week',
     });
   });
 
@@ -130,6 +149,7 @@ describe('catalog-config (dynamic)', () => {
       defaultView: 'grid',
       productOpenMode: 'modal',
       availabilityDisplay: 'exact',
+      arrivalDisplay: 'week',
     });
   });
 

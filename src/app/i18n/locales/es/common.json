@@ -549,6 +549,8 @@
   "text-expected-arrival": "Llegada prevista:",
   "text-week": "Semana",
   "text-arriving": "EN CAMINO",
+  "text-arriving-week": "Llega en la semana {{week}}",
+  "text-arriving-date": "Llega el {{date}}",
   "text-not-available": "NO DISPONIBLE",
   "breadcrumb-products": "Productos",
   "breadcrumb-search": "Búsqueda",

@@ -4,6 +4,7 @@ import {
   asCatalogView,
   asProductOpenMode,
   asAvailabilityDisplay,
+  asArrivalDisplay,
   type CatalogConfig,
 } from './catalog-config.types';
 
@@ -22,6 +23,7 @@ export {
   asCatalogView,
   asProductOpenMode,
   asAvailabilityDisplay,
+  asArrivalDisplay,
   type CatalogConfig,
 };
 
@@ -33,6 +35,7 @@ export function resolveCatalogConfigFromEnv(): CatalogConfig {
     availabilityDisplay: asAvailabilityDisplay(
       process.env.CATALOG_AVAILABILITY_DISPLAY,
     ),
+    arrivalDisplay: asArrivalDisplay(process.env.CATALOG_ARRIVAL_DISPLAY),
   };
 }
 
@@ -45,6 +48,7 @@ export function mapCatalogRecord(data: Record<string, unknown>): CatalogConfig {
     defaultView: asCatalogView(data.default_view),
     productOpenMode: asProductOpenMode(data.product_open_mode),
     availabilityDisplay: asAvailabilityDisplay(data.availability_display),
+    arrivalDisplay: asArrivalDisplay(data.arrival_display),
   };
 }
 

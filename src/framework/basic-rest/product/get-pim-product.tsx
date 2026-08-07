@@ -272,6 +272,12 @@ export function transformPimProduct(
     // rolls up from `raw.variants` — a parent's label must not print a child's
     // barcode.
     ean: normalizeEan((raw as any).ean),
+    // Incoming deliveries. Like ean, these are per entity_code and must NOT
+    // roll up from variants: a parent showing a child's arrival date would
+    // promise stock for an article the buyer is not looking at.
+    arrivals: Array.isArray((raw as any).arrivals)
+      ? (raw as any).arrivals
+      : undefined,
     // "New" flag from PIM (attribute_is_new_b boolean field)
     // Parent is flagged new if itself OR any variant is new
     is_new:

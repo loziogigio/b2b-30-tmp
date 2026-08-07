@@ -549,6 +549,8 @@
   "text-expected-arrival": "Chegada Prevista:",
   "text-week": "Semana",
   "text-arriving": "A CHEGAR",
+  "text-arriving-week": "Chega na semana {{week}}",
+  "text-arriving-date": "Chega a {{date}}",
   "text-not-available": "NÃO DISPONÍVEL",
   "breadcrumb-products": "Produtos",
   "breadcrumb-search": "Pesquisa",

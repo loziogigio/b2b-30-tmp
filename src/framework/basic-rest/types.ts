@@ -128,6 +128,10 @@ export type Product = {
   // stores it multi-value). Declared explicitly for the same reason as the
   // flags above: the index signature would otherwise type it as `unknown`.
   ean?: string;
+  // Open supplier deliveries, ascending by eta, written by the item importer
+  // and merged in by the CS search enricher (never indexed in Solr). Shown only
+  // when the item is out of stock.
+  arrivals?: Array<{ eta?: string; qty?: number }>;
 };
 export type {
   DynamicBlockSection,
