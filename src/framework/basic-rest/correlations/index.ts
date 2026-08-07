@@ -22,6 +22,10 @@ export async function fetchCorrelations(
         source_entity_code: entityCode,
         correlation_type: options?.type || 'related',
         limit: options?.limit || 20,
+        // Correlations authored once on the parent article apply to every
+        // variant. Opt-in on the API because the CS admin lists the same
+        // endpoint and must keep showing only a product's own entries.
+        include_parent: 'true',
       },
     );
     return result;
