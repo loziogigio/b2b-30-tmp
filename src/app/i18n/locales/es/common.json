@@ -386,6 +386,7 @@
   "text-reminder-notify": "Avíseme cuando esté disponible",
   "text-print": "Imprimir",
   "text-shelf-label": "Etiqueta de estante",
+  "text-shelf-label-note": "El PDF se imprime a tamaño real ({{width}}×{{height}} mm).",
   "text-download-jpeg": "Descargar JPEG",
   "text-download-pdf": "Descargar PDF",
   "text-shelf-label-failed": "No se ha podido generar la etiqueta de este producto.",

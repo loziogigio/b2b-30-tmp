@@ -455,6 +455,7 @@
   "text-save-for-later": "Für später speichern",
   "text-print": "Drucken",
   "text-shelf-label": "Regaletikett",
+  "text-shelf-label-note": "Das PDF druckt in Originalgröße ({{width}}×{{height}} mm).",
   "text-download-jpeg": "JPEG herunterladen",
   "text-download-pdf": "PDF herunterladen",
   "text-shelf-label-failed": "Das Etikett für dieses Produkt konnte nicht erstellt werden.",

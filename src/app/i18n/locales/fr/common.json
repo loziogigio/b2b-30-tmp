@@ -386,6 +386,7 @@
   "text-reminder-notify": "M'avertir lorsque disponible",
   "text-print": "Imprimer",
   "text-shelf-label": "Étiquette de rayon",
+  "text-shelf-label-note": "Le PDF s’imprime à la taille réelle ({{width}}×{{height}} mm).",
   "text-download-jpeg": "Télécharger JPEG",
   "text-download-pdf": "Télécharger PDF",
   "text-shelf-label-failed": "Impossible de générer l'étiquette de ce produit.",

@@ -386,6 +386,7 @@
   "text-reminder-notify": "Notificar quando estiver disponível",
   "text-print": "Imprimir",
   "text-shelf-label": "Etiqueta de prateleira",
+  "text-shelf-label-note": "O PDF imprime no tamanho real ({{width}}×{{height}} mm).",
   "text-download-jpeg": "Transferir JPEG",
   "text-download-pdf": "Transferir PDF",
   "text-shelf-label-failed": "Não foi possível gerar a etiqueta deste produto.",

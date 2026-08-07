@@ -36,6 +36,9 @@ const TimePackagingModal = dynamic(
 const RadioPlayerModal = dynamic(
   () => import('@components/radio/radio-player-modal'),
 );
+const ShelfLabelModal = dynamic(
+  () => import('@components/product/shelf-label-modal'),
+);
 
 export default function ManagedModal({ lang }: { lang: string }) {
   const { isOpen, view } = useModalState();
@@ -83,6 +86,7 @@ export default function ManagedModal({ lang }: { lang: string }) {
       {view === 'PHONE_NUMBER' && <PhoneNumberPopup lang={lang} />}
       {view === 'DELIVERY_VIEW' && <DeliveryAddresses lang={lang} />}
       {view === 'TIME_PACKAGING_VIEW' && <TimePackagingModal lang={lang} />}
+      {view === 'SHELF_LABEL_VIEW' && <ShelfLabelModal lang={lang} />}
     </Modal>
   );
 }

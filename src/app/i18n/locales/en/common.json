@@ -386,6 +386,7 @@
   "text-reminder-notify": "Notify when available",
   "text-print": "Print",
   "text-shelf-label": "Shelf label",
+  "text-shelf-label-note": "The PDF prints at true size ({{width}}×{{height}} mm).",
   "text-download-jpeg": "Download JPEG",
   "text-download-pdf": "Download PDF",
   "text-shelf-label-failed": "Could not generate the label for this product.",
