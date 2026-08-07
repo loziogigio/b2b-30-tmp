@@ -1,6 +1,6 @@
 import JsBarcode from 'jsbarcode';
 import { jsPDF } from 'jspdf';
-import { isValidEan13 } from '@utils/ean';
+import { pickBarcodeFormat } from '@utils/ean';
 
 /**
  * Printable shelf label for a product: name, article code and the EAN barcode.
@@ -38,7 +38,7 @@ export interface ShelfLabelInput {
  * Wrap text to at most `maxLines`, ellipsising the last line if it overflows.
  * Canvas has no text wrapping of its own.
  */
-function wrapText(
+export function wrapText(
   ctx: CanvasRenderingContext2D,
   text: string,
   maxWidth: number,
@@ -49,46 +49,68 @@ function wrapText(
 
   const lines: string[] = [];
   let current = '';
+  // Counted in WORDS, not characters: the input was split on /\s+/ and rejoined
+  // with single spaces, so comparing string lengths would report a phantom
+  // overflow for any name containing a double space.
+  let consumedWords = 0;
 
   for (const word of words) {
     const candidate = current ? `${current} ${word}` : word;
-    if (ctx.measureText(candidate).width <= maxWidth || !current) {
+
+    // `!current` lets an over-long single word start a line anyway, so the loop
+    // always advances; clampLine below is what stops it overflowing the label.
+    if (!current || ctx.measureText(candidate).width <= maxWidth) {
       current = candidate;
+      consumedWords++;
       continue;
     }
+
     lines.push(current);
-    current = word;
-    if (lines.length === maxLines) break;
-  }
-
-  if (lines.length < maxLines && current) lines.push(current);
-
-  // Ellipsise the last line if we ran out of lines mid-name.
-  const consumed = lines.join(' ');
-  if (consumed.length < text.length && lines.length) {
-    let last = lines[lines.length - 1];
-    while (last && ctx.measureText(`${last}…`).width > maxWidth) {
-      last = last.slice(0, -1);
+    if (lines.length === maxLines) {
+      current = '';
+      break;
     }
-    lines[lines.length - 1] = `${last}…`;
+    current = word;
+    consumedWords++;
   }
 
-  return lines;
+  if (current && lines.length < maxLines) lines.push(current);
+
+  const overflowed = consumedWords < words.length;
+
+  return lines.map((line, index) =>
+    clampLine(ctx, line, maxWidth, overflowed && index === lines.length - 1),
+  );
 }
 
 /**
- * Render the barcode on its own canvas.
+ * Shrink a line until it fits, marking any cut with an ellipsis.
  *
- * A retail shelf scanner expects EAN-13, so that is the format whenever the
- * value really is one. JsBarcode THROWS on invalid EAN13 input (wrong length or
- * bad check digit), which would blank the whole label — so a non-conforming
- * code degrades to CODE128, which still scans and still prints the number.
+ * Handles both causes of overflow: a name too long for `maxLines` (the caller
+ * passes `withEllipsis`), and a single unbreakable word wider than the label.
  */
+function clampLine(
+  ctx: CanvasRenderingContext2D,
+  line: string,
+  maxWidth: number,
+  withEllipsis: boolean,
+): string {
+  const candidate = withEllipsis ? `${line}…` : line;
+  if (ctx.measureText(candidate).width <= maxWidth) return candidate;
+
+  let text = line;
+  while (text && ctx.measureText(`${text}…`).width > maxWidth) {
+    text = text.slice(0, -1);
+  }
+  return `${text}…`;
+}
+
+/** Render the barcode on its own canvas. Symbology choice lives in @utils/ean. */
 function renderBarcodeCanvas(ean: string): HTMLCanvasElement | null {
   try {
     const canvas = document.createElement('canvas');
     JsBarcode(canvas, ean, {
-      format: isValidEan13(ean) ? 'EAN13' : 'CODE128',
+      format: pickBarcodeFormat(ean),
       displayValue: true,
       fontSize: 30,
       height: 110,
@@ -146,7 +168,8 @@ export function renderShelfLabelCanvas({
   if (trimmedSku) {
     ctx.fillStyle = '#444444';
     ctx.font = `${mm(2.6)}px Arial, Helvetica, sans-serif`;
-    ctx.fillText(`COD. ${trimmedSku}`, pad, y);
+    // 4th arg condenses rather than overflowing when the code is very long.
+    ctx.fillText(`COD. ${trimmedSku}`, pad, y, textWidth);
     y += mm(3.2);
   }
 
@@ -161,6 +184,10 @@ export function renderShelfLabelCanvas({
   );
   const drawWidth = Math.floor(barcode.width * scale);
   const drawHeight = Math.floor(barcode.height * scale);
+  // Interpolating the bars would spread each module over a fractional number of
+  // device pixels and hand the printer grey edges to threshold — the one thing
+  // a barcode cannot afford. Keep the modules hard-edged.
+  ctx.imageSmoothingEnabled = false;
   ctx.drawImage(
     barcode,
     Math.floor((width - drawWidth) / 2),
@@ -196,11 +223,32 @@ export function downloadShelfLabelJpeg(input: ShelfLabelInput): boolean {
   const canvas = renderShelfLabelCanvas(input);
   if (!canvas) return false;
 
+  // Quality 1.0, not 0.95: JPEG ringing lands exactly on the high-contrast bar
+  // edges, which is where a scanner reads.
   triggerDownload(
-    canvas.toDataURL('image/jpeg', 0.95),
+    canvas.toDataURL('image/jpeg', 1.0),
     shelfLabelFilename(input.sku, input.ean, 'jpg'),
   );
   return true;
+}
+
+/**
+ * A PDF whose single page IS the label, so it prints at true physical size
+ * rather than as a stamp in the corner of an A4.
+ *
+ * jsPDF normalises the format array TO the orientation — 'portrait' forces
+ * height >= width and would silently swap this into a 30×50 page, clipping the
+ * right of the label off the sheet. So the orientation is derived from the
+ * constants rather than hard-coded, and stays correct if the stock changes
+ * shape. Exported so a test can assert the resulting page really is
+ * LABEL_WIDTH_MM × LABEL_HEIGHT_MM.
+ */
+export function createLabelDocument(): jsPDF {
+  return new jsPDF({
+    orientation: LABEL_WIDTH_MM >= LABEL_HEIGHT_MM ? 'landscape' : 'portrait',
+    unit: 'mm',
+    format: [LABEL_WIDTH_MM, LABEL_HEIGHT_MM],
+  });
 }
 
 /** Returns false when the label could not be produced, so callers can warn. */
@@ -208,15 +256,7 @@ export function downloadShelfLabelPdf(input: ShelfLabelInput): boolean {
   const canvas = renderShelfLabelCanvas(input);
   if (!canvas) return false;
 
-  // The page IS the label, so it prints at true physical size rather than as a
-  // stamp in the corner of an A4. Orientation stays 'portrait' even though the
-  // label is landscape-shaped: jsPDF swaps the format array when told
-  // 'landscape', which would silently give a 30×50 page instead of 50×30.
-  const doc = new jsPDF({
-    orientation: 'portrait',
-    unit: 'mm',
-    format: [LABEL_WIDTH_MM, LABEL_HEIGHT_MM],
-  });
+  const doc = createLabelDocument();
   doc.addImage(
     canvas.toDataURL('image/png'),
     'PNG',

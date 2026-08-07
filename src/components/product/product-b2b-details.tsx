@@ -398,10 +398,13 @@ const ProductB2BDetails: React.FC<{
 
   const toggleShare = () => setShareButtonStatus((s) => !s);
 
-  // Shelf label: the EAN is normalised in the product transform, but the detail
-  // page can also be showing a synthetic parent assembled from children, so
-  // normalise defensively here too.
-  const ean = normalizeEan(data?.ean);
+  // Shelf label. `isFromParentSearch` builds a synthetic parent by spreading a
+  // CHILD record and overwriting only `sku` — so its `ean` belongs to a
+  // different article than its code. A label pairing one product's code with
+  // another's barcode scans as the wrong goods at the till, so refuse to offer
+  // one for that shape. (The multi-variant early return already excludes it
+  // today; this keeps it true if that return ever moves.)
+  const ean = isFromParentSearch ? '' : normalizeEan(data?.ean);
 
   const handleDownloadLabel = (format: 'jpeg' | 'pdf') => {
     setLabelMenuOpen(false);

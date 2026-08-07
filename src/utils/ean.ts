@@ -31,3 +31,15 @@ export function isValidEan13(value: string): boolean {
 
   return checkDigit === Number(value[12]);
 }
+
+/**
+ * Which symbology should encode this code?
+ *
+ * A retail shelf scanner expects EAN-13, so use it whenever the value really is
+ * one. JsBarcode's EAN13 encoder THROWS on a wrong-length or bad-checksum input,
+ * so everything else degrades to CODE128 — still scannable, still prints the
+ * number, never blanks the label.
+ */
+export function pickBarcodeFormat(value: string): 'EAN13' | 'CODE128' {
+  return isValidEan13(value) ? 'EAN13' : 'CODE128';
+}
