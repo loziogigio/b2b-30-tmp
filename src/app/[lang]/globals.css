@@ -641,3 +641,53 @@ input[type='search']::-webkit-search-results-decoration {
   font-weight: 600;
   padding: 0.75rem 1rem;
 }
+
+/* ------------------------------------------------------------------
+   Product content badges — video / 3D / related products.
+
+   The markup carries no glyph on purpose (see product-badges.tsx): each
+   modifier owns its icon here, so a tenant stylesheet can override the icon
+   without a code change. Replace the `content` values below — or swap in a
+   background-image — to restyle.
+   ------------------------------------------------------------------ */
+.vinc-pbadges {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Float the stack over a product image (card, list-row thumbnail). The parent
+   must be position:relative — both call sites already are. */
+.vinc-pbadges--overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  z-index: 10;
+  padding: 2px;
+}
+
+.vinc-pbadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 0 0 1px #eaeef2;
+  font-size: 11px;
+  line-height: 1;
+  color: #4b5563;
+}
+
+.vinc-pbadge--video::before {
+  content: '\25B6'; /* ▶ */
+}
+
+.vinc-pbadge--3d::before {
+  content: '\25EB'; /* ◫ */
+}
+
+.vinc-pbadge--related::before {
+  content: '\29C9'; /* ⧉ */
+}

@@ -23,6 +23,7 @@ import { useProductsPriceMap } from '@framework/pricing';
 import { selectBestPrice } from '@framework/pricing/best-price';
 import { buildCartPriceData } from '../b2b-offer-rows';
 import LastOrdered from '../last-ordered';
+import ProductBadges from '../product-badges';
 
 const AddToCart = dynamic(() => import('@components/product/add-to-cart'), {
   ssr: false,
@@ -254,6 +255,13 @@ export default function ProductRowB2B({
                   PROMO
                 </span>
               )}
+
+              {/* Content badges: video / 3D / related — icons supplied by CSS */}
+              <ProductBadges
+                lang={lang}
+                product={product as any}
+                className="vinc-pbadges--overlay"
+              />
             </button>
           </Cell>
 

@@ -26,6 +26,7 @@ import { buildCartPriceData } from '../b2b-offer-rows';
 import { useProductPriceData } from '@framework/pricing';
 import { selectBestPrice } from '@framework/pricing/best-price';
 import LastOrdered from '../last-ordered';
+import ProductBadges from '../product-badges';
 
 interface RenderPopupOrAddToCartProps {
   props: { data: Product & { variantCount?: number } };
@@ -338,6 +339,13 @@ const ProductCardB2B: React.FC<ProductProps> = ({
             </span>
           )}
         </div>
+
+        {/* Content badges: video / 3D / related — icons supplied by CSS */}
+        <ProductBadges
+          lang={lang}
+          product={product as any}
+          className="vinc-pbadges--overlay"
+        />
       </div>
 
       {/* Textual Information Section */}

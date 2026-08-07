@@ -33,6 +33,7 @@ import { isModalFullWidth } from '@/lib/theme/resolver';
 import B2BOfferRows from './b2b-offer-rows';
 import B2BInfoBlock from './details/b2b-info-block';
 import { useCompareList } from '@/contexts/compare/compare.context';
+import ProductBadges from './product-badges';
 
 export default function ProductPopup({ lang }: { lang: string }) {
   const { t } = useTranslation(lang, 'common');
@@ -215,6 +216,13 @@ export default function ProductPopup({ lang }: { lang: string }) {
                 >
                   {product?.name}
                 </h2>
+
+                {/* Content badges: video / 3D / related — icons supplied by CSS */}
+                <ProductBadges
+                  lang={lang}
+                  product={product as any}
+                  className="mt-2"
+                />
               </div>
             </div>
 
