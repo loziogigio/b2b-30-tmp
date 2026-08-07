@@ -57,8 +57,11 @@ export default function ProductBadges({ lang, product, className }: Props) {
     return null;
   }
 
+  // A <span>, not a <div>: the list row renders the stack inside a <button>,
+  // which only accepts phrasing content. `.vinc-pbadges` sets display:flex, so
+  // the layout is unaffected.
   return (
-    <div className={cn('vinc-pbadges', className)}>
+    <span className={cn('vinc-pbadges', className)}>
       {active.map((badge) => {
         const label = t(badge.i18nKey, { defaultValue: badge.fallback });
         return (
@@ -71,6 +74,6 @@ export default function ProductBadges({ lang, product, className }: Props) {
           />
         );
       })}
-    </div>
+    </span>
   );
 }
