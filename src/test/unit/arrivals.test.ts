@@ -131,6 +131,26 @@ describe('pickErpArrival', () => {
     ).toBe('2026-08-26');
   });
 
+  it('reads the NORMALISED shape transformErpPricesResponse actually emits', () => {
+    // This is the shape that reaches production: mapSupplierArrivals renames
+    // DataArrivoPrevista -> expected_date and NumeroDellaSettimana ->
+    // week_number. Reading only the raw names loses the supplier's own week and
+    // silently derives one from the date instead.
+    const out = pickErpArrival(
+      withRows([
+        {
+          article_code: '020945',
+          expected_date: '2026-09-02',
+          confirmed_date: undefined,
+          week_number: 36,
+          expected_qty: 86,
+        },
+      ]),
+      TODAY,
+    );
+    expect(out).toEqual({ eta: '2026-09-02', week: 36 });
+  });
+
   it('returns null when there is no ERP payload at all', () => {
     expect(pickErpArrival(undefined, TODAY)).toBeNull();
     expect(pickErpArrival({}, TODAY)).toBeNull();

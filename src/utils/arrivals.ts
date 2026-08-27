@@ -126,6 +126,11 @@ export function dmyToIso(value: string | undefined): string | null {
  * at the top level), dates in either dd/mm/yyyy or ISO, under four possible
  * field names, plus a supplier-stated week number that we prefer over a
  * computed one.
+ *
+ * Both the normalised shape (expected_date / confirmed_date / week_number, as
+ * emitted by transformErpPricesResponse) and the raw ERP shape
+ * (DataArrivoPrevista / DataArrivoConfermata / NumeroDellaSettimana) are
+ * accepted, because both reach this function on different paths.
  */
 export function pickErpArrival(
   priceData: any,
@@ -151,7 +156,12 @@ export function pickErpArrival(
     if (!eta || eta < today) continue;
 
     if (!best || eta < best.eta) {
-      const week = Number(row?.NumeroDellaSettimana);
+      // `week_number` is the NORMALISED name produced by
+      // transformErpPricesResponse; NumeroDellaSettimana is the raw ERP name,
+      // kept as a fallback for any caller that passes an untransformed payload.
+      // Reading only the raw name silently loses the supplier's own week and
+      // makes us derive one from the date instead.
+      const week = Number(row?.week_number ?? row?.NumeroDellaSettimana);
       best = {
         eta,
         week: Number.isFinite(week) && week > 0 ? week : undefined,
