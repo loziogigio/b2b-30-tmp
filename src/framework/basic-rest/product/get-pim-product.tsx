@@ -256,10 +256,11 @@ export function transformPimProduct(
     // Content badges (video / 3D / related). The media flags roll up from the
     // variants like has_active_promo does, because in grouped mode the card
     // shows the PARENT and the video/3D of a child is reachable from it.
-    // has_correlations deliberately does NOT roll up: correlations are authored
-    // per entity code (a variant does not inherit its parent's, and symmetrically
-    // a parent does not inherit its variants'), so a rolled-up badge would
-    // promise related products the buyer cannot find on that page.
+    // has_correlations deliberately does NOT roll UP from variants. Inheritance
+    // runs downward only: a correlation authored on the parent is inherited by
+    // every child (the enricher stamps the flag from own-or-parent code), but a
+    // parent must not advertise a correlation that exists only on one child —
+    // that would promise related products the buyer cannot find on that page.
     has_video:
       (raw as any).has_video === true ||
       raw.variants?.some((v: any) => v.has_video === true) === true,
