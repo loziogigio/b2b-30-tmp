@@ -51,3 +51,9 @@ docs/superpowers/
 
 # TypeScript incremental build caches
 *.tsbuildinfo
+
+# Shared packages staged into the Docker build context by build-docker.sh
+.docker-packages/
+
+# Dev deps installed inside the vendored packages (tests/tsc)
+vendor/*/node_modules/

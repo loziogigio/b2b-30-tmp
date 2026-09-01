@@ -153,8 +153,8 @@ importers:
         specifier: file:vendor/vinc-erp
         version: file:vendor/vinc-erp
       vinc-mongo-db:
-        specifier: ^1.0.0
-        version: 1.0.0(lru-cache@11.5.0)(mongoose@8.19.1)
+        specifier: file:../../packages/vinc-mongo-db
+        version: file:../../packages/vinc-mongo-db(lru-cache@11.5.0)(mongoose@8.19.1)
       vinc-pim:
         specifier: ^1.0.0
         version: 1.0.0
@@ -3751,8 +3751,8 @@ packages:
   vinc-erp@file:vendor/vinc-erp:
     resolution: {directory: vendor/vinc-erp, type: directory}
 
-  vinc-mongo-db@1.0.0:
-    resolution: {integrity: sha512-M1GtycYkEAd+qFOWbAjPBbgq5w1s2BvK8kj3TI0oRsEBR0QuMp9BNnC95MhgffebxU98wYm3thUXeCnFYKACWQ==}
+  vinc-mongo-db@file:../../packages/vinc-mongo-db:
+    resolution: {directory: ../../packages/vinc-mongo-db, type: directory}
     peerDependencies:
       lru-cache: ^11.0.0
       mongoose: ^8.0.0
@@ -7733,7 +7733,7 @@ snapshots:
 
   vinc-erp@file:vendor/vinc-erp: {}
 
-  vinc-mongo-db@1.0.0(lru-cache@11.5.0)(mongoose@8.19.1):
+  vinc-mongo-db@file:../../packages/vinc-mongo-db(lru-cache@11.5.0)(mongoose@8.19.1):
     dependencies:
       lru-cache: 11.5.0
       mongoose: 8.19.1

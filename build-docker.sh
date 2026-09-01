@@ -153,6 +153,38 @@ echo "    VINC_API_URL=${VINC_API_URL}"
 echo ""
 
 # ============================================================================
+# Stage out-of-context local packages
+# ============================================================================
+# `vinc-mongo-db` is consumed straight from the shared packages/ folder
+# (file:../../packages/vinc-mongo-db) rather than being duplicated here, so
+# there is a single source of truth. Docker cannot COPY from outside the build
+# context, so mirror it in before building. The Dockerfile places it at
+# /packages, which is where `../../packages` resolves to from WORKDIR /app.
+SHARED_PACKAGES_DIR="../../packages"
+STAGED_PACKAGES_DIR=".docker-packages"
+
+echo "Step 0/4: Staging shared packages..."
+rm -rf "$STAGED_PACKAGES_DIR"
+mkdir -p "$STAGED_PACKAGES_DIR"
+
+for pkg in vinc-mongo-db; do
+    src="${SHARED_PACKAGES_DIR}/${pkg}"
+    if [ ! -d "$src" ]; then
+        echo "Error: shared package '$pkg' not found at ${src}"
+        exit 1
+    fi
+    # pnpm packs only the package's `files` allowlist (dist/), so a stale or
+    # missing build would silently ship old code.
+    if [ ! -d "${src}/dist" ]; then
+        echo "Error: ${src}/dist is missing — run 'pnpm build' in ${src} first"
+        exit 1
+    fi
+    rsync -a --delete --exclude node_modules "${src}/" "${STAGED_PACKAGES_DIR}/${pkg}/"
+    echo "  staged ${pkg}"
+done
+echo ""
+
+# ============================================================================
 # Build Docker Image
 # ============================================================================
 echo "Step 1/4: Building Docker image..."

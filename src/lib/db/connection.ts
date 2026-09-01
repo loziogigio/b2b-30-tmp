@@ -23,9 +23,48 @@ export {
 const defaultMongoDb = process.env.MONGO_DB ?? 'vinc-default';
 
 /**
+ * Raised when a multi-tenant request cannot be mapped to a tenant database.
+ *
+ * Falling back to `defaultMongoDb` here used to turn a registry/Mongo outage
+ * into a storefront rendering "No Content Available" from the empty default
+ * database — indistinguishable from a misconfigured tenant, and cacheable. A
+ * throw surfaces the outage as an error instead, and lets the Redis
+ * stale-if-error layer serve the last-known page rather than an empty one.
+ */
+export class TenantDbUnresolvedError extends Error {
+  constructor(readonly hostname: string) {
+    super(
+      `[DB] No tenant found for ${hostname} — refusing to fall back to the default database`,
+    );
+    this.name = 'TenantDbUnresolvedError';
+  }
+}
+
+/**
+ * Resolve the request hostname used for tenant lookup.
+ * Returns null outside a request context (build, scripts, background jobs).
+ */
+const requestHostname = async (): Promise<string | null> => {
+  try {
+    const headersList = await headers();
+    return (
+      headersList.get('x-tenant-hostname') ||
+      headersList.get('host') ||
+      'localhost'
+    );
+  } catch {
+    // headers() not available (e.g., in build or outside request context)
+    return null;
+  }
+};
+
+/**
  * Connect to the appropriate database
  * - Single-tenant mode: uses MONGO_DB from .env
  * - Multi-tenant mode: resolves tenant from hostname and uses tenant's database
+ *
+ * @throws {TenantDbUnresolvedError} in multi-tenant mode when the hostname does
+ * not resolve to a tenant (typically the tenant registry being unreachable).
  */
 export const connectToDatabase = async (): Promise<Connection> => {
   // Single-tenant mode: use .env values directly
@@ -34,26 +73,17 @@ export const connectToDatabase = async (): Promise<Connection> => {
   }
 
   // Multi-tenant mode: resolve tenant from hostname
-  let hostname = 'localhost';
-  try {
-    const headersList = await headers();
-    hostname =
-      headersList.get('x-tenant-hostname') ||
-      headersList.get('host') ||
-      'localhost';
-  } catch {
-    // headers() not available (e.g., in build or outside request context)
+  const hostname = await requestHostname();
+  if (hostname === null) {
     console.warn('[DB] Could not get headers, using default database');
     return getPooledConnection(defaultMongoDb);
   }
 
   return withResolvedTenant(hostname, (tenant) => {
     if (!tenant) {
-      console.warn(
-        `[DB] No tenant found for ${hostname}, using default database`,
-      );
+      throw new TenantDbUnresolvedError(hostname);
     }
-    return getPooledConnection(tenant?.database.mongoDb || defaultMongoDb);
+    return getPooledConnection(tenant.database.mongoDb || defaultMongoDb);
   });
 };
 
@@ -71,23 +101,20 @@ export const resolveTenantDbTarget = async (): Promise<{
     return { dbName: defaultMongoDb, tenantId: SINGLE_TENANT_ID };
   }
 
-  let hostname = 'localhost';
-  try {
-    const headersList = await headers();
-    hostname =
-      headersList.get('x-tenant-hostname') ||
-      headersList.get('host') ||
-      'localhost';
-  } catch {
+  const hostname = await requestHostname();
+  if (hostname === null) {
     return { dbName: defaultMongoDb, tenantId: SINGLE_TENANT_ID };
   }
 
-  return withResolvedTenant(hostname, (tenant) =>
-    tenant
-      ? {
-          dbName: tenant.database.mongoDb || defaultMongoDb,
-          tenantId: tenant.id,
-        }
-      : { dbName: defaultMongoDb, tenantId: 'unknown' },
-  );
+  return withResolvedTenant(hostname, (tenant) => {
+    // Same reasoning as connectToDatabase: an unresolved tenant must not key a
+    // cache entry against the empty default database.
+    if (!tenant) {
+      throw new TenantDbUnresolvedError(hostname);
+    }
+    return {
+      dbName: tenant.database.mongoDb || defaultMongoDb,
+      tenantId: tenant.id,
+    };
+  });
 };

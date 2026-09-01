@@ -15,6 +15,10 @@ FROM base AS deps
 COPY package.json pnpm-lock.yaml ./
 # Vendored file: deps (vinc-erp) must be present before install
 COPY vendor ./vendor
+# vinc-mongo-db is `file:../../packages/vinc-mongo-db`, which lives outside the
+# build context. build-docker.sh stages it into .docker-packages/ so it lands at
+# the path pnpm expects: from WORKDIR /app, `../../packages` resolves to /packages.
+COPY .docker-packages /packages
 # Use BuildKit cache for the pnpm store for faster repeated builds
 RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile
