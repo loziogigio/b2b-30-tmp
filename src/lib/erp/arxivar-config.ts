@@ -101,7 +101,7 @@ export async function resolveArxivarConfig(
 
     const channel = arxivarChannel();
     const dyn = await cachedJson(
-      `arxivar:settings:${api.pimApiUrl}:${channel}`,
+      `arxivar:settings:${api.tenantId}:${api.pimApiUrl}:${channel}`,
       { softTtlMs: 5 * 60_000, hardTtlSeconds: 3600 },
       () =>
         fetchArxivarSettings({

@@ -84,7 +84,7 @@ export async function resolveCartConfig(req: NextRequest): Promise<CartConfig> {
 
     const channel = cartChannel();
     const dyn = await cachedJson(
-      `cart:settings:${api.pimApiUrl}:${channel}`,
+      `cart:settings:${api.tenantId}:${api.pimApiUrl}:${channel}`,
       { softTtlMs: 5 * 60_000, hardTtlSeconds: 3600 },
       () =>
         fetchCartSettings({

@@ -85,7 +85,7 @@ export async function resolveCatalogConfig(
 
     const channel = catalogChannel();
     const dyn = await cachedJson(
-      `catalog:settings:${api.pimApiUrl}:${channel}`,
+      `catalog:settings:${api.tenantId}:${api.pimApiUrl}:${channel}`,
       { softTtlMs: 5 * 60_000, hardTtlSeconds: 3600 },
       () =>
         fetchCatalogSettings({

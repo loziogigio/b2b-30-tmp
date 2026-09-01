@@ -3,13 +3,15 @@ import { parseMyMbConnection } from 'vinc-erp';
 
 export type CouponConfig = {
   enabled: boolean;
-  baseUrl: string;    // e.g. http://mymb.baseprotection.com:8884/MyMB/Service/web
+  baseUrl: string; // e.g. http://mymb.baseprotection.com:8884/MyMB/Service/web
   authHeader: string; // "Basic " + base64(user:pass)
 };
 
 /** Feature is active by default; empty connection means the proxy short-circuits. */
 export const DEFAULT_COUPON_CONFIG: CouponConfig = {
-  enabled: true, baseUrl: '', authHeader: '',
+  enabled: true,
+  baseUrl: '',
+  authHeader: '',
 };
 
 /** Build a Basic auth header from explicit user/pass env (used when the URL has no creds). */
@@ -61,14 +63,22 @@ export function mapCouponRecord(data: Record<string, unknown>): CouponConfig {
   const pass = data.api_password == null ? '' : String(data.api_password);
   const recordAuth = basicAuth(user, pass);
   if (recordAuth) {
-    return { enabled, baseUrl: rawUrl.replace(/\/+$/, ''), authHeader: recordAuth };
+    return {
+      enabled,
+      baseUrl: rawUrl.replace(/\/+$/, ''),
+      authHeader: recordAuth,
+    };
   }
 
   try {
     const { baseUrl, authHeader } = parseMyMbConnection(rawUrl);
     return { enabled, baseUrl, authHeader };
   } catch {
-    return { enabled, baseUrl: rawUrl.replace(/\/+$/, ''), authHeader: authFromEnv() };
+    return {
+      enabled,
+      baseUrl: rawUrl.replace(/\/+$/, ''),
+      authHeader: authFromEnv(),
+    };
   }
 }
 
@@ -87,7 +97,9 @@ function couponChannel(): string {
  * Dynamic imports keep the pure helpers above free of the ERP-factory / Redis
  * deps so they stay unit-testable in isolation.
  */
-export async function resolveCouponConfig(req: NextRequest): Promise<CouponConfig> {
+export async function resolveCouponConfig(
+  req: NextRequest,
+): Promise<CouponConfig> {
   const envCfg = resolveCouponConfigFromEnv();
   try {
     const [{ resolveTenantApiConfig }, { cachedJson }] = await Promise.all([
@@ -101,7 +113,7 @@ export async function resolveCouponConfig(req: NextRequest): Promise<CouponConfi
 
     const channel = couponChannel();
     const dyn = await cachedJson(
-      `coupon:settings:${api.pimApiUrl}:${channel}`,
+      `coupon:settings:${api.tenantId}:${api.pimApiUrl}:${channel}`,
       { softTtlMs: 5 * 60_000, hardTtlSeconds: 3600 },
       () =>
         fetchCouponSettings({
@@ -134,7 +146,9 @@ interface FetchCouponArgs {
  * Phase 2: fetch the channel-scoped `coupon_settings` record from Commerce Suite
  * (mirrors fetchErpSettings). Returns DEFAULT_COUPON_CONFIG when absent.
  */
-export async function fetchCouponSettings(args: FetchCouponArgs): Promise<CouponConfig> {
+export async function fetchCouponSettings(
+  args: FetchCouponArgs,
+): Promise<CouponConfig> {
   const url = new URL(
     `${args.csBaseUrl.replace(/\/+$/, '')}/api/b2b/data-models/coupon_settings/records`,
   );
