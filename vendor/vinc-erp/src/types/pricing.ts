@@ -8,6 +8,13 @@ export interface MyMbErpSettings {
   cases: Record<string, { label: string; addToCart: boolean }>;
   updatePromoSeconds: number;
   updateAvailableAgainSeconds: number;
+  /**
+   * Sales-channel code the ERP filters promos by, sent as the `canale` key of
+   * the GetPrezzaturaMultipla body (B2B / B2C / APP — the codes are defined in
+   * each tenant's ERP). Undefined omits the key entirely, which is the
+   * pre-filter behaviour: the ERP then returns every promo.
+   */
+  erpChannel?: string;
 }
 
 export interface PriceQuery {

@@ -27,13 +27,33 @@ export function formatTimeAvailability(
 ): TimeAvailability {
   const avail = priceData ? Number(priceData.availability) : 0;
 
+  // A tenant opts into a dot-only pill by clearing that case's label in
+  // `erp_settings`. Every pill surface renders a coloured dot next to the text,
+  // so an empty label leaves just the dot. This is deliberately NOT the same as
+  // a MISSING `product_label_action` (no ERP data resolved yet), which keeps its
+  // fallback text — otherwise a product awaiting pricing would silently lose it.
+  const action = priceData?.product_label_action;
+  const labelBlanked =
+    typeof action?.LABEL === 'string' && action.LABEL.trim() === '';
+
   if (!(avail > 0)) {
+    if (labelBlanked) return { ok: false, label: '' };
     return {
       ok: false,
       label:
-        priceData?.product_label_action?.LABEL ||
+        action?.LABEL ||
         t('text-out-stock', { defaultValue: 'Non disponibile' }),
     };
+  }
+
+  const uom = priceData?.packaging_option_default?.packaging_uom?.trim();
+  const qty = uom ? `${avail} ${uom}` : `${avail}`;
+
+  // Blanked in-stock label: drop the word but keep the quantity when the channel
+  // asked for `exact`, so turning the pill into a dot does not also throw away
+  // the stock figure the tenant deliberately switched on.
+  if (labelBlanked) {
+    return { ok: true, label: mode === 'exact' ? qty : '' };
   }
 
   const inStock = t('text-in-stock', { defaultValue: 'Disponibile' });
@@ -41,9 +61,5 @@ export function formatTimeAvailability(
     return { ok: true, label: inStock };
   }
 
-  const uom = priceData?.packaging_option_default?.packaging_uom?.trim();
-  return {
-    ok: true,
-    label: uom ? `${inStock} · ${avail} ${uom}` : `${inStock} · ${avail}`,
-  };
+  return { ok: true, label: `${inStock} · ${qty}` };
 }

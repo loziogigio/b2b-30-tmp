@@ -62,6 +62,56 @@ describe('MyMbErpClient.getMultiplePrices', () => {
     expect((init as any).headers.Authorization).toBe('Basic xyz');
   });
 
+  it('omits the `canale` promo filter when erpChannel is unset', async () => {
+    const f = vi.fn().mockResolvedValue(jsonResponse({
+      GetPrezzaturaMultiplaResult: { ReturnCode: 0, ListaPrezzatura: [] },
+    }));
+    const client = makeClient(f as unknown as typeof fetch);
+    await client.getMultiplePrices({
+      customerCode: 'C', addressCode: 'A', entityCodes: ['ART1'],
+    });
+    const body = JSON.parse((f.mock.calls[0][1] as RequestInit).body as string);
+    expect(body).not.toHaveProperty('canale');
+  });
+
+  it('sends the `canale` promo filter verbatim when erpChannel is set', async () => {
+    const f = vi.fn().mockResolvedValue(jsonResponse({
+      GetPrezzaturaMultiplaResult: { ReturnCode: 0, ListaPrezzatura: [] },
+    }));
+    const client = new MyMbErpClient({
+      baseUrl: 'http://erp:8896/MyMB/web',
+      authHeader: 'Basic xyz',
+      settings: { ...settings, erpChannel: 'B2B' },
+      cache: new NoopCacheAdapter(),
+      fetchImpl: f as unknown as typeof fetch,
+    });
+    await client.getMultiplePrices({
+      customerCode: 'C', addressCode: 'A', entityCodes: ['ART1'],
+    });
+    const body = JSON.parse((f.mock.calls[0][1] as RequestInit).body as string);
+    // Lowercase on purpose: MyMB spells this key `canale`, unlike every other
+    // PascalCase key in the body. Wrong casing is ignored silently by the ERP.
+    expect(body.canale).toBe('B2B');
+  });
+
+  it('omits `canale` when erpChannel is blank/whitespace', async () => {
+    const f = vi.fn().mockResolvedValue(jsonResponse({
+      GetPrezzaturaMultiplaResult: { ReturnCode: 0, ListaPrezzatura: [] },
+    }));
+    const client = new MyMbErpClient({
+      baseUrl: 'http://erp:8896/MyMB/web',
+      authHeader: 'Basic xyz',
+      settings: { ...settings, erpChannel: '   ' },
+      cache: new NoopCacheAdapter(),
+      fetchImpl: f as unknown as typeof fetch,
+    });
+    await client.getMultiplePrices({
+      customerCode: 'C', addressCode: 'A', entityCodes: ['ART1'],
+    });
+    const body = JSON.parse((f.mock.calls[0][1] as RequestInit).body as string);
+    expect(body).not.toHaveProperty('canale');
+  });
+
   it('throws ErpError when ReturnCode != 0', async () => {
     const f = vi.fn().mockResolvedValue(jsonResponse({
       GetPrezzaturaMultiplaResult: { ReturnCode: 3, Message: 'bad' },

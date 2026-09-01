@@ -8,6 +8,7 @@ import {
 import { resolveSupportedLang } from '@/app/i18n/settings';
 import { cacheTag, SINGLE_TENANT_ID } from '@/lib/cache/tags';
 import { AUTH_COOKIES } from '@/lib/auth/cookies';
+import { warnIfRedirectDroppedAuth } from '@/lib/tenant/auth-redirect-warning';
 
 /**
  * Server-side PIM API fetch utilities.
@@ -171,6 +172,8 @@ export const serverFetchPimProducts = cache(
                   },
                 }),
           });
+
+          warnIfRedirectDroppedAuth(response, url, Boolean(authorization));
 
           if (!response.ok) return { results: [], total: 0 };
 

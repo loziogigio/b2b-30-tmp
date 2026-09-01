@@ -53,6 +53,13 @@ class MyMbErpClient {
             IdElaborazione: input.idCart ?? '0',
             ListaQuantita: input.quantityList ?? new Array(entityCodes.length).fill(1),
         };
+        // Promo channel filter. Lowercase `canale` on purpose — that is how MyMB
+        // spells it, unlike every other (PascalCase) key above; a mis-cased key is
+        // dropped silently by the ERP, so the promos would come back unfiltered
+        // with nothing to show for it. Omitted when unconfigured.
+        const erpChannel = this.settings.erpChannel?.trim();
+        if (erpChannel)
+            body.canale = erpChannel;
         const data = await this.request(endpoints_js_1.MYMB_ENDPOINTS.GET_PREZZATURA_MULTIPLA, { method: 'POST', body });
         const result = data?.GetPrezzaturaMultiplaResult;
         if (!result || result.ReturnCode !== 0) {

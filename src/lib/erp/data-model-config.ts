@@ -48,6 +48,8 @@ export function mapErpSettingsRecord(
     }
   }
 
+  const erpChannel = String(data.erp_channel ?? '').trim();
+
   return {
     packagingOptionsId,
     isManagedSubstitutes: Boolean(data.is_managed_substitutes),
@@ -60,6 +62,8 @@ export function mapErpSettingsRecord(
       data.update_available_again_seconds ??
         DEFAULT_ERP_SETTINGS.updateAvailableAgainSeconds,
     ),
+    // Blank stays undefined so the ERP request body keeps no `canale` key.
+    erpChannel: erpChannel || undefined,
   };
 }
 

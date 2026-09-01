@@ -12,26 +12,38 @@ function getLabelAndCartStatus(quantityAvailable, substituteAvailable, orderSupp
     const supplier = config.isManagedSupplierOrder;
     const hasSub = Array.isArray(substituteAvailable) && substituteAvailable.length > 0;
     const hasArr = Array.isArray(orderSupplierAvailable) && orderSupplierAvailable.length > 0;
-    let c = null;
+    // A substitute/arrival only counts when that behaviour is actually managed.
+    const substituteApplies = subs && hasSub;
+    const arrivalApplies = supplier && hasArr;
+    // Order matters: 1 (both) -> 2 (substitute) -> 3 (arrival) -> 5 (nothing
+    // managed at all) -> 4 (managed, but nothing available).
+    //
+    // The previous ladder required `supplier` on every branch for cases 1-4 and
+    // required BOTH flags false for case 5, so `subs=true, supplier=false` (and
+    // `subs=false, supplier=true`) matched nothing, left `c` null and rendered
+    // the literal 'UNKNOWN'. That is the erp_settings blueprint default, so any
+    // tenant seeded from it showed UNKNOWN instead of its configured
+    // "Non disponibile" whenever stock hit 0.
+    let c;
     if (quantityAvailable > 0) {
         c = 0;
     }
-    else if (subs && hasSub && supplier && hasArr) {
+    else if (substituteApplies && arrivalApplies) {
         c = 1;
     }
-    else if (subs && hasSub && supplier && !hasArr) {
+    else if (substituteApplies) {
         c = 2;
     }
-    else if (subs && !hasSub && supplier && hasArr) {
+    else if (arrivalApplies) {
         c = 3;
-    }
-    else if (subs && !hasSub && supplier && !hasArr) {
-        c = 4;
     }
     else if (!subs && !supplier) {
         c = 5;
     }
-    const entry = c !== null ? config.cases[String(c)] : undefined;
+    else {
+        c = 4;
+    }
+    const entry = config.cases[String(c)];
     return {
         LABEL: entry?.label ?? 'UNKNOWN',
         ADD_TO_CART: entry?.addToCart ?? false,

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { AUTH_COOKIES, resolveAuthContext } from '@/lib/auth/server';
 import { buildTenantApiHeaders, resolveTenantApiConfig } from '@/lib/tenant';
 import { customerAddressCodes } from '@/lib/profile/session-owner';
+import { warnIfRedirectDroppedAuth } from '@/lib/tenant/auth-redirect-warning';
 
 // ---------------------------------------------------------------------------
 // Category-tree cache (per tenant + upstream PIM URL).
@@ -545,6 +546,12 @@ async function proxyRequest(
     }
 
     const response = await fetch(targetUrl.toString(), fetchOptions);
+
+    warnIfRedirectDroppedAuth(
+      response,
+      targetUrl.toString(),
+      Boolean(bearerToken),
+    );
 
     // Log the response status
     console.log(

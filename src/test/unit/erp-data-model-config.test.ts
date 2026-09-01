@@ -35,6 +35,25 @@ describe('mapErpSettingsRecord', () => {
     expect(settings.cases).toEqual({});
   });
 
+  it('maps erp_channel to erpChannel, trimmed', () => {
+    expect(mapErpSettingsRecord({ erp_channel: ' B2B ' }).erpChannel).toBe(
+      'B2B',
+    );
+  });
+
+  it('leaves erpChannel undefined when erp_channel is absent or blank', () => {
+    // Undefined is what keeps the `canale` key out of the ERP request body, so
+    // tenants that never set the field keep the promos they get today.
+    expect(mapErpSettingsRecord({}).erpChannel).toBeUndefined();
+    expect(
+      mapErpSettingsRecord({ erp_channel: '' }).erpChannel,
+    ).toBeUndefined();
+    expect(
+      mapErpSettingsRecord({ erp_channel: '  ' }).erpChannel,
+    ).toBeUndefined();
+    expect(DEFAULT_ERP_SETTINGS.erpChannel).toBeUndefined();
+  });
+
   it('ignores empty segments when parsing packaging_options_id', () => {
     expect(
       mapErpSettingsRecord({ packaging_options_id: '3, ,1,' })
