@@ -13,6 +13,7 @@ export declare const MYMB_ENDPOINTS: {
     readonly GET_RIGHE_CON_INFO_CONSEGNA: "GetRigheConInfoConsegna";
     readonly GET_RIGHE_DDT_CON_INFO: "GetRigheDDTConInfo";
     readonly GET_RIGHE_FATT_CON_INFO: "GetRigheFATTConInfo";
+    readonly GET_ULTIMO_ORDINATO_CLIENTE_X_ARTICOLO: "GetUltimoOrdinatoClienteXArticolo";
 };
 export type MyMbEndpoint = (typeof MYMB_ENDPOINTS)[keyof typeof MYMB_ENDPOINTS];
 /** Raw MYMB coupon webservice endpoints (separate connection from pricing). */

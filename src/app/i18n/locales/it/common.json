@@ -812,5 +812,17 @@
   "text-destination": "Destinazione",
   "orders-status-to-fulfill": "Da evadere",
   "orders-status-fulfilled": "Evaso",
-  "orders-status-in-acceptance": "In accettazione"
+  "orders-status-in-acceptance": "In accettazione",
+  "text-order-history": "Storico ordinato",
+  "text-ordered-since": "Ordinato dal",
+  "text-cause": "Causale",
+  "text-document": "Documento",
+  "text-ordered-qty": "Ordinato",
+  "text-settled-qty": "Saldato",
+  "text-delivered-qty": "Consegnato",
+  "text-residual-qty": "Residuo",
+  "text-no-orders-for-article": "Nessun ordine registrato per questo articolo.",
+  "text-order-history-unavailable": "Storico non disponibile al momento.",
+  "text-show-more": "Mostra altri",
+  "text-quantities-in-uom": "Quantità espresse in {{uom}}"
 }

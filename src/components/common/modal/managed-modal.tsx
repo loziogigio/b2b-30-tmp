@@ -39,6 +39,9 @@ const RadioPlayerModal = dynamic(
 const ShelfLabelModal = dynamic(
   () => import('@components/product/shelf-label-modal'),
 );
+const TimeOrderHistoryModal = dynamic(
+  () => import('@components/themes/time/product/time-order-history-modal'),
+);
 
 export default function ManagedModal({ lang }: { lang: string }) {
   const { isOpen, view } = useModalState();
@@ -58,7 +61,12 @@ export default function ManagedModal({ lang }: { lang: string }) {
     );
   }
 
-  if (view === 'B2B_PRODUCT_VARIANTS_QUICK_VIEW' || view === 'PRODUCT_VIEW') {
+  if (
+    view === 'B2B_PRODUCT_VARIANTS_QUICK_VIEW' ||
+    view === 'PRODUCT_VIEW' ||
+    view === 'ORDER_HISTORY_VIEW' ||
+    view === 'TIME_PACKAGING_VIEW'
+  ) {
     // Time theme always uses the fullscreen panel; other themes honor the env flag.
     const modalVariant: 'center' | 'fullscreen' =
       themeId === 'time'
@@ -72,6 +80,8 @@ export default function ManagedModal({ lang }: { lang: string }) {
           <B2BProductVariantsQuickView lang={lang} />
         )}
         {view === 'PRODUCT_VIEW' && <ProductPopup lang={lang} />}
+        {view === 'ORDER_HISTORY_VIEW' && <TimeOrderHistoryModal lang={lang} />}
+        {view === 'TIME_PACKAGING_VIEW' && <TimePackagingModal lang={lang} />}
       </Modal>
     );
   }
@@ -85,7 +95,6 @@ export default function ManagedModal({ lang }: { lang: string }) {
       {view === 'PAYMENT' && <PaymentPopup lang={lang} />}
       {view === 'PHONE_NUMBER' && <PhoneNumberPopup lang={lang} />}
       {view === 'DELIVERY_VIEW' && <DeliveryAddresses lang={lang} />}
-      {view === 'TIME_PACKAGING_VIEW' && <TimePackagingModal lang={lang} />}
       {view === 'SHELF_LABEL_VIEW' && <ShelfLabelModal lang={lang} />}
     </Modal>
   );

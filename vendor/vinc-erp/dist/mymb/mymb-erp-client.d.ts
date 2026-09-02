@@ -94,6 +94,43 @@ export declare class MyMbErpClient implements ErpClient {
         docType: 'F' | 'DDT';
         type?: string;
     }): Promise<any[]>;
+    /**
+     * This customer's order history for ONE article — MyMB
+     * `GetUltimoOrdinatoClienteXArticolo` (GET). Backs the "già ordinato" popup.
+     *
+     * `entityCode` is the `CodiceInternoArticolo` (the PIM entity code, e.g.
+     * "53295" for SKU BF05003), and `customerCode` the customer's
+     * `CodiceInterno` — NOT the commercial `Codice`. Passing the commercial code
+     * returns an empty list with no error, so a mismatch looks exactly like
+     * "never ordered".
+     *
+     * Live shape captured from a tenant instance (customer 5300 ×
+     * article 53295, 2026-09-02):
+     *
+     * ```jsonc
+     * { "GetUltimoOrdinatoClienteXArticoloResult": {
+     *     "m_Item1": { "Message": "", "ReturnCode": 0 },
+     *     "m_Item2": [{
+     *       "DataDecorrenza": "01/01/2024",
+     *       "DataRegistrazioneString": "31/07/2026",
+     *       "PkRiga": { "CausaleDocumento": "OC", "AnnoDocumento": 2026,
+     *                   "NumeroDocumento": 1110, "NumeroRiga": 160 },
+     *       "QuantitaOrdinata": 48, "QuantitaSaldata": 0,
+     *       "QuantitaConsegnata": 48, "QuantitaResidua": 0,
+     *       "PrezzaturaImputata_Prezzo": 1.52, "UM": null }] } }
+     * ```
+     *
+     * Rows come back newest-document-first. Unlike `GetCliente`, this endpoint
+     * never reports `ReturnCode 1`: an unknown article, an unknown customer,
+     * empty params and even a request with no params at all all answer
+     * `ReturnCode 0` with an empty `m_Item2`. There is therefore no error to
+     * detect here — only "no history". POST is rejected by the service with a
+     * 404 HTML page, so this must stay a GET.
+     */
+    getLatestOrderByItem(input: {
+        customerCode: string;
+        entityCode: string;
+    }): Promise<any[]>;
     /** Customer profile — hub `get_client` → MyMB `GetCliente` (GET). */
     getCustomer(customerCode: string): Promise<any>;
     /** Credit exposure — hub `exposition` → MyMB `GetEsposizioneClienteInfo` (GET). */

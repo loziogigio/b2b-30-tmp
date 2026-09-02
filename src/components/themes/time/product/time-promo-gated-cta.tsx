@@ -5,6 +5,7 @@ import cn from 'classnames';
 import { IoArrowForwardOutline, IoTimeOutline } from 'react-icons/io5';
 import type { ErpPriceData } from '@utils/transform/erp-prices';
 import { useCart } from '@contexts/cart/cart.context';
+import { useModalAction } from '@components/common/modal/modal.context';
 import { selectBestPrice } from '@framework/pricing/best-price';
 
 type TFn = (key: string, opts?: { defaultValue?: string }) => string;
@@ -86,6 +87,7 @@ export function usePromoGating(
  */
 export function TimeAlreadyPurchasedBadge({
   priceData,
+  product,
   t,
   size = 'md',
   align = 'start',
@@ -93,6 +95,8 @@ export function TimeAlreadyPurchasedBadge({
   full = false,
 }: {
   priceData?: ErpPriceData;
+  /** Only used to title the popup; the badge renders fine without it. */
+  product?: any;
   t: TFn;
   size?: 'sm' | 'md';
   align?: 'start' | 'end';
@@ -101,6 +105,7 @@ export function TimeAlreadyPurchasedBadge({
   /** Full one-line block: clock + label + date + quantity. */
   full?: boolean;
 }) {
+  const { openModal } = useModalAction();
   if (!priceData?.buy_did) return null;
   const date = priceData?.buy_did_last_date;
   const isSm = size === 'sm';
@@ -111,17 +116,34 @@ export function TimeAlreadyPurchasedBadge({
       ? `${amount}${uom ? ` ${uom}` : ''}`
       : '';
 
+  // The badge is the entry point to the order-history popup on every surface
+  // it appears on (card, search row, variants table, detail, product popup).
+  // stopPropagation keeps the click off the card/row navigation behind it.
+  const openHistory = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    openModal('ORDER_HISTORY_VIEW', { product, priceData });
+  };
+  const historyTitle = date
+    ? t('text-ordered-on', { defaultValue: `Già ordinato il ${date}` })
+    : t('text-already-ordered', { defaultValue: 'Già ordinato' });
+
   // Full (product detail): one block — clock + label + date + qty.
   if (full) {
     return (
-      <span className="inline-flex items-center gap-1.5 bg-[#16a34a] text-white font-bold rounded-[5px] uppercase tracking-wide font-[family-name:var(--font-body)] whitespace-nowrap text-[11px] sm:text-xs px-2.5 py-1">
+      <button
+        type="button"
+        onClick={openHistory}
+        title={historyTitle}
+        className="inline-flex items-center gap-1.5 bg-[#16a34a] hover:bg-[#15803d] text-white font-bold rounded-[5px] uppercase tracking-wide font-[family-name:var(--font-body)] whitespace-nowrap text-[11px] sm:text-xs px-2.5 py-1 cursor-pointer transition-colors"
+      >
         <IoTimeOutline size={13} />
         {t('text-already-ordered', { defaultValue: 'Già ordinato' })}
         {date && (
           <span className="font-mono tabular-nums normal-case">{date}</span>
         )}
         {qty && <span className="normal-case opacity-90">· {qty}</span>}
-      </span>
+      </button>
     );
   }
 
@@ -129,33 +151,32 @@ export function TimeAlreadyPurchasedBadge({
   // wording lives in the hover tooltip.
   if (inline) {
     return (
-      <span
+      <button
+        type="button"
+        onClick={openHistory}
         className={cn(
-          'inline-flex items-center gap-1 bg-[#16a34a] text-white font-bold rounded-[5px] font-[family-name:var(--font-body)] whitespace-nowrap',
+          'inline-flex items-center gap-1 bg-[#16a34a] hover:bg-[#15803d] text-white font-bold rounded-[5px] font-[family-name:var(--font-body)] whitespace-nowrap cursor-pointer transition-colors',
           isSm
             ? 'text-[10px] px-1.5 py-[2px]'
             : 'text-[10px] sm:text-[11px] px-2 py-[3px]',
         )}
-        title={
-          date
-            ? t('text-ordered-on', {
-                defaultValue: `Già ordinato il ${date}`,
-              })
-            : t('text-already-ordered', { defaultValue: 'Già ordinato' })
-        }
+        title={historyTitle}
       >
         <IoTimeOutline size={isSm ? 11 : 12} />
         {date && <span className="font-mono tabular-nums">{date}</span>}
         {qty && <span className="opacity-90">· {qty}</span>}
-      </span>
+      </button>
     );
   }
 
   // Stacked: green label pill above the date.
   return (
-    <div
+    <button
+      type="button"
+      onClick={openHistory}
+      title={historyTitle}
       className={cn(
-        'inline-flex flex-col gap-0.5 leading-tight',
+        'inline-flex flex-col gap-0.5 leading-tight cursor-pointer bg-transparent border-0 p-0 text-left',
         align === 'end' ? 'items-end' : 'items-start',
       )}
     >
@@ -179,7 +200,7 @@ export function TimeAlreadyPurchasedBadge({
           {date}
         </span>
       )}
-    </div>
+    </button>
   );
 }
 
@@ -257,6 +278,7 @@ export function TimeStatusBadges({
       {showOrdered && (
         <TimeAlreadyPurchasedBadge
           priceData={priceData}
+          product={product}
           t={t}
           size={size}
           full

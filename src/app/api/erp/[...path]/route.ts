@@ -7,6 +7,7 @@ import {
   buildOrderDetailResponseFromDocRows,
 } from '@utils/transform/erp-order-detail';
 import { mapErpDocRowsToLines } from '@utils/transform/erp-document-lines';
+import { mapErpLatestOrderRows } from '@utils/transform/erp-latest-order';
 import { sessionOwnedCustomerCodes } from '@/lib/profile/session-owner';
 
 type RouteParams = { params: Promise<{ path: string[] }> };
@@ -253,6 +254,21 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         return NextResponse.json({
           status: 'success',
           data: mapErpDocRowsToLines(rows),
+        });
+      }
+      case 'get_latest_order_by_item': {
+        // This customer's order history for one article — backs the
+        // "gia ordinato" popup. MyMB reports no errors here: an unknown
+        // article, an unknown customer and a malformed request all answer
+        // ReturnCode 0 with an empty list, so an empty history is a success,
+        // never a 404. Do not "improve" this into an error path.
+        const data = await client.getLatestOrderByItem({
+          customerCode: String(body.customer_code ?? ''),
+          entityCode: String(body.entity_code ?? ''),
+        });
+        return NextResponse.json({
+          status: 'success',
+          data: mapErpLatestOrderRows(data),
         });
       }
       case 'get_customer': {

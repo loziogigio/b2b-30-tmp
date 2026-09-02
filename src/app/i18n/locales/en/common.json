@@ -812,5 +812,17 @@
   "text-destination": "Destination",
   "orders-status-to-fulfill": "To fulfill",
   "orders-status-fulfilled": "Fulfilled",
-  "orders-status-in-acceptance": "In acceptance"
+  "orders-status-in-acceptance": "In acceptance",
+  "text-order-history": "Order history",
+  "text-ordered-since": "Ordered since",
+  "text-cause": "Type",
+  "text-document": "Document",
+  "text-ordered-qty": "Ordered",
+  "text-settled-qty": "Settled",
+  "text-delivered-qty": "Delivered",
+  "text-residual-qty": "Outstanding",
+  "text-no-orders-for-article": "No orders recorded for this item.",
+  "text-order-history-unavailable": "Order history is unavailable right now.",
+  "text-show-more": "Show more",
+  "text-quantities-in-uom": "Quantities in {{uom}}"
 }

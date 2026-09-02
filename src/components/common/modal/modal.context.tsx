@@ -14,6 +14,7 @@ type MODAL_VIEWS =
   | 'CATEGORY_VIEW'
   | 'B2B_PRODUCT_VARIANTS_QUICK_VIEW'
   | 'TIME_PACKAGING_VIEW'
+  | 'ORDER_HISTORY_VIEW'
   | 'RADIO_PLAYER';
 
 // One layer in the modal stack

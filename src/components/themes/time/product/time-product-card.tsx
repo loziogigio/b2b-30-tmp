@@ -454,6 +454,7 @@ export default function TimeProductCard({
                   {effectivePriceData?.buy_did && (
                     <TimeAlreadyPurchasedBadge
                       priceData={effectivePriceData}
+                      product={product}
                       t={t}
                       size="sm"
                       inline

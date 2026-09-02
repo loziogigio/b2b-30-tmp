@@ -304,6 +304,7 @@ export default function TimeVariantsTable({
               {vPrice?.buy_did && (
                 <TimeAlreadyPurchasedBadge
                   priceData={vPrice}
+                  product={v}
                   t={t}
                   size="sm"
                   inline

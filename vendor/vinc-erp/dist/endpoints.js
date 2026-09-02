@@ -16,6 +16,7 @@ exports.MYMB_ENDPOINTS = {
     GET_RIGHE_CON_INFO_CONSEGNA: 'GetRigheConInfoConsegna',
     GET_RIGHE_DDT_CON_INFO: 'GetRigheDDTConInfo',
     GET_RIGHE_FATT_CON_INFO: 'GetRigheFATTConInfo',
+    GET_ULTIMO_ORDINATO_CLIENTE_X_ARTICOLO: 'GetUltimoOrdinatoClienteXArticolo',
 };
 /** Raw MYMB coupon webservice endpoints (separate connection from pricing). */
 exports.MYMB_COUPON_ENDPOINTS = {
