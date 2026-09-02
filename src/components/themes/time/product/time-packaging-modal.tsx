@@ -2,13 +2,13 @@
 
 import React from 'react';
 import cn from 'classnames';
-import { IoClose } from 'react-icons/io5';
-import {
-  useModalState,
-  useModalAction,
-} from '@components/common/modal/modal.context';
+import { useModalState } from '@components/common/modal/modal.context';
 import { useTranslation } from 'src/app/i18n/client';
 import type { PackagingOption } from '@utils/transform/erp-prices';
+import TimeDrawerShell from './time-drawer-shell';
+
+/** The packaging table is three narrow columns; cap the content column. */
+const CONTENT_WIDTH = 620;
 
 type PackagingModalData = {
   sku?: string;
@@ -35,13 +35,15 @@ function HexIcon({ className }: { className?: string }) {
 }
 
 /**
- * Product-level packaging breakdown shown in a centered modal. Triggered from
- * the Time offer rows when a product carries more than three packaging
- * options, where the inline "CRT: 20 · Epal 120: 640 · …" list gets unwieldy.
+ * Product-level packaging breakdown. Triggered from the Time offer rows when a
+ * product carries more than three packaging options, where the inline
+ * "CRT: 20 · Epal 120: 640 · …" list gets unwieldy.
+ *
+ * Renders in the theme's shared drawer shell, so it opens, stacks and closes
+ * exactly like the variants and order-history drawers.
  */
 export default function TimePackagingModal({ lang }: { lang: string }) {
   const { data } = useModalState();
-  const { closeModal } = useModalAction();
   const { t } = useTranslation(lang, 'common');
   const { sku, name, options = [] } = (data ?? {}) as PackagingModalData;
 
@@ -55,26 +57,15 @@ export default function TimePackagingModal({ lang }: { lang: string }) {
   );
 
   return (
-    <div className="w-full sm:w-[520px] max-w-[92vw] bg-white rounded-2xl shadow-2xl overflow-hidden font-[family-name:var(--font-body)] ltr:text-left rtl:text-right">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-3 px-5 sm:px-6 py-4 border-b border-[var(--time-gray-100)]">
-        <span className="inline-flex items-center gap-2 bg-[#fdecef] text-[var(--time-red)] font-extrabold px-3 py-1.5 rounded-full text-sm sm:text-[15px]">
-          <HexIcon className="h-4 w-4" />
-          {t('text-packaging-items', { defaultValue: 'Imballi articoli' })}
-        </span>
-        <button
-          type="button"
-          onClick={closeModal}
-          className="inline-flex items-center gap-1.5 border border-[var(--time-gray-200)] rounded-full px-3 py-1.5 text-xs sm:text-[13px] font-bold text-[var(--time-dark)] hover:bg-[var(--time-gray-50)] transition-colors cursor-pointer"
-        >
-          <IoClose className="h-4 w-4" />
-          {t('text-close', { defaultValue: 'Chiudi' })}
-        </button>
-      </div>
-
+    <TimeDrawerShell
+      lang={lang}
+      title={t('text-packaging-items', { defaultValue: 'Imballi articoli' })}
+      maxContentWidth={CONTENT_WIDTH}
+      contentClassName="font-[family-name:var(--font-body)] ltr:text-left rtl:text-right"
+    >
       {/* Product identity */}
       {(sku || name) && (
-        <div className="flex items-center gap-3 px-5 sm:px-6 pt-4">
+        <div className="flex items-center gap-3 pb-4">
           {sku && (
             <span className="bg-[var(--time-dark)] text-white text-xs sm:text-[13px] font-extrabold px-2.5 py-1 rounded-md font-mono tracking-wide shrink-0">
               {String(sku).toUpperCase()}
@@ -89,7 +80,7 @@ export default function TimePackagingModal({ lang }: { lang: string }) {
       )}
 
       {/* Packaging table */}
-      <div className="px-3 sm:px-4 py-4">
+      <div className="pt-2">
         <div className="rounded-xl bg-[var(--time-gray-50)] p-2 sm:p-3">
           {/* Column headers */}
           <div className="grid grid-cols-[1fr_auto_auto] gap-3 px-3 pb-2 text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-[var(--time-gray-400)]">
@@ -145,6 +136,6 @@ export default function TimePackagingModal({ lang }: { lang: string }) {
           </div>
         </div>
       </div>
-    </div>
+    </TimeDrawerShell>
   );
 }
