@@ -43,6 +43,33 @@ describe('mapErpDocRowsToLines', () => {
     expect(line.entityCode).toBe('BBB');
   });
 
+  // Live row from Belli e Forti invoice VEN/2026/2555 (line 40) — the export
+  // needs the list price and the six ScontoORicarica percentages the old
+  // mapper dropped.
+  it('carries the ERP list price and the six line discounts', () => {
+    const [line] = mapErpDocRowsToLines([
+      {
+        ...dflRow,
+        CodiceArticolo: 'BF00821',
+        Quantita: 72,
+        Valore: [74.88, 16.47, 91.35],
+        PrezzaturaImputata: { Prezzo: 1.04, IVAPercentuale: 22 },
+        ScontoORicarica1: 5,
+        ScontoORicarica2: 2.5,
+      },
+    ]);
+    expect(line.listPrice).toBe(1.04);
+    expect(line.discounts).toEqual([5, 2.5, 0, 0, 0, 0]);
+  });
+
+  it('reports zeroed discounts and no list price when the ERP sends neither', () => {
+    const [line] = mapErpDocRowsToLines([
+      { CodiceArticolo: 'AAA', Quantita: 1, PrezzaturaImputata: null },
+    ]);
+    expect(line.listPrice).toBeUndefined();
+    expect(line.discounts).toEqual([0, 0, 0, 0, 0, 0]);
+  });
+
   it('handles null/empty input safely', () => {
     expect(mapErpDocRowsToLines(null)).toEqual([]);
     expect(mapErpDocRowsToLines(undefined)).toEqual([]);

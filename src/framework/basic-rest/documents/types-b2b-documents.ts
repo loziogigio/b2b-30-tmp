@@ -35,9 +35,18 @@ export type DocumentLine = {
   name: string;
   quantity: number;
   uom: string;
+  /** Effective unit price — the line net divided by the quantity. */
   unitPrice: number;
+  /**
+   * The ERP's own unit price, the one `discounts` are applied to
+   * (MyMB `PrezzaturaImputata.Prezzo`). Equals `unitPrice` on an undiscounted
+   * line; absent when the ERP sends no pricing block.
+   */
+  listPrice?: number;
   vatRate: number;
   lineTotal: number;
+  /** Line % discounts in ERP order (MyMB `ScontoORicarica1..6`). */
+  discounts?: number[];
   discountsJson?: string; // JSON array of % discounts, e.g. "[5, 2.5]"
   ddtRef?: DocumentLineRef; // invoice line generated from a DDT
   orderRef?: DocumentLineRef; // invoice line generated from an order

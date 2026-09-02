@@ -19,6 +19,7 @@ type RawDocLine = {
   quantity?: number;
   uom?: string;
   unit_price?: number;
+  list_price?: number;
   vat_rate?: number;
   line_total?: number;
   discounts_json?: string;
@@ -36,6 +37,20 @@ function mapRef(r?: RawDocLineRef): DocumentLineRef | undefined {
   };
 }
 
+/**
+ * `discounts_json` ("[5, 2.5]") as a number array — the export needs the
+ * percentages themselves, not the stored string. [] on anything unparseable.
+ */
+function parseDiscounts(json?: string): number[] {
+  if (!json) return [];
+  try {
+    const parsed = JSON.parse(json);
+    return Array.isArray(parsed) ? parsed.map((d) => Number(d) || 0) : [];
+  } catch {
+    return [];
+  }
+}
+
 /** Map raw `data.items[]` (if present) into typed DocumentLine[]. */
 export function mapDocumentLines(
   items?: RawDocLine[],
@@ -49,8 +64,10 @@ export function mapDocumentLines(
     quantity: Number(it.quantity ?? 0),
     uom: String(it.uom ?? ''),
     unitPrice: Number(it.unit_price ?? 0),
+    listPrice: it.list_price == null ? undefined : Number(it.list_price),
     vatRate: Number(it.vat_rate ?? 0),
     lineTotal: Number(it.line_total ?? 0),
+    discounts: parseDiscounts(it.discounts_json),
     discountsJson: it.discounts_json,
     ddtRef: mapRef(it.ddt_ref),
     orderRef: mapRef(it.order_ref),

@@ -5,12 +5,16 @@ import type {
 } from '@framework/documents/types-b2b-documents';
 
 /**
- * Per-document line exports for the default-theme documents (Fatture / DDT).
+ * Per-document line exports for the documents page (Fatture / DDT).
  *
- * Columns: SKU · Prodotto · Q.tà×UM · Barcode.
+ * The Excel sheet mirrors the customer's own accounting export ("belli e
+ * forti v2"): the invoice header repeated on every article line, then the
+ * article, its barcode, quantities, amounts and the three line discounts.
+ * The PDF stays the picking sheet — SKU · Prodotto · Q.tà×UM · Barcode, the
+ * barcode drawn as a real Code-128 with the value beneath it.
+ *
  * The barcode (EAN) is enriched per line from PIM by `entityCode` via
  * `fetchBarcodes` (see /api/b2b/barcodes); pass the resulting map in.
- * The PDF renders a real Code-128 barcode (with the value beneath it).
  */
 
 /** Render a value as an inline Code-128 barcode SVG, with the value below it. */
@@ -36,6 +40,12 @@ function barcodeSvg(value: string): string {
 export type BarcodeMap = Record<string, string>;
 
 /**
+ * Document-level values the lines themselves do not carry. `customerCode` is
+ * the ERP customer the document belongs to (ERP_STATIC.customer_code).
+ */
+export type DocExportContext = { customerCode?: string };
+
+/**
  * Minimal translate signature — pass the component's `t` to localize the
  * generated print/Excel HTML. Defaults to `IT_LABELS`, which returns each
  * label's Italian `defaultValue`, so callers without a `t` (or the default
@@ -58,6 +68,41 @@ const qtyFmt = (n: number) =>
     minimumFractionDigits: 0,
     maximumFractionDigits: 3,
   }).format(Number(n || 0));
+
+/**
+ * Decimal in it-IT, without grouping separators — "1234,56". Grouping would
+ * make the fallback text unparseable for Excel (see `numCell`).
+ */
+const decFmt = (n: number, maxDigits = 5) =>
+  new Intl.NumberFormat('it-IT', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: maxDigits,
+    useGrouping: false,
+  }).format(Number(n || 0));
+
+/**
+ * A numeric Excel cell. `x:num` carries the raw value, so Excel stores the
+ * number regardless of the machine's locale; the it-IT text is only what a
+ * reader (or an Excel that ignores x:num) sees.
+ */
+function numCell(value: number | undefined, maxDigits = 5): string {
+  const n = Number(value || 0);
+  return `<td x:num="${n}">${escapeHtml(decFmt(n, maxDigits))}</td>`;
+}
+
+/** The first three line discounts (%), zero-filled — the reference columns. */
+function discountsOf(ln: DocumentLine): number[] {
+  const d = ln.discounts ?? [];
+  return [0, 1, 2].map((i) => Number(d[i] || 0));
+}
+
+/**
+ * The unit price the discounts apply to: the ERP's own price when it sends
+ * one, else the effective price derived from the line net.
+ */
+function unitPriceOf(ln: DocumentLine): number {
+  return ln.listPrice ?? ln.unitPrice;
+}
 
 /** "10 PZ" — quantity with its unit of measure. */
 function qtyUm(ln: DocumentLine): string {
@@ -97,11 +142,18 @@ export async function fetchBarcodes(
 
 // ------------------------------------------------------------------- Excel ---
 
-/** Excel (.xls) export: an HTML table Excel opens natively. */
+/**
+ * Excel (.xls) export: an HTML table Excel opens natively.
+ *
+ * One row per article line, each carrying the document header (date, number,
+ * ERP causale, customer) so the sheet can be filtered or concatenated with
+ * other documents' exports.
+ */
 export function renderDocumentLinesExcelHtml(
   row: DocumentRow,
   barcodes: BarcodeMap,
   t: PrintT = IT_LABELS,
+  ctx: DocExportContext = {},
 ): string {
   const lines = row.lines ?? [];
   const kind =
@@ -109,20 +161,69 @@ export function renderDocumentLinesExcelHtml(
       ? t('doc-print-ddt', { defaultValue: 'DDT' })
       : t('doc-print-invoice', { defaultValue: 'Fattura' });
   const title = `${kind} ${row.document}`;
-  // mso-number-format:'\@' keeps SKU / barcode as text (no scientific notation).
+  // mso-number-format:'\@' keeps codes as text (no scientific notation on a
+  // 13-digit barcode, no leading zeros dropped from a customer code).
   const textCell = `style="mso-number-format:'\\@'"`;
+  const txt = (v: unknown) => `<td ${textCell}>${escapeHtml(v)}</td>`;
+
+  // The ERP causale ("VEN") when the row carries one — it is what the
+  // customer's own export calls "Tipo Doc" — else the F/DDT tab value.
+  const docType = row.scope || row.doc_type;
+  const customerCode = ctx.customerCode ?? '';
 
   const body = lines
-    .map(
-      (ln) => `
+    .map((ln) => {
+      const [sc1, sc2, sc3] = discountsOf(ln);
+      return `
       <tr>
-        <td ${textCell}>${escapeHtml(ln.sku)}</td>
+        ${txt(row.date_label)}
+        ${txt(row.number)}
+        ${txt(docType)}
+        ${txt(ln.sku)}
         <td>${escapeHtml(ln.name)}</td>
-        <td>${escapeHtml(qtyUm(ln))}</td>
-        <td ${textCell}>${escapeHtml(barcodeOf(ln, barcodes))}</td>
-      </tr>`,
-    )
+        ${txt(barcodeOf(ln, barcodes))}
+        <td>${escapeHtml(ln.uom)}</td>
+        ${numCell(ln.quantity, 3)}
+        ${numCell(unitPriceOf(ln))}
+        ${numCell(ln.lineTotal, 2)}
+        ${numCell(ln.vatRate, 2)}
+        ${txt(customerCode)}
+        ${numCell(sc1, 2)}
+        ${numCell(sc2, 2)}
+        ${numCell(sc3, 2)}
+      </tr>`;
+    })
     .join('');
+
+  // The reference sheet is an invoice; a DDT export says so in the first two
+  // headers rather than mislabelling its own date and number as an invoice's.
+  const isDdt = row.doc_type === 'DDT';
+  const headers = [
+    isDdt
+      ? ['doc-export-ddt-date', 'Data DDT']
+      : ['doc-export-doc-date', 'Data Fatt'],
+    isDdt
+      ? ['doc-export-ddt-number', 'N. DDT']
+      : ['doc-export-doc-number', 'N. Fatt'],
+    ['doc-export-doc-type', 'Tipo Doc'],
+    ['doc-export-item-code', 'Cod. Articolo'],
+    ['doc-export-description', 'Descrizione'],
+    ['doc-print-barcode', 'Barcode'],
+    ['doc-export-uom', 'UM'],
+    ['doc-export-qty', 'Q.ta'],
+    ['doc-export-unit-price', 'Prezzo unitario'],
+    ['doc-export-amount', 'Importo'],
+    ['doc-export-vat', 'Iva'],
+    ['doc-export-customer-code', 'Cod. Cliente'],
+    ['doc-export-discount-1', 'Sconto 1'],
+    ['doc-export-discount-2', 'Sconto 2'],
+    ['doc-export-discount-3', 'Sconto 3'],
+  ]
+    .map(
+      ([key, defaultValue]) =>
+        `<th>${escapeHtml(t(key, { defaultValue }))}</th>`,
+    )
+    .join('\n        ');
 
   return `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel">
 <head><meta charset="utf-8" /><title>${escapeHtml(title)}</title></head>
@@ -130,14 +231,11 @@ export function renderDocumentLinesExcelHtml(
   <table border="1">
     <thead>
       <tr>
-        <th>${escapeHtml(t('doc-print-sku', { defaultValue: 'SKU' }))}</th>
-        <th>${escapeHtml(t('doc-print-product', { defaultValue: 'Prodotto' }))}</th>
-        <th>${escapeHtml(t('doc-print-qty-um', { defaultValue: 'Q.tà x UM' }))}</th>
-        <th>${escapeHtml(t('doc-print-barcode', { defaultValue: 'Barcode' }))}</th>
+        ${headers}
       </tr>
     </thead>
     <tbody>
-      ${body || `<tr><td colspan="4">${escapeHtml(t('doc-print-no-rows', { defaultValue: 'Nessuna riga' }))}</td></tr>`}
+      ${body || `<tr><td colspan="15">${escapeHtml(t('doc-print-no-rows', { defaultValue: 'Nessuna riga' }))}</td></tr>`}
     </tbody>
   </table>
 </body>
@@ -148,9 +246,10 @@ export function downloadDocumentLinesExcel(
   row: DocumentRow,
   barcodes: BarcodeMap,
   t: PrintT = IT_LABELS,
+  ctx: DocExportContext = {},
 ): void {
   if (typeof window === 'undefined') return;
-  const html = renderDocumentLinesExcelHtml(row, barcodes, t);
+  const html = renderDocumentLinesExcelHtml(row, barcodes, t, ctx);
   const blob = new Blob(['﻿' + html], {
     type: 'application/vnd.ms-excel;charset=utf-8;',
   });

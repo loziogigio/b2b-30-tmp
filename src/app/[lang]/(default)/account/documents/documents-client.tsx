@@ -35,7 +35,10 @@ export default function DocumentsClient({ lang }: { lang: string }) {
     setBusy({ doc: r.document, kind });
     try {
       const barcodes = await fetchBarcodes(r.lines.map((l) => l.entityCode));
-      if (kind === 'excel') downloadDocumentLinesExcel(r, barcodes);
+      if (kind === 'excel')
+        downloadDocumentLinesExcel(r, barcodes, undefined, {
+          customerCode: ERP_STATIC.customer_code,
+        });
       else openDocumentLinesPrintWindow(r, barcodes);
     } finally {
       setBusy(null);
@@ -95,7 +98,7 @@ export default function DocumentsClient({ lang }: { lang: string }) {
         )}
         title={
           kind === 'excel'
-            ? 'Esporta righe in Excel (SKU, prodotto, q.tà×UM, barcode)'
+            ? 'Esporta righe in Excel (articolo, barcode, quantità, importi, sconti)'
             : 'Esporta righe in PDF con barcode'
         }
       >
