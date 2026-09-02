@@ -1,12 +1,16 @@
 'use client';
 
 import cn from 'classnames';
+import { useAccountSettings } from '@/hooks/use-account-settings';
+import { isAccountSectionVisible } from '@/lib/erp/account-config.types';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useTranslation } from 'src/app/i18n/client';
 import { useLogoutMutation } from '@framework/auth/use-logout';
 
 type MenuItem = {
+  /** Section id shared with the time theme, used by the account_settings flags. */
+  id: string;
   labelKey: string;
   href: (lang: string) => string;
   match: (pathname: string) => boolean;
@@ -14,31 +18,37 @@ type MenuItem = {
 
 const MENU: MenuItem[] = [
   {
+    id: 'profile',
     labelKey: 'text-profile',
     href: (l) => `/${l}/account/profile`,
     match: (p) => /\/account\/profile(?:$|\/)/.test(p),
   },
   {
+    id: 'password',
     labelKey: 'text-change-password',
     href: (l) => `/${l}/account/change-password`,
     match: (p) => /\/account\/change-password(?:$|\/)/.test(p),
   },
   {
+    id: 'documents',
     labelKey: 'text-my-documents',
     href: (l) => `/${l}/account/documents`,
     match: (p) => /\/account\/documents(?:$|\/)/.test(p),
   },
   {
+    id: 'orders',
     labelKey: 'text-my-orders',
     href: (l) => `/${l}/account/orders`,
     match: (p) => /\/account\/orders(?:$|\/)/.test(p),
   },
   {
+    id: 'deadlines',
     labelKey: 'text-deadlines',
     href: (l) => `/${l}/account/deadlines`,
     match: (p) => /\/account\/deadlines(?:$|\/)/.test(p),
   },
   {
+    id: 'fido',
     labelKey: 'text-fido',
     href: (l) => `/${l}/account/fido`,
     match: (p) => /\/account\/fido(?:$|\/)/.test(p),
@@ -52,6 +62,7 @@ interface SidebarMenuProps {
 export default function SidebarMenu({ lang }: SidebarMenuProps) {
   const { t } = useTranslation(lang, 'common');
   const pathname = usePathname();
+  const { settings: accountSettings } = useAccountSettings();
   const { mutate: logout, isPending: isLoggingOut } = useLogoutMutation(lang);
 
   function handleLogout() {
@@ -61,7 +72,9 @@ export default function SidebarMenu({ lang }: SidebarMenuProps) {
   return (
     <nav className="rounded-2xl bg-white p-2 shadow-sm">
       <ul className="space-y-1">
-        {MENU.map((item) => {
+        {MENU.filter((item) =>
+          isAccountSectionVisible(item.id, accountSettings),
+        ).map((item) => {
           const href = item.href(lang);
           const isActive = item.match(pathname || '');
           return (

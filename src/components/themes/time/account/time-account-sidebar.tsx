@@ -1,6 +1,8 @@
 'use client';
 
 import Link from 'next/link';
+import { useAccountSettings } from '@/hooks/use-account-settings';
+import { isAccountSectionVisible } from '@/lib/erp/account-config.types';
 import { usePathname } from 'next/navigation';
 import cn from 'classnames';
 import { useTranslation } from 'src/app/i18n/client';
@@ -77,6 +79,7 @@ interface TimeAccountSidebarProps {
 export default function TimeAccountSidebar({ lang }: TimeAccountSidebarProps) {
   const { t } = useTranslation(lang, 'common');
   const pathname = usePathname() || '';
+  const { settings: accountSettings } = useAccountSettings();
   const { mutate: logout, isPending: isLoggingOut } = useLogoutMutation(lang);
   const { data: customer } = useCustomerQuery(true);
 
@@ -120,7 +123,9 @@ export default function TimeAccountSidebar({ lang }: TimeAccountSidebarProps) {
 
       {/* Nav */}
       <nav className="flex flex-col gap-0.5 flex-1">
-        {NAV_ITEMS.map((item) => {
+        {NAV_ITEMS.filter((item) =>
+          isAccountSectionVisible(item.id, accountSettings),
+        ).map((item) => {
           const active = item.match(pathname);
           const Icon = item.icon;
           return (

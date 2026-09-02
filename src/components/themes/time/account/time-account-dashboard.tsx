@@ -7,6 +7,7 @@ import {
   useExpositionQuery,
   usePaymentDeadlineQuery,
 } from '@framework/acccount/fetch-account';
+import { useAccountSettings } from '@/hooks/use-account-settings';
 import { useOrdersListQuery } from '@framework/order/fetch-orders-list';
 import { useDocumentsListQuery } from '@framework/documents/fetch-documents-list';
 import { ERP_STATIC } from '@framework/utils/static';
@@ -45,6 +46,9 @@ export default function TimeAccountDashboard({
   const { data: customer } = useCustomerQuery(true);
   const { data: exposition } = useExpositionQuery(true);
   const { data: deadlines } = usePaymentDeadlineQuery(true);
+  const {
+    settings: { showFido, showDeadlines },
+  } = useAccountSettings();
 
   const { from, to } = lastMonthRange();
   const { data: orders = [] } = useOrdersListQuery(
@@ -158,23 +162,27 @@ export default function TimeAccountDashboard({
           </div>
         </TimeCard>
 
-        <TimeCard hover className="p-5 cursor-pointer">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[28px]">💳</span>
-          </div>
-          <div className="text-[26px] font-black text-[var(--time-dark)] font-[var(--font-display)] tabular-nums mb-0.5">
-            {money(creditAvailable)}
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-[var(--time-gray-400)] font-[var(--font-body)]">
-              {t('text-credit-available', { defaultValue: 'Fido Disponibile' })}
-            </span>
-          </div>
-        </TimeCard>
+        {showFido && (
+          <TimeCard hover className="p-5 cursor-pointer">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[28px]">💳</span>
+            </div>
+            <div className="text-[26px] font-black text-[var(--time-dark)] font-[var(--font-display)] tabular-nums mb-0.5">
+              {money(creditAvailable)}
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-[var(--time-gray-400)] font-[var(--font-body)]">
+                {t('text-credit-available', {
+                  defaultValue: 'Fido Disponibile',
+                })}
+              </span>
+            </div>
+          </TimeCard>
+        )}
       </div>
 
       {/* Credit Bar */}
-      {creditLimit > 0 && (
+      {showFido && creditLimit > 0 && (
         <TimeCard className="px-6 py-5">
           <div className="flex items-center justify-between mb-3">
             <div>
@@ -325,54 +333,56 @@ export default function TimeAccountDashboard({
       {/* Deadlines + Agent */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-3.5">
         {/* Deadlines */}
-        <TimeCard>
-          <TimeSectionHeader
-            title={t('text-upcoming-deadlines', {
-              defaultValue: 'Prossime Scadenze',
-            })}
-          />
-          <div>
-            {deadlineItems.map((d, i) => (
-              <div
-                key={`${d.document}-${i}`}
-                className="flex items-center justify-between px-[22px] py-3.5 border-b border-[var(--time-gray-50)] last:border-b-0"
-              >
-                <div className="flex items-center gap-3">
-                  <TimeIconBox
-                    icon={d.amount <= 0 ? <IconCheck /> : <IconCalendar />}
-                    color={d.amount <= 0 ? '#059669' : '#2563eb'}
-                    bg={
-                      d.amount <= 0
-                        ? 'rgba(5,150,105,0.08)'
-                        : 'rgba(37,99,235,0.08)'
-                    }
-                  />
-                  <div>
-                    <div className="text-[13px] font-semibold text-[var(--time-dark)] font-[var(--font-body)]">
-                      {d.description}
+        {showDeadlines && (
+          <TimeCard>
+            <TimeSectionHeader
+              title={t('text-upcoming-deadlines', {
+                defaultValue: 'Prossime Scadenze',
+              })}
+            />
+            <div>
+              {deadlineItems.map((d, i) => (
+                <div
+                  key={`${d.document}-${i}`}
+                  className="flex items-center justify-between px-[22px] py-3.5 border-b border-[var(--time-gray-50)] last:border-b-0"
+                >
+                  <div className="flex items-center gap-3">
+                    <TimeIconBox
+                      icon={d.amount <= 0 ? <IconCheck /> : <IconCalendar />}
+                      color={d.amount <= 0 ? '#059669' : '#2563eb'}
+                      bg={
+                        d.amount <= 0
+                          ? 'rgba(5,150,105,0.08)'
+                          : 'rgba(37,99,235,0.08)'
+                      }
+                    />
+                    <div>
+                      <div className="text-[13px] font-semibold text-[var(--time-dark)] font-[var(--font-body)]">
+                        {d.description}
+                      </div>
+                      <div className="text-[11px] text-[var(--time-gray-400)] font-[var(--font-body)] mt-px">
+                        {d.document} ·{' '}
+                        {d.dueDate
+                          ? new Date(d.dueDate).toLocaleDateString('it-IT')
+                          : ''}
+                      </div>
                     </div>
-                    <div className="text-[11px] text-[var(--time-gray-400)] font-[var(--font-body)] mt-px">
-                      {d.document} ·{' '}
-                      {d.dueDate
-                        ? new Date(d.dueDate).toLocaleDateString('it-IT')
-                        : ''}
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-extrabold text-[var(--time-dark)] tabular-nums">
+                      {money(d.amount)}
                     </div>
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-sm font-extrabold text-[var(--time-dark)] tabular-nums">
-                    {money(d.amount)}
-                  </div>
+              ))}
+              {deadlineItems.length === 0 && (
+                <div className="px-[22px] py-6 text-center text-sm text-[var(--time-gray-400)]">
+                  {t('text-no-deadlines', { defaultValue: 'Nessuna scadenza' })}
                 </div>
-              </div>
-            ))}
-            {deadlineItems.length === 0 && (
-              <div className="px-[22px] py-6 text-center text-sm text-[var(--time-gray-400)]">
-                {t('text-no-deadlines', { defaultValue: 'Nessuna scadenza' })}
-              </div>
-            )}
-          </div>
-        </TimeCard>
+              )}
+            </div>
+          </TimeCard>
+        )}
 
         {/* Agent Card */}
         {customer && (
