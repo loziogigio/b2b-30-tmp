@@ -52,6 +52,14 @@ function BannerSlide({
     linkProps.rel = 'noopener noreferrer';
   }
 
+  // Hero Slider artwork: the CMS lets editors upload a separate mobile image
+  // (`imageMobile` -> `mobileImage`). Render it as a second layer that swaps at
+  // the md breakpoint, so it works under SSR with no width measurement and no
+  // hydration flash.
+  const desktopSrc = item.image || item.mobileImage || '';
+  const mobileSrc = item.mobileImage || desktopSrc;
+  const hasDistinctMobile = Boolean(mobileSrc) && mobileSrc !== desktopSrc;
+
   const imageNode = (
     <div
       className="relative w-full overflow-hidden rounded-xl bg-[var(--time-gray-100)] group transition-shadow duration-300 hover:shadow-[0_6px_24px_rgba(0,0,0,0.1)]"
@@ -67,15 +75,29 @@ function BannerSlide({
           loop
           playsInline
         />
-      ) : item.image ? (
-        <Image
-          src={item.image}
-          alt={item.alt || item.title || ''}
-          fill
-          className="transition-transform duration-300 group-hover:scale-[1.02]"
-          style={{ objectFit: imageFit }}
-          sizes={sizes}
-        />
+      ) : desktopSrc ? (
+        <>
+          <Image
+            src={desktopSrc}
+            alt={item.alt || item.title || ''}
+            fill
+            className={`transition-transform duration-300 group-hover:scale-[1.02] ${
+              hasDistinctMobile ? 'hidden md:block' : ''
+            }`}
+            style={{ objectFit: imageFit }}
+            sizes={sizes}
+          />
+          {hasDistinctMobile && (
+            <Image
+              src={mobileSrc}
+              alt={item.alt || item.title || ''}
+              fill
+              className="transition-transform duration-300 group-hover:scale-[1.02] md:hidden"
+              style={{ objectFit: imageFit }}
+              sizes="100vw"
+            />
+          )}
+        </>
       ) : null}
 
       {/* Title overlay on hover — only when API provides overlay config */}
