@@ -25,6 +25,7 @@ import {
   type NotificationItem,
   type NotificationTrigger,
 } from '@framework/notifications';
+import { resolveNotificationUrl } from '@/lib/notifications/notification-url';
 
 interface NotificationDetailModalProps {
   notification: NotificationItem | null;
@@ -117,9 +118,10 @@ function buildNavigationUrl(
   notification: NotificationItem,
   lang: string,
 ): string | null {
-  // If action_url is provided, use it directly
+  // Campaign-authored destination. Relative by convention, so it has to be
+  // localized rather than left to resolve against the current page.
   if (notification.action_url) {
-    return notification.action_url;
+    return resolveNotificationUrl(notification.action_url, lang);
   }
 
   const payload = notification.payload;
@@ -134,8 +136,7 @@ function buildNavigationUrl(
   if (payload.category === 'product') {
     // Priority 1: Use products_url if available (e.g., "search?text=condizionatore")
     if (payload.products_url) {
-      // Prepend language to the URL
-      return `/${lang}/${payload.products_url.replace(/^\//, '')}`;
+      return resolveNotificationUrl(payload.products_url, lang);
     }
 
     // Priority 2: Use filters object if available
@@ -167,7 +168,7 @@ function buildNavigationUrl(
   if (payload.category === 'price') {
     // Priority 1: Use products_url if available
     if (payload.products_url) {
-      return `/${lang}/${payload.products_url.replace(/^\//, '')}`;
+      return resolveNotificationUrl(payload.products_url, lang);
     }
 
     // Priority 2: Use filters object if available
@@ -197,7 +198,7 @@ function buildNavigationUrl(
 
   // Generic category - use url field for external links (catalogs, documents)
   if (payload.category === 'generic' && payload.url) {
-    return payload.url;
+    return resolveNotificationUrl(payload.url, lang);
   }
 
   return null;
