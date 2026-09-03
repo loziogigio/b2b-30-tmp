@@ -44,6 +44,14 @@ vi.mock('@framework/product/get-pim-menu', () => ({
   }),
 }));
 
+// The drawer checks the categories tree before offering its catalogue-index
+// link; an unresolved query leaves the link in place, which is what this test
+// is about. Link visibility itself is covered by
+// `b2b-header-catalogue-index-link.test.tsx`.
+vi.mock('@framework/product/get-pim-categories', () => ({
+  usePimCategoriesQuery: () => ({ data: undefined, isSuccess: false }),
+}));
+
 describe('B2BHeaderMenu category root', () => {
   it('uses the server-hydrated locale root for root and leaf links', () => {
     render(

@@ -29,6 +29,8 @@ export interface MenuTreeNode {
   category_id?: string;
   /** ERP group code (e.g. "10010001"), retained for legacy integrations. */
   external_code?: string | null;
+  /** Products assigned to this PIM category, when the tenant maintains counts. */
+  product_count?: number;
 }
 
 function transformPimMenuItem(

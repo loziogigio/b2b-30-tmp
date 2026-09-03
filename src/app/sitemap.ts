@@ -14,6 +14,7 @@ import {
   sitemapDataToRoutes,
 } from '@/lib/vcs/seo';
 import { categoryDetailHref } from '@/lib/seo/category-root';
+import { hasBrowsableCategoryTree } from '@/lib/pim/category-tree';
 import { absoluteProductDetailUrl } from '@/lib/seo/product-url';
 
 // Commerce Suite search intentionally caps a page at 100 rows. Matching that
@@ -39,6 +40,16 @@ async function localSitemap(): Promise<MetadataRoute.Sitemap> {
 
   const now = new Date();
   const entries: MetadataRoute.Sitemap = [];
+
+  // The catalogue index and everything under it only exist for tenants with a
+  // real PIM categories tree. Tenants whose groups live in an ERP facet publish
+  // a lone placeholder category, and listing it would offer search engines an
+  // index page with a single dead entry on it.
+  const pimCategoryRoots = await serverFetchPimCategories('b2b').catch(
+    () => [],
+  );
+  const hasCatalogueIndex = hasBrowsableCategoryTree(pimCategoryRoots);
+
   // ===============================
   // Built-in routes (typed segments under app/[lang]/(default)/*)
   // ===============================
@@ -57,16 +68,18 @@ async function localSitemap(): Promise<MetadataRoute.Sitemap> {
         priority: page.priority,
       });
     }
-    entries.push({
-      url: `${siteUrl}${categoryDetailHref(
-        lang,
-        [],
-        categoryRootForLang(seoConfig, lang),
-      )}`,
-      lastModified: now,
-      changeFrequency: 'weekly',
-      priority: 0.9,
-    });
+    if (hasCatalogueIndex) {
+      entries.push({
+        url: `${siteUrl}${categoryDetailHref(
+          lang,
+          [],
+          categoryRootForLang(seoConfig, lang),
+        )}`,
+        lastModified: now,
+        changeFrequency: 'weekly',
+        priority: 0.9,
+      });
+    }
   }
 
   // ===============================
@@ -101,7 +114,7 @@ async function localSitemap(): Promise<MetadataRoute.Sitemap> {
   // — `/it/categorie/<L1-slug>` rather than `/it/categorie/categorie/<L1>`.
   // ===============================
   try {
-    const roots = await serverFetchPimCategories('b2b');
+    const roots = hasCatalogueIndex ? pimCategoryRoots : [];
 
     function extractCategoryPaths(
       items: any[],

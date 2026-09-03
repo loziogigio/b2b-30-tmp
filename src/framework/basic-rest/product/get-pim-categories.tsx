@@ -77,6 +77,7 @@ function transformPimCategoryNode(
     description: node.description || null,
     category_id: node.category_id,
     external_code: node.external_code ?? null,
+    product_count: node.product_count,
   };
 }
 

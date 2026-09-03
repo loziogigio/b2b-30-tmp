@@ -147,6 +147,28 @@ describe('local sitemap route contract', () => {
     expect(urls).not.toContain(`${SITE}/it/products/PO%2027%2F011`);
   });
 
+  it('omits the catalogue index when the tree is a lone dead placeholder', async () => {
+    // bellieforti's shape: one placeholder root, no ERP code, no children.
+    // Listing it would feed search engines an index page with nothing on it.
+    categoriesMock.mockResolvedValue([
+      {
+        category_id: '0',
+        name: 'Prodotti',
+        slug: 'prodotti-0',
+        external_code: null,
+        product_count: 0,
+        children: [],
+      },
+    ]);
+
+    const urls = (await sitemap()).map((entry) => entry.url);
+
+    expect(urls).not.toContain(`${SITE}/it/prodotti`);
+    expect(urls).not.toContain(`${SITE}/it/prodotti/prodotti-0`);
+    // Unrelated routes still listed.
+    expect(urls).toContain(`${SITE}/it/search`);
+  });
+
   it('paginates the fallback catalog in contiguous 100-row search pages', async () => {
     productSkusMock
       .mockResolvedValueOnce({ skus: ['SKU-0'], total: 201 })

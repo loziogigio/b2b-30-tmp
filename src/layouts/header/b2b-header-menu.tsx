@@ -9,6 +9,8 @@ import {
   usePimMenuQuery,
   type MenuTreeNode,
 } from '@framework/product/get-pim-menu';
+import { usePimCategoriesQuery } from '@framework/product/get-pim-categories';
+import { hasBrowsableCategoryTree } from '@/lib/pim/category-tree';
 import useWindowSize from '@utils/use-window-size';
 import { slugify } from '@utils/slugify';
 import { useCategoryRoot } from '@/contexts/category-root.context';
@@ -104,6 +106,16 @@ const B2BHeaderMenu: React.FC<MenuProps> = ({
     lang,
     staleTime: 5 * 60 * 1000,
   });
+
+  // The "see all groups" link below leaves the menu for the catalogue index,
+  // which is built from the PIM *categories* tree — a different source. Tenants
+  // whose groups live in an ERP facet have no such tree, so the index would be
+  // a dead end; check before offering the link. An unresolved query keeps the
+  // link, so a PIM hiccup never strips navigation out of the drawer.
+  const { data: categoriesData, isSuccess: categoriesLoaded } =
+    usePimCategoriesQuery({ channel, staleTime: 5 * 60 * 1000 });
+  const showCatalogueIndexLink =
+    !categoriesLoaded || hasBrowsableCategoryTree(categoriesData?.menuItems);
 
   const isLoading = headerLoading || mobileLoading;
   const isError = headerError;
@@ -334,7 +346,7 @@ const B2BHeaderMenu: React.FC<MenuProps> = ({
         >
           <ul className="py-1">
             {/* See all categories link at root level */}
-            {path.length === 0 && (
+            {path.length === 0 && showCatalogueIndexLink && (
               <li>
                 <Link
                   href={categoryDetailHref(lang, [], categoryRoot)}
