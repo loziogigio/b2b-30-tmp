@@ -23,6 +23,7 @@ import AddToCart from '@components/product/add-to-cart';
 import TimeOfferRows from './time-offer-rows';
 import { TimeStatusBadges, usePromoGating } from './time-promo-gated-cta';
 import TimeProductTabs from './time-product-tabs';
+import TimeShelfLabelButton from './time-shelf-label-button';
 import CorrelatedProductsCarousel from '@components/product/feeds/correlated-products-carousel';
 import TimeVariantsGrid from './time-variants-grid';
 import ProductJsonLd from '@components/seo/product-json-ld';
@@ -48,6 +49,7 @@ import { ReminderIcon, ReminderIconFilled } from '@components/icons/app-icons';
 import { useCompareList } from '@/contexts/compare/compare.context';
 import { verifyPromoItem } from '@/hooks/use-coupon';
 import { ERP_STATIC } from '@framework/utils/static';
+import { normalizeEan } from '@utils/ean';
 import cn from 'classnames';
 
 import type { PageBlock } from '@/lib/types/blocks';
@@ -200,6 +202,14 @@ const TimeProductDetail: React.FC<{
   const likes = useLikes();
   const reminders = useReminders();
   const sku = String(data?.sku ?? '');
+
+  // Shelf label. `isFromParentSearch` builds a synthetic parent by spreading a
+  // CHILD record and overwriting only `sku` — so its `ean` belongs to a
+  // different article than its code. A label pairing one product's code with
+  // another's barcode scans as the wrong goods at the till, so refuse to offer
+  // one for that shape.
+  const ean = isFromParentSearch ? '' : normalizeEan(data?.ean);
+
   const favorite = isAuthorized && sku ? likes.isLiked(sku) : false;
   const hasReminder = isAuthorized && sku ? reminders.hasReminder(sku) : false;
   const {
@@ -735,6 +745,12 @@ const TimeProductDetail: React.FC<{
               <HiOutlinePrinter size={16} />
               {t('text-print', { defaultValue: 'Stampa' })}
             </button>
+            <TimeShelfLabelButton
+              lang={lang}
+              name={String(data?.name ?? '')}
+              sku={sku}
+              ean={ean}
+            />
           </div>
 
           {/* Section 1: per-product dynamic blocks (sidebar, below action buttons) */}
