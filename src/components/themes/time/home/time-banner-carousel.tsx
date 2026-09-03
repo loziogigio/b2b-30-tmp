@@ -30,6 +30,9 @@ interface TimeBannerCarouselProps {
   lang: string;
   itemsPerView?: number;
   aspectRatio?: string;
+  /** Aspect ratio used below the md breakpoint when a slide has its own
+   *  mobile artwork (which the CMS recommends at 768x800, i.e. portrait). */
+  mobileAspectRatio?: string;
   mediaHeight?: string;
   imageFit?: 'cover' | 'contain';
 }
@@ -39,11 +42,13 @@ function BannerSlide({
   sizes,
   mediaStyle,
   imageFit,
+  mobileAspectRatio,
 }: {
   item: BannerItem;
   sizes: string;
   mediaStyle: CSSProperties;
   imageFit: 'cover' | 'contain';
+  mobileAspectRatio?: string;
 }) {
   const href = item.link;
   const linkProps: Record<string, string> = {};
@@ -60,10 +65,30 @@ function BannerSlide({
   const mobileSrc = item.mobileImage || desktopSrc;
   const hasDistinctMobile = Boolean(mobileSrc) && mobileSrc !== desktopSrc;
 
+  // A portrait mobile image inside the wide desktop box would be letterboxed
+  // down to a sliver, so give the box its own ratio below md. Both ratios go
+  // through CSS vars: an inline `aspect-ratio` would outrank the md: class.
+  const desktopAspectRatio = mediaStyle.aspectRatio as string | undefined;
+  const useResponsiveRatio = Boolean(
+    hasDistinctMobile && mobileAspectRatio && desktopAspectRatio,
+  );
+  const { aspectRatio: _fixedRatio, ...mediaStyleWithoutRatio } = mediaStyle;
+  const boxStyle: CSSProperties = useResponsiveRatio
+    ? ({
+        ...mediaStyleWithoutRatio,
+        '--time-ar-mobile': mobileAspectRatio,
+        '--time-ar-desktop': desktopAspectRatio,
+      } as CSSProperties)
+    : mediaStyle;
+
   const imageNode = (
     <div
-      className="relative w-full overflow-hidden rounded-xl bg-[var(--time-gray-100)] group transition-shadow duration-300 hover:shadow-[0_6px_24px_rgba(0,0,0,0.1)]"
-      style={mediaStyle}
+      className={`relative w-full overflow-hidden rounded-xl bg-[var(--time-gray-100)] group transition-shadow duration-300 hover:shadow-[0_6px_24px_rgba(0,0,0,0.1)]${
+        useResponsiveRatio
+          ? ' aspect-[var(--time-ar-mobile)] md:aspect-[var(--time-ar-desktop)]'
+          : ''
+      }`}
+      style={boxStyle}
     >
       {item.videoUrl ? (
         <video
@@ -144,6 +169,7 @@ export default function TimeBannerCarousel({
   titleAlignment,
   itemsPerView = 3,
   aspectRatio = '16 / 9',
+  mobileAspectRatio,
   mediaHeight,
   imageFit = 'cover',
 }: TimeBannerCarouselProps) {
@@ -207,6 +233,7 @@ export default function TimeBannerCarousel({
               }}
             >
               <BannerSlide
+                mobileAspectRatio={mobileAspectRatio}
                 item={item}
                 sizes={imageSizes}
                 mediaStyle={mediaStyle}

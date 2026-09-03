@@ -1,8 +1,13 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import type { CSSProperties } from 'react';
 import Image from 'next/image';
 import Link from '@components/ui/link';
+
+const HERO_ASPECT_RATIO = '16 / 6';
+/** The CMS recommends 768x800 for the mobile slide artwork. */
+const HERO_MOBILE_ASPECT_RATIO = '768 / 800';
 
 type Slide = {
   id: string;
@@ -49,20 +54,51 @@ export default function TimeHeroCarousel({
   const slide = slides[currentSlide];
   const linkTarget = slide?.openInNewTab ? '_blank' : undefined;
 
+  // Editors can upload a separate mobile image; swap the two layers at the md
+  // breakpoint and give the box its own ratio below it, so the portrait mobile
+  // artwork is not letterboxed inside the wide desktop box. Both ratios go
+  // through CSS vars: an inline `aspect-ratio` would outrank the md: class.
+  const desktopSrc = slide?.image || slide?.mobileImage || '';
+  const mobileSrc = slide?.mobileImage || desktopSrc;
+  const hasDistinctMobile = Boolean(mobileSrc) && mobileSrc !== desktopSrc;
+
+  const boxStyle: CSSProperties = hasDistinctMobile
+    ? ({
+        '--time-ar-mobile': HERO_MOBILE_ASPECT_RATIO,
+        '--time-ar-desktop': HERO_ASPECT_RATIO,
+      } as CSSProperties)
+    : { aspectRatio: HERO_ASPECT_RATIO };
+
   const inner = (
     <div
-      className="relative w-full h-full rounded-2xl overflow-hidden bg-[var(--time-gray-100)]"
-      style={{ aspectRatio: '16 / 6' }}
+      className={`relative w-full h-full rounded-2xl overflow-hidden bg-[var(--time-gray-100)]${
+        hasDistinctMobile
+          ? ' aspect-[var(--time-ar-mobile)] md:aspect-[var(--time-ar-desktop)]'
+          : ''
+      }`}
+      style={boxStyle}
     >
       {/* Background image — fully visible, centered */}
-      {slide?.image && (
+      {desktopSrc && (
         <Image
-          src={slide.image}
-          alt={slide.alt || slide.title || ''}
+          src={desktopSrc}
+          alt={slide?.alt || slide?.title || ''}
           fill
-          className="object-contain"
+          className={`object-contain${
+            hasDistinctMobile ? ' hidden md:block' : ''
+          }`}
           priority={currentSlide === 0}
           sizes="(max-width: 768px) 100vw, 80vw"
+        />
+      )}
+      {hasDistinctMobile && (
+        <Image
+          src={mobileSrc}
+          alt={slide?.alt || slide?.title || ''}
+          fill
+          className="object-contain md:hidden"
+          priority={currentSlide === 0}
+          sizes="100vw"
         />
       )}
 

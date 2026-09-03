@@ -159,6 +159,9 @@ const transformMediaItem = (item: any, cardStyle?: any) => {
 /** Standard vertical spacing between all blocks */
 const BLOCK_SPACING = 'mb-10';
 const TIME_HERO_BANNER_ASPECT_RATIO = '3 / 1';
+/** Below md the hero uses the mobile artwork, which the CMS recommends at
+ *  768x800; keeping the 3/1 desktop box there would shrink it to a sliver. */
+const TIME_HERO_BANNER_MOBILE_ASPECT_RATIO = '768 / 800';
 
 /**
  * Block layout wrapper — respects `fullWidth` from block config.
@@ -347,6 +350,10 @@ const TimeBlockRenderer: React.FC<TimeBlockRendererProps> = ({
           itemsPerView={heroItemsPerView}
           aspectRatio={
             block.config?.aspectRatio || TIME_HERO_BANNER_ASPECT_RATIO
+          }
+          mobileAspectRatio={
+            block.config?.mobileAspectRatio ||
+            TIME_HERO_BANNER_MOBILE_ASPECT_RATIO
           }
           mediaHeight={block.config?.mediaHeight}
           imageFit={block.config?.imageFit || 'contain'}
