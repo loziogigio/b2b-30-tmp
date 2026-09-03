@@ -1,6 +1,5 @@
-import JsBarcode from 'jsbarcode';
 import { jsPDF } from 'jspdf';
-import { pickBarcodeFormat } from '@utils/ean';
+import { renderBarcodeCanvas } from '@framework/product/barcode-image';
 
 /**
  * Printable shelf label for a product: name, article code and the EAN barcode.
@@ -103,27 +102,6 @@ function clampLine(
     text = text.slice(0, -1);
   }
   return `${text}…`;
-}
-
-/** Render the barcode on its own canvas. Symbology choice lives in @utils/ean. */
-function renderBarcodeCanvas(ean: string): HTMLCanvasElement | null {
-  try {
-    const canvas = document.createElement('canvas');
-    JsBarcode(canvas, ean, {
-      format: pickBarcodeFormat(ean),
-      displayValue: true,
-      fontSize: 30,
-      height: 110,
-      width: 3,
-      margin: 6,
-      textMargin: 3,
-      background: '#ffffff',
-      lineColor: '#000000',
-    });
-    return canvas;
-  } catch {
-    return null;
-  }
 }
 
 /** Compose the full label. Returns null when there is nothing printable. */

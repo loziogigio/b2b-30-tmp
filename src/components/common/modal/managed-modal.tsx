@@ -39,6 +39,10 @@ const RadioPlayerModal = dynamic(
 const ShelfLabelModal = dynamic(
   () => import('@components/product/shelf-label-modal'),
 );
+// Time theme's barcode-only alternative to the shelf label.
+const TimeBarcodeModal = dynamic(
+  () => import('@components/themes/time/product/time-barcode-modal'),
+);
 const TimeOrderHistoryModal = dynamic(
   () => import('@components/themes/time/product/time-order-history-modal'),
 );
@@ -96,6 +100,7 @@ export default function ManagedModal({ lang }: { lang: string }) {
       {view === 'PHONE_NUMBER' && <PhoneNumberPopup lang={lang} />}
       {view === 'DELIVERY_VIEW' && <DeliveryAddresses lang={lang} />}
       {view === 'SHELF_LABEL_VIEW' && <ShelfLabelModal lang={lang} />}
+      {view === 'BARCODE_VIEW' && <TimeBarcodeModal lang={lang} />}
     </Modal>
   );
 }

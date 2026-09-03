@@ -23,7 +23,7 @@ import AddToCart from '@components/product/add-to-cart';
 import TimeOfferRows from './time-offer-rows';
 import { TimeStatusBadges, usePromoGating } from './time-promo-gated-cta';
 import TimeProductTabs from './time-product-tabs';
-import TimeShelfLabelButton from './time-shelf-label-button';
+import TimeBarcodeButton from './time-barcode-button';
 import CorrelatedProductsCarousel from '@components/product/feeds/correlated-products-carousel';
 import TimeVariantsGrid from './time-variants-grid';
 import ProductJsonLd from '@components/seo/product-json-ld';
@@ -745,12 +745,7 @@ const TimeProductDetail: React.FC<{
               <HiOutlinePrinter size={16} />
               {t('text-print', { defaultValue: 'Stampa' })}
             </button>
-            <TimeShelfLabelButton
-              lang={lang}
-              name={String(data?.name ?? '')}
-              sku={sku}
-              ean={ean}
-            />
+            <TimeBarcodeButton lang={lang} sku={sku} ean={ean} />
           </div>
 
           {/* Section 1: per-product dynamic blocks (sidebar, below action buttons) */}

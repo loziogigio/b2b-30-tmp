@@ -45,7 +45,7 @@ import { printProductDetail } from '@utils/print-product';
 import { normalizeEan } from '@utils/ean';
 import TimeVariantsGrid from './time-variants-grid';
 import TimeOfferRows from './time-offer-rows';
-import TimeShelfLabelButton from './time-shelf-label-button';
+import TimeBarcodeButton from './time-barcode-button';
 import { TimeStatusBadges, usePromoGating } from './time-promo-gated-cta';
 
 type GalleryImage = {
@@ -643,9 +643,8 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
                 <HiOutlinePrinter size={14} />
                 {t('text-print', { defaultValue: 'Stampa' })}
               </button>
-              <TimeShelfLabelButton
+              <TimeBarcodeButton
                 lang={lang}
-                name={String(product?.name ?? '')}
                 sku={sku}
                 ean={normalizeEan(product?.ean)}
                 size="compact"
