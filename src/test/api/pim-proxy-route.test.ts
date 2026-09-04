@@ -341,6 +341,204 @@ describe('PIM proxy route', () => {
     expect(mocks.validateToken).not.toHaveBeenCalled();
   });
 
+  it('rejects an oversized body before forwarding it to Suite', async () => {
+    global.fetch = vi.fn() as typeof fetch;
+    const req = new NextRequest(
+      'http://localhost/api/proxy/pim/api/search/search',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': String(1024 * 1024 + 1),
+        },
+        body: '{}',
+      },
+    );
+
+    const res = await POST(req, {
+      params: Promise.resolve({ path: ['api', 'search', 'search'] }),
+    });
+
+    expect(res.status).toBe(413);
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('rejects an oversized streamed search body without Content-Length', async () => {
+    global.fetch = vi.fn() as typeof fetch;
+    const req = new NextRequest(
+      'http://localhost/api/proxy/pim/api/search/search',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: 'x'.repeat(1024 * 1024) }),
+      },
+    );
+
+    expect(req.headers.get('content-length')).toBeNull();
+    const res = await POST(req, {
+      params: Promise.resolve({ path: ['api', 'search', 'search'] }),
+    });
+
+    expect(res.status).toBe(413);
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('does not apply the search-body limit to unrelated proxy writes', async () => {
+    let calledInit: RequestInit | undefined;
+    global.fetch = vi.fn(
+      async (_url: RequestInfo | URL, init?: RequestInit) => {
+        calledInit = init;
+        return new Response(JSON.stringify({ success: true }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        });
+      },
+    ) as typeof fetch;
+    const req = new NextRequest(
+      'http://localhost/api/proxy/pim/api/b2b/import',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': String(1024 * 1024 + 1),
+        },
+        body: '{}',
+      },
+    );
+
+    const res = await POST(req, {
+      params: Promise.resolve({ path: ['api', 'b2b', 'import'] }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(calledInit?.body).toBe('{}');
+  });
+
+  it('loads every category page before expanding a parent filter', async () => {
+    mocks.resolveTenantApiConfig.mockResolvedValue({
+      pimApiUrl: TEST_SUITE_URL,
+      apiKeyId: TEST_API_KEY_ID,
+      apiSecret: TEST_API_SECRET,
+      tenantId: 'tenant-pagination',
+    });
+    const categoryPages: number[] = [];
+    let forwardedBody = '';
+    global.fetch = vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+      const target = new URL(String(url));
+      if (target.pathname.endsWith('/api/b2b/pim/categories')) {
+        const page = Number(target.searchParams.get('page'));
+        categoryPages.push(page);
+        const categories =
+          page === 1
+            ? [{ category_id: 'root', level: 1, path: [] }]
+            : [
+                {
+                  category_id: 'leaf',
+                  level: 3,
+                  parent_id: 'root',
+                  path: ['root'],
+                },
+              ];
+        return new Response(
+          JSON.stringify({
+            categories,
+            pagination: { page, limit: 200, total: 2, pages: 2 },
+          }),
+          { status: 200, headers: { 'content-type': 'application/json' } },
+        );
+      }
+
+      forwardedBody = String(init?.body);
+      return new Response(
+        JSON.stringify({ success: true, data: { results: [] } }),
+        { status: 200, headers: { 'content-type': 'application/json' } },
+      );
+    }) as typeof fetch;
+
+    const req = new NextRequest(
+      'http://localhost/api/proxy/pim/api/search/search',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lang: 'it',
+          filters: { category_ancestors: ['root'] },
+        }),
+      },
+    );
+    const res = await POST(req, {
+      params: Promise.resolve({ path: ['api', 'search', 'search'] }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(categoryPages).toEqual([1, 2]);
+    expect(JSON.parse(forwardedBody).filters.category_ancestors).toEqual([
+      'leaf',
+    ]);
+  });
+
+  it('retries category loading after a transient failure', async () => {
+    mocks.resolveTenantApiConfig.mockResolvedValue({
+      pimApiUrl: TEST_SUITE_URL,
+      apiKeyId: TEST_API_KEY_ID,
+      apiSecret: TEST_API_SECRET,
+      tenantId: 'tenant-category-retry',
+    });
+    let categoryAttempts = 0;
+    const forwardedBodies: string[] = [];
+    global.fetch = vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+      const target = new URL(String(url));
+      if (target.pathname.endsWith('/api/b2b/pim/categories')) {
+        categoryAttempts += 1;
+        if (categoryAttempts === 1) {
+          return new Response('unavailable', { status: 503 });
+        }
+        return new Response(
+          JSON.stringify({
+            categories: [
+              { category_id: 'root', level: 1, path: [] },
+              {
+                category_id: 'leaf',
+                level: 3,
+                parent_id: 'root',
+                path: ['root'],
+              },
+            ],
+            pagination: { page: 1, limit: 200, total: 2, pages: 1 },
+          }),
+          { status: 200, headers: { 'content-type': 'application/json' } },
+        );
+      }
+
+      forwardedBodies.push(String(init?.body));
+      return new Response(
+        JSON.stringify({ success: true, data: { results: [] } }),
+        { status: 200, headers: { 'content-type': 'application/json' } },
+      );
+    }) as typeof fetch;
+
+    const callSearch = () =>
+      POST(
+        new NextRequest('http://localhost/api/proxy/pim/api/search/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            filters: { category_ancestors: ['root'] },
+          }),
+        }),
+        { params: Promise.resolve({ path: ['api', 'search', 'search'] }) },
+      );
+
+    expect((await callSearch()).status).toBe(200);
+    expect((await callSearch()).status).toBe(200);
+    expect(categoryAttempts).toBe(2);
+    expect(
+      forwardedBodies.map(
+        (body) => JSON.parse(body).filters.category_ancestors,
+      ),
+    ).toEqual([['root'], ['leaf']]);
+  });
+
   it('downgrades an expired session search to guest context', async () => {
     mocks.validateToken.mockResolvedValueOnce({
       authenticated: false,

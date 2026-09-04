@@ -15,6 +15,7 @@ import {
   resolveCategoryRootMapForHost,
   tenantHostFromRequest,
 } from '@/lib/seo/category-root-runtime';
+import { isObviousExploitProbe } from '@/lib/security/probe-path';
 
 acceptLanguage.languages(languages);
 
@@ -130,6 +131,18 @@ const applyCampaignPersistence = (req: NextRequest, res: NextResponse) => {
 };
 
 export async function middleware(req: NextRequest) {
+  // Never spend tenant/API/SSR work on well-known exploit scanners. Keeping
+  // this before locale handling also prevents `/.env` becoming `/it/.env`.
+  if (isObviousExploitProbe(req.nextUrl.pathname)) {
+    return new NextResponse(null, {
+      status: 404,
+      headers: {
+        'Cache-Control': 'public, max-age=300',
+        'X-Robots-Tag': 'noindex, nofollow',
+      },
+    });
+  }
+
   // Skip middleware for icon and chrome files
   if (
     req.nextUrl.pathname.includes('icon') ||

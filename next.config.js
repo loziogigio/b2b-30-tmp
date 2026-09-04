@@ -4,6 +4,12 @@ module.exports = {
   reactStrictMode: true,
   output: 'standalone',
   transpilePackages: ['vinc-mongo-db', 'vinc-erp'],
+  compiler: {
+    // Production bundles must not retain application console calls. Besides
+    // reducing noise, this prevents request bodies, tokens and user profiles
+    // from reaching browser or container logs. Development/test logs remain.
+    removeConsole: process.env.NODE_ENV === 'production',
+  },
   // Skip static page generation during build for faster Docker builds
   generateBuildId: async () => {
     return 'build-' + Date.now();

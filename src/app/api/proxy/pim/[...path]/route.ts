@@ -3,6 +3,10 @@ import { AUTH_COOKIES, resolveAuthContext } from '@/lib/auth/server';
 import { buildTenantApiHeaders, resolveTenantApiConfig } from '@/lib/tenant';
 import { customerAddressCodes } from '@/lib/profile/session-owner';
 import { warnIfRedirectDroppedAuth } from '@/lib/tenant/auth-redirect-warning';
+import {
+  expandCategoryFilterToLeaves,
+  type CategoryMap,
+} from '@/lib/pim/category-filter';
 
 // ---------------------------------------------------------------------------
 // Category-tree cache (per tenant + upstream PIM URL).
@@ -12,25 +16,59 @@ import { warnIfRedirectDroppedAuth } from '@/lib/tenant/auth-redirect-warning';
 // nothing. The tree comes from /api/b2b/pim/categories (admin endpoint that
 // the same API key has access to).
 // ---------------------------------------------------------------------------
-type CatNode = {
-  id: string;
-  name?: string;
-  level?: number;
-  parent_id?: string;
-  path?: string[];
-};
-type CatMap = Record<string, CatNode>;
 const catCache = new Map<
   string,
-  { map: CatMap; loadedAt: number; promise?: Promise<CatMap | null> }
+  { map: CategoryMap; loadedAt: number; promise?: Promise<CategoryMap | null> }
 >();
 const CAT_CACHE_TTL_MS = 10 * 60 * 1000;
+const CATEGORY_PAGE_SIZE = 200;
+const MAX_CATEGORY_PAGES = 100;
+const MAX_SEARCH_BODY_BYTES = 1024 * 1024;
+const PIM_UPSTREAM_TIMEOUT_MS = 15_000;
+const PIM_PROXY_DEBUG = process.env.PIM_PROXY_DEBUG === 'true';
+
+class RequestBodyTooLargeError extends Error {}
+
+async function readRequestBody(
+  req: NextRequest,
+  maxBytes?: number,
+): Promise<string> {
+  if (maxBytes === undefined || !req.body) return req.text();
+
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let byteLength = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    byteLength += value.byteLength;
+    if (byteLength > maxBytes) {
+      try {
+        await reader.cancel();
+      } catch {
+        // The size violation determines the response even if stream cleanup
+        // fails after the limit has already been crossed.
+      }
+      throw new RequestBodyTooLargeError();
+    }
+    chunks.push(value);
+  }
+
+  const body = new Uint8Array(byteLength);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(body);
+}
 
 async function getCategoryMap(
   baseUrl: string,
   headers: Record<string, string>,
   tenantId: string,
-): Promise<CatMap | null> {
+): Promise<CategoryMap | null> {
   const key = `${tenantId}::${baseUrl}`;
   const entry = catCache.get(key);
   if (entry && Date.now() - entry.loadedAt < CAT_CACHE_TTL_MS) return entry.map;
@@ -39,34 +77,74 @@ async function getCategoryMap(
   const promise = (async () => {
     try {
       const u = new URL('api/b2b/pim/categories', baseUrl);
-      u.searchParams.set('limit', '2000');
-      const resp = await fetch(u.toString(), { method: 'GET', headers });
-      if (!resp.ok) return null;
-      const data = await resp.json();
-      const items: any[] = Array.isArray(data)
-        ? data
-        : data?.categories || data?.items || data?.data || [];
-      const map: CatMap = {};
+      u.searchParams.set('limit', String(CATEGORY_PAGE_SIZE));
+      const signal = AbortSignal.timeout(PIM_UPSTREAM_TIMEOUT_MS);
+      const loadPage = async (page: number) => {
+        u.searchParams.set('page', String(page));
+        const resp = await fetch(u.toString(), {
+          method: 'GET',
+          headers,
+          signal,
+        });
+        if (!resp.ok) {
+          throw new Error(`Category request failed (${resp.status})`);
+        }
+        return resp.json();
+      };
+
+      const firstPage = await loadPage(1);
+      const reportedPageCount = Array.isArray(firstPage)
+        ? 1
+        : Number(firstPage?.pagination?.pages ?? 1);
+      if (!Number.isSafeInteger(reportedPageCount) || reportedPageCount < 0) {
+        throw new Error('Category response has invalid pagination');
+      }
+      // Suite reports zero pages for an empty result, but page one was still a
+      // valid response and should be cached as an empty category map.
+      const pageCount = Math.max(1, reportedPageCount);
+      if (pageCount > MAX_CATEGORY_PAGES) {
+        throw new Error('Category response exceeds the pagination safety cap');
+      }
+
+      const pages = [firstPage];
+      for (let page = 2; page <= pageCount; page += 1) {
+        pages.push(await loadPage(page));
+      }
+      const items: any[] = pages.flatMap((data) =>
+        Array.isArray(data)
+          ? data
+          : data?.categories || data?.items || data?.data || [],
+      );
+      const map: CategoryMap = {};
       for (const c of items) {
-        const id = c?.category_id || c?.id;
-        if (!id) continue;
+        const rawId = c?.category_id || c?.id;
+        if (!rawId) continue;
+        const id = String(rawId);
         map[id] = {
           id,
           name: c.name,
           level: c.level,
-          parent_id: c.parent_id,
-          path: Array.isArray(c.path) ? c.path : [],
+          parent_id:
+            c.parent_id === undefined || c.parent_id === null
+              ? undefined
+              : String(c.parent_id),
+          path: Array.isArray(c.path) ? c.path.map(String) : [],
         };
       }
       catCache.set(key, { map, loadedAt: Date.now() });
       return map;
     } catch (err) {
-      console.warn('[PIM Proxy] categories cache load failed:', err);
+      console.warn(
+        '[PIM Proxy] categories cache load failed:',
+        err instanceof Error ? err.name : 'UnknownError',
+      );
       return null;
     }
   })();
   catCache.set(key, { map: {}, loadedAt: 0, promise });
-  return promise;
+  const map = await promise;
+  if (!map) catCache.delete(key);
+  return map;
 }
 
 // ---------------------------------------------------------------------------
@@ -318,6 +396,7 @@ async function getPromoTypeMap(
       const resp = await fetch(url.toString(), {
         method: 'POST',
         headers: { ...headers, 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(PIM_UPSTREAM_TIMEOUT_MS),
         body: JSON.stringify({
           lang,
           rows: PROMO_HARVEST_ROWS,
@@ -364,53 +443,6 @@ function enrichPromoFacetLabels(data: any, promoMap: PromoMap): any {
     if (!f.entity.label) f.entity.label = friendly;
   }
   return data;
-}
-
-// Drill-down dedup: drop ancestors when a descendant is also selected,
-// then expand each remaining id to its L3 leaf descendants.
-function expandCategoryFilterToLeaves(
-  ids: string[] | string,
-  catMap: CatMap,
-): string[] {
-  const list = (Array.isArray(ids) ? ids : [ids]).map(String);
-
-  const ancestorsOf = (id: string) => catMap[id]?.path || [];
-  const kept = list.filter((id) => {
-    const others = list.filter((o) => o !== id);
-    return !others.some((o) => ancestorsOf(o).includes(id));
-  });
-
-  let childrenIndex: Map<string, CatNode[]> | null = null;
-  const buildIndex = () => {
-    childrenIndex = new Map();
-    for (const c of Object.values(catMap)) {
-      if (!c?.parent_id) continue;
-      const arr = childrenIndex!.get(c.parent_id) || [];
-      arr.push(c);
-      childrenIndex!.set(c.parent_id, arr);
-    }
-  };
-  const out = new Set<string>();
-  const collect = (id: string) => {
-    const meta = catMap[id];
-    if (!meta) {
-      out.add(id);
-      return;
-    }
-    if (meta.level === 3) {
-      out.add(id);
-      return;
-    }
-    if (!childrenIndex) buildIndex();
-    const kids = childrenIndex!.get(id) || [];
-    if (!kids.length) {
-      out.add(id);
-      return;
-    }
-    for (const k of kids) collect(k.id);
-  };
-  for (const id of kept) collect(id);
-  return Array.from(out);
 }
 
 // Rewrite a /api/search/search request body so non-leaf category_ancestors
@@ -498,12 +530,31 @@ async function proxyRequest(
   const fetchOptions: RequestInit = {
     method,
     headers,
+    signal: AbortSignal.any([
+      req.signal,
+      AbortSignal.timeout(PIM_UPSTREAM_TIMEOUT_MS),
+    ]),
   };
 
   // Forward body for POST/PUT/PATCH/DELETE
   if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+    const declaredLength = Number(req.headers.get('content-length'));
+    if (
+      searchPath &&
+      Number.isFinite(declaredLength) &&
+      declaredLength > MAX_SEARCH_BODY_BYTES
+    ) {
+      return NextResponse.json(
+        { error: 'Request body too large' },
+        { status: 413 },
+      );
+    }
+
     try {
-      let bodyText = await req.text();
+      let bodyText = await readRequestBody(
+        req,
+        searchPath ? MAX_SEARCH_BODY_BYTES : undefined,
+      );
       if (bodyText) {
         if (method === 'POST' && searchPath) {
           const sanitized = sanitizeSearchBody(bodyText, trustedUserContext);
@@ -533,16 +584,24 @@ async function proxyRequest(
         }
         fetchOptions.body = bodyText;
       }
-    } catch {
-      // No body
+    } catch (error) {
+      if (error instanceof RequestBodyTooLargeError) {
+        return NextResponse.json(
+          { error: 'Request body too large' },
+          { status: 413 },
+        );
+      }
+      return NextResponse.json(
+        { error: 'Invalid request body' },
+        { status: 400 },
+      );
     }
   }
 
   try {
-    // Log the request
-    console.log(`[PIM Proxy] ${method} ${targetUrl.toString()}`);
-    if (fetchOptions.body) {
-      console.log(`[PIM Proxy] Body: ${fetchOptions.body}`);
+    if (PIM_PROXY_DEBUG) {
+      // Keep request bodies and query values out of normal production logs.
+      console.log(`[PIM Proxy] ${method} ${targetUrl.pathname}`);
     }
 
     const response = await fetch(targetUrl.toString(), fetchOptions);
@@ -553,10 +612,9 @@ async function proxyRequest(
       Boolean(bearerToken),
     );
 
-    // Log the response status
-    console.log(
-      `[PIM Proxy] Response: ${response.status} ${response.statusText}`,
-    );
+    if (PIM_PROXY_DEBUG) {
+      console.log(`[PIM Proxy] Response: ${response.status}`);
+    }
 
     // Handle non-JSON responses
     const contentType = response.headers.get('content-type');
@@ -608,10 +666,17 @@ async function proxyRequest(
       });
     }
   } catch (error) {
-    console.error('[PIM Proxy] Error:', error);
+    const timedOut =
+      error instanceof Error &&
+      (error.name === 'TimeoutError' || error.name === 'AbortError') &&
+      !req.signal.aborted;
+    console.error(
+      '[PIM Proxy] upstream request failed:',
+      error instanceof Error ? error.name : 'UnknownError',
+    );
     return NextResponse.json(
-      { error: 'Proxy error', message: (error as Error).message },
-      { status: 502 },
+      { error: timedOut ? 'Upstream timeout' : 'Proxy error' },
+      { status: timedOut ? 504 : 502 },
     );
   }
 }

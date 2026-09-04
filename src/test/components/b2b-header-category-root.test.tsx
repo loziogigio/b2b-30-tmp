@@ -16,8 +16,8 @@ vi.mock('@utils/use-window-size', () => ({
 }));
 
 vi.mock('@components/ui/link', () => ({
-  default: ({ href, children, ...props }: any) => (
-    <a href={String(href)} {...props}>
+  default: ({ href, children, prefetch, ...props }: any) => (
+    <a href={String(href)} data-prefetch={String(prefetch)} {...props}>
       {children}
     </a>
   ),
@@ -75,9 +75,17 @@ describe('B2BHeaderMenu category root', () => {
       'href',
       '/it/prodotti',
     );
+    expect(screen.getByTitle('See all groups')).toHaveAttribute(
+      'data-prefetch',
+      'false',
+    );
     expect(screen.getByTitle('Valvole')).toHaveAttribute(
       'href',
       '/it/prodotti/valvole',
+    );
+    expect(screen.getByTitle('Valvole')).toHaveAttribute(
+      'data-prefetch',
+      'false',
     );
   });
 });

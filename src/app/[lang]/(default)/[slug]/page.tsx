@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
+import { cache } from 'react';
 import { cookies } from 'next/headers';
 import {
   QueryClient,
@@ -25,6 +26,12 @@ import {
 import { AUTH_COOKIES } from '@/lib/auth/cookies';
 import { absoluteProductDetailUrl } from '@/lib/seo/product-url';
 
+// generateMetadata and the page resolve the same slug during one render. These
+// wrappers share their Mongo/VCS promises so an unknown URL is not looked up
+// twice before it becomes a 404.
+const getCmsPageForRequest = cache(getCachedCmsPage);
+const resolveProductForRequest = cache(resolveProduct);
+
 interface RouteParams {
   params: Promise<{ lang: string; slug: string }>;
 }
@@ -35,7 +42,7 @@ export async function generateMetadata({
   const { lang, slug } = await params;
 
   // 1) CMS page wins on a single-segment collision (spec D3 / open item).
-  const page = await getCachedCmsPage(slug, lang);
+  const page = await getCmsPageForRequest(slug, lang);
   if (page) {
     const seo = (page.seo ?? {}) as {
       title?: string;
@@ -50,7 +57,7 @@ export async function generateMetadata({
   }
 
   // 2) Else try to resolve the slug to a product via vcs.
-  const resolved = await resolveProduct(slug, lang);
+  const resolved = await resolveProductForRequest(slug, lang);
   if (!resolved) return {};
 
   return productMetadata(resolved, slug, lang);
@@ -132,7 +139,7 @@ export default async function FlatSlugPage({ params }: RouteParams) {
   const { lang, slug } = await params;
 
   // 1) CMS page → render it (CMS wins, spec D3).
-  const page = await getCachedCmsPage(slug, lang);
+  const page = await getCmsPageForRequest(slug, lang);
   if (page) {
     return (
       <CmsPageRenderer blocks={page.blocks ?? []} pageSlug={slug} lang={lang} />
@@ -140,7 +147,7 @@ export default async function FlatSlugPage({ params }: RouteParams) {
   }
 
   // 2) Else resolve the slug to a product via vcs → render product detail.
-  const resolved = await resolveProduct(slug, lang);
+  const resolved = await resolveProductForRequest(slug, lang);
   if (!resolved) notFound();
 
   return renderProductDetail(resolved, slug, lang);

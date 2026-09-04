@@ -266,6 +266,7 @@ const B2BInlineCategoryMenu: React.FC<InlineMenuProps> = ({
       >
         <Link
           href={hrefFor(macro)}
+          prefetch={false}
           onClick={() => {
             setOpenId(null);
             setAltroOpen(false);
@@ -426,6 +427,7 @@ const B2BInlineCategoryMenu: React.FC<InlineMenuProps> = ({
                             <li key={macro.id}>
                               <Link
                                 href={hrefFor(macro)}
+                                prefetch={false}
                                 onMouseEnter={() => openMacro(macro.id)}
                                 onFocus={() => openMacro(macro.id)}
                                 onClick={() => {
@@ -463,6 +465,7 @@ const B2BInlineCategoryMenu: React.FC<InlineMenuProps> = ({
                           <li key={g.id}>
                             <Link
                               href={hrefFor(g)}
+                              prefetch={false}
                               onMouseEnter={() => setActiveGroup(gi)}
                               onFocus={() => setActiveGroup(gi)}
                               onClick={() => setOpenId(null)}
@@ -515,6 +518,7 @@ const B2BInlineCategoryMenu: React.FC<InlineMenuProps> = ({
                           hrefFor(activeGroupNode) !== '#' && (
                             <Link
                               href={hrefFor(activeGroupNode)}
+                              prefetch={false}
                               onClick={() => setOpenId(null)}
                               className="inline-flex items-center gap-1.5 text-[12.5px] font-bold text-[var(--color-brand)]"
                             >
@@ -539,6 +543,7 @@ const B2BInlineCategoryMenu: React.FC<InlineMenuProps> = ({
                           <Link
                             key={leaf.id}
                             href={hrefFor(leaf)}
+                            prefetch={false}
                             onClick={() => setOpenId(null)}
                             className="flex break-inside-avoid items-baseline gap-1.5 rounded-md py-1.5 pl-0.5 pr-1.5 text-[13.5px] leading-tight text-gray-600 transition-colors hover:bg-[var(--color-brand)]/5 hover:text-[var(--color-brand)]"
                           >
@@ -552,6 +557,7 @@ const B2BInlineCategoryMenu: React.FC<InlineMenuProps> = ({
                     ) : activeGroupNode && hrefFor(activeGroupNode) !== '#' ? (
                       <Link
                         href={hrefFor(activeGroupNode)}
+                        prefetch={false}
                         onClick={() => setOpenId(null)}
                         className="inline-flex items-center gap-1.5 text-[14px] font-semibold text-[var(--color-brand)]"
                       >
@@ -574,6 +580,7 @@ const B2BInlineCategoryMenu: React.FC<InlineMenuProps> = ({
                       {hrefFor(openMacroNode) !== '#' && (
                         <Link
                           href={hrefFor(openMacroNode)}
+                          prefetch={false}
                           onClick={() => setOpenId(null)}
                           className="inline-flex items-center gap-1.5 text-[12.5px] font-bold text-[var(--color-brand)]"
                         >
@@ -596,6 +603,7 @@ const B2BInlineCategoryMenu: React.FC<InlineMenuProps> = ({
                       <Link
                         key={g.id}
                         href={hrefFor(g)}
+                        prefetch={false}
                         onClick={() => setOpenId(null)}
                         className="flex break-inside-avoid items-baseline gap-1.5 rounded-md py-1.5 pl-0.5 pr-1.5 text-[13.5px] leading-tight text-gray-600 transition-colors hover:bg-[var(--color-brand)]/5 hover:text-[var(--color-brand)]"
                       >

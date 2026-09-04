@@ -350,6 +350,7 @@ const B2BHeaderMenu: React.FC<MenuProps> = ({
               <li>
                 <Link
                   href={categoryDetailHref(lang, [], categoryRoot)}
+                  prefetch={false}
                   className="block px-4 h-11 leading-[44px] text-[14px] font-medium text-brand hover:bg-brand/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 truncate border-b border-gray-100"
                   title={t('see-all-categories', {
                     defaultValue: 'See all groups',
@@ -378,6 +379,7 @@ const B2BHeaderMenu: React.FC<MenuProps> = ({
                   return (
                     <Link
                       href={href}
+                      prefetch={false}
                       className="block px-4 h-11 leading-[44px] text-[14px] font-medium text-brand hover:bg-brand/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 truncate"
                       title={`${t('see-all-in', { defaultValue: 'See all in' })} ${current.label}`}
                       onClick={close}
@@ -434,6 +436,7 @@ const B2BHeaderMenu: React.FC<MenuProps> = ({
                 <li key={node.id}>
                   <Link
                     href={leafHref}
+                    prefetch={false}
                     className="block px-4 h-12 text-[15px] text-gray-900 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
                     title={label}
                     onClick={close}

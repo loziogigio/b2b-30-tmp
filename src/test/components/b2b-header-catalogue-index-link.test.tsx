@@ -23,8 +23,8 @@ vi.mock('@utils/use-window-size', () => ({
 }));
 
 vi.mock('@components/ui/link', () => ({
-  default: ({ href, children, ...props }: any) => (
-    <a href={String(href)} {...props}>
+  default: ({ href, children, prefetch, ...props }: any) => (
+    <a href={String(href)} data-prefetch={String(prefetch)} {...props}>
       {children}
     </a>
   ),
