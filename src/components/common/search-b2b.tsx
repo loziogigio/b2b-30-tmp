@@ -59,12 +59,7 @@ const SearchB2B = forwardRef<HTMLDivElement, Props>(
     },
     ref,
   ) => {
-    const {
-      displayMobileSearch,
-      closeMobileSearch,
-      displaySearch,
-      closeSearch,
-    } = useUI();
+    const { closeMobileSearch, displaySearch, closeSearch } = useUI();
     const [searchText, setSearchText] = useState('');
     const searchParams = useSearchParams();
     const pathname = usePathname();
@@ -73,9 +68,7 @@ const SearchB2B = forwardRef<HTMLDivElement, Props>(
     const { data, isLoading } = useSearchQuery({
       text: searchText,
     });
-    useFreezeBodyScroll(
-      inputFocus === true || displaySearch || displayMobileSearch,
-    );
+    useFreezeBodyScroll(inputFocus === true || displaySearch);
     function handleSearch(e: React.SyntheticEvent) {
       e.preventDefault();
     }
@@ -187,19 +180,6 @@ const SearchB2B = forwardRef<HTMLDivElement, Props>(
           className,
         )}
       >
-        <div
-          className={cn(
-            'overlay cursor-pointer invisible w-full h-full opacity-0 flex top-0 ltr:left-0 rtl:right-0 transition-all duration-300 fixed',
-            {
-              open: displayMobileSearch,
-              'input-focus-overlay-open': inputFocus === true,
-              'open-search-overlay': displaySearch,
-            },
-          )}
-          onClick={() => disableInputFocus()}
-        />
-        {/* End of overlay */}
-
         <div className="relative flex flex-col justify-center w-full shrink-0">
           <div className="flex flex-col w-full mx-auto">
             <SearchBoxComponent
@@ -219,10 +199,14 @@ const SearchB2B = forwardRef<HTMLDivElement, Props>(
             />
           </div>
           {/* End of searchbox */}
-          {/* Full overlay content (suggestions + recommended) */}
+          {/* Full overlay content (suggestions + recommended). Below the `lg`
+              breakpoint this widget is only CSS-hidden and stays mounted, so it
+              must not react to `displayMobileSearch`: the layout's
+              MobileSearchOverlay owns that flag, and both overlays portal to
+              document.body where the hidden wrapper cannot suppress them. */}
           <SearchOverlayB2B
             lang={lang}
-            open={inputFocus === true || displaySearch || displayMobileSearch}
+            open={inputFocus === true || displaySearch}
             onClose={disableInputFocus}
             value={searchText}
             onChange={handleAutoSearch}
