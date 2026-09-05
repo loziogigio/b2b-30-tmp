@@ -16,6 +16,10 @@ import {
   tenantHostFromRequest,
 } from '@/lib/seo/category-root-runtime';
 import { isObviousExploitProbe } from '@/lib/security/probe-path';
+import {
+  isRootStaticAsset,
+  isUnservedIconProbe,
+} from '@/lib/routing/root-asset-path';
 
 acceptLanguage.languages(languages);
 
@@ -143,12 +147,20 @@ export async function middleware(req: NextRequest) {
     });
   }
 
-  // Skip middleware for icon and chrome files
-  if (
-    req.nextUrl.pathname.includes('icon') ||
-    req.nextUrl.pathname.includes('chrome')
-  ) {
+  // Root icon/manifest files (favicon probes, Apple touch icons, PWA icons)
+  // carry no locale prefix and go straight to the static handler. Only the
+  // exact files we ship qualify: a substring test on "icon" used to let real
+  // storefront URLs skip locale handling too.
+  if (isRootStaticAsset(req.nextUrl.pathname)) {
     return applyCampaignPersistence(req, NextResponse.next());
+  }
+  // Sized icon variants we do not ship: a bare 404 here costs nothing, while
+  // letting them through would render a full storefront page as an "icon".
+  if (isUnservedIconProbe(req.nextUrl.pathname)) {
+    return new NextResponse(null, {
+      status: 404,
+      headers: { 'Cache-Control': 'public, max-age=86400' },
+    });
   }
 
   // Determine language from cookie, accept-language header, or fallback
