@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useUI } from '@contexts/ui.context';
 import { getThemedComponent } from '@/lib/theme/registry';
 import useFreezeBodyScroll from '@utils/use-freeze-body-scroll';
@@ -43,8 +43,14 @@ export default function MobileSearchOverlay({ lang }: Props) {
     closeMobileSearch();
   }
 
-  // Only render on mobile (lg:hidden equivalent - component is only shown when displayMobileSearch is true)
-  if (!displayMobileSearch) return null;
+  // Mount on the first open, then keep the overlay alive while closed so that
+  // reopening does not rebuild it and re-fetch its trending carousel. Until
+  // that first open nothing is rendered, so desktop pays nothing for it.
+  const [everOpened, setEverOpened] = useState(false);
+  useEffect(() => {
+    if (displayMobileSearch) setEverOpened(true);
+  }, [displayMobileSearch]);
+  if (!everOpened) return null;
 
   return (
     <div className="lg:hidden">

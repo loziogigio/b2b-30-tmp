@@ -37,7 +37,9 @@ type Props = {
 
 const RECENT_KEY = 'b2b-recent-searches';
 
-function useRecentSearches() {
+// Re-read on every open: the overlay stays mounted between opens, so a term
+// pushed on submit would otherwise not show up until a full reload.
+function useRecentSearches(open: boolean) {
   const [items, setItems] = React.useState<string[]>([]);
   React.useEffect(() => {
     try {
@@ -46,7 +48,7 @@ function useRecentSearches() {
     } catch {
       setItems([]);
     }
-  }, []);
+  }, [open]);
   const remove = (term: string) => {
     const next = items.filter((t) => t !== term);
     setItems(next);
@@ -80,7 +82,7 @@ export default function SearchOverlayB2B({
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const { isOpen: modalOpen } = useModalState();
-  const { items: recent, remove, clear } = useRecentSearches();
+  const { items: recent, remove, clear } = useRecentSearches(open);
   const rootRef = React.useRef<HTMLDivElement>(null);
 
   function gotoSearch(term: string) {
@@ -262,6 +264,15 @@ export default function SearchOverlayB2B({
   // Mobile filter toggle state (hidden by default on mobile)
   const [filtersOpen, setFiltersOpen] = useState(false);
 
+  // The trending carousel mounts on the first open and then stays mounted:
+  // remounting it on every open re-fetched the trending SKUs and rebuilt
+  // Swiper, which is what made reopening feel slow. Nothing loads until the
+  // overlay has actually been opened once.
+  const [everOpened, setEverOpened] = useState(open);
+  useEffect(() => {
+    if (open) setEverOpened(true);
+  }, [open]);
+
   // Portal mount: render at document.body so the overlay escapes any
   // ancestor stacking context (e.g. the sticky `z-[100]` header it lives in).
   const [portalNode, setPortalNode] = useState<HTMLElement | null>(null);
@@ -274,7 +285,7 @@ export default function SearchOverlayB2B({
       ref={rootRef}
       onClickCapture={handleClickCapture}
       className={cn(
-        'fixed inset-0 z-[110] transition-all duration-200',
+        'fixed inset-0 z-[110] transition-opacity duration-200',
         open ? 'opacity-100 visible' : 'opacity-0 invisible',
       )}
       aria-hidden={!open}
@@ -464,7 +475,7 @@ export default function SearchOverlayB2B({
                   </p>
                 </div>
               )}
-              {open && (
+              {everOpened && (
                 <TrendingProductsCarousel
                   lang={lang}
                   limitSkus={18}
