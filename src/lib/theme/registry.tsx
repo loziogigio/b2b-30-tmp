@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic';
 import type { ThemeId } from './types';
 import { useThemeId } from '@/contexts/tenant.context';
-import { useMemo, type ComponentType } from 'react';
+import { Suspense, useMemo, type ComponentType } from 'react';
 
 /**
  * Component slots that can be themed.
@@ -110,7 +110,18 @@ export function getThemedComponent<P = any>(
   const ThemedSlot: ComponentType<P> = (props) => {
     const themeId = asThemeId(useThemeId());
     const Component = useMemo(() => getDynamic<P>(slot, themeId), [themeId]);
-    return <Component {...(props as any)} />;
+    // `next/dynamic({ ssr: true })` without a `loading` option renders the
+    // lazy component bare, with no Suspense boundary of its own. The first
+    // client-side render of a slot then suspends up to whatever boundary
+    // already encloses it, and React hides that boundary's visible content
+    // until the chunk arrives (the search overlay "opened, closed and
+    // reopened" on its first use: its product cards are this slot). A
+    // boundary per slot keeps a chunk load local to the slot.
+    return (
+      <Suspense fallback={null}>
+        <Component {...(props as any)} />
+      </Suspense>
+    );
   };
   ThemedSlot.displayName = `Themed(${slot})`;
   return ThemedSlot;
