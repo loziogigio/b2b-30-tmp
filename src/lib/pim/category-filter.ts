@@ -71,5 +71,11 @@ export function expandCategoryFilterToLeaves(
     }
   }
 
+  // Malformed data (two categories listing each other as ancestors) can shadow
+  // every selected id, leaving nothing to walk. An empty filter is read by the
+  // search backend as "no category restriction" and would return the whole
+  // catalogue, so keep the caller's original selection instead.
+  if (output.size === 0 && list.length > 0) return list;
+
   return Array.from(output);
 }

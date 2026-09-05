@@ -34,12 +34,14 @@ describe('expandCategoryFilterToLeaves', () => {
     ).toEqual(['leafA', 'unknown']);
   });
 
-  it('terminates on malformed cyclic category data', () => {
+  it('terminates on malformed cyclic category data and keeps the selection', () => {
+    // A parent cycle has no leaves to expand to. The walk must end, and the
+    // result must not be [] (which the backend reads as "every category").
     const cyclic: CategoryMap = {
       a: { id: 'a', level: 1, parent_id: 'b' },
       b: { id: 'b', level: 2, parent_id: 'a' },
     };
-    expect(expandCategoryFilterToLeaves('a', cyclic)).toEqual([]);
+    expect(expandCategoryFilterToLeaves('a', cyclic)).toEqual(['a']);
   });
 
   it('reads category metadata linearly for a large unknown selection', () => {
@@ -56,5 +58,22 @@ describe('expandCategoryFilterToLeaves', () => {
       ids.length,
     );
     expect(reads).toBeLessThan(ids.length * 3);
+  });
+  it('keeps the original selection when malformed cyclic data shadows every id', () => {
+    // Two categories that list each other as ancestors shadow one another, so
+    // the expansion has nothing to walk. Returning [] would be read by the
+    // search backend as "no category restriction" — the whole catalogue.
+    const cyclic: CategoryMap = {
+      a: { id: 'a', level: 2, parent_id: 'b', path: ['b'] },
+      b: { id: 'b', level: 2, parent_id: 'a', path: ['a'] },
+    };
+    expect(expandCategoryFilterToLeaves(['a', 'b'], cyclic)).toEqual([
+      'a',
+      'b',
+    ]);
+  });
+
+  it('still returns an empty filter for an empty selection', () => {
+    expect(expandCategoryFilterToLeaves([], categories)).toEqual([]);
   });
 });

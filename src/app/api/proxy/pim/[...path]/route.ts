@@ -24,7 +24,23 @@ const CAT_CACHE_TTL_MS = 10 * 60 * 1000;
 const CATEGORY_PAGE_SIZE = 200;
 const MAX_CATEGORY_PAGES = 100;
 const MAX_SEARCH_BODY_BYTES = 1024 * 1024;
+// Upstream budgets. Search must stay snappy (the UI blocks on it). ELIA's
+// assistant backend is allowed 30s of its own, so give it headroom rather than
+// cutting it off early. Everything else (cart, orders, submit) gets a generous
+// bound that only trips on a genuine hang.
 const PIM_UPSTREAM_TIMEOUT_MS = 15_000;
+const PIM_ELIA_TIMEOUT_MS = 35_000;
+const PIM_DEFAULT_TIMEOUT_MS = 30_000;
+
+function isEliaPath(pathString: string): boolean {
+  return pathString === 'api/elia' || pathString.startsWith('api/elia/');
+}
+
+function upstreamTimeoutMs(pathString: string, searchPath: boolean): number {
+  if (searchPath) return PIM_UPSTREAM_TIMEOUT_MS;
+  if (isEliaPath(pathString)) return PIM_ELIA_TIMEOUT_MS;
+  return PIM_DEFAULT_TIMEOUT_MS;
+}
 const PIM_PROXY_DEBUG = process.env.PIM_PROXY_DEBUG === 'true';
 
 class RequestBodyTooLargeError extends Error {}
@@ -527,14 +543,10 @@ async function proxyRequest(
     attachTrustedUserContext(headers, trustedUserContext);
   }
 
-  const fetchOptions: RequestInit = {
-    method,
-    headers,
-    signal: AbortSignal.any([
-      req.signal,
-      AbortSignal.timeout(PIM_UPSTREAM_TIMEOUT_MS),
-    ]),
-  };
+  // The upstream timeout is armed right before dispatch (below), not here:
+  // reading the body and expanding the category tree can themselves take
+  // seconds and must not eat into the budget of the request they prepare.
+  const fetchOptions: RequestInit = { method, headers };
 
   // Forward body for POST/PUT/PATCH/DELETE
   if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
@@ -604,6 +616,10 @@ async function proxyRequest(
       console.log(`[PIM Proxy] ${method} ${targetUrl.pathname}`);
     }
 
+    fetchOptions.signal = AbortSignal.any([
+      req.signal,
+      AbortSignal.timeout(upstreamTimeoutMs(pathString, searchPath)),
+    ]);
     const response = await fetch(targetUrl.toString(), fetchOptions);
 
     warnIfRedirectDroppedAuth(
