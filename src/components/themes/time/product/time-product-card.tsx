@@ -22,6 +22,7 @@ import { IoIosHeart, IoIosHeartEmpty } from 'react-icons/io';
 import { ReminderIcon, ReminderIconFilled } from '@components/icons/app-icons';
 import {
   hasActivePromo,
+  promoNeedsOfferView,
   PromoGatedCta,
   TimeAlreadyPurchasedBadge,
   TimePromoLabel,
@@ -339,7 +340,13 @@ export default function TimeProductCard({
                     onClick={handleClick}
                     className="w-full h-8 rounded-[var(--radius-btn)] border-none bg-[var(--time-dark)] text-white text-[11px] sm:text-xs font-bold cursor-pointer font-[family-name:var(--font-body)] transition-colors hover:bg-[var(--time-red)]"
                   >
-                    {t('text-view-product', { defaultValue: 'Visualizza' })}
+                    {/* An article whose promos still need picking says so, the
+                        same words the list row uses — "Visualizza" is only for
+                        the other gating reasons (no price, ADD_TO_CART=false
+                        with nothing on offer). */}
+                    {promoNeedsOfferView(effectivePriceData)
+                      ? t('text-view-offers', { defaultValue: 'VEDI OFFERTE' })
+                      : t('text-view-product', { defaultValue: 'Visualizza' })}
                   </button>
                 )}
               </div>

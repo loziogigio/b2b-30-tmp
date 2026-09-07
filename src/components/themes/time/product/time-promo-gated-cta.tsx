@@ -28,6 +28,29 @@ export function hasActivePromo(
   return !!(priceData?.is_promo || product?.has_active_promo);
 }
 
+/**
+ * Does resolving this article's promos require the offer view?
+ *
+ * True when the ERP ships more than one offer, or when the single offer is not
+ * the one the default packaging already triggers (`is_improving_promo`): either
+ * way the buyer has to pick a promo line, so a listing surfaces the "VEDI
+ * OFFERTE" CTA instead of a generic "Visualizza".
+ *
+ * Counts the real `all_promo_offers` array rather than the ERP's `count_promo`,
+ * which comes back 0 on tenants that nonetheless ship several promos (see
+ * BF00811: `count_promo: 0`, `num_promo: 2`, two entries in `all_promo`). This
+ * is the same rule the default theme's card and row already apply, and the one
+ * the time list row was already using inline.
+ */
+export function promoNeedsOfferView(priceData?: ErpPriceData): boolean {
+  const anyPd = priceData as any;
+  const offerCount = anyPd?.all_promo_offers?.length ?? 0;
+  const hasPromo =
+    offerCount > 0 || Boolean(anyPd?.promo) || Boolean(anyPd?.is_promo);
+  if (!hasPromo) return false;
+  return offerCount > 1 || !anyPd?.is_improving_promo;
+}
+
 export type PromoGating = {
   /** The product carries at least one active promo offer. */
   isPromo: boolean;
@@ -289,9 +312,11 @@ export function TimeStatusBadges({
 }
 
 /**
- * 50/50 layout used in promo-gated listings: a cart-total pill on the left and
- * a filled-red PROMO CTA on the right that opens the preview/promo modal.
- * Mirrors the legacy `PvQuantityInput` external-link variant.
+ * Layout used in promo-gated listings: a compact cart-total pill on the left
+ * and a filled-red VEDI OFFERTE CTA on the right that opens the preview/promo
+ * modal. Mirrors the legacy `PvQuantityInput` external-link variant; the pill
+ * only ever holds a number, so the CTA takes the remaining width and the label
+ * matches the list row's.
  */
 export function PromoGatedCta({
   cartQty,
@@ -311,13 +336,16 @@ export function PromoGatedCta({
     ? 'text-xs sm:text-[13px]'
     : 'text-[11px] sm:text-xs';
   const iconSize = isMd ? 14 : 12;
-  const promoLabel = t('text-promo', { defaultValue: 'Promo' });
+  // The list row is the reference wording for "this article's promos still
+  // need picking" — every time surface says VEDI OFFERTE, not a second word
+  // for the same action.
+  const promoLabel = t('text-view-offers', { defaultValue: 'VEDI OFFERTE' });
 
   return (
     <div className="flex items-stretch gap-1.5 w-full">
       <span
         className={cn(
-          'flex-1 basis-1/2 min-w-0 inline-flex items-center justify-center px-2 rounded-[var(--radius-btn)] font-extrabold tabular-nums font-[family-name:var(--font-body)]',
+          'shrink-0 min-w-[34px] inline-flex items-center justify-center px-2 rounded-[var(--radius-btn)] font-extrabold tabular-nums font-[family-name:var(--font-body)]',
           heightClass,
           valueTextClass,
           cartQty > 0
@@ -334,7 +362,7 @@ export function PromoGatedCta({
         aria-label={promoLabel}
         title={promoLabel}
         className={cn(
-          'flex-1 basis-1/2 min-w-0 rounded-[var(--radius-btn)] border-[1.5px] cursor-pointer transition-colors flex items-center justify-center gap-1 font-[family-name:var(--font-body)] font-bold uppercase tracking-wide border-[var(--time-red)] bg-[var(--time-red)] text-white hover:bg-white hover:text-[var(--time-red)]',
+          'flex-1 min-w-0 rounded-[var(--radius-btn)] border-[1.5px] cursor-pointer transition-colors flex items-center justify-center gap-1 whitespace-nowrap font-[family-name:var(--font-body)] font-bold uppercase border-[var(--time-red)] bg-[var(--time-red)] text-white hover:bg-white hover:text-[var(--time-red)]',
           heightClass,
           buttonTextClass,
         )}

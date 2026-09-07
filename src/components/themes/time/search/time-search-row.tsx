@@ -22,6 +22,7 @@ import { IoIosHeart, IoIosHeartEmpty } from 'react-icons/io';
 import { ReminderIcon, ReminderIconFilled } from '@components/icons/app-icons';
 import {
   hasActivePromo,
+  promoNeedsOfferView,
   PromoGatedCta,
   TimeStatusBadges,
   usePromoGating,
@@ -373,12 +374,15 @@ export default function TimeSearchRow({
               />
             ) : (
               // Other gating reasons (no price, ADD_TO_CART=false): keep the
-              // generic "Visualizza" CTA — same behaviour as before.
+              // generic "Visualizza" CTA — unless promos are still waiting to
+              // be picked, in which case say it the way the list row does.
               <button
                 onClick={handleClick}
                 className="flex-1 h-9 rounded-[var(--radius-btn)] border-none bg-[var(--time-dark)] text-white text-xs sm:text-[13px] font-bold cursor-pointer font-[family-name:var(--font-body)] transition-colors hover:bg-[var(--time-red)]"
               >
-                {t('text-view-product', { defaultValue: 'Visualizza' })}
+                {promoNeedsOfferView(priceData)
+                  ? t('text-view-offers', { defaultValue: 'VEDI OFFERTE' })
+                  : t('text-view-product', { defaultValue: 'Visualizza' })}
               </button>
             )}
           </div>

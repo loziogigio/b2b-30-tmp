@@ -41,6 +41,7 @@ vi.mock('@components/product/add-to-cart', () => ({
 }));
 vi.mock('@components/themes/time/product/time-promo-gated-cta', () => ({
   hasActivePromo: () => false,
+  promoNeedsOfferView: () => false,
   PromoGatedCta: () => null,
   TimeAlreadyPurchasedBadge: () => null,
   TimePromoLabel: () => null,
