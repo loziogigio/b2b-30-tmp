@@ -21,7 +21,12 @@ import { useHomeSettings } from '@/hooks/use-home-settings';
 import { buildCartPriceData } from '@components/product/b2b-offer-rows';
 import { selectBestPrice } from '@framework/pricing/best-price';
 import { IoIosHeart, IoIosHeartEmpty } from 'react-icons/io';
-import { TimeAlreadyPurchasedBadge } from './time-promo-gated-cta';
+import {
+  hasActivePromo,
+  promoNeedsOfferView,
+  TimeAlreadyPurchasedBadge,
+  TimePromoLabel,
+} from './time-promo-gated-cta';
 import { C, fmtEuro, listOf, netOf } from './time-row-helpers';
 
 const AddToCart = dynamic(() => import('@components/product/add-to-cart'), {
@@ -154,19 +159,36 @@ export default function TimeVariantsTable({
         const isFav =
           isAuthorized && targetSku ? likes.isLiked(targetSku) : false;
         const vImg = v.image?.thumbnail || headerImg;
-        const net = netOf(dPrice);
-        const list = listOf(dPrice);
-        const hasDiscount = net != null && list != null && list > net;
-        const tiers = (dPrice as any)?.discount_description || '';
+        // Promo pricing is read off the RAW erp row, exactly like the grid
+        // card. `dPrice` is the CART adapter: for a net-price promo
+        // (RigaPrezzoNettoQuantitaMinima &c.) `buildPromoPriceData` flattens
+        // `gross_price` down to the promo unit price, so listOf(dPrice) would
+        // equal the net and silently drop the strike-through + the -X% the
+        // grid shows for the very same article.
+        const net = netOf(vPrice);
+        const list = listOf(vPrice);
+        const hasDiscount =
+          net != null && list != null && list > net && net > 0;
+        const tiers = (vPrice as any)?.discount_description || '';
         const packParts = dPrice ? buildPackagingParts(dPrice) : [];
 
-        const promoCount = (vPrice as any)?.all_promo_offers?.length ?? 0;
-        const hasPromo =
-          promoCount > 0 ||
-          Boolean((vPrice as any)?.promo) ||
-          Boolean((vPrice as any)?.is_promo);
-        const isImproving = Boolean((vPrice as any)?.is_improving_promo);
-        const promoNeedsDetail = hasPromo && (promoCount > 1 || !isImproving);
+        const isOnPromo = hasActivePromo(v, vPrice);
+        const discountPercent = hasDiscount
+          ? Math.round((1 - Number(net) / Number(list)) * 100)
+          : 0;
+        // Same rule as TimeProductCard: show the ERP's tier ladder when it
+        // sends one, else the computed -X% — and only on an actual promo (a
+        // plain price discount doesn't earn the badge).
+        const discountLabel =
+          tiers ||
+          (isOnPromo && discountPercent > 0 ? `-${discountPercent}%` : '');
+        // Badge wording stays on the ERP's own promo count: the badge states
+        // the STATE ("In offerta"), the button states the ACTION ("Vedi
+        // offerte"), so the two never say the same word twice on one row.
+        const hasMultiplePromos = Number((vPrice as any)?.count_promo ?? 0) > 1;
+        // Shared with the grid card + search row, so every time listing routes
+        // the same articles to the offer view.
+        const promoNeedsDetail = promoNeedsOfferView(vPrice);
 
         return (
           <div
@@ -281,7 +303,7 @@ export default function TimeVariantsTable({
               </div>
             </div>
 
-            {/* availability + ordered */}
+            {/* availability + promo + ordered */}
             <div
               style={{
                 display: 'flex',
@@ -290,17 +312,36 @@ export default function TimeVariantsTable({
                 alignItems: 'flex-start',
               }}
             >
-              {isAuthorized &&
-                vPrice &&
-                vPrice?.availability != null &&
-                (() => {
-                  const a = formatTimeAvailability(
-                    vPrice,
-                    catalogSettings.availabilityDisplay,
-                    t,
-                  );
-                  return <StockPill ok={a.ok} label={a.label} />;
-                })()}
+              {/* Availability and the promo label share a line, the same
+                  pairing the grid card renders under its CTA. */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  flexWrap: 'wrap',
+                }}
+              >
+                {isAuthorized &&
+                  vPrice &&
+                  vPrice?.availability != null &&
+                  (() => {
+                    const a = formatTimeAvailability(
+                      vPrice,
+                      catalogSettings.availabilityDisplay,
+                      t,
+                    );
+                    return <StockPill ok={a.ok} label={a.label} />;
+                  })()}
+                {isAuthorized && isOnPromo && (
+                  <TimePromoLabel
+                    hasMultiplePromos={hasMultiplePromos}
+                    onClick={() => openQuick(isPseudo ? parent : v)}
+                    t={t}
+                    size="sm"
+                  />
+                )}
+              </div>
               {vPrice?.buy_did && (
                 <TimeAlreadyPurchasedBadge
                   priceData={vPrice}
@@ -366,7 +407,7 @@ export default function TimeVariantsTable({
                       >
                         {fmtEuro(list!, decimals)}
                       </span>
-                      {tiers && (
+                      {discountLabel && (
                         <span
                           style={{
                             fontSize: 11,
@@ -375,7 +416,7 @@ export default function TimeVariantsTable({
                             whiteSpace: 'nowrap',
                           }}
                         >
-                          {tiers}
+                          {discountLabel}
                         </span>
                       )}
                     </div>
