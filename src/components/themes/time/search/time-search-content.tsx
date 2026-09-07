@@ -204,16 +204,30 @@ export default function TimeSearchContent({ lang }: { lang: string }) {
           sidebarOpen && 'gap-6',
         )}
       >
-        {/* Sidebar */}
+        {/* Sidebar — pins under the REAL header. The header is built per
+            tenant (rows can be added, removed, resized or unpinned), so a
+            hardcoded `top-16` left the first facets hidden behind a taller
+            header. `--vinc-header-height` is published by useFixedRowOffsets
+            from the measured pinned rows; 64px is only the pre-hydration
+            fallback. The tail keeps the same breathing room the old
+            `100vh-120px` had for a 64px header. */}
         <div
           className={cn(
-            'sticky hidden lg:block top-16 shrink-0 overflow-hidden transition-all duration-300 ease-in-out h-[calc(100vh-120px)]',
+            'sticky hidden lg:block shrink-0 overflow-x-hidden overflow-y-auto transition-all duration-300 ease-in-out',
             sidebarOpen
               ? 'w-64 xl:w-72 pt-4 ltr:pr-5 rtl:pl-5 opacity-100'
               : 'w-0 p-0 opacity-0',
           )}
+          style={{
+            top: 'var(--vinc-header-height, 64px)',
+            height: 'calc(100vh - var(--vinc-header-height, 64px) - 56px)',
+          }}
         >
-          <div className="w-64 xl:w-72 h-full">
+          {/* Natural height: the scroll now lives on the sticky wrapper, and
+              pinning this to h-full would cap the facet list at the viewport
+              instead of letting it scroll. The fixed width keeps the list from
+              reflowing while the wrapper animates open/closed. */}
+          <div className="w-64 xl:w-72">
             <TimeSearchFilters lang={lang} text={text} />
           </div>
         </div>
