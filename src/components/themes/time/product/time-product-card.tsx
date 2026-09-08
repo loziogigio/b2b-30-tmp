@@ -26,6 +26,7 @@ import {
   PromoGatedCta,
   TimeAlreadyPurchasedBadge,
   TimePromoLabel,
+  useErpPromoAuthority,
   usePromoGating,
 } from './time-promo-gated-cta';
 import cn from 'classnames';
@@ -143,6 +144,8 @@ export default function TimeProductCard({
   // instead of the inline qty selector, with a cart-total readout next to it.
   const { hasMultiplePromos, isPromoGated, canInlineAdd, cartQty } =
     usePromoGating(effectivePriceData, product);
+  // Only the customer's own ERP row may badge a promo (PIM's flag is catalog-wide).
+  const erpIsAuthority = useErpPromoAuthority();
 
   function handleClick() {
     openProduct(product, !!hasVariants);
@@ -192,7 +195,7 @@ export default function TimeProductCard({
           {!hidePrices &&
             !hasVariants &&
             discountPercent > 0 &&
-            hasActivePromo(product, effectivePriceData) && (
+            hasActivePromo(product, effectivePriceData, erpIsAuthority) && (
               <span className="bg-[var(--time-red)] text-white text-[10px] sm:text-[11px] font-bold px-[7px] py-[3px] rounded-[5px] font-[family-name:var(--font-body)]">
                 {discountTiers || `-${discountPercent}%`}
               </span>
@@ -200,7 +203,7 @@ export default function TimeProductCard({
           {/* PROMO: a multi-variant parent shows it whenever ANY child carries
               the promo flag (hasActivePromo checks the variations). */}
           {!hidePrices &&
-            hasActivePromo(product, effectivePriceData) &&
+            hasActivePromo(product, effectivePriceData, erpIsAuthority) &&
             (hasVariants || discountPercent === 0) && (
               <span className="bg-[var(--time-red)] text-white text-[10px] sm:text-[11px] font-bold px-[7px] py-[3px] rounded-[5px] font-[family-name:var(--font-body)]">
                 PROMO
@@ -379,7 +382,11 @@ export default function TimeProductCard({
                     {availInfo.label}
                   </span>
                 </div>
-                {hasActivePromo(product, effectivePriceData) && (
+                {hasActivePromo(
+                  product,
+                  effectivePriceData,
+                  erpIsAuthority,
+                ) && (
                   <TimePromoLabel
                     hasMultiplePromos={hasMultiplePromos}
                     onClick={handleClick}

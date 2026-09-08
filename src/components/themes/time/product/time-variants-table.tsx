@@ -26,6 +26,7 @@ import {
   promoNeedsOfferView,
   TimeAlreadyPurchasedBadge,
   TimePromoLabel,
+  useErpPromoAuthority,
 } from './time-promo-gated-cta';
 import { C, fmtEuro, listOf, netOf } from './time-row-helpers';
 
@@ -90,6 +91,7 @@ export default function TimeVariantsTable({
   const { isAuthorized, hidePrices } = useUI();
   const { settings } = useHomeSettings();
   const { settings: catalogSettings } = useCatalogSettings();
+  const erpIsAuthority = useErpPromoAuthority();
   const decimals = settings?.cardStyle?.priceDecimals ?? 2;
 
   const sku = parent?.sku;
@@ -172,7 +174,7 @@ export default function TimeVariantsTable({
         const tiers = (vPrice as any)?.discount_description || '';
         const packParts = dPrice ? buildPackagingParts(dPrice) : [];
 
-        const isOnPromo = hasActivePromo(v, vPrice);
+        const isOnPromo = hasActivePromo(v, vPrice, erpIsAuthority);
         const discountPercent = hasDiscount
           ? Math.round((1 - Number(net) / Number(list)) * 100)
           : 0;

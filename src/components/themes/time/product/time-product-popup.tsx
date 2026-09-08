@@ -46,7 +46,11 @@ import { normalizeEan } from '@utils/ean';
 import TimeVariantsGrid from './time-variants-grid';
 import TimeOfferRows from './time-offer-rows';
 import TimeBarcodeButton from './time-barcode-button';
-import { TimeStatusBadges, usePromoGating } from './time-promo-gated-cta';
+import {
+  TimeStatusBadges,
+  useErpPromoAuthority,
+  usePromoGating,
+} from './time-promo-gated-cta';
 
 type GalleryImage = {
   id?: string | number;
@@ -152,6 +156,7 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
     t,
   );
   const { hasMultiplePromos } = usePromoGating(erpPrice, product);
+  const erpIsAuthority = useErpPromoAuthority();
 
   /* ── Likes / Reminders init ── */
   useEffect(() => {
@@ -532,6 +537,7 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
               )}
               <div className="col-span-2">
                 <TimeStatusBadges
+                  erpIsAuthority={erpIsAuthority}
                   priceData={erpPrice}
                   product={product}
                   hasMultiplePromos={hasMultiplePromos}

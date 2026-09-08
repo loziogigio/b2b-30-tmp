@@ -7,17 +7,46 @@ import type { ErpPriceData } from '@utils/transform/erp-prices';
 import { useCart } from '@contexts/cart/cart.context';
 import { useModalAction } from '@components/common/modal/modal.context';
 import { selectBestPrice } from '@framework/pricing/best-price';
+import { usePricingSource } from '@framework/pricing/use-pricing-source';
+import { useUI } from '@contexts/ui.context';
 
 type TFn = (key: string, opts?: { defaultValue?: string }) => string;
 
 /**
- * True when the product has an active promo. For variant parents the flag is
- * only honoured when at least one variation actually carries a promo — the
- * PIM `has_active_promo` field on the parent itself can be misleading.
+ * Is the ERP price row the authority on promos for the current viewer?
+ *
+ * True exactly when `useProductPriceData` would fetch one: an authorised user
+ * on an ERP-backed pricing source. Anonymous visitors and inline-pricing
+ * tenants never get an ERP row, so for them the PIM flag is all there is.
+ *
+ * Lives here so the card, the search row, the variants table, the detail page
+ * and the popup all answer the question the same way.
+ */
+export function useErpPromoAuthority(): boolean {
+  const { isAuthorized } = useUI();
+  const source = usePricingSource();
+  return isAuthorized && (source === 'erp' || source === 'hybrid');
+}
+
+/**
+ * True when the product has an active promo FOR THIS VIEWER.
+ *
+ * `product.has_active_promo` is PIM data and is catalog-wide: it is true for
+ * every viewer, including customers the ERP gives no promo to. So when ERP
+ * pricing is the authority for this viewer (`erpIsAuthority`), the ERP row is
+ * the only signal, and a row that has not arrived yet is NOT a promo — a badge
+ * that appears and then vanishes is worse than one that appears late.
+ *
+ * Guests and inline-pricing tenants keep the PIM flag: there is no ERP row for
+ * them and never will be.
+ *
+ * For variant parents the flag is only honoured when at least one variation
+ * actually carries a promo — the parent's own PIM field can be misleading.
  */
 export function hasActivePromo(
   product: any,
   priceData?: ErpPriceData,
+  erpIsAuthority = false,
 ): boolean {
   const variations = Array.isArray(product?.variations)
     ? product.variations
@@ -25,6 +54,7 @@ export function hasActivePromo(
   if (variations.length > 1) {
     return variations.some((v: any) => !!(v?.has_active_promo || v?.is_promo));
   }
+  if (erpIsAuthority) return !!priceData?.is_promo;
   return !!(priceData?.is_promo || product?.has_active_promo);
 }
 
@@ -277,6 +307,7 @@ export function TimeStatusBadges({
   onPromoClick,
   t,
   size = 'md',
+  erpIsAuthority = false,
 }: {
   priceData?: ErpPriceData;
   product: any;
@@ -284,8 +315,10 @@ export function TimeStatusBadges({
   onPromoClick: () => void;
   t: TFn;
   size?: 'sm' | 'md';
+  /** When true, only the ERP row may badge a promo — see hasActivePromo. */
+  erpIsAuthority?: boolean;
 }) {
-  const showPromo = hasActivePromo(product, priceData);
+  const showPromo = hasActivePromo(product, priceData, erpIsAuthority);
   const showOrdered = !!priceData?.buy_did;
   if (!showPromo && !showOrdered) return null;
   return (

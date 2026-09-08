@@ -21,7 +21,11 @@ import { useReminders } from '@contexts/reminders/reminders.context';
 import { productPlaceholder } from '@assets/placeholders';
 import AddToCart from '@components/product/add-to-cart';
 import TimeOfferRows from './time-offer-rows';
-import { TimeStatusBadges, usePromoGating } from './time-promo-gated-cta';
+import {
+  TimeStatusBadges,
+  useErpPromoAuthority,
+  usePromoGating,
+} from './time-promo-gated-cta';
 import TimeProductTabs from './time-product-tabs';
 import TimeBarcodeButton from './time-barcode-button';
 import CorrelatedProductsCarousel from '@components/product/feeds/correlated-products-carousel';
@@ -197,6 +201,7 @@ const TimeProductDetail: React.FC<{
     t,
   );
   const { hasMultiplePromos } = usePromoGating(erpPrice, data);
+  const erpIsAuthority = useErpPromoAuthority();
 
   /* ── Likes / Reminders ── */
   const likes = useLikes();
@@ -626,6 +631,7 @@ const TimeProductDetail: React.FC<{
             )}
             <div className="col-span-2">
               <TimeStatusBadges
+                erpIsAuthority={erpIsAuthority}
                 priceData={erpPrice}
                 product={data}
                 hasMultiplePromos={hasMultiplePromos}
