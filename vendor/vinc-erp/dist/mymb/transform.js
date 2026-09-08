@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getLabelAndCartStatus = getLabelAndCartStatus;
 exports.getPackagingOptions = getPackagingOptions;
 exports.buildPriceEntry = buildPriceEntry;
+exports.buildCustomerPromo = buildCustomerPromo;
 /**
  * Port of Python `get_label_and_cart_status`. Determines the availability
  * "case" (0..5) and resolves label / add-to-cart from `config.cases`.
@@ -172,5 +173,17 @@ function buildPriceEntry(price, settings) {
         entry.is_promo = false;
     }
     return entry;
+}
+const str = (v) => (v == null ? '' : String(v).trim());
+/** One `GetTestatePromoPerClienteResult.ListaPromo` row -> CustomerPromo. */
+function buildCustomerPromo(row) {
+    return {
+        code: str(row?.CodicePromozione),
+        parentCode: str(row?.CodicePromozionePadre),
+        label: str(row?.DescrizionePromo),
+        type: str(row?.CodiceTipoTipologiaPromozione),
+        from: str(row?.DataInizioValidita),
+        to: str(row?.DataScadenza),
+    };
 }
 //# sourceMappingURL=transform.js.map

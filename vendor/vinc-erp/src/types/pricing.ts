@@ -98,3 +98,19 @@ export interface MyMbPriceEntry {
   prod_substitution: string[];
   product_label_action: ProductLabelAction;
 }
+
+/**
+ * One promo header a customer is entitled to — GetTestatePromoPerCliente.
+ *
+ * `code` is the ERP `CodicePromozione` and is the SAME vocabulary as the Solr
+ * `promo_code` facet field (verified 2026-09-08 on vinc-bellieforti-com), so it
+ * can filter facet buckets directly with no mapping table.
+ */
+export interface CustomerPromo {
+  code: string;
+  parentCode: string;
+  label: string;
+  type: string;
+  from: string;
+  to: string;
+}
