@@ -26,6 +26,7 @@ import {
   promoNeedsOfferView,
   TimeAlreadyPurchasedBadge,
   TimePromoLabel,
+  useErpPromoAuthority,
 } from './time-promo-gated-cta';
 import { C, fmtEuro, listOf, netOf } from './time-row-helpers';
 
@@ -90,6 +91,7 @@ export default function TimeVariantsTable({
   const { isAuthorized, hidePrices } = useUI();
   const { settings } = useHomeSettings();
   const { settings: catalogSettings } = useCatalogSettings();
+  const erpIsAuthority = useErpPromoAuthority();
   const decimals = settings?.cardStyle?.priceDecimals ?? 2;
 
   const sku = parent?.sku;
@@ -172,7 +174,7 @@ export default function TimeVariantsTable({
         const tiers = (vPrice as any)?.discount_description || '';
         const packParts = dPrice ? buildPackagingParts(dPrice) : [];
 
-        const isOnPromo = hasActivePromo(v, vPrice);
+        const isOnPromo = hasActivePromo(v, vPrice, erpIsAuthority);
         const discountPercent = hasDiscount
           ? Math.round((1 - Number(net) / Number(list)) * 100)
           : 0;
@@ -182,10 +184,6 @@ export default function TimeVariantsTable({
         const discountLabel =
           tiers ||
           (isOnPromo && discountPercent > 0 ? `-${discountPercent}%` : '');
-        // Badge wording stays on the ERP's own promo count: the badge states
-        // the STATE ("In offerta"), the button states the ACTION ("Vedi
-        // offerte"), so the two never say the same word twice on one row.
-        const hasMultiplePromos = Number((vPrice as any)?.count_promo ?? 0) > 1;
         // Shared with the grid card + search row, so every time listing routes
         // the same articles to the offer view.
         const promoNeedsDetail = promoNeedsOfferView(vPrice);
@@ -335,7 +333,6 @@ export default function TimeVariantsTable({
                   })()}
                 {isAuthorized && isOnPromo && (
                   <TimePromoLabel
-                    hasMultiplePromos={hasMultiplePromos}
                     onClick={() => openQuick(isPseudo ? parent : v)}
                     t={t}
                     size="sm"

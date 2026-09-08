@@ -275,6 +275,16 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         const data = await client.getCustomer(body.customer_code);
         return NextResponse.json({ status: 'success', data });
       }
+      case 'get_customer_promos': {
+        // `data` is null when the ERP could not answer — that is the contract,
+        // not an error: callers must fail open rather than read it as "this
+        // customer is entitled to no promos".
+        const data = await client.getCustomerPromos(
+          body.customer_code,
+          body.address_code,
+        );
+        return NextResponse.json({ status: 'success', data });
+      }
       case 'exposition': {
         const data = await client.getExposition(body.customer_code);
         return NextResponse.json({ status: 'success', data });

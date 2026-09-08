@@ -7,17 +7,46 @@ import type { ErpPriceData } from '@utils/transform/erp-prices';
 import { useCart } from '@contexts/cart/cart.context';
 import { useModalAction } from '@components/common/modal/modal.context';
 import { selectBestPrice } from '@framework/pricing/best-price';
+import { usePricingSource } from '@framework/pricing/use-pricing-source';
+import { useUI } from '@contexts/ui.context';
 
 type TFn = (key: string, opts?: { defaultValue?: string }) => string;
 
 /**
- * True when the product has an active promo. For variant parents the flag is
- * only honoured when at least one variation actually carries a promo — the
- * PIM `has_active_promo` field on the parent itself can be misleading.
+ * Is the ERP price row the authority on promos for the current viewer?
+ *
+ * True exactly when `useProductPriceData` would fetch one: an authorised user
+ * on an ERP-backed pricing source. Anonymous visitors and inline-pricing
+ * tenants never get an ERP row, so for them the PIM flag is all there is.
+ *
+ * Lives here so the card, the search row, the variants table, the detail page
+ * and the popup all answer the question the same way.
+ */
+export function useErpPromoAuthority(): boolean {
+  const { isAuthorized } = useUI();
+  const source = usePricingSource();
+  return isAuthorized && (source === 'erp' || source === 'hybrid');
+}
+
+/**
+ * True when the product has an active promo FOR THIS VIEWER.
+ *
+ * `product.has_active_promo` is PIM data and is catalog-wide: it is true for
+ * every viewer, including customers the ERP gives no promo to. So when ERP
+ * pricing is the authority for this viewer (`erpIsAuthority`), the ERP row is
+ * the only signal, and a row that has not arrived yet is NOT a promo — a badge
+ * that appears and then vanishes is worse than one that appears late.
+ *
+ * Guests and inline-pricing tenants keep the PIM flag: there is no ERP row for
+ * them and never will be.
+ *
+ * For variant parents the flag is only honoured when at least one variation
+ * actually carries a promo — the parent's own PIM field can be misleading.
  */
 export function hasActivePromo(
   product: any,
   priceData?: ErpPriceData,
+  erpIsAuthority = false,
 ): boolean {
   const variations = Array.isArray(product?.variations)
     ? product.variations
@@ -25,6 +54,7 @@ export function hasActivePromo(
   if (variations.length > 1) {
     return variations.some((v: any) => !!(v?.has_active_promo || v?.is_promo));
   }
+  if (erpIsAuthority) return !!priceData?.is_promo;
   return !!(priceData?.is_promo || product?.has_active_promo);
 }
 
@@ -54,8 +84,6 @@ export function promoNeedsOfferView(priceData?: ErpPriceData): boolean {
 export type PromoGating = {
   /** The product carries at least one active promo offer. */
   isPromo: boolean;
-  /** More than one active promo offer is available. */
-  hasMultiplePromos: boolean;
   /** Direct add is gated by promos (multiple offers, or a non-improving promo
    *  such as a min-value / min-pieces threshold). */
   isPromoGated: boolean;
@@ -82,10 +110,13 @@ export function usePromoGating(
   const hasValidPrice = selectBestPrice(priceData).effectivePrice > 0;
   const canAddToCart = priceData?.product_label_action?.ADD_TO_CART ?? true;
   const isPromo = !!(priceData?.is_promo || priceData?.promo);
-  const promoCount = Number(priceData?.count_promo ?? 0);
-  const isImprovingPromo = !!priceData?.is_improving_promo;
-  const hasMultiplePromos = isPromo && promoCount > 1;
-  const isPromoGated = isPromo && (promoCount > 1 || !isImprovingPromo);
+  // NOT `count_promo`: RighePromo is an object, so the transform's
+  // `Array.isArray(...) ? length : 0` makes that field 0 for every article,
+  // always (verified live 2026-09-08). Count the real offers instead — the
+  // same signal promoNeedsOfferView uses, so the card, the search row and the
+  // catalog list row can no longer disagree about the same article.
+  const offerCount = priceData?.all_promo_offers?.length ?? 0;
+  const isPromoGated = promoNeedsOfferView(priceData);
   const canInlineAdd = hasValidPrice && canAddToCart && !isPromoGated;
 
   const cart = useCart() as any;
@@ -100,7 +131,7 @@ export function usePromoGating(
     );
   }, [cartItems, product]);
 
-  return { isPromo, hasMultiplePromos, isPromoGated, canInlineAdd, cartQty };
+  return { isPromo, isPromoGated, canInlineAdd, cartQty };
 }
 
 /**
@@ -228,25 +259,28 @@ export function TimeAlreadyPurchasedBadge({
 }
 
 /**
- * Small clickable promo label. Mirrors the legacy ProductItemAction.vue
- * `textPromo`: "Vedi offerte" for multi-offer products, "In offerta" for
- * single-promo products. Click opens the preview/promo modal.
+ * Small clickable promo label placed next to the availability.
+ *
+ * It states the STATE — "In offerta" — and never the action. The CTA below it
+ * already says VEDI OFFERTE when the promos need picking, and a card that
+ * prints the same words twice reads as a bug. (It used to say "Vedi offerte"
+ * for multi-offer products, mirroring the legacy ProductItemAction.vue
+ * `textPromo`; that branch was unreachable in practice because it keyed off
+ * `count_promo`, which the ERP transform makes 0 for every article.)
+ *
+ * Click still opens the preview/promo modal.
  */
 export function TimePromoLabel({
-  hasMultiplePromos,
   onClick,
   t,
   size = 'md',
 }: {
-  hasMultiplePromos: boolean;
   onClick: () => void;
   t: TFn;
   size?: 'sm' | 'md';
 }) {
   const isSm = size === 'sm';
-  const label = hasMultiplePromos
-    ? t('text-see-offers', { defaultValue: 'Vedi offerte' })
-    : t('text-in-promo', { defaultValue: 'In offerta' });
+  const label = t('text-in-promo', { defaultValue: 'In offerta' });
   return (
     <button
       type="button"
@@ -273,31 +307,25 @@ export function TimePromoLabel({
 export function TimeStatusBadges({
   priceData,
   product,
-  hasMultiplePromos,
   onPromoClick,
   t,
   size = 'md',
+  erpIsAuthority = false,
 }: {
   priceData?: ErpPriceData;
   product: any;
-  hasMultiplePromos: boolean;
   onPromoClick: () => void;
   t: TFn;
   size?: 'sm' | 'md';
+  /** When true, only the ERP row may badge a promo — see hasActivePromo. */
+  erpIsAuthority?: boolean;
 }) {
-  const showPromo = hasActivePromo(product, priceData);
+  const showPromo = hasActivePromo(product, priceData, erpIsAuthority);
   const showOrdered = !!priceData?.buy_did;
   if (!showPromo && !showOrdered) return null;
   return (
     <div className="inline-flex items-start gap-1.5 flex-wrap">
-      {showPromo && (
-        <TimePromoLabel
-          hasMultiplePromos={hasMultiplePromos}
-          onClick={onPromoClick}
-          t={t}
-          size={size}
-        />
-      )}
+      {showPromo && <TimePromoLabel onClick={onPromoClick} t={t} size={size} />}
       {showOrdered && (
         <TimeAlreadyPurchasedBadge
           priceData={priceData}

@@ -297,3 +297,74 @@ describe('MyMbErpClient.getOrders', () => {
     expect(String(f.mock.calls[0][0])).toContain('CodiceIndirizzo=7');
   });
 });
+
+describe('MyMbErpClient.getCustomerPromos', () => {
+  const okBody = {
+    GetTestatePromoPerClienteResult: {
+      ReturnCode: 0,
+      Message: '',
+      ListaPromo: [
+        { CodicePromozione: '26-FUORI TUTTO', DescrizionePromo: 'FUORI TUTTO', CodiceTipoTipologiaPromozione: 'STD' },
+        { CodicePromozione: '26-SETTEMBRE', DescrizionePromo: 'CANVASS SETTEMBRE', CodiceTipoTipologiaPromozione: 'STD' },
+        { CodicePromozione: 'IMPMIN', DescrizionePromo: 'MINIMO ORDINE', CodiceTipoTipologiaPromozione: '0' },
+      ],
+    },
+  };
+
+  it('returns the customer promos on ReturnCode 0', async () => {
+    const f = vi.fn().mockResolvedValue(jsonResponse(okBody));
+    const client = makeClient(f as unknown as typeof fetch);
+    const promos = await client.getCustomerPromos('10407', '1');
+    expect(promos?.map((p) => p.code)).toEqual([
+      '26-FUORI TUTTO',
+      '26-SETTEMBRE',
+      'IMPMIN',
+    ]);
+  });
+
+  it('sends the four captured params, address included', async () => {
+    const f = vi.fn().mockResolvedValue(jsonResponse(okBody));
+    await makeClient(f as unknown as typeof fetch).getCustomerPromos('10407', '1');
+    const url = String(f.mock.calls[0][0]);
+    expect(url).toContain('GetTestatePromoPerCliente');
+    expect(url).toContain('CodiceInternoCliente=10407');
+    expect(url).toContain('CodiceIndirizzo=1');
+    expect(url).toContain('CanalePromozione=');
+    expect(url).toContain('CodiceTipotipologiaPromo=');
+  });
+
+  it('returns null on a ReturnCode 1 business error delivered as HTTP 200', async () => {
+    // The real failure mode: MyMB answers 200 with ReturnCode 1. Collapsing
+    // this to [] would read as "entitled to nothing" and empty the facet.
+    const f = vi.fn().mockResolvedValue(
+      jsonResponse({
+        GetTestatePromoPerClienteResult: {
+          ReturnCode: 1,
+          Message: 'Errore generazione Testata Documento; C:\\Users\\Administrator\\source\\...',
+          ListaPromo: [],
+        },
+      }),
+    );
+    await expect(
+      makeClient(f as unknown as typeof fetch).getCustomerPromos('10407', '1'),
+    ).resolves.toBeNull();
+  });
+
+  it('returns null when the transport throws', async () => {
+    const f = vi.fn().mockRejectedValue(new Error('ECONNREFUSED'));
+    await expect(
+      makeClient(f as unknown as typeof fetch).getCustomerPromos('10407', '1'),
+    ).resolves.toBeNull();
+  });
+
+  it('returns an empty array — not null — for a customer with no promos', async () => {
+    const f = vi.fn().mockResolvedValue(
+      jsonResponse({
+        GetTestatePromoPerClienteResult: { ReturnCode: 0, Message: '', ListaPromo: [] },
+      }),
+    );
+    await expect(
+      makeClient(f as unknown as typeof fetch).getCustomerPromos('10407', '1'),
+    ).resolves.toEqual([]);
+  });
+});

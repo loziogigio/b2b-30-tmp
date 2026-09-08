@@ -103,7 +103,6 @@ describe('TimeStatusBadges', () => {
       <TimeStatusBadges
         priceData={priceData}
         product={product}
-        hasMultiplePromos={false}
         onPromoClick={vi.fn()}
         t={t}
       />,
@@ -118,18 +117,25 @@ describe('TimeStatusBadges', () => {
   });
 
   it('keeps the promo label working alongside the history badge', () => {
+    // The badge states the STATE ("In offerta"); the CTA elsewhere on the card
+    // carries the ACTION ("VEDI OFFERTE"), so the two never repeat each other.
+    // It used to read "Vedi offerte" for multi-promo articles, but that keyed
+    // off count_promo, which the ERP transform makes 0 for every article.
     const onPromoClick = vi.fn();
     render(
       <TimeStatusBadges
-        priceData={{ ...priceData, is_promo: true, count_promo: 2 }}
+        priceData={{
+          ...priceData,
+          is_promo: true,
+          all_promo_offers: [{ promo_code: 'A' }, { promo_code: 'B' }],
+        }}
         product={{ ...product, has_active_promo: true }}
-        hasMultiplePromos
         onPromoClick={onPromoClick}
         t={t}
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: /Vedi offerte/i }));
+    fireEvent.click(screen.getByRole('button', { name: /In offerta/i }));
 
     expect(onPromoClick).toHaveBeenCalled();
     expect(mocks.openModal).not.toHaveBeenCalled();

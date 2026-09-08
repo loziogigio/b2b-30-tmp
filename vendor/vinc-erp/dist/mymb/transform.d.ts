@@ -1,4 +1,4 @@
-import type { MyMbErpSettings, MyMbPriceEntry, ProductLabelAction } from '../types/pricing.js';
+import type { CustomerPromo, MyMbErpSettings, MyMbPriceEntry, ProductLabelAction } from '../types/pricing.js';
 interface LabelConfig {
     isManagedSubstitutes: boolean;
     isManagedSupplierOrder: boolean;
@@ -30,5 +30,7 @@ export declare function getPackagingOptions(list: RawPackaging[] | undefined, or
  * substitute-fallback network call is applied by the client afterwards.
  */
 export declare function buildPriceEntry(price: Record<string, any>, settings: MyMbErpSettings): MyMbPriceEntry;
+/** One `GetTestatePromoPerClienteResult.ListaPromo` row -> CustomerPromo. */
+export declare function buildCustomerPromo(row: any): CustomerPromo;
 export {};
 //# sourceMappingURL=transform.d.ts.map

@@ -25,6 +25,7 @@ import {
   promoNeedsOfferView,
   PromoGatedCta,
   TimeStatusBadges,
+  useErpPromoAuthority,
   usePromoGating,
 } from '@components/themes/time/product/time-promo-gated-cta';
 import React from 'react';
@@ -102,8 +103,11 @@ export default function TimeSearchRow({
   // gates direct add (multiple promos, or a non-improving threshold promo)
   // we replace the inline qty selector with a PROMO CTA that opens the
   // preview/promo modal instead.
-  const { hasMultiplePromos, isPromoGated, canInlineAdd, cartQty } =
-    usePromoGating(priceData, product);
+  const { isPromoGated, canInlineAdd, cartQty } = usePromoGating(
+    priceData,
+    product,
+  );
+  const erpIsAuthority = useErpPromoAuthority();
   const variantCount = product.variantCount ?? variations.length;
   // Packaging info from ERP — filtered set (packaging_options_id), shared with
   // the offer rows. Renders "UM: <unit> · <code>: <qty> · …".
@@ -150,7 +154,7 @@ export default function TimeSearchRow({
             </span>
           )}
           {!hidePrices &&
-            hasActivePromo(product, priceData) &&
+            hasActivePromo(product, priceData, erpIsAuthority) &&
             discountPercent === 0 && (
               <span className="bg-[var(--time-red)] text-white text-[10px] sm:text-[11px] font-bold px-1.5 py-[2px] rounded font-[family-name:var(--font-body)]">
                 PROMO
@@ -334,9 +338,9 @@ export default function TimeSearchRow({
               </span>
             </div>
             <TimeStatusBadges
+              erpIsAuthority={erpIsAuthority}
               priceData={priceData}
               product={product}
-              hasMultiplePromos={hasMultiplePromos}
               onPromoClick={handleClick}
               t={t}
             />

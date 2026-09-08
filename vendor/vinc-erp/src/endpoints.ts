@@ -16,6 +16,7 @@ export const MYMB_ENDPOINTS = {
   GET_RIGHE_FATT_CON_INFO: 'GetRigheFATTConInfo',
   GET_ULTIMO_ORDINATO_CLIENTE_X_ARTICOLO:
     'GetUltimoOrdinatoClienteXArticolo',
+  GET_TESTATE_PROMO_PER_CLIENTE: 'GetTestatePromoPerCliente',
 } as const;
 
 export type MyMbEndpoint =

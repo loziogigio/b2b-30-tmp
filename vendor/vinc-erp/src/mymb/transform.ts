@@ -1,4 +1,5 @@
 import type {
+  CustomerPromo,
   MyMbErpSettings,
   MyMbPriceEntry,
   NormalizedPackagingOption,
@@ -203,4 +204,18 @@ export function buildPriceEntry(
   }
 
   return entry;
+}
+
+const str = (v: unknown): string => (v == null ? '' : String(v).trim());
+
+/** One `GetTestatePromoPerClienteResult.ListaPromo` row -> CustomerPromo. */
+export function buildCustomerPromo(row: any): CustomerPromo {
+  return {
+    code: str(row?.CodicePromozione),
+    parentCode: str(row?.CodicePromozionePadre),
+    label: str(row?.DescrizionePromo),
+    type: str(row?.CodiceTipoTipologiaPromozione),
+    from: str(row?.DataInizioValidita),
+    to: str(row?.DataScadenza),
+  };
 }
