@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { AUTH_COOKIES, resolveAuthContext } from '@/lib/auth/server';
 import { buildTenantApiHeaders, resolveTenantApiConfig } from '@/lib/tenant';
 import { customerAddressCodes } from '@/lib/profile/session-owner';
+import { getEntitledPromoCodes } from '@/lib/erp/customer-promos';
 import { warnIfRedirectDroppedAuth } from '@/lib/tenant/auth-redirect-warning';
 import {
   expandCategoryFilterToLeaves,
@@ -441,6 +442,33 @@ async function getPromoTypeMap(
   return promise;
 }
 
+/**
+ * Drops PROMOZIONE buckets the customer cannot receive.
+ *
+ * Solr's `promo_code` is populated from PIM `promotions[]`, which is
+ * catalog-wide, so every customer is offered every campaign. The ERP knows
+ * better: on 2026-09-08 customer 10407 was offered 4 buckets while entitled to
+ * 2 — two campaigns covering 423 products they cannot get.
+ *
+ * `entitled === null` means the ERP could not answer. FAIL OPEN: filter
+ * nothing. An empty Set is a real answer and does empty the facet.
+ *
+ * Counts are left alone — they are catalog-wide facts and stay true.
+ */
+export function filterPromoFacetByEntitlement(
+  data: any,
+  entitled: Set<string> | null,
+): any {
+  if (!entitled) return data;
+  const facets = data?.data?.facet_results || data?.facet_results;
+  const list = facets?.promo_code;
+  if (!Array.isArray(list)) return data;
+  facets.promo_code = list.filter((f: any) =>
+    entitled.has(String(f?.value ?? '').trim()),
+  );
+  return data;
+}
+
 // Rewrites facet_results.promo_type entries in-place so the sidebar renders
 // "GIORNALINO SUPERPREZZI" instead of the bare "SPR" code. Both `label` and
 // `entity.label` are populated so consumers that read either path get the
@@ -670,6 +698,30 @@ async function proxyRequest(
             config.tenantId,
           );
           data = enrichPromoFacetLabels(data, promoMap);
+
+          // Entitlement comes off the SANITIZED body: sanitizeSearchBody has
+          // already replaced the browser's hint with the SSO-owned pair, so a
+          // spoofed customer_code can never widen what this viewer sees.
+          let trustedCustomer = '';
+          let trustedAddress = '';
+          try {
+            if (typeof fetchOptions.body === 'string') {
+              const parsed = JSON.parse(fetchOptions.body);
+              trustedCustomer = String(parsed?.customer_code ?? '').trim();
+              trustedAddress = String(parsed?.address_code ?? '').trim();
+            }
+          } catch {
+            // body wasn't JSON — treat as a guest search, filter nothing
+          }
+          if (trustedCustomer && trustedAddress) {
+            const entitled = await getEntitledPromoCodes({
+              req,
+              tenantId: config.tenantId,
+              customerCode: trustedCustomer,
+              addressCode: trustedAddress,
+            });
+            data = filterPromoFacetByEntitlement(data, entitled);
+          }
         }
       }
 
