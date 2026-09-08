@@ -1,6 +1,6 @@
 import type { CacheAdapter } from '../cache.js';
 import type { ErpClient } from '../erp-client.js';
-import type { MyMbErpSettings, MyMbPriceEntry, PriceQuery } from '../types/pricing.js';
+import type { CustomerPromo, MyMbErpSettings, MyMbPriceEntry, PriceQuery } from '../types/pricing.js';
 import type { MyMbCartClosureInfo } from '../types/cart-closure.js';
 export interface MyMbErpClientConfig {
     /** Base URL, no userinfo, no trailing slash (from parseMyMbConnection). */
@@ -133,6 +133,16 @@ export declare class MyMbErpClient implements ErpClient {
     }): Promise<any[]>;
     /** Customer profile — hub `get_client` → MyMB `GetCliente` (GET). */
     getCustomer(customerCode: string): Promise<any>;
+    /**
+     * Promo headers this customer is entitled to — MyMB `GetTestatePromoPerCliente`.
+     *
+     * Returns `null` for "unknown" (business error, transport failure) and `[]`
+     * for "genuinely entitled to nothing". Callers MUST treat these differently:
+     * `null` means fall back to showing everything, `[]` means show nothing.
+     * A business error arrives as HTTP 200 with ReturnCode !== 0, so the status
+     * code alone proves nothing.
+     */
+    getCustomerPromos(customerCode: string, addressCode: string, promoType?: string): Promise<CustomerPromo[] | null>;
     /** Credit exposure — hub `exposition` → MyMB `GetEsposizioneClienteInfo` (GET). */
     getExposition(customerCode: string): Promise<any>;
     /** Payment deadlines — hub `payment_deadline` → MyMB `GetListaScadenzeConInfo` (GET). */

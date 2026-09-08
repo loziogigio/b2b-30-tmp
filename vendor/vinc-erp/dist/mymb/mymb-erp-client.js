@@ -247,6 +247,40 @@ class MyMbErpClient {
         });
         return data?.GetClienteResult ?? null;
     }
+    /**
+     * Promo headers this customer is entitled to — MyMB `GetTestatePromoPerCliente`.
+     *
+     * Returns `null` for "unknown" (business error, transport failure) and `[]`
+     * for "genuinely entitled to nothing". Callers MUST treat these differently:
+     * `null` means fall back to showing everything, `[]` means show nothing.
+     * A business error arrives as HTTP 200 with ReturnCode !== 0, so the status
+     * code alone proves nothing.
+     */
+    async getCustomerPromos(customerCode, addressCode, promoType = '') {
+        try {
+            const data = await this.request(endpoints_js_1.MYMB_ENDPOINTS.GET_TESTATE_PROMO_PER_CLIENTE, {
+                method: 'GET',
+                params: {
+                    CodiceInternoCliente: customerCode,
+                    CodiceIndirizzo: addressCode,
+                    CanalePromozione: '',
+                    CodiceTipotipologiaPromo: promoType,
+                },
+            });
+            const result = data?.GetTestatePromoPerClienteResult;
+            if (!result || result.ReturnCode !== 0) {
+                // `Message` carries ERP server paths — log the code, never the text.
+                console.warn('[MyMB] GetTestatePromoPerCliente ReturnCode', result?.ReturnCode);
+                return null;
+            }
+            const list = Array.isArray(result.ListaPromo) ? result.ListaPromo : [];
+            return list.map(transform_js_1.buildCustomerPromo);
+        }
+        catch (err) {
+            console.warn('[MyMB] GetTestatePromoPerCliente failed:', err.message);
+            return null;
+        }
+    }
     /** Credit exposure — hub `exposition` → MyMB `GetEsposizioneClienteInfo` (GET). */
     async getExposition(customerCode) {
         const data = await this.request(endpoints_js_1.MYMB_ENDPOINTS.GET_ESPOSIZIONE_CLIENTE_INFO, {
