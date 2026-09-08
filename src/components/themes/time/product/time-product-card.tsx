@@ -142,8 +142,10 @@ export default function TimeProductCard({
   const isOutOfStock = hasAvailability && availability <= 0;
   // Same legacy gating as TimeSearchRow: promo-gated items get the PROMO CTA
   // instead of the inline qty selector, with a cart-total readout next to it.
-  const { hasMultiplePromos, isPromoGated, canInlineAdd, cartQty } =
-    usePromoGating(effectivePriceData, product);
+  const { isPromoGated, canInlineAdd, cartQty } = usePromoGating(
+    effectivePriceData,
+    product,
+  );
   // Only the customer's own ERP row may badge a promo (PIM's flag is catalog-wide).
   const erpIsAuthority = useErpPromoAuthority();
 
@@ -386,14 +388,7 @@ export default function TimeProductCard({
                   product,
                   effectivePriceData,
                   erpIsAuthority,
-                ) && (
-                  <TimePromoLabel
-                    hasMultiplePromos={hasMultiplePromos}
-                    onClick={handleClick}
-                    t={t}
-                    size="sm"
-                  />
-                )}
+                ) && <TimePromoLabel onClick={handleClick} t={t} size="sm" />}
               </div>
 
               {/* Like · reminder (not clickable when in stock) · last purchase —

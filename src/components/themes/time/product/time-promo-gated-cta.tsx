@@ -84,8 +84,6 @@ export function promoNeedsOfferView(priceData?: ErpPriceData): boolean {
 export type PromoGating = {
   /** The product carries at least one active promo offer. */
   isPromo: boolean;
-  /** More than one active promo offer is available. */
-  hasMultiplePromos: boolean;
   /** Direct add is gated by promos (multiple offers, or a non-improving promo
    *  such as a min-value / min-pieces threshold). */
   isPromoGated: boolean;
@@ -112,10 +110,13 @@ export function usePromoGating(
   const hasValidPrice = selectBestPrice(priceData).effectivePrice > 0;
   const canAddToCart = priceData?.product_label_action?.ADD_TO_CART ?? true;
   const isPromo = !!(priceData?.is_promo || priceData?.promo);
-  const promoCount = Number(priceData?.count_promo ?? 0);
-  const isImprovingPromo = !!priceData?.is_improving_promo;
-  const hasMultiplePromos = isPromo && promoCount > 1;
-  const isPromoGated = isPromo && (promoCount > 1 || !isImprovingPromo);
+  // NOT `count_promo`: RighePromo is an object, so the transform's
+  // `Array.isArray(...) ? length : 0` makes that field 0 for every article,
+  // always (verified live 2026-09-08). Count the real offers instead — the
+  // same signal promoNeedsOfferView uses, so the card, the search row and the
+  // catalog list row can no longer disagree about the same article.
+  const offerCount = priceData?.all_promo_offers?.length ?? 0;
+  const isPromoGated = promoNeedsOfferView(priceData);
   const canInlineAdd = hasValidPrice && canAddToCart && !isPromoGated;
 
   const cart = useCart() as any;
@@ -130,7 +131,7 @@ export function usePromoGating(
     );
   }, [cartItems, product]);
 
-  return { isPromo, hasMultiplePromos, isPromoGated, canInlineAdd, cartQty };
+  return { isPromo, isPromoGated, canInlineAdd, cartQty };
 }
 
 /**
@@ -258,25 +259,28 @@ export function TimeAlreadyPurchasedBadge({
 }
 
 /**
- * Small clickable promo label. Mirrors the legacy ProductItemAction.vue
- * `textPromo`: "Vedi offerte" for multi-offer products, "In offerta" for
- * single-promo products. Click opens the preview/promo modal.
+ * Small clickable promo label placed next to the availability.
+ *
+ * It states the STATE — "In offerta" — and never the action. The CTA below it
+ * already says VEDI OFFERTE when the promos need picking, and a card that
+ * prints the same words twice reads as a bug. (It used to say "Vedi offerte"
+ * for multi-offer products, mirroring the legacy ProductItemAction.vue
+ * `textPromo`; that branch was unreachable in practice because it keyed off
+ * `count_promo`, which the ERP transform makes 0 for every article.)
+ *
+ * Click still opens the preview/promo modal.
  */
 export function TimePromoLabel({
-  hasMultiplePromos,
   onClick,
   t,
   size = 'md',
 }: {
-  hasMultiplePromos: boolean;
   onClick: () => void;
   t: TFn;
   size?: 'sm' | 'md';
 }) {
   const isSm = size === 'sm';
-  const label = hasMultiplePromos
-    ? t('text-see-offers', { defaultValue: 'Vedi offerte' })
-    : t('text-in-promo', { defaultValue: 'In offerta' });
+  const label = t('text-in-promo', { defaultValue: 'In offerta' });
   return (
     <button
       type="button"
@@ -303,7 +307,6 @@ export function TimePromoLabel({
 export function TimeStatusBadges({
   priceData,
   product,
-  hasMultiplePromos,
   onPromoClick,
   t,
   size = 'md',
@@ -311,7 +314,6 @@ export function TimeStatusBadges({
 }: {
   priceData?: ErpPriceData;
   product: any;
-  hasMultiplePromos: boolean;
   onPromoClick: () => void;
   t: TFn;
   size?: 'sm' | 'md';
@@ -323,14 +325,7 @@ export function TimeStatusBadges({
   if (!showPromo && !showOrdered) return null;
   return (
     <div className="inline-flex items-start gap-1.5 flex-wrap">
-      {showPromo && (
-        <TimePromoLabel
-          hasMultiplePromos={hasMultiplePromos}
-          onClick={onPromoClick}
-          t={t}
-          size={size}
-        />
-      )}
+      {showPromo && <TimePromoLabel onClick={onPromoClick} t={t} size={size} />}
       {showOrdered && (
         <TimeAlreadyPurchasedBadge
           priceData={priceData}

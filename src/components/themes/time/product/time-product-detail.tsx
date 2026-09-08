@@ -200,7 +200,6 @@ const TimeProductDetail: React.FC<{
     catalogSettings.availabilityDisplay,
     t,
   );
-  const { hasMultiplePromos } = usePromoGating(erpPrice, data);
   const erpIsAuthority = useErpPromoAuthority();
 
   /* ── Likes / Reminders ── */
@@ -634,7 +633,6 @@ const TimeProductDetail: React.FC<{
                 erpIsAuthority={erpIsAuthority}
                 priceData={erpPrice}
                 product={data}
-                hasMultiplePromos={hasMultiplePromos}
                 onPromoClick={() => {
                   const el = document.getElementById('time-offer-rows');
                   el?.scrollIntoView({

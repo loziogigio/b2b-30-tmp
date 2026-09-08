@@ -184,10 +184,6 @@ export default function TimeVariantsTable({
         const discountLabel =
           tiers ||
           (isOnPromo && discountPercent > 0 ? `-${discountPercent}%` : '');
-        // Badge wording stays on the ERP's own promo count: the badge states
-        // the STATE ("In offerta"), the button states the ACTION ("Vedi
-        // offerte"), so the two never say the same word twice on one row.
-        const hasMultiplePromos = Number((vPrice as any)?.count_promo ?? 0) > 1;
         // Shared with the grid card + search row, so every time listing routes
         // the same articles to the offer view.
         const promoNeedsDetail = promoNeedsOfferView(vPrice);
@@ -337,7 +333,6 @@ export default function TimeVariantsTable({
                   })()}
                 {isAuthorized && isOnPromo && (
                   <TimePromoLabel
-                    hasMultiplePromos={hasMultiplePromos}
                     onClick={() => openQuick(isPseudo ? parent : v)}
                     t={t}
                     size="sm"

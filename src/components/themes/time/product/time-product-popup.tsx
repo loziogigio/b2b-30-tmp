@@ -155,7 +155,6 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
     catalogSettings.availabilityDisplay,
     t,
   );
-  const { hasMultiplePromos } = usePromoGating(erpPrice, product);
   const erpIsAuthority = useErpPromoAuthority();
 
   /* ── Likes / Reminders init ── */
@@ -540,7 +539,6 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
                   erpIsAuthority={erpIsAuthority}
                   priceData={erpPrice}
                   product={product}
-                  hasMultiplePromos={hasMultiplePromos}
                   onPromoClick={navigateToProductPage}
                   t={t}
                 />

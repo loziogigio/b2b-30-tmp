@@ -103,8 +103,10 @@ export default function TimeSearchRow({
   // gates direct add (multiple promos, or a non-improving threshold promo)
   // we replace the inline qty selector with a PROMO CTA that opens the
   // preview/promo modal instead.
-  const { hasMultiplePromos, isPromoGated, canInlineAdd, cartQty } =
-    usePromoGating(priceData, product);
+  const { isPromoGated, canInlineAdd, cartQty } = usePromoGating(
+    priceData,
+    product,
+  );
   const erpIsAuthority = useErpPromoAuthority();
   const variantCount = product.variantCount ?? variations.length;
   // Packaging info from ERP — filtered set (packaging_options_id), shared with
@@ -339,7 +341,6 @@ export default function TimeSearchRow({
               erpIsAuthority={erpIsAuthority}
               priceData={priceData}
               product={product}
-              hasMultiplePromos={hasMultiplePromos}
               onPromoClick={handleClick}
               t={t}
             />

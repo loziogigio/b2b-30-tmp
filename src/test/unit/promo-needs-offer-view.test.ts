@@ -53,3 +53,19 @@ describe('promoNeedsOfferView', () => {
     ).toBe(true);
   });
 });
+
+describe('promo gating no longer depends on count_promo', () => {
+  it('treats two real offers as multiple even though count_promo is 0', () => {
+    // RighePromo is an OBJECT, so `Array.isArray` in the transform is always
+    // false and count_promo is 0 for every article, always. Verified live
+    // 2026-09-08: count_promo 0 alongside num_promo 2.
+    const pd = {
+      is_promo: true,
+      promo: true,
+      count_promo: 0,
+      is_improving_promo: true,
+      all_promo_offers: [{ promo_code: 'A' }, { promo_code: 'B' }],
+    } as any;
+    expect(promoNeedsOfferView(pd)).toBe(true);
+  });
+});
