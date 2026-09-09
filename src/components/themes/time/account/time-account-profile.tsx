@@ -8,6 +8,8 @@ import {
 import { TimeCard, TimeInfoRow } from './time-account-primitives';
 import { IconMapPin, IconTruck } from './time-account-icons';
 import { selectReferenceAgent } from '@utils/transform/b2b-addresses';
+import { ERP_STATIC } from '@framework/utils/static';
+import { useEffect, useState } from 'react';
 
 interface TimeAccountProfileProps {
   lang: string;
@@ -15,6 +17,10 @@ interface TimeAccountProfileProps {
 
 export default function TimeAccountProfile({ lang }: TimeAccountProfileProps) {
   const { t } = useTranslation(lang, 'common');
+  // ERP_STATIC is hydrated from localStorage on the client; read it after
+  // mount so the server render and the first client render agree.
+  const [activeAddressCode, setActiveAddressCode] = useState('');
+  useEffect(() => setActiveAddressCode(ERP_STATIC.address_code || ''), []);
   const {
     data: customer,
     isLoading: loadingCustomer,
@@ -61,10 +67,11 @@ export default function TimeAccountProfile({ lang }: TimeAccountProfileProps) {
     );
   }
 
-  // The agent MyMB attaches to the legal seat (falling back to the first
-  // address that has one). Undefined hides the section entirely — an empty
-  // "AGENTE DI RIFERIMENTO" block is worse than none.
-  const agent = selectReferenceAgent(addresses);
+  // The agent for the address the customer is operating under, then the
+  // legal seat, then the first address that has one. Undefined hides the
+  // section entirely — an empty "AGENTE DI RIFERIMENTO" block is worse than
+  // none.
+  const agent = selectReferenceAgent(addresses, activeAddressCode);
 
   // Split addresses: legal seat vs delivery
   const legalSeat = addresses.find((a) => a.isLegalSeat);

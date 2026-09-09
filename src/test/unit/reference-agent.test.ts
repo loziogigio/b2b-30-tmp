@@ -219,3 +219,58 @@ describe('attachAgents — MyMB is the authority on the legal seat', () => {
     expect(out.every((a) => !a.isLegalSeat)).toBe(true);
   });
 });
+
+describe('selectReferenceAgent — the active address wins', () => {
+  // The session carries the address the customer is operating under
+  // (ERP_STATIC.address_code, e.g. "1"). Pricing and promos are already
+  // resolved per customer+address, so the reference agent follows the same
+  // pair: agents can differ per address, and the one for the address you are
+  // logged in as is the one you should be calling.
+  const a = (id: string, isLegalSeat: boolean, name: string) =>
+    ({
+      id,
+      title: id,
+      isLegalSeat,
+      address: {
+        street_address: '',
+        city: '',
+        state: '',
+        zip: '',
+        country: '',
+      },
+      agent: { name },
+    }) as AddressB2B;
+
+  it('prefers the active address over the legal seat', () => {
+    const out = selectReferenceAgent(
+      [a('1', true, 'Sede Legale Agente'), a('5', false, 'Milano Agente')],
+      '5',
+    );
+    expect(out?.name).toBe('Milano Agente');
+  });
+
+  it('falls back to the legal seat when the active address has no agent', () => {
+    const out = selectReferenceAgent(
+      [a('1', true, 'Sede Legale Agente'), { ...a('5', false, ''), agent: {} }],
+      '5',
+    );
+    expect(out?.name).toBe('Sede Legale Agente');
+  });
+
+  it('falls back to the legal seat when the active address is unknown', () => {
+    const out = selectReferenceAgent(
+      [a('1', true, 'Sede Legale Agente'), a('5', false, 'Milano Agente')],
+      '99',
+    );
+    expect(out?.name).toBe('Sede Legale Agente');
+  });
+
+  it('treats the "0" sentinel and blanks as no active address', () => {
+    const addrs = [a('1', true, 'Sede Legale Agente'), a('0', false, 'Zero')];
+    expect(selectReferenceAgent(addrs, '0')?.name).toBe('Sede Legale Agente');
+    expect(selectReferenceAgent(addrs, '')?.name).toBe('Sede Legale Agente');
+    expect(selectReferenceAgent(addrs, undefined)?.name).toBe(
+      'Sede Legale Agente',
+    );
+  });
+});

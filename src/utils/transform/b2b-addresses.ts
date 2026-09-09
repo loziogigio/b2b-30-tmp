@@ -60,23 +60,38 @@ export function transformAddresses(res: RawAddressesResponse): AddressB2B[] {
 /**
  * The single agent the storefront shows as "AGENTE DI RIFERIMENTO".
  *
- * MyMB attaches an agent to each ADDRESS, but a customer's addresses normally
- * share one, so the account page shows one block. The legal seat wins; failing
- * that, the first address that actually has an agent.
+ * MyMB attaches an agent to each ADDRESS and agents can differ per address, so
+ * the choice follows the same customer+address pair that already drives
+ * pricing and promos:
+ *
+ *   1. the address the customer is operating under (`activeAddressCode`,
+ *      i.e. ERP_STATIC.address_code from the login selection);
+ *   2. the legal seat (MyMB's IsSedeLegale, see attachAgents);
+ *   3. the first address that actually has an agent.
  *
  * An address whose agent object exists but is entirely blank does NOT count —
- * returning it would render an empty section instead of hiding it.
+ * returning it would render an empty section instead of hiding it. The '0'
+ * sentinel ERP_STATIC uses for "no address selected" is treated as absent.
  */
 export function selectReferenceAgent(
   addresses: AddressB2B[],
+  activeAddressCode?: string,
 ): AddressB2B['agent'] | undefined {
   const hasAny = (a: AddressB2B) =>
     Boolean(
       a.agent && Object.values(a.agent).some((v) => String(v ?? '').trim()),
     );
   const list = Array.isArray(addresses) ? addresses : [];
-  return (list.find((a) => a.isLegalSeat && hasAny(a)) ?? list.find(hasAny))
-    ?.agent;
+  const active = String(activeAddressCode ?? '').trim();
+  const byActive =
+    active && active !== '0'
+      ? list.find((a) => String(a.id) === active && hasAny(a))
+      : undefined;
+  return (
+    byActive ??
+    list.find((a) => a.isLegalSeat && hasAny(a)) ??
+    list.find(hasAny)
+  )?.agent;
 }
 
 /** Blank ERP strings become undefined so the UI can test truthiness. */
