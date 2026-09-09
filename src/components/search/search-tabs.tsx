@@ -208,11 +208,26 @@ export default function SearchTabs({ lang }: { lang: string }) {
       return;
     }
 
-    const current = tabs[active];
+    const current = active >= 0 ? tabs[active] : undefined;
     if (current && current.key === key && current.query === qs) return; // no-op
 
     const existingIdx = tabs.findIndex((t, i) => i !== active && t.key === key);
     let nextTabs = [...tabs];
+
+    if (!current) {
+      // Coming back from the Preferiti view (active === -1): there is no tab to
+      // update in place, so select the matching one or open a new one.
+      if (existingIdx !== -1) {
+        setActive(existingIdx);
+        return;
+      }
+      const newTab: Tab = { id: randomId(), key, label: lbl, query: qs };
+      const next = [...tabs, newTab].slice(-MAX_TABS);
+      setTabs(next);
+      setActive(next.length - 1);
+      saveTabs(next);
+      return;
+    }
 
     if (existingIdx !== -1) {
       // Deduplicate: switch to existing and drop current if it became a duplicate
