@@ -469,6 +469,52 @@ export function filterPromoFacetByEntitlement(
   return data;
 }
 
+/** `lang` from a search body; the env default when absent or not JSON. */
+export function readBodyLang(bodyText: string): string {
+  const fallback = process.env.NEXT_PUBLIC_PIM_DEFAULT_LANG || 'it';
+  try {
+    const parsed = JSON.parse(bodyText);
+    return typeof parsed?.lang === 'string' && parsed.lang.trim()
+      ? parsed.lang.trim()
+      : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+/**
+ * The customer/address pair a SANITIZED search body carries. Empty for guests
+ * and for a user with no owned selection — sanitizeSearchBody only writes the
+ * pair back after the session has proven ownership of both halves.
+ */
+export function readTrustedPair(bodyText: string): {
+  customerCode: string;
+  addressCode: string;
+} {
+  try {
+    const parsed = JSON.parse(bodyText);
+    return {
+      customerCode: String(parsed?.customer_code ?? '').trim(),
+      addressCode: String(parsed?.address_code ?? '').trim(),
+    };
+  } catch {
+    return { customerCode: '', addressCode: '' };
+  }
+}
+
+/**
+ * Everything the proxy does to a search response before returning it, as one
+ * pure function so the INDEPENDENCE of the two steps is unit-tested: the
+ * entitlement filter applies even when no promo_type facet came back.
+ */
+export function postProcessSearchResponse(
+  data: any,
+  opts: { promoMap: PromoMap; entitled: Set<string> | null },
+): any {
+  data = enrichPromoFacetLabels(data, opts.promoMap);
+  return filterPromoFacetByEntitlement(data, opts.entitled);
+}
+
 // Rewrites facet_results.promo_type entries in-place so the sidebar renders
 // "GIORNALINO SUPERPREZZI" instead of the bare "SPR" code. Both `label` and
 // `entity.label` are populated so consumers that read either path get the
@@ -665,64 +711,49 @@ async function proxyRequest(
     if (contentType && contentType.includes('application/json')) {
       let data = await response.json();
 
-      // For search responses, enrich facet_results.promo_type with friendly
-      // labels harvested from promotions[]. PIM ships the raw codes (SPR /
-      // ZZZ / LIP) but products carry the human title — same approach as
-      // dfl-b2b/server/api/pim-search.
+      // Search responses get two INDEPENDENT post-processing steps:
+      //   1. facet_results.promo_type labels harvested from promotions[] — only
+      //      worth a harvest when that facet is actually in the response;
+      //   2. facet_results.promo_code trimmed to the customer's entitlement.
+      // (2) must not live inside (1)'s guard: the storefront sidebar requests
+      // promo_code but never promo_type, so that guard is normally closed —
+      // and the entitlement filter never ran in production (2026-09-09).
       if (method === 'POST' && response.ok && searchPath) {
-        const promoFacet =
+        const bodyText =
+          typeof fetchOptions.body === 'string' ? fetchOptions.body : '';
+
+        const promoTypeFacet =
           data?.data?.facet_results?.promo_type ||
           data?.facet_results?.promo_type;
-        if (Array.isArray(promoFacet) && promoFacet.length > 0) {
+        let promoMap: PromoMap = {};
+        if (Array.isArray(promoTypeFacet) && promoTypeFacet.length > 0) {
           const proxyHeaders = buildTenantApiHeaders(config, {
             contentType: false,
             includeLegacyApiKeyAlias: true,
           });
-          // Honour the lang the caller requested so the promo titles match
-          // the rest of the response (falls back to env / 'it').
-          let lang = process.env.NEXT_PUBLIC_PIM_DEFAULT_LANG || 'it';
-          try {
-            if (typeof fetchOptions.body === 'string') {
-              const parsed = JSON.parse(fetchOptions.body);
-              if (typeof parsed?.lang === 'string' && parsed.lang.trim()) {
-                lang = parsed.lang.trim();
-              }
-            }
-          } catch {
-            // body wasn't JSON — keep default lang
-          }
-          const promoMap = await getPromoTypeMap(
+          promoMap = await getPromoTypeMap(
             baseUrl,
             proxyHeaders,
-            lang,
+            readBodyLang(bodyText),
             config.tenantId,
           );
-          data = enrichPromoFacetLabels(data, promoMap);
-
-          // Entitlement comes off the SANITIZED body: sanitizeSearchBody has
-          // already replaced the browser's hint with the SSO-owned pair, so a
-          // spoofed customer_code can never widen what this viewer sees.
-          let trustedCustomer = '';
-          let trustedAddress = '';
-          try {
-            if (typeof fetchOptions.body === 'string') {
-              const parsed = JSON.parse(fetchOptions.body);
-              trustedCustomer = String(parsed?.customer_code ?? '').trim();
-              trustedAddress = String(parsed?.address_code ?? '').trim();
-            }
-          } catch {
-            // body wasn't JSON — treat as a guest search, filter nothing
-          }
-          if (trustedCustomer && trustedAddress) {
-            const entitled = await getEntitledPromoCodes({
-              req,
-              tenantId: config.tenantId,
-              customerCode: trustedCustomer,
-              addressCode: trustedAddress,
-            });
-            data = filterPromoFacetByEntitlement(data, entitled);
-          }
         }
+
+        // Entitlement comes off the SANITIZED body: sanitizeSearchBody has
+        // already replaced the browser's hint with the SSO-owned pair, so a
+        // spoofed customer_code can never widen what this viewer sees.
+        const { customerCode, addressCode } = readTrustedPair(bodyText);
+        const entitled =
+          customerCode && addressCode
+            ? await getEntitledPromoCodes({
+                req,
+                tenantId: config.tenantId,
+                customerCode,
+                addressCode,
+              })
+            : null;
+
+        data = postProcessSearchResponse(data, { promoMap, entitled });
       }
 
       return NextResponse.json(data, { status: response.status });

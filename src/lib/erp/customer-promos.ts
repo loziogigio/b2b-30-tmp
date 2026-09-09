@@ -32,7 +32,7 @@ export async function getEntitledPromoCodes(args: {
 
   try {
     // Cache the plain array: a Set does not survive JSON serialisation.
-    const codes = await cachedJson<string[] | null>(
+    const codes = await cachedJson<string[]>(
       entitlementCacheKey(tenantId, customerCode, addressCode),
       { softTtlMs: SOFT_TTL_MS, hardTtlSeconds: HARD_TTL_SECONDS },
       async () => {
@@ -42,10 +42,16 @@ export async function getEntitledPromoCodes(args: {
           customerCode,
           addressCode,
         );
-        return promos === null ? null : promos.map((p) => p.code);
+        // THROW on unknown rather than return null: cachedJson persists
+        // whatever the producer returns, and a cached null would fail open
+        // for the whole soft TTL after a single ERP blip. Throwing means
+        // nothing is written (or a stale REAL answer is served), and the
+        // outer catch still turns it into the caller's null.
+        if (promos === null) throw new Error('promo entitlement unknown');
+        return promos.map((p) => p.code);
       },
     );
-    return codes === null ? null : new Set(codes);
+    return new Set(codes);
   } catch (err) {
     console.warn('[promo-entitlement] lookup failed:', (err as Error).message);
     return null;

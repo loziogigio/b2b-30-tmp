@@ -88,3 +88,20 @@ describe('getEntitledPromoCodes', () => {
     expect(mocks.getCustomerPromos).not.toHaveBeenCalled();
   });
 });
+
+describe('getEntitledPromoCodes — an unknown must never be cached', () => {
+  it('makes the cache producer REJECT on null, so cachedJson writes nothing', async () => {
+    // cachedJson persists whatever the producer returns; a cached null would
+    // fail open for the whole soft TTL after one ERP blip.
+    mocks.getCustomerPromos.mockResolvedValue(null);
+    let producer: (() => Promise<unknown>) | undefined;
+    mocks.cachedJson.mockImplementationOnce(
+      async (_k: string, _o: unknown, p: () => Promise<unknown>) => {
+        producer = p;
+        return p();
+      },
+    );
+    expect(await getEntitledPromoCodes(ARGS)).toBeNull();
+    await expect(producer!()).rejects.toThrow(/unknown/);
+  });
+});
