@@ -142,3 +142,80 @@ describe('attachAgents', () => {
     expect(selectReferenceAgent(merged)?.name).toBe('Geromel Daniele');
   });
 });
+
+describe('attachAgents — MyMB is the authority on the legal seat', () => {
+  // Real shape for Belli e Forti customer 10407: the Suite derives isLegalSeat
+  // from address_type === 'billing' and marks NOTHING, so every address
+  // arrives false. MyMB does know, and agents CAN differ per address, so
+  // without this the "prefer the legal seat" rule silently picks an arbitrary
+  // address.
+  const suiteAddr = (id: string) =>
+    ({
+      id,
+      title: id,
+      isLegalSeat: false,
+      address: {
+        street_address: '',
+        city: '',
+        state: '',
+        zip: '',
+        country: '',
+      },
+      agent: {},
+    }) as AddressB2B;
+
+  const erpAgents = [
+    {
+      addressCode: '10',
+      isLegalSeat: false,
+      code: '999',
+      name: 'Altro Agente',
+      email: '',
+      phone: '',
+    },
+    {
+      addressCode: '1',
+      isLegalSeat: true,
+      code: '10524',
+      name: 'Geromel Daniele',
+      email: 'g@x.it',
+      phone: '336',
+    },
+  ];
+
+  it("adopts MyMB's legal seat when the Suite flagged none", () => {
+    const out = attachAgents([suiteAddr('10'), suiteAddr('1')], erpAgents);
+    expect(out.find((a) => a.id === '1')?.isLegalSeat).toBe(true);
+    expect(out.find((a) => a.id === '10')?.isLegalSeat).toBe(false);
+  });
+
+  it('so the reference agent is the legal seat, not merely the first', () => {
+    const out = attachAgents([suiteAddr('10'), suiteAddr('1')], erpAgents);
+    expect(selectReferenceAgent(out)?.name).toBe('Geromel Daniele');
+  });
+
+  it('OVERRIDES the Suite when the two disagree — the ERP is the record', () => {
+    const suiteSaysTen = [
+      { ...suiteAddr('10'), isLegalSeat: true },
+      suiteAddr('1'),
+    ];
+    const out = attachAgents(suiteSaysTen, erpAgents);
+    expect(out.find((a) => a.id === '1')?.isLegalSeat).toBe(true);
+    expect(out.find((a) => a.id === '10')?.isLegalSeat).toBe(false);
+    expect(selectReferenceAgent(out)?.name).toBe('Geromel Daniele');
+  });
+
+  it('an address MyMB does not know keeps the flag the Suite gave it', () => {
+    const out = attachAgents(
+      [{ ...suiteAddr('77'), isLegalSeat: true }, suiteAddr('1')],
+      erpAgents,
+    );
+    expect(out.find((a) => a.id === '77')?.isLegalSeat).toBe(true);
+  });
+
+  it('leaves every flag false when MyMB names no legal seat either', () => {
+    const noSeat = erpAgents.map((a) => ({ ...a, isLegalSeat: false }));
+    const out = attachAgents([suiteAddr('10'), suiteAddr('1')], noSeat);
+    expect(out.every((a) => !a.isLegalSeat)).toBe(true);
+  });
+});

@@ -96,11 +96,19 @@ export function attachAgents(
 ): AddressB2B[] {
   if (!agents || agents.length === 0) return addresses;
   const byCode = new Map(agents.map((a) => [String(a.addressCode), a]));
+
+  // MyMB is the ERP of record for this tenant, so it is the authority on which
+  // address is the sede legale — the Suite derives isLegalSeat from
+  // address_type === 'billing' and on some tenants marks nothing at all
+  // (Belli e Forti: all 11 addresses false). Agents CAN differ per address, so
+  // the "prefer the legal seat" rule in selectReferenceAgent must key off the
+  // ERP's flag, not the Suite's. An address MyMB does not know keeps its own.
   return addresses.map((addr) => {
     const a = byCode.get(String(addr.id));
     if (!a) return addr;
     return {
       ...addr,
+      isLegalSeat: a.isLegalSeat,
       agent: {
         code: orUndefined(a.code),
         name: orUndefined(a.name),
