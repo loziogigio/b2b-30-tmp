@@ -85,6 +85,13 @@ function keyFromQuery(qs: string): string {
   return qs || 'empty';
 }
 
+// The Preferiti (wishlist) view is a fixed tab, not a search: it must never
+// create, overwrite or highlight a search tab.
+function isLikesQuery(qs: URLSearchParams | string): boolean {
+  const params = typeof qs === 'string' ? new URLSearchParams(qs) : qs;
+  return params.get('source') === 'likes';
+}
+
 function labelFromQuery(qs: URLSearchParams, fallback = 'Search'): string {
   // prefer text, sku, category; else query string or translated fallback
   const text = qs.get('text');
@@ -101,7 +108,9 @@ function loadTabs(): Tab[] {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
     const arr = JSON.parse(raw) as Tab[];
-    return Array.isArray(arr) ? arr : [];
+    return Array.isArray(arr)
+      ? arr.filter((t) => t && !isLikesQuery(t.query || ''))
+      : [];
   } catch {
     return [];
   }
@@ -137,6 +146,13 @@ export default function SearchTabs({ lang }: { lang: string }) {
     const currentQS = parseQuery(searchParams);
     const currentKey = keyFromQuery(currentQS);
     const stored = loadTabs().filter(Boolean);
+    if (isLikesQuery(searchParams)) {
+      // Preferiti view: show stored tabs, none active, don't add one
+      setTabs(stored);
+      setActive(-1);
+      saveTabs(stored);
+      return;
+    }
     // find a tab with current key
     let idx = stored.findIndex((t) => t.key === currentKey);
     let list = stored;
@@ -169,6 +185,11 @@ export default function SearchTabs({ lang }: { lang: string }) {
 
   // When URL params change (search action), update the active tab in-place or dedupe to an existing tab
   React.useEffect(() => {
+    if (isLikesQuery(searchParams)) {
+      // Preferiti view: leave the search tabs untouched, none active
+      setActive(-1);
+      return;
+    }
     const qs = parseQuery(searchParams);
     const key = keyFromQuery(qs);
     const lbl = labelFromQuery(searchParams, searchLabel);
@@ -243,6 +264,12 @@ export default function SearchTabs({ lang }: { lang: string }) {
   function closeTab(idx: number) {
     if (!tabs[idx]) return;
     const next = tabs.filter((_, i) => i !== idx);
+    if (active === -1) {
+      // Preferiti view: just drop the tab, keep showing Preferiti
+      setTabs(next);
+      saveTabs(next);
+      return;
+    }
     const nextActive =
       idx === active
         ? Math.max(0, idx - 1)
