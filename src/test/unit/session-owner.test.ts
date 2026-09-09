@@ -12,6 +12,7 @@ vi.mock('@/lib/auth', () => ({
   AUTH_COOKIES: { ACCESS_TOKEN: 'auth_token' },
 }));
 vi.mock('@/lib/auth/server', () => ({
+  AUTH_COOKIES: { ACCESS_TOKEN: 'auth_token' },
   resolveAuthContext: mocks.resolveAuthContext,
 }));
 
@@ -20,7 +21,10 @@ import {
   sessionOwnedCustomers,
 } from '@/lib/profile/session-owner';
 
-const request = new NextRequest('http://localhost/api/erp/get_multiple_prices');
+const request = new NextRequest(
+  'http://localhost/api/erp/get_multiple_prices',
+  { headers: { Cookie: 'auth_token=access-token' } },
+);
 
 describe('sessionOwnedCustomerCodes', () => {
   beforeEach(() => {
@@ -30,14 +34,14 @@ describe('sessionOwnedCustomerCodes', () => {
     });
     mocks.resolveAuthContext.mockResolvedValue({
       success: true,
-      context: { ssoApi: { validate: mocks.validate } },
+      context: { tenantId: 'tenant-a', ssoApi: { validate: mocks.validate } },
     });
   });
 
   it('returns null when SSO reports an inactive session', async () => {
     mocks.validate.mockResolvedValue({
       authenticated: false,
-      user: { customers: [{ erp_customer_id: 'C1' }] },
+      user: { id: 'user-a', customers: [{ erp_customer_id: 'C1' }] },
     });
 
     expect(await sessionOwnedCustomerCodes(request)).toBeNull();
@@ -46,7 +50,10 @@ describe('sessionOwnedCustomerCodes', () => {
   it('returns only ERP customer codes from an authenticated session', async () => {
     mocks.validate.mockResolvedValue({
       authenticated: true,
+      active: true,
+      tenant_id: 'tenant-a',
       user: {
+        id: 'user-a',
         customers: [
           { erp_customer_id: 'C1' },
           { erp_customer_id: '' },
@@ -63,7 +70,12 @@ describe('sessionOwnedCustomerCodes', () => {
   it('does NOT admit VINC customer ids — its callers compare ERP codes', async () => {
     mocks.validate.mockResolvedValue({
       authenticated: true,
-      user: { customers: [{ id: 'vinc-abc', erp_customer_id: '5300' }] },
+      active: true,
+      tenant_id: 'tenant-a',
+      user: {
+        id: 'user-a',
+        customers: [{ id: 'vinc-abc', erp_customer_id: '5300' }],
+      },
     });
 
     const codes = await sessionOwnedCustomerCodes(request);
@@ -80,7 +92,7 @@ describe('sessionOwnedCustomers', () => {
     });
     mocks.resolveAuthContext.mockResolvedValue({
       success: true,
-      context: { ssoApi: { validate: mocks.validate } },
+      context: { tenantId: 'tenant-a', ssoApi: { validate: mocks.validate } },
     });
   });
 
@@ -92,7 +104,10 @@ describe('sessionOwnedCustomers', () => {
   it('resolves a customer by EITHER its ERP code or its VINC id', async () => {
     mocks.validate.mockResolvedValue({
       authenticated: true,
+      active: true,
+      tenant_id: 'tenant-a',
       user: {
+        id: 'user-a',
         customers: [
           {
             id: 'vinc-abc',
@@ -118,7 +133,10 @@ describe('sessionOwnedCustomers', () => {
   it('does not resolve a customer the session does not own', async () => {
     mocks.validate.mockResolvedValue({
       authenticated: true,
+      active: true,
+      tenant_id: 'tenant-a',
       user: {
+        id: 'user-a',
         customers: [{ id: 'vinc-abc', erp_customer_id: '5300', addresses: [] }],
       },
     });
@@ -130,7 +148,7 @@ describe('sessionOwnedCustomers', () => {
   it('returns null when SSO reports an inactive session', async () => {
     mocks.validate.mockResolvedValue({
       authenticated: false,
-      user: { customers: [{ id: 'v', erp_customer_id: '5300' }] },
+      user: { id: 'user-a', customers: [{ id: 'v', erp_customer_id: '5300' }] },
     });
 
     expect(await sessionOwnedCustomers(request)).toBeNull();

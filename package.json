@@ -15,7 +15,8 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test-all": "pnpm check-format && pnpm lint && pnpm check-types && pnpm build",
-    "prepare": "husky"
+    "prepare": "husky",
+    "test:security": "vitest run --config security/vitest.config.ts"
   },
   "dependencies": {
     "@google/model-viewer": "^4.1.0",

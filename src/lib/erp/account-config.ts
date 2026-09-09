@@ -139,8 +139,8 @@ export async function resolveAccountConfigFromHeaders(): Promise<AccountConfig> 
           process.env.PIM_API_PRIVATE_URL ||
           process.env.NEXT_PUBLIC_PIM_API_URL ||
           '',
-        apiKeyId: process.env.API_KEY_ID || process.env.NEXT_PUBLIC_API_KEY_ID,
-        apiSecret: process.env.API_SECRET || process.env.NEXT_PUBLIC_API_SECRET,
+        apiKeyId: process.env.API_KEY_ID || process.env.PIM_API_KEY_ID,
+        apiSecret: process.env.API_SECRET || process.env.PIM_API_SECRET,
         tenantId: process.env.NEXT_PUBLIC_TENANT_ID || 'default',
       });
     }

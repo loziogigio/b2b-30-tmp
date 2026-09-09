@@ -6,14 +6,14 @@ const {
   submitCoupon,
   verifyPromoItem,
   resolveCouponConfig,
-  sessionOwnedCustomerCodes,
+  sessionCustomerContext,
 } = vi.hoisted(() => ({
   validateCoupon: vi.fn(),
   getCartCoupon: vi.fn(),
   submitCoupon: vi.fn(),
   verifyPromoItem: vi.fn(),
   resolveCouponConfig: vi.fn(),
-  sessionOwnedCustomerCodes: vi.fn(),
+  sessionCustomerContext: vi.fn(),
 }));
 
 vi.mock('vinc-erp', async (orig) => {
@@ -27,7 +27,7 @@ vi.mock('vinc-erp', async (orig) => {
 });
 
 vi.mock('@/lib/erp/coupon-config', () => ({ resolveCouponConfig }));
-vi.mock('@/lib/profile/session-owner', () => ({ sessionOwnedCustomerCodes }));
+vi.mock('@/lib/profile/session-owner', () => ({ sessionCustomerContext }));
 // get_multiple_prices path is untouched; stub the ERP factory so the module imports cleanly.
 vi.mock('@/lib/erp/factory', () => ({ getMyMbErpClient: vi.fn() }));
 
@@ -46,7 +46,11 @@ const params = (p: string) => ({ params: Promise.resolve({ path: [p] }) });
 describe('coupon proxy cases', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    sessionOwnedCustomerCodes.mockResolvedValue(new Set(['C']));
+    sessionCustomerContext.mockResolvedValue({
+      owned: new Map([['C', new Set(['A'])]]),
+      erpCodeById: new Map([['C', 'C']]),
+      token: 'token',
+    });
     resolveCouponConfig.mockResolvedValue({
       enabled: true,
       baseUrl: 'http://c/web',
@@ -77,51 +81,24 @@ describe('coupon proxy cases', () => {
     expect(validateCoupon).toHaveBeenCalledWith('C', 'AB');
   });
 
-  it('check_coupon_cart does the two-step lookup + validation', async () => {
-    getCartCoupon.mockResolvedValue({
-      GetInfoCouponFromDocumentoResult: { m_Item2: { Codice: 'AB' } },
-    });
-    const raw = {
-      GetStatoCouponClienteResult: {
-        m_Item2: { isValido: 'S', percentualeSconto: '5' },
-      },
-    };
-    validateCoupon.mockResolvedValue(raw);
-    const res = await POST(
-      req('check_coupon_cart', { codiceInternoCliente: 'C', id_cart: '9' }),
-      params('check_coupon_cart'),
-    );
-    const json = await res.json();
-    expect(getCartCoupon).toHaveBeenCalledWith('9');
-    expect(validateCoupon).toHaveBeenCalledWith('C', 'AB');
-    expect(json).toEqual({ status: 'success', data: raw, apply: apply('AB') });
-  });
-
-  it('check_coupon_cart with no coupon on the cart returns a soft error', async () => {
-    getCartCoupon.mockResolvedValue({
-      GetInfoCouponFromDocumentoResult: { m_Item2: {} },
-    });
-    const res = await POST(
-      req('check_coupon_cart', { codiceInternoCliente: 'C', id_cart: '9' }),
-      params('check_coupon_cart'),
-    );
-    expect(res.status).toBe(200);
-    const json = await res.json();
-    expect(json.status).toBe('error');
-    expect(validateCoupon).not.toHaveBeenCalled();
-  });
-
-  it('submit_coupon forwards idElaborazione + codiceCoupon', async () => {
-    const raw = { UpdateTestataDocumentoConCouponResult: { ReturnCode: 0 } };
-    submitCoupon.mockResolvedValue(raw);
-    const res = await POST(
-      req('submit_coupon', { idElaborazione: '9', codiceCoupon: 'AB' }),
-      params('submit_coupon'),
-    );
-    const json = await res.json();
-    expect(submitCoupon).toHaveBeenCalledWith('9', 'AB');
-    expect(json).toEqual({ status: 'success', data: raw });
-  });
+  it.each(['check_coupon_cart', 'submit_coupon'])(
+    'denies %s without a server-owned cart mapping',
+    async (endpoint) => {
+      const res = await POST(
+        req(endpoint, {
+          codiceInternoCliente: 'C',
+          id_cart: '9',
+          idElaborazione: '9',
+          codiceCoupon: 'AB',
+        }),
+        params(endpoint),
+      );
+      expect(res.status).toBe(403);
+      expect(getCartCoupon).not.toHaveBeenCalled();
+      expect(submitCoupon).not.toHaveBeenCalled();
+      expect(validateCoupon).not.toHaveBeenCalled();
+    },
+  );
 
   it('verify_promo_item forwards the three params and echoes the JSON', async () => {
     const raw = { GetPromozioneBaseXArticoloResult: {} };

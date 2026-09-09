@@ -20,6 +20,10 @@ vi.mock('@/lib/auth/server', () => ({
   resolveAuthContext: mocks.resolveAuthContext,
 }));
 
+vi.mock('@/lib/erp/customer-promos', () => ({
+  getEntitledPromoCodes: vi.fn(async () => null),
+}));
+
 import { GET, POST } from '@/app/api/proxy/pim/[...path]/route';
 
 const TEST_TENANT_ID = 'tenant-a';
@@ -257,7 +261,7 @@ describe('PIM proxy route', () => {
     },
   );
 
-  it('does not attach trusted user headers when SSO validation fails', async () => {
+  it('does not forward service credentials when SSO validation fails', async () => {
     mocks.validateToken.mockResolvedValueOnce({
       authenticated: false,
       tenant_id: TEST_TENANT_ID,
@@ -296,10 +300,8 @@ describe('PIM proxy route', () => {
     });
 
     expect(res.status).toBe(401);
-    const headers = calledInit?.headers as Record<string, string>;
-    expect(headers.Authorization).toBe(TEST_BEARER_TOKEN);
-    expect(headers['x-user-id']).toBeUndefined();
-    expect(headers['x-user-type']).toBeUndefined();
+    expect(calledInit).toBeUndefined();
+    expect(global.fetch).not.toHaveBeenCalled();
   });
 
   it('strips spoofed customer pricing context from an anonymous POST search', async () => {
@@ -383,7 +385,7 @@ describe('PIM proxy route', () => {
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
-  it('does not apply the search-body limit to unrelated proxy writes', async () => {
+  it('blocks unreviewed writes even when they exceed the search-body limit', async () => {
     let calledInit: RequestInit | undefined;
     global.fetch = vi.fn(
       async (_url: RequestInfo | URL, init?: RequestInit) => {
@@ -410,8 +412,8 @@ describe('PIM proxy route', () => {
       params: Promise.resolve({ path: ['api', 'b2b', 'import'] }),
     });
 
-    expect(res.status).toBe(200);
-    expect(calledInit?.body).toBe('{}');
+    expect(res.status).toBe(403);
+    expect(calledInit).toBeUndefined();
   });
 
   it('loads every category page before expanding a parent filter', async () => {

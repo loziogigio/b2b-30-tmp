@@ -1,14 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 
-// Bypass Redis: run the producer directly so the probe's real fetch logic is exercised.
-vi.mock('@/lib/cache/redis-cache', () => ({
-  cachedJson: (
-    _key: string,
-    _opts: unknown,
-    producer: () => Promise<unknown>,
-  ) => producer(),
-}));
-
 import {
   probeModelAvailable,
   fetchModelRecords,
@@ -35,6 +26,7 @@ describe('probeModelAvailable', () => {
       await probeModelAvailable(
         { csBaseUrl: '', apiKeyId: '', apiSecret: '' },
         'historical_order',
+        'token',
       ),
     ).toBe(false);
     expect(f).not.toHaveBeenCalled();
@@ -48,7 +40,9 @@ describe('probeModelAvailable', () => {
       headers = init?.headers;
       return { ok: true } as any;
     }) as any;
-    expect(await probeModelAvailable(creds, 'historical_order')).toBe(true);
+    expect(await probeModelAvailable(creds, 'historical_order', 'token')).toBe(
+      true,
+    );
     expect(calledUrl).toBe(
       'https://cs.example/api/b2b/data-models/historical_order',
     );
@@ -58,11 +52,15 @@ describe('probeModelAvailable', () => {
 
   it('maps non-OK → false and a network error → false', async () => {
     global.fetch = vi.fn(async () => ({ ok: false }) as any) as any;
-    expect(await probeModelAvailable(creds, 'historical_order')).toBe(false);
+    expect(await probeModelAvailable(creds, 'historical_order', 'token')).toBe(
+      false,
+    );
     global.fetch = vi.fn(async () => {
       throw new Error('network');
     }) as any;
-    expect(await probeModelAvailable(creds, 'historical_order')).toBe(false);
+    expect(await probeModelAvailable(creds, 'historical_order', 'token')).toBe(
+      false,
+    );
   });
 });
 
@@ -81,6 +79,7 @@ describe('fetchModelRecords', () => {
       creds,
       'historical_order',
       new URLSearchParams('relation_id=x'),
+      'token',
     );
     expect(page.items).toHaveLength(1);
     expect(page.pagination?.total).toBe(1);
@@ -95,12 +94,18 @@ describe('fetchModelRecords', () => {
       creds,
       'historical_order',
       new URLSearchParams(),
+      'token',
     );
     expect(page.items).toEqual([]);
 
     global.fetch = vi.fn(async () => ({ ok: false, status: 500 })) as any;
     await expect(
-      fetchModelRecords(creds, 'historical_order', new URLSearchParams()),
+      fetchModelRecords(
+        creds,
+        'historical_order',
+        new URLSearchParams(),
+        'token',
+      ),
     ).rejects.toThrow();
   });
 });
@@ -108,7 +113,9 @@ describe('fetchModelRecords', () => {
 describe('fetchModelRecord', () => {
   it('returns null on 404', async () => {
     global.fetch = vi.fn(async () => ({ status: 404, ok: false })) as any;
-    expect(await fetchModelRecord(creds, 'historical_order', 'abc')).toBeNull();
+    expect(
+      await fetchModelRecord(creds, 'historical_order', 'abc', 'token'),
+    ).toBeNull();
   });
 
   it('returns data on success and url-encodes the id', async () => {
@@ -121,7 +128,12 @@ describe('fetchModelRecord', () => {
         json: async () => ({ data: { _id: 'a b', total: 9 } }),
       } as any;
     }) as any;
-    const rec = await fetchModelRecord(creds, 'historical_order', 'a b');
+    const rec = await fetchModelRecord(
+      creds,
+      'historical_order',
+      'a b',
+      'token',
+    );
     expect(rec.total).toBe(9);
     expect(calledUrl).toContain('/records/a%20b');
   });
@@ -129,7 +141,7 @@ describe('fetchModelRecord', () => {
   it('throws on a non-404 non-OK response', async () => {
     global.fetch = vi.fn(async () => ({ status: 500, ok: false })) as any;
     await expect(
-      fetchModelRecord(creds, 'historical_order', 'abc'),
+      fetchModelRecord(creds, 'historical_order', 'abc', 'token'),
     ).rejects.toThrow();
   });
 });

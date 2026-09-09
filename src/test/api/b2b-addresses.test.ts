@@ -20,12 +20,14 @@ vi.mock('@/lib/erp/factory', () => ({
   }),
 }));
 
-vi.mock('@/lib/tenant', () => ({
+vi.mock('@/lib/tenant', async () => ({
+  buildTenantApiHeaders: (await import('@/lib/tenant/api-headers'))
+    .buildTenantApiHeaders,
   resolveTenantApiConfig: (...args: any[]) =>
     mockResolveTenantApiConfig(...args),
 }));
 
-const { POST } = await import('@/app/api/b2b/addresses/route');
+import { POST } from '@/app/api/b2b/addresses/route';
 
 const makeReq = (body: unknown) =>
   new NextRequest('http://localhost/api/b2b/addresses', {
@@ -72,6 +74,7 @@ describe('POST /api/b2b/addresses', () => {
     mockSessionCustomerContext.mockResolvedValue({
       owned: new Map([['1001', new Set(['A'])]]),
       erpCodeById: new Map(),
+      token: 'token',
     });
     const res = await POST(makeReq({ customer_id: '9999' }));
     expect(res.status).toBe(403);
@@ -82,6 +85,7 @@ describe('POST /api/b2b/addresses', () => {
     mockSessionCustomerContext.mockResolvedValue({
       owned: new Map([['1001', new Set(['A', 'B'])]]),
       erpCodeById: new Map(),
+      token: 'token',
     });
     const res = await POST(makeReq({ customer_id: '1001' }));
     expect(res.status).toBe(200);
@@ -93,6 +97,7 @@ describe('POST /api/b2b/addresses', () => {
     mockSessionCustomerContext.mockResolvedValue({
       owned: new Map([['1001', new Set<string>()]]),
       erpCodeById: new Map(),
+      token: 'token',
     });
     const res = await POST(makeReq({ customer_id: '1001' }));
     expect(res.status).toBe(403);

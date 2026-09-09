@@ -8,6 +8,24 @@ const { probeModelAvailable, fetchModelRecords, fetchModelRecord } = vi.hoisted(
   }),
 );
 
+vi.mock('@/lib/auth/storefront-session', () => ({
+  resolveStorefrontSession: vi.fn(async () => ({
+    token: 'token',
+    tenantId: 'tenant-a',
+    user: {
+      id: 'user-a',
+      customers: [
+        {
+          id: 'customer-a',
+          erp_customer_id: '015892',
+          has_all_address_access: true,
+          addresses: [],
+        },
+      ],
+    },
+  })),
+}));
+
 vi.mock('@/lib/profile/cs-creds', () => ({
   resolveCsCreds: vi.fn(async () => ({
     csBaseUrl: 'https://cs.example',
@@ -69,7 +87,9 @@ describe('GET /api/profile/[model]', () => {
   it('returns records when available', async () => {
     probeModelAvailable.mockResolvedValue(true);
     fetchModelRecords.mockResolvedValue({
-      items: [{ _id: '1', data: { document_number: 'OC/1' } }],
+      items: [
+        { _id: '1', relation_id: '015892', data: { document_number: 'OC/1' } },
+      ],
       pagination: { page: 1, limit: 50, total: 1, totalPages: 1 },
     });
     const res = await listGET(listReq('historical_order'), {
@@ -124,7 +144,11 @@ describe('GET /api/profile/[model]/[id]', () => {
 
   it('returns the record when found', async () => {
     probeModelAvailable.mockResolvedValue(true);
-    fetchModelRecord.mockResolvedValue({ _id: 'abc', data: { total: 9 } });
+    fetchModelRecord.mockResolvedValue({
+      _id: 'abc',
+      relation_id: '015892',
+      data: { total: 9 },
+    });
     const res = await recordGET(
       new NextRequest('http://localhost/api/profile/historical_order/abc'),
       { params: Promise.resolve({ model: 'historical_order', id: 'abc' }) },

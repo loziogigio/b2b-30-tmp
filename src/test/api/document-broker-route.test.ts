@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-const { sessionOwnedCustomerCodes, fetchModelRecord } = vi.hoisted(() => ({
-  sessionOwnedCustomerCodes: vi.fn(),
+const { resolveStorefrontSession, fetchModelRecord } = vi.hoisted(() => ({
+  resolveStorefrontSession: vi.fn(),
   fetchModelRecord: vi.fn(),
 }));
 
-vi.mock('@/lib/profile/session-owner', () => ({ sessionOwnedCustomerCodes }));
+vi.mock('@/lib/auth/storefront-session', () => ({ resolveStorefrontSession }));
 vi.mock('@/lib/profile/cs-creds', () => ({
   resolveCsCreds: vi.fn(async () => ({
     csBaseUrl: 'https://cs',
@@ -27,7 +27,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 beforeEach(() => {
-  sessionOwnedCustomerCodes.mockReset();
+  resolveStorefrontSession.mockReset();
   fetchModelRecord.mockReset();
 });
 
@@ -44,32 +44,61 @@ describe('GET /api/profile/document/[model]/[id]', () => {
   it('404s an unknown model (before any session/record work)', async () => {
     const res = await GET(req('erp_settings', 'x'), ctx('erp_settings', 'x'));
     expect(res.status).toBe(404);
-    expect(sessionOwnedCustomerCodes).not.toHaveBeenCalled();
+    expect(resolveStorefrontSession).not.toHaveBeenCalled();
   });
 
   it('401s when there is no valid session', async () => {
-    sessionOwnedCustomerCodes.mockResolvedValue(null);
+    resolveStorefrontSession.mockResolvedValue(null);
     const res = await GET(req('invoice', 'i1'), ctx('invoice', 'i1'));
     expect(res.status).toBe(401);
   });
 
   it('403s when the record is owned by another customer', async () => {
-    sessionOwnedCustomerCodes.mockResolvedValue(new Set(['015892']));
+    resolveStorefrontSession.mockResolvedValue({
+      token: 'token',
+      tenantId: 'tenant-a',
+      user: {
+        id: 'user-a',
+        customers: [
+          {
+            id: 'customer-a',
+            erp_customer_id: '015892',
+            addresses: [{ erp_address_id: 'ADDRESS-A' }],
+          },
+        ],
+      },
+    });
     fetchModelRecord.mockResolvedValue({
       _id: 'i1',
       relation_id: '999999',
-      data: { pdf_url: 'https://b2b.hidros.com/documenti-clienti/x.pdf' },
+      data: {
+        destinazione: { code: 'ADDRESS-A' },
+        pdf_url: 'https://files.example.test/documenti-clienti/x.pdf',
+      },
     });
     const res = await GET(req('invoice', 'i1'), ctx('invoice', 'i1'));
     expect(res.status).toBe(403);
   });
 
   it('404s when the owned record has no file for the kind', async () => {
-    sessionOwnedCustomerCodes.mockResolvedValue(new Set(['015892']));
+    resolveStorefrontSession.mockResolvedValue({
+      token: 'token',
+      tenantId: 'tenant-a',
+      user: {
+        id: 'user-a',
+        customers: [
+          {
+            id: 'customer-a',
+            erp_customer_id: '015892',
+            addresses: [{ erp_address_id: 'ADDRESS-A' }],
+          },
+        ],
+      },
+    });
     fetchModelRecord.mockResolvedValue({
       _id: 'i1',
       relation_id: '015892',
-      data: {},
+      data: { destinazione: { code: 'ADDRESS-A' } },
     });
     const res = await GET(req('invoice', 'i1'), ctx('invoice', 'i1'));
     expect(res.status).toBe(404);
@@ -77,12 +106,27 @@ describe('GET /api/profile/document/[model]/[id]', () => {
 
   it('streams the file (via the internal overlay) when the session owns the record', async () => {
     delete process.env.DOCUMENTI_CLIENTI_BASE; // rely on the in-code default overlay base
-    sessionOwnedCustomerCodes.mockResolvedValue(new Set(['015892']));
+    resolveStorefrontSession.mockResolvedValue({
+      token: 'token',
+      tenantId: 'tenant-a',
+      user: {
+        id: 'user-a',
+        customers: [
+          {
+            id: 'customer-a',
+            erp_customer_id: '015892',
+            addresses: [{ erp_address_id: 'ADDRESS-A' }],
+          },
+        ],
+      },
+    });
     fetchModelRecord.mockResolvedValue({
       _id: 'i1',
       relation_id: '015892',
       data: {
-        pdf_url: 'https://b2b.hidros.com/documenti-clienti/D.D.T/2026/F.pdf',
+        destinazione: { code: 'ADDRESS-A' },
+        pdf_url:
+          'https://files.example.test/documenti-clienti/D.D.T/2026/F.pdf',
       },
     });
     let fetchedUrl = '';
@@ -110,11 +154,27 @@ describe('GET /api/profile/document/[model]/[id]', () => {
   });
 
   it('propagates a 404 from the upstream file server', async () => {
-    sessionOwnedCustomerCodes.mockResolvedValue(new Set(['015892']));
+    resolveStorefrontSession.mockResolvedValue({
+      token: 'token',
+      tenantId: 'tenant-a',
+      user: {
+        id: 'user-a',
+        customers: [
+          {
+            id: 'customer-a',
+            erp_customer_id: '015892',
+            addresses: [{ erp_address_id: 'ADDRESS-A' }],
+          },
+        ],
+      },
+    });
     fetchModelRecord.mockResolvedValue({
       _id: 'i1',
       relation_id: '015892',
-      data: { pdf_url: 'https://b2b.hidros.com/documenti-clienti/x.pdf' },
+      data: {
+        destinazione: { code: 'ADDRESS-A' },
+        pdf_url: 'https://files.example.test/documenti-clienti/x.pdf',
+      },
     });
     global.fetch = vi.fn(async () => ({
       ok: false,
@@ -126,11 +186,27 @@ describe('GET /api/profile/document/[model]/[id]', () => {
   });
 
   it('502s on other upstream failures', async () => {
-    sessionOwnedCustomerCodes.mockResolvedValue(new Set(['015892']));
+    resolveStorefrontSession.mockResolvedValue({
+      token: 'token',
+      tenantId: 'tenant-a',
+      user: {
+        id: 'user-a',
+        customers: [
+          {
+            id: 'customer-a',
+            erp_customer_id: '015892',
+            addresses: [{ erp_address_id: 'ADDRESS-A' }],
+          },
+        ],
+      },
+    });
     fetchModelRecord.mockResolvedValue({
       _id: 'i1',
       relation_id: '015892',
-      data: { pdf_url: 'https://b2b.hidros.com/documenti-clienti/x.pdf' },
+      data: {
+        destinazione: { code: 'ADDRESS-A' },
+        pdf_url: 'https://files.example.test/documenti-clienti/x.pdf',
+      },
     });
     global.fetch = vi.fn(async () => ({
       ok: false,
@@ -142,11 +218,27 @@ describe('GET /api/profile/document/[model]/[id]', () => {
   });
 
   it('refuses to proxy a non documenti-clienti URL (never fetches it)', async () => {
-    sessionOwnedCustomerCodes.mockResolvedValue(new Set(['015892']));
+    resolveStorefrontSession.mockResolvedValue({
+      token: 'token',
+      tenantId: 'tenant-a',
+      user: {
+        id: 'user-a',
+        customers: [
+          {
+            id: 'customer-a',
+            erp_customer_id: '015892',
+            addresses: [{ erp_address_id: 'ADDRESS-A' }],
+          },
+        ],
+      },
+    });
     fetchModelRecord.mockResolvedValue({
       _id: 'i1',
       relation_id: '015892',
-      data: { pdf_url: 'https://evil.example/secret' },
+      data: {
+        destinazione: { code: 'ADDRESS-A' },
+        pdf_url: 'https://evil.example/secret',
+      },
     });
     const f = vi.fn();
     global.fetch = f as any;

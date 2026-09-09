@@ -177,10 +177,8 @@ export function buildTenantFromEnv(): TenantConfig {
         process.env.B2B_API_URL ||
         process.env.NEXT_PUBLIC_B2B_PUBLIC_REST_API_ENDPOINT ||
         '',
-      apiKeyId:
-        process.env.API_KEY_ID || process.env.NEXT_PUBLIC_API_KEY_ID || '',
-      apiSecret:
-        process.env.API_SECRET || process.env.NEXT_PUBLIC_API_SECRET || '',
+      apiKeyId: process.env.API_KEY_ID || process.env.PIM_API_KEY_ID || '',
+      apiSecret: process.env.API_SECRET || process.env.PIM_API_SECRET || '',
     },
     database: {
       mongoUrl: process.env.MONGO_URL || '',

@@ -1,13 +1,13 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 
-const { getLatestOrderByItem, sessionOwnedCustomerCodes } = vi.hoisted(() => ({
+const { getLatestOrderByItem, sessionCustomerContext } = vi.hoisted(() => ({
   getLatestOrderByItem: vi.fn(),
-  sessionOwnedCustomerCodes: vi.fn(),
+  sessionCustomerContext: vi.fn(),
 }));
 vi.mock('@/lib/erp/factory', () => ({
   getMyMbErpClient: vi.fn(async () => ({ getLatestOrderByItem })),
 }));
-vi.mock('@/lib/profile/session-owner', () => ({ sessionOwnedCustomerCodes }));
+vi.mock('@/lib/profile/session-owner', () => ({ sessionCustomerContext }));
 
 import { POST } from '@/app/api/erp/[...path]/route';
 import { NextRequest } from 'next/server';
@@ -47,7 +47,11 @@ function call(body: unknown) {
 describe('POST /api/erp/get_latest_order_by_item', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    sessionOwnedCustomerCodes.mockResolvedValue(new Set(['5300']));
+    sessionCustomerContext.mockResolvedValue({
+      owned: new Map([['5300', new Set(['A'])]]),
+      erpCodeById: new Map([['5300', '5300']]),
+      token: 'token',
+    });
   });
 
   it('returns the article history mapped for the popup', async () => {
@@ -94,7 +98,7 @@ describe('POST /api/erp/get_latest_order_by_item', () => {
   });
 
   it('rejects anonymous requests before reaching the ERP', async () => {
-    sessionOwnedCustomerCodes.mockResolvedValue(null);
+    sessionCustomerContext.mockResolvedValue(null);
 
     const res = await call({ customer_code: '5300', entity_code: '53295' });
 

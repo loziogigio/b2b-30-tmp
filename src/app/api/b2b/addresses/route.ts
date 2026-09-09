@@ -1,6 +1,7 @@
+import { privateStorefrontRoute } from '@/lib/security/private-response';
 import { NextRequest, NextResponse } from 'next/server';
 import type { AddressB2B } from '@framework/acccount/types-b2b-account';
-import { resolveTenantApiConfig } from '@/lib/tenant';
+import { buildTenantApiHeaders, resolveTenantApiConfig } from '@/lib/tenant';
 import { sessionCustomerContext } from '@/lib/profile/session-owner';
 import { attachAgents } from '@utils/transform/b2b-addresses';
 import { getMyMbErpClient } from '@/lib/erp/factory';
@@ -73,10 +74,24 @@ function transformPimAddress(addr: PIMAddressResponse): AddressB2B {
   };
 }
 
-export async function POST(request: NextRequest) {
+async function post(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { customer_id } = body;
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { success: false, message: 'Invalid JSON body' },
+        { status: 400 },
+      );
+    }
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid request body' },
+        { status: 400 },
+      );
+    }
+    const { customer_id } = body as { customer_id?: unknown };
 
     if (!customer_id) {
       return NextResponse.json(
@@ -124,7 +139,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { pimApiUrl, tenantId } = await resolveTenantApiConfig(request);
+    const config = await resolveTenantApiConfig(request);
+    const { pimApiUrl, tenantId } = config;
 
     if (!pimApiUrl) {
       console.error('[b2b/addresses] PIM API URL not configured');
@@ -139,10 +155,11 @@ export async function POST(request: NextRequest) {
 
     const response = await fetch(endpoint, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Tenant-ID': tenantId,
-      },
+      redirect: 'error',
+      cache: 'no-store',
+      headers: buildTenantApiHeaders(config, {
+        authorization: `Bearer ${sessionCtx!.token}`,
+      }),
       body: JSON.stringify({
         customer_id,
         tenant_id: tenantId,
@@ -213,3 +230,5 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export const POST = privateStorefrontRoute(post);

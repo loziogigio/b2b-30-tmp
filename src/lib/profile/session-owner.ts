@@ -1,7 +1,5 @@
 import type { NextRequest } from 'next/server';
-import { cookies } from 'next/headers';
-import { AUTH_COOKIES } from '@/lib/auth';
-import { resolveAuthContext } from '@/lib/auth/server';
+import { resolveStorefrontSession } from '@/lib/auth/storefront-session';
 
 /** SSO customer shape → the address codes enabled on it. Pure. */
 export function customerAddressCodes(customer: {
@@ -34,16 +32,11 @@ export function customerAddressCodes(customer: {
 export async function sessionOwnedCustomers(
   req: NextRequest,
 ): Promise<Map<string, Set<string>> | null> {
-  const token = (await cookies()).get(AUTH_COOKIES.ACCESS_TOKEN)?.value;
-  if (!token) return null;
-
-  const result = await resolveAuthContext(req, 'validate');
-  if (!result.success) return null;
+  const session = await resolveStorefrontSession(req);
+  if (!session) return null;
 
   try {
-    const validation = await result.context.ssoApi.validate(token);
-    const authenticated = validation.authenticated ?? validation.active;
-    if (!authenticated || !validation.user) return null;
+    const validation = session;
 
     const owned = new Map<string, Set<string>>();
     for (const customer of validation.user?.customers ?? []) {
@@ -73,16 +66,11 @@ export async function sessionOwnedCustomers(
 export async function sessionOwnedCustomerCodes(
   req: NextRequest,
 ): Promise<Set<string> | null> {
-  const token = (await cookies()).get(AUTH_COOKIES.ACCESS_TOKEN)?.value;
-  if (!token) return null;
-
-  const result = await resolveAuthContext(req, 'validate');
-  if (!result.success) return null;
+  const session = await resolveStorefrontSession(req);
+  if (!session) return null;
 
   try {
-    const validation = await result.context.ssoApi.validate(token);
-    const authenticated = validation.authenticated ?? validation.active;
-    if (!authenticated || !validation.user) return null;
+    const validation = session;
 
     return new Set(
       (validation.user?.customers ?? [])
@@ -109,17 +97,13 @@ export async function sessionOwnedCustomerCodes(
 export async function sessionCustomerContext(req: NextRequest): Promise<{
   owned: Map<string, Set<string>>;
   erpCodeById: Map<string, string>;
+  token: string;
 } | null> {
-  const token = (await cookies()).get(AUTH_COOKIES.ACCESS_TOKEN)?.value;
-  if (!token) return null;
-
-  const result = await resolveAuthContext(req, 'validate');
-  if (!result.success) return null;
+  const session = await resolveStorefrontSession(req);
+  if (!session) return null;
 
   try {
-    const validation = await result.context.ssoApi.validate(token);
-    const authenticated = validation.authenticated ?? validation.active;
-    if (!authenticated || !validation.user) return null;
+    const validation = session;
 
     const owned = new Map<string, Set<string>>();
     const erpCodeById = new Map<string, string>();
@@ -134,7 +118,7 @@ export async function sessionCustomerContext(req: NextRequest): Promise<{
         }
       }
     }
-    return { owned, erpCodeById };
+    return { owned, erpCodeById, token: session.token };
   } catch {
     return null;
   }

@@ -24,6 +24,8 @@ export interface SSOCustomer {
   erp_customer_id: string;
   name?: string;
   business_name?: string;
+  /** Live validation metadata; an absent flag does not grant unrestricted access. */
+  has_all_address_access?: boolean;
   addresses: SSOAddress[];
 }
 

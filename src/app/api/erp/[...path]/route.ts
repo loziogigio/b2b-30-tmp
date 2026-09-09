@@ -1,3 +1,4 @@
+import { privateStorefrontRoute } from '@/lib/security/private-response';
 import { NextRequest, NextResponse } from 'next/server';
 import { CouponClient } from 'vinc-erp';
 import { getMyMbErpClient } from '@/lib/erp/factory';
@@ -8,7 +9,8 @@ import {
 } from '@utils/transform/erp-order-detail';
 import { mapErpDocRowsToLines } from '@utils/transform/erp-document-lines';
 import { mapErpLatestOrderRows } from '@utils/transform/erp-latest-order';
-import { sessionOwnedCustomerCodes } from '@/lib/profile/session-owner';
+import { sessionCustomerContext } from '@/lib/profile/session-owner';
+import { safeProxyPath } from '@/lib/security/storefront-proxy-policy';
 
 type RouteParams = { params: Promise<{ path: string[] }> };
 
@@ -17,6 +19,20 @@ const COUPON_ENDPOINTS = new Set([
   'check_coupon_cart',
   'submit_coupon',
   'verify_promo_item',
+]);
+
+const ERP_READ_ENDPOINTS = new Set([
+  'get_multiple_prices',
+  'get_orders',
+  'get_order_detail',
+  'get_document_rows',
+  'get_latest_order_by_item',
+  'get_customer',
+  'get_customer_promos',
+  'exposition',
+  'payment_deadline',
+  'get_invoices',
+  'get_ddt',
 ]);
 
 /**
@@ -110,9 +126,18 @@ async function handleCoupon(
   }
 }
 
-export async function POST(req: NextRequest, { params }: RouteParams) {
+async function post(req: NextRequest, { params }: RouteParams) {
   const { path } = await params;
-  const endpoint = path.join('/');
+  const endpoint = safeProxyPath(path);
+  if (
+    !endpoint ||
+    (!ERP_READ_ENDPOINTS.has(endpoint) && !COUPON_ENDPOINTS.has(endpoint))
+  ) {
+    return NextResponse.json(
+      { status: 'error', message: 'Unknown ERP endpoint' },
+      { status: 404 },
+    );
+  }
 
   let body: any = {};
   try {
@@ -120,12 +145,19 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
   } catch {
     body = {};
   }
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return NextResponse.json(
+      { status: 'error', message: 'Invalid request body' },
+      { status: 400 },
+    );
+  }
 
   // This route holds the tenant's server-side ERP credentials, so a browser
   // request must never be enough on its own to reach MyMB. Validate the SSO
   // session and, whenever a customer code is supplied, ensure it belongs to
   // that session instead of trusting the request body.
-  const ownedCustomerCodes = await sessionOwnedCustomerCodes(req);
+  const sessionContext = await sessionCustomerContext(req);
+  const ownedCustomerCodes = sessionContext?.owned;
   if (!ownedCustomerCodes) {
     return NextResponse.json(
       { status: 'error', message: 'Unauthorized' },
@@ -139,12 +171,58 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     );
   }
 
-  const requestedCustomerCode = String(
-    body.customer_code ?? body.codiceInternoCliente ?? '',
-  ).trim();
-  if (requestedCustomerCode && !ownedCustomerCodes.has(requestedCustomerCode)) {
+  const coupon = COUPON_ENDPOINTS.has(endpoint);
+  const requestedCustomerCode = coupon
+    ? body.codiceInternoCliente
+    : body.customer_code;
+  if (
+    typeof requestedCustomerCode !== 'string' ||
+    !requestedCustomerCode ||
+    !ownedCustomerCodes.has(requestedCustomerCode) ||
+    sessionContext!.erpCodeById.get(requestedCustomerCode) !==
+      requestedCustomerCode ||
+    (body.customer_code != null &&
+      body.codiceInternoCliente != null &&
+      body.customer_code !== body.codiceInternoCliente)
+  ) {
     return NextResponse.json(
       { status: 'error', message: 'Forbidden customer' },
+      { status: 403 },
+    );
+  }
+
+  const requestedAddress =
+    (coupon ? body.codiceIndirizzo : body.address_code) ?? '';
+  const allowedAddresses = ownedCustomerCodes.get(requestedCustomerCode)!;
+  const addressScoped = new Set([
+    'get_multiple_prices',
+    'get_orders',
+    'get_order_detail',
+    'get_document_rows',
+    'get_invoices',
+    'get_ddt',
+    'get_customer_promos',
+    'verify_promo_item',
+  ]);
+  if (
+    typeof requestedAddress !== 'string' ||
+    (body.address_code != null &&
+      body.codiceIndirizzo != null &&
+      body.address_code !== body.codiceIndirizzo) ||
+    (requestedAddress && !allowedAddresses.has(requestedAddress)) ||
+    (addressScoped.has(endpoint) && !requestedAddress)
+  ) {
+    return NextResponse.json(
+      { status: 'error', message: 'Forbidden address' },
+      { status: 403 },
+    );
+  }
+
+  // These ERP operations accept an opaque cart ID without customer scope.
+  // Until an order-ownership adapter exists, they must not receive service auth.
+  if (endpoint === 'submit_coupon' || endpoint === 'check_coupon_cart') {
+    return NextResponse.json(
+      { status: 'error', message: 'Cart operation unavailable' },
       { status: 403 },
     );
   }
@@ -171,7 +249,9 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
           addressCode: body.address_code,
           entityCodes: body.entity_codes ?? [],
           quantityList: body.quantity_list,
-          idCart: body.id_cart,
+          // Catalog pricing has no server-owned order mapping. Never let an
+          // arbitrary browser cart id influence ERP pricing/document context.
+          idCart: '0',
         };
         const data = await client.getMultiplePrices(priceReq);
         return NextResponse.json({ status: 'success', data });
@@ -239,6 +319,38 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         // read straight off the document via GetRigheFATT/DDTConInfo, then
         // map to the DocumentLine[] documents-export.ts consumes.
         const docType = body.doc_type === 'DDT' ? 'DDT' : 'F';
+        const documents = await (docType === 'DDT'
+          ? client.getDdt({
+              customerCode: requestedCustomerCode,
+              addressCode: requestedAddress,
+            })
+          : client.getInvoices({
+              customerCode: requestedCustomerCode,
+              addressCode: requestedAddress,
+            }));
+        const cause = String(
+          body.CausaleDocDefinitivo ?? body.cause ?? body.scope ?? '',
+        );
+        const year = String(
+          body.AnnoDocDefinitivo ?? body.doc_year ?? body.year ?? '',
+        );
+        const number = String(
+          body.NumeroDocDefinitivo ?? body.doc_number ?? body.number ?? '',
+        );
+        if (
+          !Array.isArray(documents) ||
+          !documents.some(
+            (document: any) =>
+              String(document.CausaleDocDefinitivo) === cause &&
+              String(document.AnnoDocDefinitivo) === year &&
+              String(document.NumeroDocDefinitivo) === number,
+          )
+        ) {
+          return NextResponse.json(
+            { status: 'error', message: 'Document not found' },
+            { status: 404 },
+          );
+        }
         const rows = await client.getDocumentRows({
           cause: String(
             body.CausaleDocDefinitivo ?? body.cause ?? body.scope ?? '',
@@ -327,3 +439,5 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     );
   }
 }
+
+export const POST = privateStorefrontRoute(post);

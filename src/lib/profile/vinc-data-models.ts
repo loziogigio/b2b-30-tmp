@@ -1,4 +1,4 @@
-import { cachedJson } from '@/lib/cache/redis-cache';
+import { buildTenantApiHeaders } from '@/lib/tenant/api-headers';
 import type { CsCreds } from '@/lib/profile/cs-creds';
 
 /** Models the browser is allowed to request through the profile BFF route. */
@@ -58,13 +58,14 @@ export function buildRecordsQuery(
   return q;
 }
 
-function authHeaders(creds: CsCreds): HeadersInit {
-  return {
-    Accept: 'application/json',
-    'x-auth-method': 'api-key',
-    'x-api-key-id': creds.apiKeyId,
-    'x-api-secret': creds.apiSecret,
-  };
+function authHeaders(creds: CsCreds, token: string): HeadersInit {
+  if (!token || !creds.csBaseUrl || !creds.apiKeyId || !creds.apiSecret) {
+    throw new Error('Profile authentication required');
+  }
+  return buildTenantApiHeaders(creds, {
+    authorization: `Bearer ${token}`,
+    contentType: false,
+  });
 }
 
 function modelBase(creds: CsCreds, model: ProfileModel): string {
@@ -73,27 +74,25 @@ function modelBase(creds: CsCreds, model: ProfileModel): string {
 
 /**
  * Is the data-model available for this tenant? Probes the model/schema endpoint
- * (200 = available). Verdict cached per (csBaseUrl, model): 5 min soft / 1 h hard.
+ * (200 = available). Authorization-dependent responses must never be cached.
+ * The generic data-model API remains subject to Suite's storefront boundary;
+ * this helper must not fall back to an unmarked service-key request.
  */
 export async function probeModelAvailable(
   creds: CsCreds,
   model: ProfileModel,
+  token: string,
 ): Promise<boolean> {
-  if (!creds.csBaseUrl || !creds.apiKeyId) return false;
-  return cachedJson<boolean>(
-    `vinc:profile:available:${creds.csBaseUrl}:${creds.apiKeyId}:${model}`,
-    { softTtlMs: 5 * 60_000, hardTtlSeconds: 3600 },
-    async () => {
-      try {
-        const res = await fetch(modelBase(creds, model), {
-          headers: authHeaders(creds),
-        });
-        return res.ok;
-      } catch {
-        return false;
-      }
-    },
-  );
+  try {
+    const res = await fetch(modelBase(creds, model), {
+      headers: authHeaders(creds, token),
+      cache: 'no-store',
+      redirect: 'manual',
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
 }
 
 export interface RecordsPage {
@@ -111,9 +110,12 @@ export async function fetchModelRecords(
   creds: CsCreds,
   model: ProfileModel,
   query: URLSearchParams,
+  token: string,
 ): Promise<RecordsPage> {
   const res = await fetch(`${modelBase(creds, model)}/records?${query}`, {
-    headers: authHeaders(creds),
+    headers: authHeaders(creds, token),
+    cache: 'no-store',
+    redirect: 'manual',
   });
   if (!res.ok)
     throw new Error(`data-model ${model} records HTTP ${res.status}`);
@@ -126,10 +128,15 @@ export async function fetchModelRecord(
   creds: CsCreds,
   model: ProfileModel,
   id: string,
+  token: string,
 ): Promise<any | null> {
   const res = await fetch(
     `${modelBase(creds, model)}/records/${encodeURIComponent(id)}`,
-    { headers: authHeaders(creds) },
+    {
+      headers: authHeaders(creds, token),
+      cache: 'no-store',
+      redirect: 'manual',
+    },
   );
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`data-model ${model} record HTTP ${res.status}`);

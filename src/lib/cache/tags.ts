@@ -26,8 +26,7 @@ export type CacheTagName = (typeof CACHE_TAG_NAMES)[number];
 export const SINGLE_TENANT_ID: string =
   process.env.VINC_TENANT_ID ||
   (() => {
-    const key =
-      process.env.API_KEY_ID || process.env.NEXT_PUBLIC_API_KEY_ID || '';
+    const key = process.env.API_KEY_ID || process.env.PIM_API_KEY_ID || '';
     const body = key.startsWith('ak_') ? key.slice(3) : key; // ak_{tenant}_{key}
     const lastSep = body.lastIndexOf('_');
     return lastSep > 0 ? body.slice(0, lastSep) : 'b2b';

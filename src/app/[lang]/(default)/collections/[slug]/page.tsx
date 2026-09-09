@@ -10,31 +10,6 @@ import { Metadata } from 'next';
 import { getServerHomeSettings } from '@/lib/home-settings/fetch-server';
 import { serverFetchCollectionBySlug } from '@/lib/pim/server-fetch';
 
-// Server-side collection fetch for SEO metadata
-async function fetchCollectionForSeo(slug: string) {
-  const PIM_API_BASE_URL = process.env.NEXT_PUBLIC_PIM_API_URL || '';
-  const url = `${PIM_API_BASE_URL}/api/public/collections/${slug}`;
-
-  try {
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-API-Key': process.env.NEXT_PUBLIC_API_KEY_ID || '',
-        'X-API-Secret': process.env.NEXT_PUBLIC_API_SECRET || '',
-      },
-      next: { revalidate: 300 }, // Cache for 5 minutes
-    });
-
-    if (!response.ok) return null;
-
-    const data = await response.json();
-    return data.collection || null;
-  } catch {
-    return null;
-  }
-}
-
 // Generate dynamic SEO metadata for collection pages
 export async function generateMetadata({
   params,
@@ -44,7 +19,7 @@ export async function generateMetadata({
   const { lang, slug } = await params;
 
   const [collection, homeSettings] = await Promise.all([
-    fetchCollectionForSeo(slug),
+    serverFetchCollectionBySlug(slug),
     getServerHomeSettings(lang),
   ]);
 

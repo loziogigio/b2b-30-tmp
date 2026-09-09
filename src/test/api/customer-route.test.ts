@@ -8,6 +8,24 @@ vi.mock('@/lib/profile/cs-creds', () => ({
   })),
 }));
 
+vi.mock('@/lib/auth/server', () => ({
+  AUTH_COOKIES: { ACCESS_TOKEN: 'auth_token' },
+  resolveAuthContext: vi.fn(async () => ({
+    success: true,
+    context: {
+      tenantId: 'tenant-a',
+      ssoApi: {
+        validate: vi.fn(async () => ({
+          authenticated: true,
+          active: true,
+          tenant_id: 'tenant-a',
+          user: { id: 'user-a', customers: [{ id: 'cust_X' }] },
+        })),
+      },
+    },
+  })),
+}));
+
 import { POST } from '@/app/api/b2b/customer/route';
 import { NextRequest } from 'next/server';
 
@@ -21,7 +39,10 @@ beforeEach(() => vi.restoreAllMocks());
 function req(body: unknown) {
   return new NextRequest('http://localhost/api/b2b/customer', {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: {
+      'content-type': 'application/json',
+      Authorization: 'Bearer token',
+    },
     body: JSON.stringify(body),
   });
 }

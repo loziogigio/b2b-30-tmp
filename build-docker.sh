@@ -129,9 +129,7 @@ else
     echo "    NEXT_PUBLIC_PROJECT_CODE=${NEXT_PUBLIC_PROJECT_CODE}"
     echo "    NEXT_PROJECT_CODE=${NEXT_PROJECT_CODE}"
     echo ""
-    echo "  API Keys:"
-    echo "    NEXT_PUBLIC_API_KEY_ID=${NEXT_PUBLIC_API_KEY_ID}"
-    echo "    NEXT_PUBLIC_API_SECRET=***hidden***"
+    echo "  API credentials: server-only configuration"
     echo ""
 fi
 
@@ -200,8 +198,6 @@ docker build \
   --build-arg NEXT_PUBLIC_TENANT_ID="${NEXT_PUBLIC_TENANT_ID:-}" \
   --build-arg NEXT_PUBLIC_PROJECT_CODE="${NEXT_PUBLIC_PROJECT_CODE:-}" \
   --build-arg NEXT_PROJECT_CODE="${NEXT_PROJECT_CODE:-}" \
-  --build-arg NEXT_PUBLIC_API_KEY_ID="${NEXT_PUBLIC_API_KEY_ID:-}" \
-  --build-arg NEXT_PUBLIC_API_SECRET="${NEXT_PUBLIC_API_SECRET:-}" \
   --build-arg API_KEY_ID="${API_KEY_ID:-}" \
   --build-arg API_SECRET="${API_SECRET:-}" \
   --build-arg NEXT_PUBLIC_PIM_API_URL="${NEXT_PUBLIC_PIM_API_URL:-}" \
