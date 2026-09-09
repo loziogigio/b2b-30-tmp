@@ -7,6 +7,7 @@ import { formatAvailability } from '@utils/format-availability';
 import { useArrivalLabel } from '../arrival-notice';
 import { useTranslation } from 'src/app/i18n/client';
 import LastOrdered from '../last-ordered';
+import { useUI } from '@contexts/ui.context';
 
 type Props = {
   product: any;
@@ -33,9 +34,13 @@ export default function B2BInfoBlock({ product, priceData, lang }: Props) {
   const buyDid = Boolean(priceData?.buy_did);
   const buyDidLast = priceData?.buy_did_last_date;
   const buyDidAmount = priceData?.buy_did_amount;
-  const isPromo = Boolean(
-    priceData?.is_promo || priceData?.promo || product?.has_active_promo,
-  );
+  const { isAuthorized } = useUI();
+  // Guests see no prices, so no promo state either.
+  const isPromo =
+    isAuthorized &&
+    Boolean(
+      priceData?.is_promo || priceData?.promo || product?.has_active_promo,
+    );
   const promoCount = Number(priceData?.count_promo ?? 0);
 
   const stato =

@@ -197,7 +197,12 @@ export default function TimeProductCard({
           {!hidePrices &&
             !hasVariants &&
             discountPercent > 0 &&
-            hasActivePromo(product, effectivePriceData, erpIsAuthority) && (
+            hasActivePromo(
+              product,
+              effectivePriceData,
+              erpIsAuthority,
+              isAuthorized,
+            ) && (
               <span className="bg-[var(--time-red)] text-white text-[10px] sm:text-[11px] font-bold px-[7px] py-[3px] rounded-[5px] font-[family-name:var(--font-body)]">
                 {discountTiers || `-${discountPercent}%`}
               </span>
@@ -205,7 +210,12 @@ export default function TimeProductCard({
           {/* PROMO: a multi-variant parent shows it whenever ANY child carries
               the promo flag (hasActivePromo checks the variations). */}
           {!hidePrices &&
-            hasActivePromo(product, effectivePriceData, erpIsAuthority) &&
+            hasActivePromo(
+              product,
+              effectivePriceData,
+              erpIsAuthority,
+              isAuthorized,
+            ) &&
             (hasVariants || discountPercent === 0) && (
               <span className="bg-[var(--time-red)] text-white text-[10px] sm:text-[11px] font-bold px-[7px] py-[3px] rounded-[5px] font-[family-name:var(--font-body)]">
                 PROMO
@@ -388,6 +398,7 @@ export default function TimeProductCard({
                   product,
                   effectivePriceData,
                   erpIsAuthority,
+                  isAuthorized,
                 ) && <TimePromoLabel onClick={handleClick} t={t} size="sm" />}
               </div>
 

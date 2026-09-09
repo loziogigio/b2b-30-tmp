@@ -334,11 +334,13 @@ const ProductCardB2B: React.FC<ProductProps> = ({
               {t('badge-new', { defaultValue: 'New' })}
             </span>
           )}
-          {(priceData?.is_promo || product.has_active_promo) && (
-            <span className="text-[9px] sm:text-[10px] md:text-xs font-bold text-white uppercase bg-red-600 px-1.5 py-1 sm:px-2 sm:py-1.5">
-              PROMO
-            </span>
-          )}
+          {/* Guests see no prices, so no promo badge either. */}
+          {isAuthorized &&
+            (priceData?.is_promo || product.has_active_promo) && (
+              <span className="text-[9px] sm:text-[10px] md:text-xs font-bold text-white uppercase bg-red-600 px-1.5 py-1 sm:px-2 sm:py-1.5">
+                PROMO
+              </span>
+            )}
         </div>
 
         {/* Content badges: video / 3D / related — icons supplied by CSS */}

@@ -47,7 +47,13 @@ export function hasActivePromo(
   product: any,
   priceData?: ErpPriceData,
   erpIsAuthority = false,
+  isAuthorized = true,
 ): boolean {
+  // A promo is a price concept. A visitor who is not logged in sees no
+  // prices, so they get no promo badge either — regardless of what the
+  // catalog-wide PIM flag says. Authority (ERP vs PIM) only matters once
+  // someone is logged in.
+  if (!isAuthorized) return false;
   const variations = Array.isArray(product?.variations)
     ? product.variations
     : [];
@@ -311,6 +317,7 @@ export function TimeStatusBadges({
   t,
   size = 'md',
   erpIsAuthority = false,
+  isAuthorized = true,
 }: {
   priceData?: ErpPriceData;
   product: any;
@@ -319,8 +326,15 @@ export function TimeStatusBadges({
   size?: 'sm' | 'md';
   /** When true, only the ERP row may badge a promo — see hasActivePromo. */
   erpIsAuthority?: boolean;
+  /** Guests never get a promo badge — see hasActivePromo. */
+  isAuthorized?: boolean;
 }) {
-  const showPromo = hasActivePromo(product, priceData, erpIsAuthority);
+  const showPromo = hasActivePromo(
+    product,
+    priceData,
+    erpIsAuthority,
+    isAuthorized,
+  );
   const showOrdered = !!priceData?.buy_did;
   if (!showPromo && !showOrdered) return null;
   return (

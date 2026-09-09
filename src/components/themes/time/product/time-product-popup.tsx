@@ -279,7 +279,9 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
 
   /* ── Promo badge info ── */
   const bestPrice = selectBestPrice(erpPrice);
-  const hasPromo = bestPrice.hasPromos || Boolean(product?.has_active_promo);
+  // Guests see no prices, so no promo either (catalog-wide PIM flag included).
+  const hasPromo =
+    isAuthorized && (bestPrice.hasPromos || Boolean(product?.has_active_promo));
   // Name the promo that actually sets the price. When the listino undercuts
   // every promo the badge still shows (promos exist here), naming the cheapest.
   const promoName =
@@ -537,6 +539,7 @@ export default function TimeProductPopup({ lang }: { lang: string }) {
               <div className="col-span-2">
                 <TimeStatusBadges
                   erpIsAuthority={erpIsAuthority}
+                  isAuthorized={isAuthorized}
                   priceData={erpPrice}
                   product={product}
                   onPromoClick={navigateToProductPage}

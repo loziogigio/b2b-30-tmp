@@ -250,7 +250,7 @@ export default function ProductRowB2B({
                 className="object-cover"
               />
               {/* PROMO badge — driven by the catalog flag on the product. */}
-              {product.has_active_promo && (
+              {isAuthorized && product.has_active_promo && (
                 <span className="absolute top-0 right-0 text-[10px] md:text-xs font-bold text-white uppercase bg-red-600 px-2 py-1">
                   PROMO
                 </span>

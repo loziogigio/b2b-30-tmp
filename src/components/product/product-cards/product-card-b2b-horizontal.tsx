@@ -206,11 +206,12 @@ const ProductCardB2BHorizontal: React.FC<ProductProps> = ({
               {t('badge-new', { defaultValue: 'New' })}
             </span>
           )}
-          {(priceData?.is_promo || product.has_active_promo) && (
-            <span className="text-[10px] md:text-xs font-bold text-white uppercase bg-red-600 px-2 py-2">
-              PROMO
-            </span>
-          )}
+          {isAuthorized &&
+            (priceData?.is_promo || product.has_active_promo) && (
+              <span className="text-[10px] md:text-xs font-bold text-white uppercase bg-red-600 px-2 py-2">
+                PROMO
+              </span>
+            )}
         </div>
       </div>
 

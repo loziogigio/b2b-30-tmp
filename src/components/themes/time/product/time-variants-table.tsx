@@ -174,7 +174,12 @@ export default function TimeVariantsTable({
         const tiers = (vPrice as any)?.discount_description || '';
         const packParts = dPrice ? buildPackagingParts(dPrice) : [];
 
-        const isOnPromo = hasActivePromo(v, vPrice, erpIsAuthority);
+        const isOnPromo = hasActivePromo(
+          v,
+          vPrice,
+          erpIsAuthority,
+          isAuthorized,
+        );
         const discountPercent = hasDiscount
           ? Math.round((1 - Number(net) / Number(list)) * 100)
           : 0;

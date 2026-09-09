@@ -154,7 +154,7 @@ export default function TimeSearchRow({
             </span>
           )}
           {!hidePrices &&
-            hasActivePromo(product, priceData, erpIsAuthority) &&
+            hasActivePromo(product, priceData, erpIsAuthority, isAuthorized) &&
             discountPercent === 0 && (
               <span className="bg-[var(--time-red)] text-white text-[10px] sm:text-[11px] font-bold px-1.5 py-[2px] rounded font-[family-name:var(--font-body)]">
                 PROMO
@@ -339,6 +339,7 @@ export default function TimeSearchRow({
             </div>
             <TimeStatusBadges
               erpIsAuthority={erpIsAuthority}
+              isAuthorized={isAuthorized}
               priceData={priceData}
               product={product}
               onPromoClick={handleClick}

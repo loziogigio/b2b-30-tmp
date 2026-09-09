@@ -379,7 +379,9 @@ const TimeProductDetail: React.FC<{
   // `bestPrice` is hoisted above the derived-price block — it now drives the
   // headline too, so display and booking cannot drift apart.
   const cartPriceData = erpPrice ? buildCartPriceData(erpPrice) : undefined;
-  const hasPromo = bestPrice.hasPromos || Boolean(data?.has_active_promo);
+  // Guests see no prices, so no promo either (catalog-wide PIM flag included).
+  const hasPromo =
+    isAuthorized && (bestPrice.hasPromos || Boolean(data?.has_active_promo));
   // Name the promo that actually sets the price. When the listino undercuts
   // every promo the badge still shows (promos exist here), naming the cheapest.
   const promoName =
@@ -631,6 +633,7 @@ const TimeProductDetail: React.FC<{
             <div className="col-span-2">
               <TimeStatusBadges
                 erpIsAuthority={erpIsAuthority}
+                isAuthorized={isAuthorized}
                 priceData={erpPrice}
                 product={data}
                 onPromoClick={() => {

@@ -146,4 +146,18 @@ describe('TimeProductCard offers CTA', () => {
     expect(screen.getByText('Visualizza')).toBeInTheDocument();
     expect(screen.queryByText('VEDI OFFERTE')).toBeNull();
   });
+
+  it('a guest gets no PROMO badge and no "In offerta" label, even when PIM flags the product', () => {
+    mocks.auth.isAuthorized = false;
+    render(
+      <TimeProductCard
+        lang="it"
+        product={{ ...product, has_active_promo: true }}
+        priceData={undefined}
+      />,
+    );
+    expect(screen.queryByText('PROMO')).toBeNull();
+    expect(screen.queryByText('In offerta')).toBeNull();
+    expect(screen.queryByText('VEDI OFFERTE')).toBeNull();
+  });
 });
