@@ -11,14 +11,8 @@ const DEFAULT_PIM_API_URL =
   '';
 // Accept both credential env conventions used across the app: the proxy family
 // (API_KEY_ID/API_SECRET) and the data-models family (PIM_API_KEY_ID/…).
-const DEFAULT_API_KEY_ID =
-  process.env.API_KEY_ID ||
-  process.env.PIM_API_KEY_ID ||
-  process.env.NEXT_PUBLIC_API_KEY_ID;
-const DEFAULT_API_SECRET =
-  process.env.API_SECRET ||
-  process.env.PIM_API_SECRET ||
-  process.env.NEXT_PUBLIC_API_SECRET;
+const DEFAULT_API_KEY_ID = process.env.API_KEY_ID || process.env.PIM_API_KEY_ID;
+const DEFAULT_API_SECRET = process.env.API_SECRET || process.env.PIM_API_SECRET;
 
 /** Suite API base URL + credentials used by storefront proxy routes. */
 export interface TenantApiConfig {
@@ -28,57 +22,8 @@ export interface TenantApiConfig {
   tenantId: string;
 }
 
-export interface TenantApiHeaderOptions {
-  authorization?: string | null;
-  contentType?: string | false;
-  accept?: string | false;
-  includeLegacyApiKeyAlias?: boolean;
-}
-
-type TenantApiCredentials = Pick<TenantApiConfig, 'apiKeyId' | 'apiSecret'>;
-
-/**
- * Build the standard commerce-suite API-key headers.
- *
- * `x-api-key-id` / `x-api-secret` are the canonical names used by current
- * suite routes. `X-API-Key` is available as a compatibility alias for older
- * PIM endpoints that identify the tenant from that header.
- */
-export function buildTenantApiHeaders(
-  config: TenantApiCredentials,
-  options: TenantApiHeaderOptions = {},
-): Record<string, string> {
-  const headers: Record<string, string> = {};
-
-  if (options.accept !== false) {
-    headers.Accept = options.accept || 'application/json';
-  }
-
-  if (options.contentType !== false) {
-    headers['Content-Type'] = options.contentType || 'application/json';
-  }
-
-  if (config.apiKeyId && config.apiSecret) {
-    headers['x-auth-method'] = 'api-key';
-  }
-
-  if (config.apiKeyId) {
-    headers['x-api-key-id'] = config.apiKeyId;
-    if (options.includeLegacyApiKeyAlias) {
-      headers['X-API-Key'] = config.apiKeyId;
-    }
-  }
-
-  if (config.apiSecret) {
-    headers['x-api-secret'] = config.apiSecret;
-  }
-
-  if (options.authorization) {
-    headers.Authorization = options.authorization;
-  }
-
-  return headers;
-}
+export { buildTenantApiHeaders } from './api-headers';
+export type { TenantApiHeaderOptions } from './api-headers';
 
 /**
  * Resolve the suite API base URL and API-key credentials for the current

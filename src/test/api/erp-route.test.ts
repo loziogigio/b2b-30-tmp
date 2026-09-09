@@ -1,13 +1,13 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 
-const { getMultiplePrices, sessionOwnedCustomerCodes } = vi.hoisted(() => ({
+const { getMultiplePrices, sessionCustomerContext } = vi.hoisted(() => ({
   getMultiplePrices: vi.fn(),
-  sessionOwnedCustomerCodes: vi.fn(),
+  sessionCustomerContext: vi.fn(),
 }));
 vi.mock('@/lib/erp/factory', () => ({
   getMyMbErpClient: vi.fn(async () => ({ getMultiplePrices })),
 }));
-vi.mock('@/lib/profile/session-owner', () => ({ sessionOwnedCustomerCodes }));
+vi.mock('@/lib/profile/session-owner', () => ({ sessionCustomerContext }));
 
 import { POST } from '@/app/api/erp/[...path]/route';
 import { NextRequest } from 'next/server';
@@ -23,11 +23,15 @@ function req(path: string, body: unknown) {
 describe('POST /api/erp/[...path]', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    sessionOwnedCustomerCodes.mockResolvedValue(new Set(['C']));
+    sessionCustomerContext.mockResolvedValue({
+      owned: new Map([['C', new Set(['A'])]]),
+      erpCodeById: new Map([['C', 'C']]),
+      token: 'token',
+    });
   });
 
   it('rejects anonymous requests before creating an ERP client', async () => {
-    sessionOwnedCustomerCodes.mockResolvedValue(null);
+    sessionCustomerContext.mockResolvedValue(null);
     const res = await POST(
       req('get_multiple_prices', {
         entity_codes: ['ART1'],

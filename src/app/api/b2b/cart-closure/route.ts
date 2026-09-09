@@ -1,7 +1,9 @@
+import { privateStorefrontRoute } from '@/lib/security/private-response';
 import { NextRequest, NextResponse } from 'next/server';
-import { resolveTenantApiConfig } from '@/lib/tenant';
-import { sessionOwnedCustomerCodes } from '@/lib/profile/session-owner';
+import { buildTenantApiHeaders, resolveTenantApiConfig } from '@/lib/tenant';
+import { sessionCustomerContext } from '@/lib/profile/session-owner';
 import { getMyMbErpClient } from '@/lib/erp/factory';
+import { safeProxyPath } from '@/lib/security/storefront-proxy-policy';
 
 /**
  * Order-header info for the session's current cart — crucially, the ERP's
@@ -19,19 +21,20 @@ import { getMyMbErpClient } from '@/lib/erp/factory';
  *
  * Mirrors the legacy `looxb2b_ordine_minimo_spese_trasporto($id_carrello)`.
  */
-export async function POST(request: NextRequest) {
+async function post(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
-    const orderId = String(body?.order_id ?? '').trim();
+    const orderId = body?.order_id;
 
-    if (!orderId) {
+    if (typeof orderId !== 'string' || !safeProxyPath([orderId])) {
       return NextResponse.json(
         { success: false, message: 'order_id is required' },
         { status: 400 },
       );
     }
 
-    const owned = await sessionOwnedCustomerCodes(request);
+    const session = await sessionCustomerContext(request);
+    const owned = session?.owned;
     if (!owned) {
       return NextResponse.json(
         { success: false, message: 'Not authenticated' },
@@ -39,7 +42,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { pimApiUrl, tenantId } = await resolveTenantApiConfig(request);
+    const config = await resolveTenantApiConfig(request);
+    const { pimApiUrl } = config;
     if (!pimApiUrl) {
       return NextResponse.json(
         { success: false, message: 'PIM API not configured' },
@@ -51,7 +55,13 @@ export async function POST(request: NextRequest) {
     // session — the client cannot nominate a cart it does not own.
     const res = await fetch(
       `${pimApiUrl.replace(/\/+$/, '')}/api/b2b/orders/${encodeURIComponent(orderId)}`,
-      { headers: { Accept: 'application/json', 'X-Tenant-ID': tenantId } },
+      {
+        headers: buildTenantApiHeaders(config, {
+          authorization: `Bearer ${session!.token}`,
+        }),
+        redirect: 'error',
+        cache: 'no-store',
+      },
     );
     if (!res.ok) {
       return NextResponse.json(
@@ -68,7 +78,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!owned.has(String(order.customer_code ?? ''))) {
+    const allowedAddresses = owned.get(String(order.customer_code ?? ''));
+    if (
+      !allowedAddresses ||
+      !allowedAddresses.has(String(order.shipping_address_code ?? ''))
+    ) {
       return NextResponse.json(
         { success: false, message: 'Forbidden order' },
         { status: 403 },
@@ -105,3 +119,5 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export const POST = privateStorefrontRoute(post);

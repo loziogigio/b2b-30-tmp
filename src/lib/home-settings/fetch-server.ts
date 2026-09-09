@@ -36,10 +36,8 @@ function resolveBaseUrl(raw: string): string {
 }
 
 const DEFAULT_PIM_API_BASE = resolveBaseUrl(rawPimApiUrl);
-const DEFAULT_API_KEY_ID =
-  process.env.API_KEY_ID || process.env.NEXT_PUBLIC_API_KEY_ID;
-const DEFAULT_API_SECRET =
-  process.env.API_SECRET || process.env.NEXT_PUBLIC_API_SECRET;
+const DEFAULT_API_KEY_ID = process.env.API_KEY_ID || process.env.PIM_API_KEY_ID;
+const DEFAULT_API_SECRET = process.env.API_SECRET || process.env.PIM_API_SECRET;
 
 // Local dev override — when set, point home-settings (header/footer config) at
 // this URL instead of the tenant's `pimApiUrl`, mirroring `resolveTenantApiConfig`

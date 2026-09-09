@@ -117,6 +117,7 @@ class SSOApiClient {
    */
   async validate(accessToken: string): Promise<SSOValidateResponse> {
     return this.request('/api/auth/validate', {
+      cache: 'no-store',
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },

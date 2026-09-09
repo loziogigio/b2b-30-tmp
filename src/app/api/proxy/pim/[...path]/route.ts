@@ -1,5 +1,10 @@
+import { privateStorefrontResponse } from '@/lib/security/private-response';
 import { NextRequest, NextResponse } from 'next/server';
-import { AUTH_COOKIES, resolveAuthContext } from '@/lib/auth/server';
+import { resolveStorefrontSession } from '@/lib/auth/storefront-session';
+import {
+  safeProxyPath,
+  storefrontProxyAccess,
+} from '@/lib/security/storefront-proxy-policy';
 import { buildTenantApiHeaders, resolveTenantApiConfig } from '@/lib/tenant';
 import { customerAddressCodes } from '@/lib/profile/session-owner';
 import { getEntitledPromoCodes } from '@/lib/erp/customer-promos';
@@ -102,6 +107,8 @@ async function getCategoryMap(
           method: 'GET',
           headers,
           signal,
+          redirect: 'error',
+          cache: 'no-store',
         });
         if (!resp.ok) {
           throw new Error(`Category request failed (${resp.status})`);
@@ -183,6 +190,7 @@ const PROMO_MAP_TTL_MS = 10 * 60 * 1000;
 const PROMO_HARVEST_ROWS = 50;
 
 type TrustedUserContext = {
+  token: string;
   userId: string;
   userType: 'b2b_user' | 'portal_user';
   customers: Array<{
@@ -206,61 +214,28 @@ function isSearchPath(pathString: string): boolean {
   );
 }
 
-function getBearerToken(req: NextRequest): string | null {
-  const authHeader = req.headers.get('Authorization');
-  if (authHeader?.startsWith('Bearer ')) {
-    const token = authHeader.slice(7).trim();
-    return token && token !== 'null' ? token : null;
-  }
-
-  const token = req.cookies.get(AUTH_COOKIES.ACCESS_TOKEN)?.value?.trim();
-  return token && token !== 'null' ? token : null;
-}
-
 async function resolveTrustedUserContext(
   req: NextRequest,
   expectedTenantId: string,
 ): Promise<TrustedUserContext | null> {
-  const token = getBearerToken(req);
-  if (!token) return null;
-
-  try {
-    const authContext = await resolveAuthContext(req, 'pim-proxy');
-    if (!authContext.success) return null;
-
-    const validation = await authContext.context.ssoApi.validate(token);
-    const authenticated = validation.authenticated ?? validation.active;
-    const tenantId = validation.tenant_id || authContext.context.tenantId;
-    const userId = validation.user?.id || validation.sub;
-
-    if (!authenticated || tenantId !== expectedTenantId || !userId) {
-      return null;
-    }
-
-    return {
-      userId,
-      userType:
-        (validation.user?.customers?.length || 0) > 0
-          ? 'b2b_user'
-          : 'portal_user',
-      customers: (validation.user?.customers ?? [])
-        .filter(
-          (customer) =>
-            typeof customer.erp_customer_id === 'string' &&
-            customer.erp_customer_id.length > 0,
-        )
-        .map((customer) => ({
-          customerCode: customer.erp_customer_id,
-          addressCodes: customerAddressCodes(customer),
-        })),
-    };
-  } catch (err) {
-    console.warn(
-      '[PIM Proxy] user context validation failed:',
-      err instanceof Error ? err.message : err,
-    );
-    return null;
-  }
+  const session = await resolveStorefrontSession(req, expectedTenantId);
+  if (!session) return null;
+  return {
+    token: session.token,
+    userId: session.user.id,
+    userType:
+      (session.user.customers?.length || 0) > 0 ? 'b2b_user' : 'portal_user',
+    customers: (session.user.customers ?? [])
+      .filter(
+        (customer) =>
+          typeof customer.erp_customer_id === 'string' &&
+          customer.erp_customer_id.length > 0,
+      )
+      .map((customer) => ({
+        customerCode: customer.erp_customer_id,
+        addressCodes: customerAddressCodes(customer),
+      })),
+  };
 }
 
 function attachTrustedUserContext(
@@ -414,6 +389,8 @@ async function getPromoTypeMap(
         method: 'POST',
         headers: { ...headers, 'Content-Type': 'application/json' },
         signal: AbortSignal.timeout(PIM_UPSTREAM_TIMEOUT_MS),
+        redirect: 'error',
+        cache: 'no-store',
         body: JSON.stringify({
           lang,
           rows: PROMO_HARVEST_ROWS,
@@ -564,7 +541,14 @@ async function proxyRequest(
   method: string,
 ) {
   const { path } = await params;
-  const pathString = path.join('/');
+  const pathString = safeProxyPath(path);
+  const access = pathString && storefrontProxyAccess(pathString, method);
+  if (!pathString || !access) {
+    return NextResponse.json(
+      { error: 'Endpoint not available to storefront' },
+      { status: 403 },
+    );
+  }
 
   // Resolve the PIM API target + credentials via the shared helper so every
   // route reaches the suite the same way (honours PIM_API_URL_OVERRIDE).
@@ -583,6 +567,12 @@ async function proxyRequest(
     ? config.pimApiUrl
     : `${config.pimApiUrl}/`;
   const targetUrl = new URL(pathString, baseUrl);
+  if (targetUrl.origin !== new URL(baseUrl).origin) {
+    return NextResponse.json(
+      { error: 'Invalid upstream path' },
+      { status: 403 },
+    );
+  }
 
   // Forward query params
   req.nextUrl.searchParams.forEach((value: string, key: string) => {
@@ -591,9 +581,13 @@ async function proxyRequest(
 
   const searchPath = isSearchPath(pathString);
   const trustedUserContext =
-    isUserContextPath(pathString) || searchPath
+    access === 'session' || isUserContextPath(pathString) || searchPath
       ? await resolveTrustedUserContext(req, config.tenantId)
       : null;
+
+  if (access === 'session' && !trustedUserContext) {
+    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  }
 
   if (
     searchPath &&
@@ -608,7 +602,7 @@ async function proxyRequest(
 
   // Forward the validated user's JWT for Suite-side defense in depth. Browser
   // sessions normally carry it in an httpOnly cookie rather than a header.
-  const bearerToken = getBearerToken(req);
+  const bearerToken = trustedUserContext?.token;
   const headers = buildTenantApiHeaders(config, {
     authorization: bearerToken ? `Bearer ${bearerToken}` : null,
     includeLegacyApiKeyAlias: true,
@@ -620,7 +614,12 @@ async function proxyRequest(
   // The upstream timeout is armed right before dispatch (below), not here:
   // reading the body and expanding the category tree can themselves take
   // seconds and must not eat into the budget of the request they prepare.
-  const fetchOptions: RequestInit = { method, headers };
+  const fetchOptions: RequestInit = {
+    method,
+    headers,
+    redirect: 'error',
+    cache: 'no-store',
+  };
 
   // Forward body for POST/PUT/PATCH/DELETE
   if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
@@ -784,33 +783,42 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ path: string[] }> },
 ) {
-  return proxyRequest(req, params, 'GET');
+  return privateStorefrontResponse(await proxyRequest(req, params, 'GET'));
 }
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ path: string[] }> },
 ) {
-  return proxyRequest(req, params, 'POST');
+  return privateStorefrontResponse(await proxyRequest(req, params, 'POST'));
 }
 
 export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ path: string[] }> },
 ) {
-  return proxyRequest(req, params, 'PUT');
+  return privateStorefrontResponse(await proxyRequest(req, params, 'PUT'));
 }
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ path: string[] }> },
 ) {
-  return proxyRequest(req, params, 'PATCH');
+  return privateStorefrontResponse(await proxyRequest(req, params, 'PATCH'));
 }
 
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ path: string[] }> },
 ) {
-  return proxyRequest(req, params, 'DELETE');
+  return privateStorefrontResponse(await proxyRequest(req, params, 'DELETE'));
+}
+
+// Explicitly deny HEAD: Next otherwise invokes GET and dispatches credentials.
+export async function HEAD() {
+  return privateStorefrontResponse(new NextResponse(null, { status: 405 }));
+}
+
+export async function OPTIONS() {
+  return privateStorefrontResponse(new NextResponse(null, { status: 405 }));
 }

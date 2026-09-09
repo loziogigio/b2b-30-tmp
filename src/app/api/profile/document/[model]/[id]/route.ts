@@ -4,7 +4,12 @@ import {
   isProfileModel,
   fetchModelRecord,
 } from '@/lib/profile/vinc-data-models';
-import { sessionOwnedCustomerCodes } from '@/lib/profile/session-owner';
+import { resolveStorefrontSession } from '@/lib/auth/storefront-session';
+import { privateStorefrontRoute } from '@/lib/security/private-response';
+import {
+  isProfileRecordId,
+  sessionOwnsProfileRecord,
+} from '@/lib/profile/record-access';
 
 type RouteParams = { params: Promise<{ model: string; id: string }> };
 
@@ -13,10 +18,6 @@ const FILE_FIELD: Record<string, string> = {
   barcode: 'pdf_barcode_url',
   csv: 'csv_url',
 };
-
-function isHttpUrl(u: unknown): u is string {
-  return typeof u === 'string' && /^https?:\/\//i.test(u);
-}
 
 // Internal overlay that serves the documenti-clienti files (the public route is
 // closed). Defaults so prod works with no extra config; override with
@@ -31,14 +32,48 @@ const DEFAULT_DOCUMENTI_CLIENTI_BASE = 'http://vinc-tunnelgw:28000';
  * `/documenti-clienti` prefix is stripped. URL.pathname normalizes encoding
  * (spaces → %20).
  */
-function resolveFetchUrl(u: string): string {
-  const base =
-    process.env.DOCUMENTI_CLIENTI_BASE || DEFAULT_DOCUMENTI_CLIENTI_BASE;
-  const { pathname } = new URL(u);
-  const marker = '/documenti-clienti';
-  const i = pathname.indexOf(marker);
-  const rel = i >= 0 ? pathname.slice(i + marker.length) : pathname;
-  return `${base.replace(/\/+$/, '')}${rel}`;
+function resolveFetchUrl(value: unknown): URL | null {
+  if (typeof value !== 'string') return null;
+  try {
+    const source = new URL(value);
+    const marker = '/documenti-clienti/';
+    if (
+      !['http:', 'https:'].includes(source.protocol) ||
+      !source.pathname.startsWith(marker)
+    )
+      return null;
+    const relativePath = source.pathname.slice(marker.length);
+    // Reject encoded separators, traversal, control characters and double
+    // encoding before the internal file server has a chance to decode them.
+    if (
+      !relativePath ||
+      relativePath.split('/').some((part) => {
+        const decoded = decodeURIComponent(part);
+        return (
+          !decoded ||
+          decoded === '.' ||
+          decoded === '..' ||
+          /[/%\\\x00-\x1f\x7f]/.test(decoded)
+        );
+      })
+    )
+      return null;
+    const base = new URL(
+      process.env.DOCUMENTI_CLIENTI_BASE || DEFAULT_DOCUMENTI_CLIENTI_BASE,
+    );
+    if (
+      !['http:', 'https:'].includes(base.protocol) ||
+      base.username ||
+      base.password ||
+      base.search ||
+      base.hash
+    )
+      return null;
+    const target = new URL(`${base.href.replace(/\/+$/, '')}/${relativePath}`);
+    return target.origin === base.origin ? target : null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -103,67 +138,77 @@ const PAGES = {
     ),
 };
 
-export async function GET(req: NextRequest, { params }: RouteParams) {
-  const { model, id } = await params;
-  if (!isProfileModel(model)) return PAGES.notAvailable();
+export const GET = privateStorefrontRoute(
+  async (req: NextRequest, { params }: RouteParams) => {
+    const { model, id } = await params;
+    if (!isProfileModel(model)) return PAGES.notAvailable();
 
-  const field = FILE_FIELD[req.nextUrl.searchParams.get('kind') ?? 'pdf'];
-  if (!field) return PAGES.notAvailable();
+    const field = FILE_FIELD[req.nextUrl.searchParams.get('kind') ?? 'pdf'];
+    if (!field) return PAGES.notAvailable();
 
-  // 1) session → owned customer codes (server-derived; never trusts the client)
-  const owned = await sessionOwnedCustomerCodes(req);
-  if (!owned) return PAGES.unauthenticated();
+    // 1) session → owned customer codes (server-derived; never trusts the client)
+    const session = await resolveStorefrontSession(req);
+    if (!session) return PAGES.unauthenticated();
+    if (!isProfileRecordId(id)) return PAGES.notAvailable();
 
-  // 2) load the record (server-side api-key)
-  const creds = await resolveCsCreds(req);
-  let rec: any;
-  try {
-    rec = await fetchModelRecord(creds, model, id);
-  } catch (error) {
-    console.error(
-      `[document broker] ${model}/${id} record fetch failed:`,
-      error,
-    );
-    return PAGES.unavailable();
-  }
-  if (!rec) return PAGES.notAvailable();
-
-  // 3) ownership gate
-  if (!rec.relation_id || !owned.has(String(rec.relation_id))) {
-    return PAGES.forbidden();
-  }
-
-  // 4) resolve + validate the file url (must be an http(s) documenti-clienti file)
-  const fileUrl = rec.data?.[field];
-  if (!isHttpUrl(fileUrl) || !fileUrl.includes('/documenti-clienti/')) {
-    return PAGES.notAvailable();
-  }
-
-  // 5) stream the file back (pass through type/length; propagate 404)
-  try {
-    const upstream = await fetch(resolveFetchUrl(fileUrl));
-    if (upstream.status === 404) return PAGES.notAvailable();
-    if (!upstream.ok || !upstream.body) {
+    // 2) load the record (server-side api-key)
+    let rec: any;
+    try {
+      const creds = await resolveCsCreds(req);
+      rec = await fetchModelRecord(creds, model, id, session.token);
+    } catch (error) {
       console.error(
-        `[document broker] upstream ${upstream.status} for ${model}/${id}`,
+        `[document broker] ${model}/${id} record fetch failed:`,
+        error,
       );
       return PAGES.unavailable();
     }
-    const filename = (fileUrl.split('/').pop() || `${model}-${id}`)
-      .split('?')[0]
-      .replace(/[\r\n"]/g, '');
-    const headers: Record<string, string> = {
-      'content-type':
-        upstream.headers.get('content-type') ??
-        (field === 'csv_url' ? 'text/csv' : 'application/pdf'),
-      'content-disposition': `inline; filename="${decodeURIComponent(filename)}"`,
-      'cache-control': 'private, no-store',
-    };
-    const len = upstream.headers.get('content-length');
-    if (len) headers['content-length'] = len;
-    return new NextResponse(upstream.body, { status: 200, headers });
-  } catch (error) {
-    console.error(`[document broker] stream failed for ${model}/${id}:`, error);
-    return PAGES.unavailable();
-  }
-}
+    if (!rec) return PAGES.notAvailable();
+
+    // 3) ownership gate
+    if (!sessionOwnsProfileRecord(session, model, rec)) {
+      return PAGES.forbidden();
+    }
+
+    // 4) resolve + validate the file url (must be an http(s) documenti-clienti file)
+    const fileUrl = rec.data?.[field];
+    const fetchUrl = resolveFetchUrl(fileUrl);
+    if (!fetchUrl) {
+      return PAGES.notAvailable();
+    }
+
+    // 5) stream the file back (pass through type/length; propagate 404)
+    try {
+      const upstream = await fetch(fetchUrl.href, {
+        cache: 'no-store',
+        redirect: 'manual',
+      });
+      if (upstream.status === 404) return PAGES.notAvailable();
+      if (!upstream.ok || !upstream.body) {
+        console.error(
+          `[document broker] upstream ${upstream.status} for ${model}/${id}`,
+        );
+        return PAGES.unavailable();
+      }
+      const filename = decodeURIComponent(
+        fetchUrl.pathname.split('/').pop() || `${model}-${id}`,
+      ).replace(/[^\x20-\x7e]|["\\]/g, '_');
+      const headers: Record<string, string> = {
+        'content-type':
+          upstream.headers.get('content-type') ??
+          (field === 'csv_url' ? 'text/csv' : 'application/pdf'),
+        'content-disposition': `inline; filename="${filename}"`,
+        'cache-control': 'private, no-store',
+      };
+      const len = upstream.headers.get('content-length');
+      if (len) headers['content-length'] = len;
+      return new NextResponse(upstream.body, { status: 200, headers });
+    } catch (error) {
+      console.error(
+        `[document broker] stream failed for ${model}/${id}:`,
+        error,
+      );
+      return PAGES.unavailable();
+    }
+  },
+);

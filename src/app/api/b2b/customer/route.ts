@@ -1,12 +1,17 @@
+import { privateStorefrontRoute } from '@/lib/security/private-response';
 import { NextRequest, NextResponse } from 'next/server';
 import { resolveCsCreds } from '@/lib/profile/cs-creds';
 import { buildTenantApiHeaders } from '@/lib/tenant';
+import {
+  resolveStorefrontSession,
+  sessionOwnsCustomer,
+} from '@/lib/auth/storefront-session';
 import {
   csCustomerToProfile,
   type CsCustomerRecord,
 } from '@utils/transform/cs-customer';
 
-export async function POST(req: NextRequest) {
+async function post(req: NextRequest) {
   let body: any = {};
   try {
     body = await req.json();
@@ -21,13 +26,21 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const session = await resolveStorefrontSession(req);
+  if (!session)
+    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+  if (!sessionOwnsCustomer(session, customerId))
+    return NextResponse.json({ error: 'Forbidden customer' }, { status: 403 });
   const creds = await resolveCsCreds(req);
 
   try {
     const res = await fetch(
       `${creds.csBaseUrl.replace(/\/+$/, '')}/api/b2b/customers/${encodeURIComponent(customerId)}`,
       {
+        redirect: 'error',
+        cache: 'no-store',
         headers: buildTenantApiHeaders(creds, {
+          authorization: `Bearer ${session.token}`,
           contentType: false,
           includeLegacyApiKeyAlias: true,
         }),
@@ -60,3 +73,5 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+export const POST = privateStorefrontRoute(post);
