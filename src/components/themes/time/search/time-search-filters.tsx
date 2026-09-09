@@ -10,9 +10,11 @@ import { SearchFiltersB2B } from '@components/search/filters-b2b';
 export default function TimeSearchFilters({
   lang,
   text,
+  collectionSlug,
 }: {
   lang: string;
   text?: string;
+  collectionSlug?: string;
 }) {
   return (
     <div
@@ -48,7 +50,12 @@ export default function TimeSearchFilters({
           border-radius: 4px;
         }
       `}</style>
-      <SearchFiltersB2B lang={lang} text={text} allowBlankSearch />
+      <SearchFiltersB2B
+        lang={lang}
+        text={text}
+        collectionSlug={collectionSlug}
+        allowBlankSearch
+      />
     </div>
   );
 }

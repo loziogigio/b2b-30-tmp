@@ -43,7 +43,14 @@ export const SearchFiltersB2B: React.FC<{
    * false so the existing default-theme behavior (gated facet load) stays.
    */
   allowBlankSearch?: boolean;
-}> = ({ lang, text, allowBlankSearch = false }) => {
+  /**
+   * Scope the facet counts to a single collection. The collection page reuses
+   * this sidebar, and its product grid is already narrowed to the collection —
+   * without the same narrowing here the facets would report whole-catalog
+   * counts next to a collection-sized result list.
+   */
+  collectionSlug?: string;
+}> = ({ lang, text, allowBlankSearch = false, collectionSlug }) => {
   const { t } = useTranslation(lang, 'common');
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -76,6 +83,7 @@ export const SearchFiltersB2B: React.FC<{
   );
   const isBlankSearch =
     !allowBlankSearch &&
+    !collectionSlug &&
     !isSpecialSource &&
     !text &&
     !urlParams.text &&
@@ -97,6 +105,16 @@ export const SearchFiltersB2B: React.FC<{
     return isSpecialSource ? buildSkuFilterParams(specialSkus) : {};
   }, [isSpecialSource, specialSkus]);
 
+  // The groups navigator runs its own count query, so it needs the same
+  // collection narrowing the facet query got.
+  const navigatorExtraFilters = React.useMemo(
+    () => ({
+      ...specialSkuFilterParams,
+      ...(collectionSlug ? { 'filters-collection_slugs': collectionSlug } : {}),
+    }),
+    [specialSkuFilterParams, collectionSlug],
+  );
+
   const canShowSpecialFacets =
     !isSpecialSource ||
     (canLoadCurrentSpecialSource && !isLoadingSkus && !!specialSkus?.length);
@@ -112,13 +130,23 @@ export const SearchFiltersB2B: React.FC<{
       // enabled in facetConfig get buckets back from PIM. No config → union
       // equals PIM_FACET_FIELDS (unchanged fetch set).
       facet_fields: resolveFacetFieldsToFetch(facetConfig),
+      // Same key the product grid sends (`filters.collection_slugs`), so the
+      // buckets are counted over exactly the rows the grid is showing.
+      ...(collectionSlug ? { 'filters-collection_slugs': collectionSlug } : {}),
     };
 
     // Add SKU filter for trending/likes/reminders pages (same as product search)
     Object.assign(params, specialSkuFilterParams);
 
     return params;
-  }, [urlParams, lang, text, specialSkuFilterParams, facetConfig]);
+  }, [
+    urlParams,
+    lang,
+    text,
+    specialSkuFilterParams,
+    facetConfig,
+    collectionSlug,
+  ]);
 
   const {
     data: filters,
@@ -203,11 +231,13 @@ export const SearchFiltersB2B: React.FC<{
       }
     });
 
+    if (collectionSlug) f['filters-collection_slugs'] = collectionSlug;
+
     // Add SKU filter for trending/likes/reminders pages (same as main search)
     Object.assign(f, specialSkuFilterParams);
 
     return f;
-  }, [searchParams, lang, text, specialSkuFilterParams]);
+  }, [searchParams, lang, text, specialSkuFilterParams, collectionSlug]);
 
   // Keep all facets (including product_type_code) in the list — the sidebar
   // render anchors the TIPO PRODOTTO breadcrumb + technical-specs accordion to
@@ -263,7 +293,7 @@ export const SearchFiltersB2B: React.FC<{
                 <GroupsNavigator
                   lang={lang}
                   text={text}
-                  extraFilters={specialSkuFilterParams}
+                  extraFilters={navigatorExtraFilters}
                   enabled={canShowSpecialFacets}
                 />
                 <hr className="border-border-base mx-4" />

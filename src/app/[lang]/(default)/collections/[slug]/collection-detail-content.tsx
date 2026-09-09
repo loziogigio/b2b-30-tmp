@@ -1,9 +1,9 @@
 'use client';
 
-import { ProductB2BSearch } from '@components/product/product-b2b-search';
+import React from 'react';
 import Container from '@components/ui/container';
 import Link from 'next/link';
-import { Element } from 'react-scroll';
+import { getThemedComponent } from '@/lib/theme/registry';
 import {
   HiOutlineHome,
   HiOutlineChevronRight,
@@ -13,6 +13,16 @@ import { useTranslation } from 'src/app/i18n/client';
 import { useCollection } from '@framework/collections/use-collections';
 import { useQueryClient } from '@tanstack/react-query';
 import { isEmptyHtml } from '@/lib/html';
+
+// The same sidebar + grid the search page renders, picked per tenant theme.
+// Sharing the slot is what keeps a collection looking like a scoped search
+// instead of a second, drifting product listing.
+const ThemedSearchResults = getThemedComponent<{
+  lang: string;
+  text?: string;
+  collectionSlug?: string;
+  header?: React.ReactNode;
+}>('SearchResults');
 
 interface CollectionDetailContentProps {
   lang: string;
@@ -96,46 +106,50 @@ export default function CollectionDetailContent({
         <span className="font-medium text-slate-900">{collection.name}</span>
       </nav>
 
-      {/* Collection Header */}
-      <div className="mb-6 pb-6 border-b border-slate-200">
-        <div className="flex flex-col md:flex-row md:items-start gap-4">
-          {/* Collection Image */}
-          {collection.hero_image?.url && (
-            <div className="flex-shrink-0 rounded-lg overflow-hidden bg-slate-100">
-              <img
-                src={collection.hero_image.url}
-                alt={collection.hero_image.alt_text || collection.name}
-                className="object-contain w-full h-auto md:w-20 md:h-20"
-              />
+      {/* Facet sidebar + product grid, same as the search page. The title
+          block rides in the content column rather than full-width above it, so
+          the facet column starts level with it instead of below it. The
+          breadcrumb stays full-width at the top of the page. */}
+      <ThemedSearchResults
+        lang={lang}
+        collectionSlug={slug}
+        header={
+          <div className="mb-6 pb-6 border-b border-slate-200">
+            <div className="flex flex-col md:flex-row md:items-start gap-4">
+              {/* Collection Image */}
+              {collection.hero_image?.url && (
+                <div className="flex-shrink-0 rounded-lg overflow-hidden bg-slate-100">
+                  <img
+                    src={collection.hero_image.url}
+                    alt={collection.hero_image.alt_text || collection.name}
+                    className="object-contain w-full h-auto md:w-20 md:h-20"
+                  />
+                </div>
+              )}
+
+              {/* Title and Description */}
+              <div className="flex-1 min-w-0">
+                <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">
+                  {collection.name}
+                </h1>
+                {!isEmptyHtml(collection.description) && (
+                  <p className="mt-1 text-slate-600">
+                    {collection.description}
+                  </p>
+                )}
+                {collection.product_count !== undefined && (
+                  <span className="mt-2 inline-block text-sm text-slate-500">
+                    {t('text-products-count', {
+                      count: collection.product_count.toLocaleString('it-IT'),
+                      defaultValue: '{{count}} prodotti',
+                    })}
+                  </span>
+                )}
+              </div>
             </div>
-          )}
-
-          {/* Title and Description */}
-          <div className="flex-1 min-w-0">
-            <h1 className="text-2xl lg:text-3xl font-bold text-slate-900">
-              {collection.name}
-            </h1>
-            {!isEmptyHtml(collection.description) && (
-              <p className="mt-1 text-slate-600">{collection.description}</p>
-            )}
-            {collection.product_count !== undefined && (
-              <span className="mt-2 inline-block text-sm text-slate-500">
-                {t('text-products-count', {
-                  count: collection.product_count.toLocaleString('it-IT'),
-                  defaultValue: '{{count}} prodotti',
-                })}
-              </span>
-            )}
           </div>
-        </div>
-      </div>
-
-      {/* Product Grid - Full Width (no sidebar) */}
-      <Element name="grid" className="pb-16 lg:pb-20">
-        <div className="w-full">
-          <ProductB2BSearch lang={lang} collectionSlug={slug} />
-        </div>
-      </Element>
+        }
+      />
     </Container>
   );
 }

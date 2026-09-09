@@ -15,6 +15,7 @@ type ComponentSlot =
   | 'ProductRow'
   | 'HomeBlockRenderer'
   | 'SearchPageContent'
+  | 'SearchResults'
   | 'ProductDetail'
   | 'ProductPopup'
   | 'VariantsQuickView'
@@ -33,6 +34,8 @@ const registry: Record<ThemeId, Record<ComponentSlot, () => Promise<any>>> = {
       import('@/components/themes/default/home/default-block-renderer'),
     SearchPageContent: () =>
       import('@/components/themes/default/search/default-search-content'),
+    SearchResults: () =>
+      import('@/components/themes/default/search/default-search-results'),
     ProductDetail: () =>
       import('@/components/themes/default/product/default-product-detail'),
     ProductPopup: () =>
@@ -53,6 +56,8 @@ const registry: Record<ThemeId, Record<ComponentSlot, () => Promise<any>>> = {
       import('@/components/themes/time/home/time-block-renderer'),
     SearchPageContent: () =>
       import('@/components/themes/time/search/time-search-content'),
+    SearchResults: () =>
+      import('@/components/themes/time/search/time-search-results'),
     ProductDetail: () =>
       import('@/components/themes/time/product/time-product-detail'),
     // Fall back to default for slots not yet themed

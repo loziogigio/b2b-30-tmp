@@ -2,6 +2,7 @@
 import * as React from 'react';
 import { RadioGroup } from '@headlessui/react';
 import { useTranslation } from 'src/app/i18n/client';
+import { filterAddresses } from '@components/address/filter-addresses';
 import type { AddressB2B } from '@framework/acccount/types-b2b-account';
 
 type Props = {
@@ -10,6 +11,12 @@ type Props = {
   onSelect?: (addr?: AddressB2B) => void; // used only when readOnly = false
   initialSelectedId?: string | number; // used only when readOnly = false
   readOnly?: boolean; // NEW
+  /**
+   * Free-text narrowing of the rendered list. Selection state deliberately
+   * stays derived from the FULL `address` list: a query that hides the current
+   * selection must not silently promote the first visible row to selected.
+   */
+  filterQuery?: string;
 };
 
 function fmtAddress(a?: AddressB2B['address']) {
@@ -28,17 +35,29 @@ const AddressGridB2B: React.FC<Props> = ({
   onSelect,
   initialSelectedId,
   readOnly = false,
+  filterQuery = '',
 }) => {
   const { t } = useTranslation(lang, 'common');
+  const isFiltering = filterQuery.trim().length > 0;
+  const noMatches = (
+    <div className="col-span-full rounded-lg border-2 border-dashed border-border-base p-5 text-center font-semibold text-brand-danger">
+      {isFiltering
+        ? t('text-no-address-matches', {
+            defaultValue: 'Nessun indirizzo corrisponde alla ricerca',
+          })
+        : t('text-no-address-found')}
+    </div>
+  );
 
   // ---------- DISPLAY-ONLY MODE ----------
+  const visibleReadOnly = filterAddresses(address, filterQuery);
   if (readOnly) {
     return (
       <div className="flex h-full flex-col mt-2 text-[13px]">
         <div className="max-h-[60vh] overflow-y-auto pr-1">
-          {address.length ? (
+          {visibleReadOnly.length ? (
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {address.map((item) => (
+              {visibleReadOnly.map((item) => (
                 <div
                   key={item.id}
                   className="border-2 border-border-base rounded-xl bg-white p-4"
@@ -105,9 +124,7 @@ const AddressGridB2B: React.FC<Props> = ({
               ))}
             </div>
           ) : (
-            <div className="rounded-lg border-2 border-dashed border-border-base p-5 text-center font-semibold text-brand-danger">
-              {t('text-no-address-found')}
-            </div>
+            noMatches
           )}
         </div>
       </div>
@@ -156,6 +173,14 @@ const AddressGridB2B: React.FC<Props> = ({
     ];
   }, [address, committedSelected]);
 
+  // Render-time narrowing only. `selected` / `committedSelected` above stay
+  // derived from the full list, so hiding the current selection behind a query
+  // leaves it selected rather than promoting whatever row happens to be first.
+  const visibleAddresses = React.useMemo(
+    () => filterAddresses(orderedAddresses, filterQuery),
+    [orderedAddresses, filterQuery],
+  );
+
   return (
     <div className="flex h-full flex-col mt-2 text-[13px]">
       <div className="max-h-[52vh] overflow-y-auto pr-1">
@@ -168,88 +193,84 @@ const AddressGridB2B: React.FC<Props> = ({
             {t('address')}
           </RadioGroup.Label>
 
-          {orderedAddresses.length ? (
-            orderedAddresses.map((item) => (
-              <RadioGroup.Option
-                key={item.id}
-                value={item}
-                className={({ checked }) =>
-                  `${checked ? 'border-brand ring-1 ring-brand/30' : 'border-border-base'}
+          {visibleAddresses.length
+            ? visibleAddresses.map((item) => (
+                <RadioGroup.Option
+                  key={item.id}
+                  value={item}
+                  className={({ checked }) =>
+                    `${checked ? 'border-brand ring-1 ring-brand/30' : 'border-border-base'}
                    border-2 rounded-xl bg-white p-4 focus:outline-none transition-shadow cursor-pointer`
-                }
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <h3 className="truncate text-[14px] font-semibold text-gray-900">
-                      {item.title ||
-                        t('text-delivery-address') ||
-                        'Delivery address'}
-                    </h3>
-                    {item.isDefault && (
-                      <span className="mt-1 inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700 ring-1 ring-inset ring-blue-200">
-                        {t('text-default-address') || 'Default'}
-                      </span>
-                    )}
-                    {item.isLegalSeat && (
-                      <span className="mt-1 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200">
-                        {t('text-registered-office') || 'Registered office'}
-                      </span>
-                    )}
-                  </div>
-                  <span
-                    className={`mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full ${
-                      selected?.id === item.id ? 'bg-teal-600' : 'bg-gray-300'
-                    }`}
-                    aria-hidden
-                  />
-                </div>
-
-                <div className="mt-2 whitespace-pre-line leading-5 text-[13px] text-gray-800">
-                  {fmtAddress(item.address)}
-                </div>
-
-                <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-gray-700">
-                  {(item.contact?.phone ||
-                    item.contact?.email ||
-                    item.contact?.mobile) && (
+                  }
+                >
+                  <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <div className="text-[11px] uppercase tracking-wide text-gray-500">
-                        {t('CONTACT') || 'Contact'}
-                      </div>
-                      <div className="truncate">
-                        {item.contact?.phone || item.contact?.mobile || '—'}
-                      </div>
-                      {item.contact?.email && (
-                        <div className="truncate" title={item.contact.email}>
-                          {item.contact.email}
-                        </div>
+                      <h3 className="truncate text-[14px] font-semibold text-gray-900">
+                        {item.title ||
+                          t('text-delivery-address') ||
+                          'Delivery address'}
+                      </h3>
+                      {item.isDefault && (
+                        <span className="mt-1 inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700 ring-1 ring-inset ring-blue-200">
+                          {t('text-default-address') || 'Default'}
+                        </span>
+                      )}
+                      {item.isLegalSeat && (
+                        <span className="mt-1 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-200">
+                          {t('text-registered-office') || 'Registered office'}
+                        </span>
                       )}
                     </div>
-                  )}
+                    <span
+                      className={`mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full ${
+                        selected?.id === item.id ? 'bg-teal-600' : 'bg-gray-300'
+                      }`}
+                      aria-hidden
+                    />
+                  </div>
 
-                  {(item.agent?.name ||
-                    item.agent?.phone ||
-                    item.agent?.email) && (
-                    <div className="min-w-0">
-                      <div className="text-[11px] uppercase tracking-wide text-gray-500">
-                        {t('AGENT') || 'Agent'}
+                  <div className="mt-2 whitespace-pre-line leading-5 text-[13px] text-gray-800">
+                    {fmtAddress(item.address)}
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-gray-700">
+                    {(item.contact?.phone ||
+                      item.contact?.email ||
+                      item.contact?.mobile) && (
+                      <div className="min-w-0">
+                        <div className="text-[11px] uppercase tracking-wide text-gray-500">
+                          {t('CONTACT') || 'Contact'}
+                        </div>
+                        <div className="truncate">
+                          {item.contact?.phone || item.contact?.mobile || '—'}
+                        </div>
+                        {item.contact?.email && (
+                          <div className="truncate" title={item.contact.email}>
+                            {item.contact.email}
+                          </div>
+                        )}
                       </div>
-                      <div className="truncate">
-                        {item.agent?.name || item.agent?.code || '—'}
+                    )}
+
+                    {(item.agent?.name ||
+                      item.agent?.phone ||
+                      item.agent?.email) && (
+                      <div className="min-w-0">
+                        <div className="text-[11px] uppercase tracking-wide text-gray-500">
+                          {t('AGENT') || 'Agent'}
+                        </div>
+                        <div className="truncate">
+                          {item.agent?.name || item.agent?.code || '—'}
+                        </div>
+                        <div className="truncate">
+                          {item.agent?.phone || item.agent?.email || '—'}
+                        </div>
                       </div>
-                      <div className="truncate">
-                        {item.agent?.phone || item.agent?.email || '—'}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </RadioGroup.Option>
-            ))
-          ) : (
-            <div className="col-span-full rounded-lg border-2 border-dashed border-border-base p-5 text-center font-semibold text-brand-danger">
-              {t('text-no-address-found')}
-            </div>
-          )}
+                    )}
+                  </div>
+                </RadioGroup.Option>
+              ))
+            : noMatches}
         </RadioGroup>
       </div>
 

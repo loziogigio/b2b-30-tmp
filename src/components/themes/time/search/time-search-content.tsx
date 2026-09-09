@@ -2,18 +2,13 @@
 
 import CategoryScrollFilter from '@components/search/category-scroll-filter';
 import Container from '@components/ui/container';
-import { Element } from 'react-scroll';
 import SearchTabs from '@components/search/search-tabs';
 import { useSearchParams } from 'next/navigation';
-import { TimeProductSearch } from './time-product-search';
-import TimeSearchFilters from './time-search-filters';
-import { useState } from 'react';
-import cn from 'classnames';
+import TimeSearchResults from './time-search-results';
 
 export default function TimeSearchContent({ lang }: { lang: string }) {
   const searchParams = useSearchParams();
   const text = searchParams?.get('text') || undefined;
-  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   return (
     <Container>
@@ -197,49 +192,7 @@ export default function TimeSearchContent({ lang }: { lang: string }) {
         `}</style>
         <SearchTabs lang={lang} />
       </div>
-      <Element
-        name="grid"
-        className={cn(
-          'flex pb-16 pt-7 lg:pt-7 lg:pb-20',
-          sidebarOpen && 'gap-6',
-        )}
-      >
-        {/* Sidebar — pins under the REAL header. The header is built per
-            tenant (rows can be added, removed, resized or unpinned), so a
-            hardcoded `top-16` left the first facets hidden behind a taller
-            header. `--vinc-header-height` is published by useFixedRowOffsets
-            from the measured pinned rows; 64px is only the pre-hydration
-            fallback. The tail keeps the same breathing room the old
-            `100vh-120px` had for a 64px header. */}
-        <div
-          className={cn(
-            'sticky hidden lg:block shrink-0 overflow-x-hidden overflow-y-auto transition-all duration-300 ease-in-out',
-            sidebarOpen
-              ? 'w-64 xl:w-72 pt-4 ltr:pr-5 rtl:pl-5 opacity-100'
-              : 'w-0 p-0 opacity-0',
-          )}
-          style={{
-            top: 'var(--vinc-header-height, 64px)',
-            height: 'calc(100vh - var(--vinc-header-height, 64px) - 56px)',
-          }}
-        >
-          {/* Natural height: the scroll now lives on the sticky wrapper, and
-              pinning this to h-full would cap the facet list at the viewport
-              instead of letting it scroll. The fixed width keeps the list from
-              reflowing while the wrapper animates open/closed. */}
-          <div className="w-64 xl:w-72">
-            <TimeSearchFilters lang={lang} text={text} />
-          </div>
-        </div>
-        {/* Content */}
-        <div className="w-full lg:pt-4 min-w-0">
-          <TimeProductSearch
-            lang={lang}
-            sidebarOpen={sidebarOpen}
-            onToggleSidebar={() => setSidebarOpen((prev) => !prev)}
-          />
-        </div>
-      </Element>
+      <TimeSearchResults lang={lang} text={text} />
     </Container>
   );
 }

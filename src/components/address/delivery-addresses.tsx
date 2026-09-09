@@ -10,6 +10,7 @@ import Heading from '@components/ui/heading';
 import { useDeliveryAddress } from '@contexts/address/address.context';
 import { useAddressQuery } from '@framework/acccount/fetch-account';
 import { useTranslation } from 'src/app/i18n/client';
+import { filterAddresses } from '@components/address/filter-addresses';
 import type { AddressB2B } from '@framework/acccount/types-b2b-account';
 
 const DeliveryAddresses: React.FC<{ lang: string }> = ({ lang }) => {
@@ -22,6 +23,15 @@ const DeliveryAddresses: React.FC<{ lang: string }> = ({ lang }) => {
 
   // Fetch list (already normalized)
   const { data: addresses = [], isLoading, error } = useAddressQuery();
+
+  const [query, setQuery] = React.useState('');
+  // Only used for the "n found" hint — the grid gets the full list plus the
+  // query and narrows its own render, so filtering can never re-derive which
+  // address is selected.
+  const matchCount = React.useMemo(
+    () => filterAddresses(addresses, query).length,
+    [addresses, query],
+  );
 
   // Check if we're on the home page
   const isHomePage = pathname === `/${lang}` || pathname === `/${lang}/`;
@@ -89,16 +99,40 @@ const DeliveryAddresses: React.FC<{ lang: string }> = ({ lang }) => {
       )}
 
       {!isLoading && !error && (
-        <div className="max-h-[60vh] overflow-y-auto pr-1">
-          <AddressGridB2B
-            lang={lang}
-            address={addresses}
-            initialSelectedId={selected?.id}
-            onSelect={(addr?: AddressB2B) => {
-              handleAddressChange(addr ?? null, true); // persist + close modal + refresh if on home
-            }}
-          />
-        </div>
+        <>
+          {addresses.length > 1 && (
+            <div className="mb-4 flex flex-col gap-1">
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={t('text-search-address')}
+                aria-label={t('text-search-address')}
+                className="h-10 w-full rounded-md border border-gray-300 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 sm:w-80"
+              />
+              {query.trim() && (
+                <span className="text-xs text-gray-500">
+                  {t('text-addresses-found', {
+                    count: matchCount,
+                    defaultValue: '{{count}} indirizzi trovati',
+                  })}
+                </span>
+              )}
+            </div>
+          )}
+
+          <div className="max-h-[60vh] overflow-y-auto pr-1">
+            <AddressGridB2B
+              lang={lang}
+              address={addresses}
+              filterQuery={query}
+              initialSelectedId={selected?.id}
+              onSelect={(addr?: AddressB2B) => {
+                handleAddressChange(addr ?? null, true); // persist + close modal + refresh if on home
+              }}
+            />
+          </div>
+        </>
       )}
     </div>
   );
