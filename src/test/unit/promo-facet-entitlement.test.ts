@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   filterPromoFacetByEntitlement,
+  GUEST_ENTITLEMENT,
   postProcessSearchResponse,
   readTrustedPair,
 } from '@/app/api/proxy/pim/[...path]/route';
@@ -143,5 +144,31 @@ describe('readTrustedPair', () => {
       addressCode: '',
     });
     expect(readTrustedPair('')).toEqual({ customerCode: '', addressCode: '' });
+  });
+});
+
+describe('guests get no PROMOZIONE facet', () => {
+  // A guest sees no prices, so a promo filter cannot pay off — and the bucket
+  // names + counts are the campaign map (regions, sizes), which should not be
+  // readable without a login. GUEST_ENTITLEMENT is an EMPTY set, not null:
+  // null means "unknown, fail open and show everything", which is what a
+  // failed ERP lookup must keep doing.
+  it('is an empty set, so every bucket is stripped', () => {
+    const out = filterPromoFacetByEntitlement(response(), GUEST_ENTITLEMENT);
+    expect(out.data.facet_results.promo_code).toHaveLength(0);
+  });
+
+  it('is distinct from null — a failed lookup must still fail OPEN', () => {
+    expect(GUEST_ENTITLEMENT).not.toBeNull();
+    expect(GUEST_ENTITLEMENT.size).toBe(0);
+    expect(
+      filterPromoFacetByEntitlement(response(), null).data.facet_results
+        .promo_code,
+    ).toHaveLength(4);
+  });
+
+  it('leaves the other facets alone for guests', () => {
+    const out = filterPromoFacetByEntitlement(response(), GUEST_ENTITLEMENT);
+    expect(out.data.facet_results.brand_id).toHaveLength(1);
   });
 });

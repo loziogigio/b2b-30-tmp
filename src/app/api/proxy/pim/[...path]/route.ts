@@ -432,9 +432,24 @@ async function getPromoTypeMap(
  *
  * Counts are left alone — they are catalog-wide facts and stay true.
  */
+/**
+ * What a NOT-LOGGED-IN visitor is entitled to: nothing.
+ *
+ * Deliberately an EMPTY set and not `null`. The two mean opposite things to
+ * `filterPromoFacetByEntitlement`: `null` is "we could not find out, fail open
+ * and show every bucket" (what an ERP failure must keep doing), while an empty
+ * set is a real answer that strips them all.
+ *
+ * Guests see no prices, so a promo filter cannot pay off for them — and the
+ * bucket names and counts are the campaign map (regions, sizes), which should
+ * not be readable without a login. Stripping it here rather than in the
+ * sidebar means it never reaches the browser at all.
+ */
+export const GUEST_ENTITLEMENT: ReadonlySet<string> = new Set<string>();
+
 export function filterPromoFacetByEntitlement(
   data: any,
-  entitled: Set<string> | null,
+  entitled: ReadonlySet<string> | null,
 ): any {
   if (!entitled) return data;
   const facets = data?.data?.facet_results || data?.facet_results;
@@ -486,7 +501,7 @@ export function readTrustedPair(bodyText: string): {
  */
 export function postProcessSearchResponse(
   data: any,
-  opts: { promoMap: PromoMap; entitled: Set<string> | null },
+  opts: { promoMap: PromoMap; entitled: ReadonlySet<string> | null },
 ): any {
   data = enrichPromoFacetLabels(data, opts.promoMap);
   return filterPromoFacetByEntitlement(data, opts.entitled);
@@ -750,7 +765,7 @@ async function proxyRequest(
                 customerCode,
                 addressCode,
               })
-            : null;
+            : GUEST_ENTITLEMENT;
 
         data = postProcessSearchResponse(data, { promoMap, entitled });
       }
