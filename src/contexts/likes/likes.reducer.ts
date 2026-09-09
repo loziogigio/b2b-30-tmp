@@ -27,6 +27,11 @@ type Action =
       liked: boolean;
       likedAt?: string | null;
     }
+  | {
+      /** Server truth for a set of SKUs; adds liked ones, same state when nothing changes. */
+      type: 'BULK_STATUS';
+      statuses: Array<{ sku: string; liked: boolean }>;
+    }
   | { type: 'RESET_LIKES' };
 
 export interface State {
@@ -128,6 +133,16 @@ export function likesReducer(state: State, action: Action): State {
         return finalize(state, next);
       }
       return state;
+    }
+    case 'BULK_STATUS': {
+      const added: LikeItem[] = [];
+      for (const st of action.statuses) {
+        const sku = typeof st?.sku === 'string' ? st.sku : '';
+        if (!sku || !st.liked || state.index[sku] != null) continue;
+        added.push({ sku, likedAt: null, isActive: true });
+      }
+      if (!added.length) return state;
+      return finalize(state, [...added, ...state.items]);
     }
     case 'RESET_LIKES':
       return initialState;

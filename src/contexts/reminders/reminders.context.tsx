@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { useLocalStorage } from '@utils/use-local-storage';
 import { useUI } from '@contexts/ui.context';
+import { createStatusBatcher, type StatusBatcher } from '@/lib/status-batcher';
 import {
   toggleReminder as apiToggleReminder,
   getBulkReminderStatus as apiGetBulkReminderStatus,
@@ -45,6 +46,32 @@ type BulkStatusResponse = {
     reminder_created_at?: string | null;
   }>;
 };
+
+type ReminderStatus = { active: boolean; createdAt: string | null };
+
+/** One Suite call for many SKUs; the batcher decides when and how many. */
+async function fetchReminderStatuses(
+  skus: string[],
+): Promise<Record<string, ReminderStatus>> {
+  const response = await apiGetBulkReminderStatus(skus);
+  const statuses: BulkStatusResponse['reminder_statuses'] = Array.isArray(
+    response,
+  )
+    ? response
+    : Array.isArray((response as any)?.reminder_statuses)
+      ? (response as any).reminder_statuses
+      : [];
+  const out: Record<string, ReminderStatus> = {};
+  for (const st of statuses) {
+    const sku = st?.sku;
+    if (!sku) continue;
+    out[sku] = {
+      active: !!st.has_active_reminder,
+      createdAt: st.reminder_created_at ?? null,
+    };
+  }
+  return out;
+}
 
 export interface RemindersProviderState extends RemindersState {
   hasReminder: (sku: string) => boolean;
@@ -91,6 +118,20 @@ export function RemindersProvider(props: React.PropsWithChildren) {
     JSON.stringify(initialState),
   );
   const [state, dispatch] = React.useReducer(remindersReducer, initialState);
+
+  // Coalesces the per-row status lookups of a list into one request per
+  // render batch (see src/lib/status-batcher.ts). Kept in a ref so the
+  // callbacks below stay stable across state updates.
+  const statusBatcherRef = React.useRef<StatusBatcher<ReminderStatus> | null>(
+    null,
+  );
+  if (statusBatcherRef.current === null) {
+    statusBatcherRef.current = createStatusBatcher(fetchReminderStatuses);
+  }
+  React.useEffect(() => {
+    // A different user (or none) means every cached answer is wrong.
+    statusBatcherRef.current?.reset();
+  }, [isAuthorized]);
 
   // Bootstrap after mount
   const bootstrapped = React.useRef(false);
@@ -223,68 +264,24 @@ export function RemindersProvider(props: React.PropsWithChildren) {
       if (!skus?.length) return {};
 
       try {
-        const response = await apiGetBulkReminderStatus(skus);
-        const statuses = Array.isArray(response)
-          ? response
-          : Array.isArray((response as any)?.reminder_statuses)
-            ? (response as any).reminder_statuses
-            : [];
-
-        if (!statuses.length) {
-          return {};
-        }
-
+        // Rows mounting together share one request; repeats are answered
+        // from cache. This callback depends on nothing that changes with
+        // state, so a response never re-triggers the rows that asked.
+        const result = await statusBatcherRef.current!.load(skus);
+        const statuses = Object.entries(result).map(([sku, st]) => ({
+          sku,
+          active: st.active,
+          createdAt: st.createdAt,
+        }));
         const map: Record<string, boolean> = {};
-        const nextItemsMap = new Map<string, ReminderItem>();
-
-        for (const existing of state.items) {
-          if (existing?.sku) {
-            nextItemsMap.set(existing.sku, existing);
-          }
-        }
-
-        let didMutate = false;
-
-        for (const status of statuses) {
-          const sku = status?.sku;
-          if (!sku) continue;
-
-          const active = !!status.has_active_reminder;
-          map[sku] = active;
-
-          if (active) {
-            const current = nextItemsMap.get(sku);
-            const updated: ReminderItem = {
-              sku,
-              isActive: true,
-              createdAt:
-                status.reminder_created_at ?? current?.createdAt ?? null,
-              expiresAt: current?.expiresAt ?? null,
-            };
-            nextItemsMap.set(sku, updated);
-            if (!current || !current.isActive) {
-              didMutate = true;
-            }
-          } else if (nextItemsMap.has(sku)) {
-            nextItemsMap.delete(sku);
-            didMutate = true;
-          }
-        }
-
-        if (didMutate) {
-          dispatch({
-            type: 'HYDRATE_REPLACE',
-            items: Array.from(nextItemsMap.values()),
-            summary: state.summary ?? null,
-          });
-        }
-
+        for (const st of statuses) map[st.sku] = st.active;
+        if (statuses.length) dispatch({ type: 'BULK_STATUS', statuses });
         return map;
       } catch {
         return {};
       }
     },
-    [isAuthorized, state.items, state.summary],
+    [isAuthorized],
   );
 
   const toggle = React.useCallback(
@@ -292,6 +289,9 @@ export function RemindersProvider(props: React.PropsWithChildren) {
       const result = await apiToggleReminder(sku);
       const active = result.has_active_reminder;
       const now = new Date().toISOString();
+      statusBatcherRef.current?.prime({
+        [sku]: { active, createdAt: active ? now : null },
+      });
       // Expiration = 30 days from now
       const expiresAt = active
         ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
@@ -328,6 +328,9 @@ export function RemindersProvider(props: React.PropsWithChildren) {
       if (hasReminder(sku)) return;
       await apiToggleReminder(sku);
       const now = new Date().toISOString();
+      statusBatcherRef.current?.prime({
+        [sku]: { active: true, createdAt: now },
+      });
       const expires =
         expiresAt ??
         new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
@@ -354,6 +357,9 @@ export function RemindersProvider(props: React.PropsWithChildren) {
     async (sku: string) => {
       if (!hasReminder(sku)) return;
       await apiToggleReminder(sku);
+      statusBatcherRef.current?.prime({
+        [sku]: { active: false, createdAt: null },
+      });
       dispatch({ type: 'REMINDER_REMOVE', sku });
       setSummary({
         totalCount: Math.max(0, (state.summary?.totalCount ?? 1) - 1),
@@ -366,6 +372,7 @@ export function RemindersProvider(props: React.PropsWithChildren) {
 
   const clearAll = React.useCallback(async () => {
     await apiClearAllUserReminders();
+    statusBatcherRef.current?.reset();
     dispatch({ type: 'RESET_REMINDERS' });
   }, []);
 

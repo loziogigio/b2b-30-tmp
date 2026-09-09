@@ -34,6 +34,15 @@ type Action =
       createdAt?: string | null;
       expiresAt?: string | null;
     }
+  | {
+      /** Server truth for a set of SKUs; no-op (same state) when nothing changes. */
+      type: 'BULK_STATUS';
+      statuses: Array<{
+        sku: string;
+        active: boolean;
+        createdAt?: string | null;
+      }>;
+    }
   | { type: 'RESET_REMINDERS' };
 
 export interface State {
@@ -147,6 +156,34 @@ export function remindersReducer(state: State, action: Action): State {
         return finalize(state, next);
       }
       return state;
+    }
+    case 'BULK_STATUS': {
+      const map = new Map<string, ReminderItem>();
+      for (const it of state.items) map.set(it.sku, it);
+      let changed = false;
+      for (const st of action.statuses) {
+        const sku = typeof st?.sku === 'string' ? st.sku : '';
+        if (!sku) continue;
+        const current = map.get(sku);
+        if (st.active) {
+          if (!current || !current.isActive) {
+            map.set(sku, {
+              sku,
+              isActive: true,
+              createdAt: st.createdAt ?? current?.createdAt ?? null,
+              expiresAt: current?.expiresAt ?? null,
+            });
+            changed = true;
+          }
+        } else if (current) {
+          map.delete(sku);
+          changed = true;
+        }
+      }
+      // Returning the same object lets useReducer bail out: no re-render, no
+      // localStorage write, and no effect re-run in the rows that asked.
+      if (!changed) return state;
+      return finalize(state, Array.from(map.values()));
     }
     case 'RESET_REMINDERS':
       return initialState;

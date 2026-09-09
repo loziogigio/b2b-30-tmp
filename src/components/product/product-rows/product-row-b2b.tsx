@@ -221,7 +221,9 @@ export default function ProductRowB2B({
     });
     if (!candidates.size) return;
     reminders.loadBulkStatus(Array.from(candidates)).catch(() => {});
-  }, [isAuthorized, reminders, variantRows, sku]);
+    // Depend on the stable callback, not the whole context object, so a
+    // status update elsewhere does not re-run this for every row.
+  }, [isAuthorized, reminders.loadBulkStatus, variantRows, sku]);
 
   /** ---------- RIGA PARENT (stesso grid) ---------- */
   return (
