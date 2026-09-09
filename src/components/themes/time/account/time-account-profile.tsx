@@ -7,6 +7,7 @@ import {
 } from '@framework/acccount/fetch-account';
 import { TimeCard, TimeInfoRow } from './time-account-primitives';
 import { IconMapPin, IconTruck } from './time-account-icons';
+import { selectReferenceAgent } from '@utils/transform/b2b-addresses';
 
 interface TimeAccountProfileProps {
   lang: string;
@@ -59,6 +60,11 @@ export default function TimeAccountProfile({ lang }: TimeAccountProfileProps) {
       </TimeCard>
     );
   }
+
+  // The agent MyMB attaches to the legal seat (falling back to the first
+  // address that has one). Undefined hides the section entirely — an empty
+  // "AGENTE DI RIFERIMENTO" block is worse than none.
+  const agent = selectReferenceAgent(addresses);
 
   // Split addresses: legal seat vs delivery
   const legalSeat = addresses.find((a) => a.isLegalSeat);
@@ -127,6 +133,44 @@ export default function TimeAccountProfile({ lang }: TimeAccountProfileProps) {
                 />
               )}
             </>
+          )}
+
+          {/* Reference agent — sits under the company data, same card. */}
+          {agent && (
+            <div className="mt-6">
+              <div className="text-[10px] font-bold text-[var(--time-gray-400)] uppercase tracking-[0.08em] font-[var(--font-body)] mb-4">
+                {t('text-reference-agent', {
+                  defaultValue: 'Agente di riferimento',
+                })}
+              </div>
+              {agent.code && (
+                <TimeInfoRow
+                  label={t('text-agent-code', { defaultValue: 'Codice' })}
+                  value={agent.code}
+                  mono
+                />
+              )}
+              {agent.name && (
+                <TimeInfoRow
+                  label={t('text-agent-name', { defaultValue: 'Agente' })}
+                  value={agent.name}
+                />
+              )}
+              {agent.email && (
+                <TimeInfoRow
+                  label={t('text-agent-email', { defaultValue: 'Email' })}
+                  value={agent.email}
+                  copyable
+                />
+              )}
+              {agent.phone && (
+                <TimeInfoRow
+                  label={t('text-agent-phone', { defaultValue: 'Telefono' })}
+                  value={agent.phone}
+                  copyable
+                />
+              )}
+            </div>
           )}
         </TimeCard>
 

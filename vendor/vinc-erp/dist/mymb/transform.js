@@ -4,6 +4,7 @@ exports.getLabelAndCartStatus = getLabelAndCartStatus;
 exports.getPackagingOptions = getPackagingOptions;
 exports.buildPriceEntry = buildPriceEntry;
 exports.buildCustomerPromo = buildCustomerPromo;
+exports.buildCustomerAddressAgent = buildCustomerAddressAgent;
 /**
  * Port of Python `get_label_and_cart_status`. Determines the availability
  * "case" (0..5) and resolves label / add-to-cart from `config.cases`.
@@ -184,6 +185,17 @@ function buildCustomerPromo(row) {
         type: str(row?.CodiceTipoTipologiaPromozione),
         from: str(row?.DataInizioValidita),
         to: str(row?.DataScadenza),
+    };
+}
+/** One `GetIndirizziClienteResult.ListaIndirizzi` row -> CustomerAddressAgent. */
+function buildCustomerAddressAgent(row) {
+    return {
+        addressCode: str(row?.Codice),
+        isLegalSeat: !!row?.IsSedeLegale,
+        code: str(row?.CodiceAgente),
+        name: str(row?.DescrizioneAgente),
+        email: str(row?.EMailAgente),
+        phone: str(row?.TelefonoAgente),
     };
 }
 //# sourceMappingURL=transform.js.map

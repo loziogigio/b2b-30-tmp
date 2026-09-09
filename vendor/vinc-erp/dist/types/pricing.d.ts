@@ -112,4 +112,22 @@ export interface CustomerPromo {
     from: string;
     to: string;
 }
+/**
+ * The sales agent attached to one customer address — GetIndirizziCliente.
+ *
+ * MyMB models the agent per ADDRESS, not per customer, so this carries the
+ * address it belongs to. In practice a customer's addresses usually share one
+ * agent (verified 2026-09-09: all 11 addresses of customer 10407 on Belli e
+ * Forti resolve to the same agent), which is why the storefront shows a single
+ * "AGENTE DI RIFERIMENTO" block.
+ */
+export interface CustomerAddressAgent {
+    /** `Codice` — matches AddressB2B.id, so the two can be merged. */
+    addressCode: string;
+    isLegalSeat: boolean;
+    code: string;
+    name: string;
+    email: string;
+    phone: string;
+}
 //# sourceMappingURL=pricing.d.ts.map

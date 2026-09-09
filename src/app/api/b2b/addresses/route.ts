@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { AddressB2B } from '@framework/acccount/types-b2b-account';
 import { resolveTenantApiConfig } from '@/lib/tenant';
-import { sessionOwnedCustomers } from '@/lib/profile/session-owner';
+import { sessionCustomerContext } from '@/lib/profile/session-owner';
+import { attachAgents } from '@utils/transform/b2b-addresses';
+import { getMyMbErpClient } from '@/lib/erp/factory';
 
 // PIM API response type
 interface PIMAddressResponse {
@@ -86,7 +88,8 @@ export async function POST(request: NextRequest) {
     // The address book is customer-scoped data. `customer_id` arrives from the
     // client, so it must be checked against the SSO-validated session before
     // it is used — otherwise any caller can read any customer's addresses.
-    const owned = await sessionOwnedCustomers(request);
+    const sessionCtx = await sessionCustomerContext(request);
+    const owned = sessionCtx?.owned ?? null;
     if (!owned) {
       return NextResponse.json(
         { success: false, message: 'Not authenticated' },
@@ -176,9 +179,30 @@ export async function POST(request: NextRequest) {
         return 0;
       });
 
+    // The agent lives on the MyMB address record; the Suite does not carry it.
+    // Best-effort: a tenant with no MyMB connection (or any ERP hiccup) yields
+    // null and the addresses go out exactly as before, so the account page
+    // omits the agent block rather than rendering a blank one.
+    const erpCustomerCode = sessionCtx?.erpCodeById.get(String(customer_id));
+    let withAgents = transformedAddresses;
+    if (erpCustomerCode) {
+      try {
+        const erp = await getMyMbErpClient(request);
+        withAgents = attachAgents(
+          transformedAddresses,
+          await erp.getCustomerAddressAgents(erpCustomerCode),
+        );
+      } catch (err) {
+        console.warn(
+          '[b2b/addresses] agent lookup skipped:',
+          (err as Error).message,
+        );
+      }
+    }
+
     return NextResponse.json({
       success: true,
-      addresses: transformedAddresses,
+      addresses: withAgents,
     });
   } catch (error) {
     console.error('[b2b/addresses] Error:', error);

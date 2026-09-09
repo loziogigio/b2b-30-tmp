@@ -813,5 +813,10 @@
   "text-destination": "Destino",
   "orders-status-to-fulfill": "Por cumplir",
   "orders-status-fulfilled": "Cumplido",
-  "orders-status-in-acceptance": "En aceptación"
+  "orders-status-in-acceptance": "En aceptación",
+  "text-reference-agent": "Agente de referencia",
+  "text-agent-code": "Código",
+  "text-agent-name": "Agente",
+  "text-agent-email": "Email",
+  "text-agent-phone": "Teléfono"
 }

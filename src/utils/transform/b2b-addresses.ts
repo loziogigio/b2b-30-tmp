@@ -3,6 +3,7 @@ import type {
   RawAddress,
   AddressB2B,
 } from '@framework/acccount/types-b2b-account';
+import type { CustomerAddressAgent } from 'vinc-erp';
 
 function normalize(r: RawAddress): AddressB2B {
   const title =
@@ -54,4 +55,58 @@ function normalize(r: RawAddress): AddressB2B {
 export function transformAddresses(res: RawAddressesResponse): AddressB2B[] {
   const list = Array.isArray(res?.ListaIndirizzi) ? res.ListaIndirizzi : [];
   return list.map(normalize);
+}
+
+/**
+ * The single agent the storefront shows as "AGENTE DI RIFERIMENTO".
+ *
+ * MyMB attaches an agent to each ADDRESS, but a customer's addresses normally
+ * share one, so the account page shows one block. The legal seat wins; failing
+ * that, the first address that actually has an agent.
+ *
+ * An address whose agent object exists but is entirely blank does NOT count —
+ * returning it would render an empty section instead of hiding it.
+ */
+export function selectReferenceAgent(
+  addresses: AddressB2B[],
+): AddressB2B['agent'] | undefined {
+  const hasAny = (a: AddressB2B) =>
+    Boolean(
+      a.agent && Object.values(a.agent).some((v) => String(v ?? '').trim()),
+    );
+  const list = Array.isArray(addresses) ? addresses : [];
+  return (list.find((a) => a.isLegalSeat && hasAny(a)) ?? list.find(hasAny))
+    ?.agent;
+}
+
+/** Blank ERP strings become undefined so the UI can test truthiness. */
+const orUndefined = (v?: string) => (v && v.trim() ? v.trim() : undefined);
+
+/**
+ * Merge the per-address agents from MyMB onto addresses sourced from the
+ * Commerce Suite, matching on the address code.
+ *
+ * `agents === null` means the ERP could not answer (no MyMB for this tenant,
+ * a ReturnCode !== 0, a timeout) — the addresses are returned untouched so the
+ * account page simply omits the agent block instead of rendering a blank one.
+ */
+export function attachAgents(
+  addresses: AddressB2B[],
+  agents: CustomerAddressAgent[] | null,
+): AddressB2B[] {
+  if (!agents || agents.length === 0) return addresses;
+  const byCode = new Map(agents.map((a) => [String(a.addressCode), a]));
+  return addresses.map((addr) => {
+    const a = byCode.get(String(addr.id));
+    if (!a) return addr;
+    return {
+      ...addr,
+      agent: {
+        code: orUndefined(a.code),
+        name: orUndefined(a.name),
+        email: orUndefined(a.email),
+        phone: orUndefined(a.phone),
+      },
+    };
+  });
 }
