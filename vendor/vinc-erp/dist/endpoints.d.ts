@@ -15,6 +15,7 @@ export declare const MYMB_ENDPOINTS: {
     readonly GET_RIGHE_FATT_CON_INFO: "GetRigheFATTConInfo";
     readonly GET_ULTIMO_ORDINATO_CLIENTE_X_ARTICOLO: "GetUltimoOrdinatoClienteXArticolo";
     readonly GET_TESTATE_PROMO_PER_CLIENTE: "GetTestatePromoPerCliente";
+    readonly GET_INDIRIZZI_CLIENTE: "GetIndirizziCliente";
 };
 export type MyMbEndpoint = (typeof MYMB_ENDPOINTS)[keyof typeof MYMB_ENDPOINTS];
 /** Raw MYMB coupon webservice endpoints (separate connection from pricing). */

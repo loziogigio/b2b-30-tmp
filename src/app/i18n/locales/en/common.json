@@ -827,5 +827,10 @@
   "text-no-orders-for-article": "No orders recorded for this item.",
   "text-order-history-unavailable": "Order history is unavailable right now.",
   "text-show-more": "Show more",
-  "text-quantities-in-uom": "Quantities in {{uom}}"
+  "text-quantities-in-uom": "Quantities in {{uom}}",
+  "text-reference-agent": "Reference agent",
+  "text-agent-code": "Code",
+  "text-agent-name": "Agent",
+  "text-agent-email": "Email",
+  "text-agent-phone": "Phone"
 }

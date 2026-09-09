@@ -368,3 +368,41 @@ describe('MyMbErpClient.getCustomerPromos', () => {
     ).resolves.toEqual([]);
   });
 });
+
+describe('MyMbErpClient.getCustomerAddressAgents', () => {
+  const okBody = {
+    GetIndirizziClienteResult: {
+      ReturnCode: 0,
+      Message: '',
+      ListaIndirizzi: [
+        { Codice: '1', IsSedeLegale: true, CodiceAgente: '10524', DescrizioneAgente: 'Geromel Daniele', EMailAgente: 'g@x.it', TelefonoAgente: '336230740' },
+        { Codice: '2', IsSedeLegale: false, CodiceAgente: '10524', DescrizioneAgente: 'Geromel Daniele', EMailAgente: 'g@x.it', TelefonoAgente: '336230740' },
+      ],
+    },
+  };
+
+  it('returns one agent entry per address', async () => {
+    const f = vi.fn().mockResolvedValue(jsonResponse(okBody));
+    const rows = await makeClient(f as unknown as typeof fetch).getCustomerAddressAgents('10407');
+    expect(rows?.map((r) => r.addressCode)).toEqual(['1', '2']);
+    expect(rows?.[0].name).toBe('Geromel Daniele');
+    expect(String(f.mock.calls[0][0])).toContain('GetIndirizziCliente');
+    expect(String(f.mock.calls[0][0])).toContain('CodiceInternoCliente=10407');
+  });
+
+  it('returns null on a ReturnCode 1 business error delivered as HTTP 200', async () => {
+    const f = vi.fn().mockResolvedValue(
+      jsonResponse({ GetIndirizziClienteResult: { ReturnCode: 1, Message: 'boom', ListaIndirizzi: [] } }),
+    );
+    await expect(
+      makeClient(f as unknown as typeof fetch).getCustomerAddressAgents('10407'),
+    ).resolves.toBeNull();
+  });
+
+  it('returns null when the transport throws — tenants without MyMB fail soft', async () => {
+    const f = vi.fn().mockRejectedValue(new Error('ECONNREFUSED'));
+    await expect(
+      makeClient(f as unknown as typeof fetch).getCustomerAddressAgents('10407'),
+    ).resolves.toBeNull();
+  });
+});

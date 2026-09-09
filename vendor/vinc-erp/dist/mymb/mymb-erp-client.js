@@ -248,6 +248,35 @@ class MyMbErpClient {
         return data?.GetClienteResult ?? null;
     }
     /**
+     * The sales agent on each of this customer's addresses — MyMB
+     * `GetIndirizziCliente`.
+     *
+     * Same `null` = unknown / `[]` = genuinely none contract as
+     * `getCustomerPromos`: a business error arrives as HTTP 200 with
+     * ReturnCode !== 0, and tenants with no MyMB connection throw on the way
+     * out. Both produce `null` so callers can fail soft and simply omit the
+     * agent rather than render a blank block.
+     */
+    async getCustomerAddressAgents(customerCode) {
+        try {
+            const data = await this.request(endpoints_js_1.MYMB_ENDPOINTS.GET_INDIRIZZI_CLIENTE, { method: 'GET', params: { CodiceInternoCliente: customerCode } });
+            const result = data?.GetIndirizziClienteResult;
+            if (!result || result.ReturnCode !== 0) {
+                // `Message` carries ERP server paths — log the code, never the text.
+                console.warn('[MyMB] GetIndirizziCliente ReturnCode', result?.ReturnCode);
+                return null;
+            }
+            const list = Array.isArray(result.ListaIndirizzi)
+                ? result.ListaIndirizzi
+                : [];
+            return list.map(transform_js_1.buildCustomerAddressAgent);
+        }
+        catch (err) {
+            console.warn('[MyMB] GetIndirizziCliente failed:', err.message);
+            return null;
+        }
+    }
+    /**
      * Promo headers this customer is entitled to — MyMB `GetTestatePromoPerCliente`.
      *
      * Returns `null` for "unknown" (business error, transport failure) and `[]`

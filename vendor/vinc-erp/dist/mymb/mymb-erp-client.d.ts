@@ -1,6 +1,6 @@
 import type { CacheAdapter } from '../cache.js';
 import type { ErpClient } from '../erp-client.js';
-import type { CustomerPromo, MyMbErpSettings, MyMbPriceEntry, PriceQuery } from '../types/pricing.js';
+import type { CustomerAddressAgent, CustomerPromo, MyMbErpSettings, MyMbPriceEntry, PriceQuery } from '../types/pricing.js';
 import type { MyMbCartClosureInfo } from '../types/cart-closure.js';
 export interface MyMbErpClientConfig {
     /** Base URL, no userinfo, no trailing slash (from parseMyMbConnection). */
@@ -133,6 +133,17 @@ export declare class MyMbErpClient implements ErpClient {
     }): Promise<any[]>;
     /** Customer profile — hub `get_client` → MyMB `GetCliente` (GET). */
     getCustomer(customerCode: string): Promise<any>;
+    /**
+     * The sales agent on each of this customer's addresses — MyMB
+     * `GetIndirizziCliente`.
+     *
+     * Same `null` = unknown / `[]` = genuinely none contract as
+     * `getCustomerPromos`: a business error arrives as HTTP 200 with
+     * ReturnCode !== 0, and tenants with no MyMB connection throw on the way
+     * out. Both produce `null` so callers can fail soft and simply omit the
+     * agent rather than render a blank block.
+     */
+    getCustomerAddressAgents(customerCode: string): Promise<CustomerAddressAgent[] | null>;
     /**
      * Promo headers this customer is entitled to — MyMB `GetTestatePromoPerCliente`.
      *

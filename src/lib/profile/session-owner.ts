@@ -93,3 +93,49 @@ export async function sessionOwnedCustomerCodes(
     return null;
   }
 }
+
+/**
+ * Ownership map AND the VINC-id -> ERP-customer-code lookup, from a SINGLE
+ * token validation.
+ *
+ * `sessionOwnedCustomers` answers "may this session see this customer?" but
+ * cannot tell you the ERP code when the caller passed a VINC id, and
+ * `sessionOwnedCustomerCodes` deliberately drops the VINC ids. A route that
+ * needs both (authorise the request, then call the ERP with the code) would
+ * otherwise validate the token twice per request.
+ *
+ * Returns null when there is no valid session (caller should respond 401).
+ */
+export async function sessionCustomerContext(req: NextRequest): Promise<{
+  owned: Map<string, Set<string>>;
+  erpCodeById: Map<string, string>;
+} | null> {
+  const token = (await cookies()).get(AUTH_COOKIES.ACCESS_TOKEN)?.value;
+  if (!token) return null;
+
+  const result = await resolveAuthContext(req, 'validate');
+  if (!result.success) return null;
+
+  try {
+    const validation = await result.context.ssoApi.validate(token);
+    const authenticated = validation.authenticated ?? validation.active;
+    if (!authenticated || !validation.user) return null;
+
+    const owned = new Map<string, Set<string>>();
+    const erpCodeById = new Map<string, string>();
+    for (const customer of validation.user?.customers ?? []) {
+      const addressCodes = customerAddressCodes(customer);
+      const erp = customer.erp_customer_id;
+      for (const key of [erp, customer.id]) {
+        if (typeof key === 'string' && key.length > 0) {
+          owned.set(key, addressCodes);
+          if (typeof erp === 'string' && erp.length > 0)
+            erpCodeById.set(key, erp);
+        }
+      }
+    }
+    return { owned, erpCodeById };
+  } catch {
+    return null;
+  }
+}

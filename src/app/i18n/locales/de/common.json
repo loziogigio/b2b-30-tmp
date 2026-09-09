@@ -628,5 +628,10 @@
   "text-destination": "Ziel",
   "orders-status-to-fulfill": "Zu erledigen",
   "orders-status-fulfilled": "Erledigt",
-  "orders-status-in-acceptance": "In Annahme"
+  "orders-status-in-acceptance": "In Annahme",
+  "text-reference-agent": "Zuständiger Vertreter",
+  "text-agent-code": "Code",
+  "text-agent-name": "Vertreter",
+  "text-agent-email": "E-Mail",
+  "text-agent-phone": "Telefon"
 }

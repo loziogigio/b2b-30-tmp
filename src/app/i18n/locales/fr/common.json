@@ -552,8 +552,8 @@
   "text-expected-arrival": "Arrivée prévue :",
   "text-week": "Semaine",
   "text-arriving": "EN ARRIVAGE",
-  "text-arriving-week": "Arriv\u00e9e semaine {{week}}",
-  "text-arriving-date": "Arriv\u00e9e le {{date}}",
+  "text-arriving-week": "Arrivée semaine {{week}}",
+  "text-arriving-date": "Arrivée le {{date}}",
   "text-not-available": "NON DISPONIBLE",
   "breadcrumb-products": "Produits",
   "breadcrumb-search": "Recherche",
@@ -813,5 +813,10 @@
   "text-destination": "Destination",
   "orders-status-to-fulfill": "À traiter",
   "orders-status-fulfilled": "Traité",
-  "orders-status-in-acceptance": "En acceptation"
+  "orders-status-in-acceptance": "En acceptation",
+  "text-reference-agent": "Agent référent",
+  "text-agent-code": "Code",
+  "text-agent-name": "Agent",
+  "text-agent-email": "E-mail",
+  "text-agent-phone": "Téléphone"
 }

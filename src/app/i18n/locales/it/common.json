@@ -827,5 +827,10 @@
   "text-no-orders-for-article": "Nessun ordine registrato per questo articolo.",
   "text-order-history-unavailable": "Storico non disponibile al momento.",
   "text-show-more": "Mostra altri",
-  "text-quantities-in-uom": "Quantità espresse in {{uom}}"
+  "text-quantities-in-uom": "Quantità espresse in {{uom}}",
+  "text-reference-agent": "Agente di riferimento",
+  "text-agent-code": "Codice",
+  "text-agent-name": "Agente",
+  "text-agent-email": "Email",
+  "text-agent-phone": "Telefono"
 }
