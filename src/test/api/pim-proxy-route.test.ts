@@ -339,7 +339,10 @@ describe('PIM proxy route', () => {
     });
 
     expect(res.status).toBe(200);
-    expect(JSON.parse(String(calledInit?.body))).toEqual({ lang: 'it' });
+    expect(JSON.parse(String(calledInit?.body))).toEqual({
+      lang: 'it',
+      channel: 'b2b',
+    });
     expect(mocks.validateToken).not.toHaveBeenCalled();
   });
 
@@ -582,7 +585,10 @@ describe('PIM proxy route', () => {
     });
 
     expect(res.status).toBe(200);
-    expect(JSON.parse(String(calledInit?.body))).toEqual({ lang: 'it' });
+    expect(JSON.parse(String(calledInit?.body))).toEqual({
+      lang: 'it',
+      channel: 'b2b',
+    });
     const headers = calledInit?.headers as Record<string, string>;
     expect(headers['x-user-id']).toBeUndefined();
     expect(headers['x-user-type']).toBeUndefined();
@@ -631,6 +637,7 @@ describe('PIM proxy route', () => {
       authenticated: true,
       customer_code: 'B_1184',
       address_code: 'ADDR-1',
+      channel: 'b2b',
     });
     expectForwardedSuiteAuth(calledInit?.headers as Record<string, string>);
   });
@@ -807,4 +814,154 @@ describe('PIM proxy route', () => {
       expect(global.fetch).not.toHaveBeenCalled();
     },
   );
+  it('strips promo filters from an anonymous POST search — hiding the facet is not enough', async () => {
+    let calledInit: RequestInit | undefined;
+    global.fetch = vi.fn(
+      async (_url: RequestInfo | URL, init?: RequestInit) => {
+        calledInit = init;
+        return new Response(
+          JSON.stringify({ success: true, data: { results: [] } }),
+          { status: 200, headers: { 'content-type': 'application/json' } },
+        );
+      },
+    ) as typeof fetch;
+
+    const req = new NextRequest(
+      'http://localhost/api/proxy/pim/api/search/search',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lang: 'it',
+          filters: {
+            has_active_promo: ['true'],
+            promo_code: ['26-PUGLIA'],
+            promo_type: ['STD'],
+            brand_id: ['b1'],
+          },
+        }),
+      },
+    );
+
+    const res = await POST(req, {
+      params: Promise.resolve({ path: ['api', 'search', 'search'] }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(JSON.parse(String(calledInit?.body))).toEqual({
+      lang: 'it',
+      filters: { brand_id: ['b1'] },
+      channel: 'b2b',
+    });
+  });
+
+  it('strips promo filters from an anonymous GET search (filters-x and filters[x] forms)', async () => {
+    let target: URL | undefined;
+    global.fetch = vi.fn(async (url: RequestInfo | URL) => {
+      target = new URL(String(url));
+      return new Response(
+        JSON.stringify({ success: true, data: { results: [] } }),
+        { status: 200, headers: { 'content-type': 'application/json' } },
+      );
+    }) as typeof fetch;
+
+    const req = new NextRequest(
+      'http://localhost/api/proxy/pim/api/search/search?lang=it&filters-has_active_promo=true&filters%5Bpromo_code%5D=26-PUGLIA&filters-brand_id=b1',
+    );
+    const res = await GET(req, {
+      params: Promise.resolve({ path: ['api', 'search', 'search'] }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(target?.searchParams.has('filters-has_active_promo')).toBe(false);
+    expect(target?.searchParams.has('filters[promo_code]')).toBe(false);
+    expect(target?.searchParams.get('filters-brand_id')).toBe('b1');
+  });
+
+  it('keeps promo filters for an SSO-owned customer/address pair', async () => {
+    let calledInit: RequestInit | undefined;
+    global.fetch = vi.fn(
+      async (_url: RequestInfo | URL, init?: RequestInit) => {
+        calledInit = init;
+        return new Response(
+          JSON.stringify({ success: true, data: { results: [] } }),
+          { status: 200, headers: { 'content-type': 'application/json' } },
+        );
+      },
+    ) as typeof fetch;
+
+    const req = new NextRequest(
+      'http://localhost/api/proxy/pim/api/search/search',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: TEST_BEARER_TOKEN,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          lang: 'it',
+          customer_code: 'B_1184',
+          address_code: 'ADDR-1',
+          filters: { has_active_promo: ['true'], promo_code: ['26-PUGLIA'] },
+        }),
+      },
+    );
+
+    const res = await POST(req, {
+      params: Promise.resolve({ path: ['api', 'search', 'search'] }),
+    });
+
+    expect(res.status).toBe(200);
+    expect(JSON.parse(String(calledInit?.body)).filters).toEqual({
+      has_active_promo: ['true'],
+      promo_code: ['26-PUGLIA'],
+    });
+  });
+
+  it('asserts the B2B channel on anonymous search regardless of caller input', async () => {
+    const bodies: string[] = [];
+    let calledUrl = '';
+    global.fetch = vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+      calledUrl = String(url);
+      bodies.push(String(init?.body ?? ''));
+      return new Response(
+        JSON.stringify({ success: true, data: { results: [] } }),
+        { status: 200, headers: { 'content-type': 'application/json' } },
+      );
+    }) as typeof fetch;
+    const params = {
+      params: Promise.resolve({ path: ['api', 'search', 'search'] }),
+    };
+
+    // 1. channel omitted, 2. channel rewritten by the caller, 3. empty body
+    for (const body of [
+      JSON.stringify({ lang: 'it', text: 'x' }),
+      JSON.stringify({ lang: 'it', text: 'x', channel: 'b2c' }),
+      '',
+    ]) {
+      const res = await POST(
+        new NextRequest('http://localhost/api/proxy/pim/api/search/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body,
+        }),
+        params,
+      );
+      expect(res.status).toBe(200);
+    }
+    expect(bodies.map((b) => JSON.parse(b).channel)).toEqual([
+      'b2b',
+      'b2b',
+      'b2b',
+    ]);
+
+    const res = await GET(
+      new NextRequest(
+        'http://localhost/api/proxy/pim/api/search/search?lang=it&text=x&channel=b2c',
+      ),
+      params,
+    );
+    expect(res.status).toBe(200);
+    expect(new URL(calledUrl).searchParams.get('channel')).toBe('b2b');
+  });
 });

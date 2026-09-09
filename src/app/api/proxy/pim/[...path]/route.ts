@@ -189,6 +189,12 @@ const promoCache = new Map<string, PromoCacheEntry>();
 const PROMO_MAP_TTL_MS = 10 * 60 * 1000;
 const PROMO_HARVEST_ROWS = 50;
 
+// This storefront is the B2B sales channel. Suite hides every price from
+// anonymous searches on this channel, so the channel must be asserted by the
+// server: a caller that omits or rewrites it must not regain guest pricing
+// (hidros V5 follow-up, 2026-09-09).
+const STOREFRONT_CHANNEL = 'b2b';
+
 type TrustedUserContext = {
   token: string;
   userId: string;
@@ -340,7 +346,11 @@ function sanitizeSearchBody(
   if (selection.customerCode && selection.addressCode) {
     body.customer_code = selection.customerCode;
     body.address_code = selection.addressCode;
+  } else {
+    // Same condition that selects GUEST_ENTITLEMENT on the response side.
+    stripPromoFiltersForGuest(body);
   }
+  body.channel = STOREFRONT_CHANNEL;
 
   return { allowed: true, bodyText: JSON.stringify(body) };
 }
@@ -365,7 +375,10 @@ function sanitizeSearchQuery(
   if (selection.customerCode && selection.addressCode) {
     url.searchParams.set('customer_code', selection.customerCode);
     url.searchParams.set('address_code', selection.addressCode);
+  } else {
+    stripPromoQueryForGuest(url);
   }
+  url.searchParams.set('channel', STOREFRONT_CHANNEL);
 
   return true;
 }
@@ -447,6 +460,58 @@ async function getPromoTypeMap(
  */
 export const GUEST_ENTITLEMENT: ReadonlySet<string> = new Set<string>();
 
+/**
+ * Every search dimension that reveals promo information. A guest sees no
+ * prices, so none of these can pay off for them — and the buckets and the
+ * ability to narrow the catalog by campaign both disclose the campaign map.
+ */
+export const PROMO_FILTER_KEYS = [
+  'has_active_promo',
+  'promo_code',
+  'promo_codes',
+  'promo_type',
+] as const;
+const PROMO_QUERY_KEY =
+  /^filters(?:-|\[)(has_active_promo|promo_code|promo_codes|promo_type)\]?$/;
+
+/**
+ * Drop promo filters from a search body that carries no trusted
+ * customer/address pair. `?filters-has_active_promo=true` on a guest URL must
+ * not narrow the catalog: hiding the facet while honouring the filter would
+ * leave the same information one hand-typed query away.
+ */
+export function stripPromoFiltersForGuest<T extends Record<string, unknown>>(
+  body: T,
+): T {
+  const filters = body.filters;
+  if (filters && typeof filters === 'object' && !Array.isArray(filters)) {
+    for (const key of PROMO_FILTER_KEYS)
+      delete (filters as Record<string, unknown>)[key];
+  }
+  return body;
+}
+
+/** GET twin of stripPromoFiltersForGuest: `filters-x` and `filters[x]` forms. */
+export function stripPromoQueryForGuest(url: URL): void {
+  for (const key of [...url.searchParams.keys()]) {
+    if (PROMO_QUERY_KEY.test(key)) url.searchParams.delete(key);
+  }
+}
+
+/**
+ * For the guest sentinel only: remove the remaining promo facets. The
+ * promo_code buckets are already emptied by the entitlement filter; a guest
+ * must not see promo_type / has_active_promo either. An authenticated customer
+ * whose entitlement is genuinely empty (a real Set, not the sentinel) keeps
+ * those facets — they are entitled to nothing, not blindfolded.
+ */
+export function stripPromoFacetsForGuest(data: any): any {
+  const facets = data?.data?.facet_results || data?.facet_results;
+  if (!facets || typeof facets !== 'object') return data;
+  for (const key of PROMO_FILTER_KEYS) delete facets[key];
+  return data;
+}
+
 export function filterPromoFacetByEntitlement(
   data: any,
   entitled: ReadonlySet<string> | null,
@@ -504,7 +569,12 @@ export function postProcessSearchResponse(
   opts: { promoMap: PromoMap; entitled: ReadonlySet<string> | null },
 ): any {
   data = enrichPromoFacetLabels(data, opts.promoMap);
-  return filterPromoFacetByEntitlement(data, opts.entitled);
+  data = filterPromoFacetByEntitlement(data, opts.entitled);
+  // Identity, on purpose: only the guest sentinel, never a customer's own
+  // (possibly empty) entitlement set.
+  return opts.entitled === GUEST_ENTITLEMENT
+    ? stripPromoFacetsForGuest(data)
+    : data;
 }
 
 // Rewrites facet_results.promo_type entries in-place so the sidebar renders
@@ -655,6 +725,8 @@ async function proxyRequest(
         req,
         searchPath ? MAX_SEARCH_BODY_BYTES : undefined,
       );
+      // An empty search body must still carry the server-asserted channel.
+      if (method === 'POST' && searchPath && !bodyText) bodyText = '{}';
       if (bodyText) {
         if (method === 'POST' && searchPath) {
           const sanitized = sanitizeSearchBody(bodyText, trustedUserContext);

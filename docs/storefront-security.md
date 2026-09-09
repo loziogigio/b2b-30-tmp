@@ -69,6 +69,31 @@ record authorization before accessing the configured internal file root. Only
 validated paths beneath `/documenti-clienti/` are accepted; encoded separators,
 traversal, malformed encoding and file-server redirects are rejected.
 
+## Session cookie (hidros V7, 2026-09-09)
+
+The access token cookie (`auth_token`) is `HttpOnly`, `Secure` in production
+and `SameSite=Lax`, like the refresh-token and session-id cookies. Browser
+JavaScript never reads or writes it: every browser API call is same-origin
+(`/api/proxy/pim`, `/api/proxy/b2b`, `/api/...`) and the route handlers read
+the cookie server-side (`storefrontBearerToken`). Logged-in state and refresh
+scheduling use the readable, non-secret `auth_token_expires_at` marker
+(`hasAuthToken()`); `setAuthTokensClient` only writes that marker. Login,
+callback, refresh and logout own the token cookies through `Set-Cookie`.
+Regression test: `src/test/unit/auth-cookies-httponly.test.ts`.
+
+## Anonymous search pricing (hidros V5, 2026-09-09)
+
+The Suite search route strips packaging/pricelist tiers for callers without an
+owned customer/address pair. The variant-grouped response carries a second copy
+of the docs in `grouped.groups[].docs`; the strip and the tag filter now cover
+that block too (Suite `applyPricingContext`). Keep the storefront proxy's search
+sanitisation (`customer_code`/`address_code`/`tag_filter` replaced from SSO)
+unchanged: it is what makes the Suite decision trustworthy. Suite hides every
+price from anonymous searches on the `b2b` channel, so the proxy asserts
+`channel: "b2b"` itself on every search body and GET query (an empty POST body
+becomes `{}` first); a caller cannot omit or rewrite the channel to regain
+guest pricing.
+
 ## Intentional compatibility changes
 
 - The legacy B2B proxy admits only eight explicit ERP read adapters. Arbitrary

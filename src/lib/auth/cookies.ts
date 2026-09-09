@@ -84,7 +84,9 @@ export const OAUTH_CONFIG = {
 
 /**
  * Get the current auth token (client-side).
- * Returns null if on server or token not set.
+ * Returns null on the server. Since the access token cookie is httpOnly
+ * (2026-09-09, hidros V7) this is null in the browser too: same-origin API
+ * routes read the cookie server-side, so client code never needs the value.
  */
 export function getAuthToken(): string | null {
   if (typeof window === 'undefined') return null;
@@ -110,9 +112,15 @@ export function getTokenExpiresAt(): number | null {
 }
 
 /**
- * Check if the auth token exists (client-side).
+ * Check whether a browser session is present (client-side).
+ * The access token itself is httpOnly, so presence is inferred from the
+ * readable, non-secret expiry marker the server sets alongside it.
  */
 export function hasAuthToken(): boolean {
+  if (typeof window === 'undefined') return false;
+  const expiresAt = getTokenExpiresAt();
+  if (expiresAt !== null)
+    return Number.isFinite(expiresAt) && expiresAt > Date.now();
   return getAuthToken() !== null;
 }
 
@@ -127,15 +135,17 @@ export function setAuthTokensClient(tokens: {
 }): void {
   if (typeof window === 'undefined') return;
 
-  Cookies.set(AUTH_COOKIES.ACCESS_TOKEN, tokens.accessToken);
-
-  if (tokens.refreshToken) {
-    Cookies.set(AUTH_COOKIES.REFRESH_TOKEN, tokens.refreshToken);
-  }
-
+  // Access and refresh tokens are httpOnly cookies owned by the server
+  // responses of /api/auth/login, /api/auth/callback and /api/auth/refresh.
+  // JavaScript cannot (and must not) write them; only the readable expiry
+  // marker used for refresh scheduling and logged-in state is kept here.
   if (tokens.expiresIn) {
     const expiresAt = Date.now() + tokens.expiresIn * 1000;
-    Cookies.set(AUTH_COOKIES.TOKEN_EXPIRES_AT, String(expiresAt));
+    Cookies.set(AUTH_COOKIES.TOKEN_EXPIRES_AT, String(expiresAt), {
+      path: '/',
+      secure: window.location.protocol === 'https:',
+      sameSite: 'lax',
+    });
   }
 }
 
@@ -223,11 +233,13 @@ export function setAuthTokensServer(
   const expiresIn =
     tokens.expiresIn || AUTH_COOKIE_MAX_AGE_SECONDS.ACCESS_TOKEN_FALLBACK;
 
-  // Access token - httpOnly: false so client JS can read it
+  // Access token - httpOnly: browser JavaScript must never read it. Every
+  // browser API call is same-origin and the route handlers read this cookie
+  // server-side (storefrontBearerToken), so no client code needs the value.
   response.cookies.set(
     AUTH_COOKIES.ACCESS_TOKEN,
     tokens.accessToken,
-    authCookieOptions({ maxAge: expiresIn }),
+    authCookieOptions({ httpOnly: true, maxAge: expiresIn }),
   );
 
   // Expiration timestamp for auto-refresh scheduling

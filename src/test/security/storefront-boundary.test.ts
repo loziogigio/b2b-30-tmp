@@ -340,7 +340,10 @@ describe('live tenant-bound shopper authentication', () => {
     );
     expect(res.status).toBe(200);
     const init = vi.mocked(global.fetch).mock.calls[0][1]!;
-    expect(JSON.parse(String(init.body))).toEqual({ query: 'x' });
+    expect(JSON.parse(String(init.body))).toEqual({
+      query: 'x',
+      channel: 'b2b',
+    });
     expect(init.headers).not.toHaveProperty('x-user-id');
     expect(init.headers).not.toHaveProperty('Authorization');
   });

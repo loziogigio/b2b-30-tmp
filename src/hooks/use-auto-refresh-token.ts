@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import {
-  getAuthToken,
+  hasAuthToken,
   getTokenExpiresAt,
   refreshAccessToken,
   clearAuthCookiesClient,
@@ -134,9 +134,8 @@ export function useAutoRefreshToken() {
   }, [doRefresh]);
 
   useEffect(() => {
-    // Check if we have a token
-    const authToken = getAuthToken();
-    if (!authToken) {
+    // Check if we have a session (the token itself is httpOnly)
+    if (!hasAuthToken()) {
       return;
     }
 

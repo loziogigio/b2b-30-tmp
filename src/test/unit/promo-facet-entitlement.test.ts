@@ -3,6 +3,7 @@ import {
   filterPromoFacetByEntitlement,
   GUEST_ENTITLEMENT,
   postProcessSearchResponse,
+  stripPromoFacetsForGuest,
   readTrustedPair,
 } from '@/app/api/proxy/pim/[...path]/route';
 
@@ -170,5 +171,48 @@ describe('guests get no PROMOZIONE facet', () => {
   it('leaves the other facets alone for guests', () => {
     const out = filterPromoFacetByEntitlement(response(), GUEST_ENTITLEMENT);
     expect(out.data.facet_results.brand_id).toHaveLength(1);
+  });
+});
+
+describe('guests get no promo facets at all', () => {
+  const withAllPromoFacets = () => ({
+    data: {
+      facet_results: {
+        promo_code: [{ value: '26-SETTEMBRE', count: 259 }],
+        promo_type: [{ value: 'STD', count: 345 }],
+        has_active_promo: [{ value: 'true', count: 400 }],
+        brand_id: [{ value: 'b1', count: 10 }],
+      },
+    },
+  });
+
+  it('the guest sentinel removes promo_type and has_active_promo too', () => {
+    const out = postProcessSearchResponse(withAllPromoFacets(), {
+      promoMap: {},
+      entitled: GUEST_ENTITLEMENT,
+    });
+    const f = out.data.facet_results;
+    expect(f.promo_type).toBeUndefined();
+    expect(f.has_active_promo).toBeUndefined();
+    expect(f.promo_code ?? []).toHaveLength(0);
+    expect(f.brand_id).toHaveLength(1);
+  });
+
+  it('a customer with a genuinely EMPTY entitlement keeps promo_type — not blindfolded', () => {
+    // A real Set that happens to be empty is a real answer for that customer;
+    // only the sentinel identity means "guest".
+    const out = postProcessSearchResponse(withAllPromoFacets(), {
+      promoMap: {},
+      entitled: new Set<string>(),
+    });
+    const f = out.data.facet_results;
+    expect(f.promo_code).toHaveLength(0);
+    expect(f.promo_type).toHaveLength(1);
+    expect(f.has_active_promo).toHaveLength(1);
+  });
+
+  it('stripPromoFacetsForGuest tolerates a response without facets', () => {
+    expect(() => stripPromoFacetsForGuest({})).not.toThrow();
+    expect(() => stripPromoFacetsForGuest({ data: {} })).not.toThrow();
   });
 });
