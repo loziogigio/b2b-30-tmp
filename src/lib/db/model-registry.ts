@@ -48,7 +48,7 @@ export async function getModel<T extends mongoose.Document>(
   // Return existing model if already registered
   if (connection.models[modelName]) {
     console.log(`[ModelRegistry] Using cached model ${modelName}`);
-    return connection.models[modelName] as mongoose.Model<T>;
+    return connection.models[modelName] as unknown as mongoose.Model<T>;
   }
 
   // Get schema and register model
@@ -62,7 +62,7 @@ export async function getModel<T extends mongoose.Document>(
   console.log(
     `[ModelRegistry] Registering new model ${modelName} on db: ${connection.name}`,
   );
-  return connection.model<T>(modelName, schema);
+  return connection.model(modelName, schema) as unknown as mongoose.Model<T>;
 }
 
 /**
