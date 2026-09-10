@@ -194,13 +194,19 @@ async function post(req: NextRequest, { params }: RouteParams) {
   const requestedAddress =
     (coupon ? body.codiceIndirizzo : body.address_code) ?? '';
   const allowedAddresses = ownedCustomerCodes.get(requestedCustomerCode)!;
+  // Endpoints that need ONE specific ship-to address: pricing context is
+  // per-address, so an empty address is meaningless (and unsafe) for them.
+  //
+  // The order/document LISTS are deliberately NOT here. Order and document
+  // history spans ALL of a customer's ship-to addresses and MyMB returns
+  // nothing when filtered to a single CodiceIndirizzo, so those callers send
+  // address_code: '' on purpose. Requiring an address broke the account
+  // orders/documents pages with 403 "Forbidden address" (baseprotection,
+  // 2026-09-10). Customer ownership is still enforced for every endpoint, and
+  // a NON-EMPTY address must still be one the session owns (checked below),
+  // so narrowing a list to someone else's address remains refused.
   const addressScoped = new Set([
     'get_multiple_prices',
-    'get_orders',
-    'get_order_detail',
-    'get_document_rows',
-    'get_invoices',
-    'get_ddt',
     'get_customer_promos',
     'verify_promo_item',
   ]);
