@@ -58,3 +58,6 @@ docs/superpowers/
 
 # Dev deps installed inside the vendored packages (tests/tsc)
 vendor/*/node_modules/
+
+# Claude Code local tooling (machine-local settings and worktree checkouts)
+.claude/
