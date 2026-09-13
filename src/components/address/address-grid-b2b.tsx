@@ -147,9 +147,6 @@ const AddressGridB2B: React.FC<Props> = ({
   const [selected, setSelected] = React.useState<AddressB2B | undefined>(
     deriveInitial,
   );
-  const [committedSelected, setCommittedSelected] = React.useState<
-    AddressB2B | undefined
-  >(deriveInitial);
 
   React.useEffect(() => {
     const initial = deriveInitial();
@@ -158,27 +155,16 @@ const AddressGridB2B: React.FC<Props> = ({
         ? prev
         : initial,
     );
-    setCommittedSelected((prev) =>
-      prev && address.some((a) => String(a.id) === String(prev.id))
-        ? prev
-        : initial,
-    );
   }, [address, deriveInitial]);
 
-  const orderedAddresses = React.useMemo(() => {
-    if (!committedSelected) return address;
-    return [
-      committedSelected,
-      ...address.filter((a) => String(a.id) !== String(committedSelected.id)),
-    ];
-  }, [address, committedSelected]);
-
-  // Render-time narrowing only. `selected` / `committedSelected` above stay
-  // derived from the full list, so hiding the current selection behind a query
-  // leaves it selected rather than promoting whatever row happens to be first.
+  // Render-time narrowing only, in API order (default address first). The
+  // selection is never hoisted to the front: cards keep a stable position so
+  // the user can find an address where they last saw it. `selected` above
+  // stays derived from the full list, so hiding the current selection behind
+  // a query leaves it selected rather than promoting whatever row is first.
   const visibleAddresses = React.useMemo(
-    () => filterAddresses(orderedAddresses, filterQuery),
-    [orderedAddresses, filterQuery],
+    () => filterAddresses(address, filterQuery),
+    [address, filterQuery],
   );
 
   return (
@@ -249,22 +235,6 @@ const AddressGridB2B: React.FC<Props> = ({
                             {item.contact.email}
                           </div>
                         )}
-                      </div>
-                    )}
-
-                    {(item.agent?.name ||
-                      item.agent?.phone ||
-                      item.agent?.email) && (
-                      <div className="min-w-0">
-                        <div className="text-[11px] uppercase tracking-wide text-gray-500">
-                          {t('AGENT') || 'Agent'}
-                        </div>
-                        <div className="truncate">
-                          {item.agent?.name || item.agent?.code || '—'}
-                        </div>
-                        <div className="truncate">
-                          {item.agent?.phone || item.agent?.email || '—'}
-                        </div>
                       </div>
                     )}
                   </div>
