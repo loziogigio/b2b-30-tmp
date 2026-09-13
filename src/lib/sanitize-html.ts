@@ -141,6 +141,27 @@ const STRICT_CONFIG: IOptions = {
 };
 
 /**
+ * Portal-admin HTML (footer "HTML" mode). Authored by the same tenant admin
+ * who can already inject raw site-wide CSS (`custom_css`) and scripts, so it
+ * may bring its own `<style>` and stylesheet `<link>`s (icon fonts). Scripts,
+ * event handlers and non-stylesheet links are still stripped. Not for PIM /
+ * CMS content — those keep DEFAULT_CONFIG.
+ */
+const PORTAL_CONFIG: IOptions = {
+  ...DEFAULT_CONFIG,
+  allowedTags: [...DEFAULT_ALLOWED_TAGS, 'style', 'link'],
+  allowedAttributes: {
+    '*': DEFAULT_ALLOWED_ATTR,
+    link: ['href', 'rel', 'type', 'media', 'crossorigin', 'integrity'],
+  },
+  // sanitize-html refuses `style` without this opt-in.
+  allowVulnerableTags: true,
+  // Only stylesheet links: no preload/prefetch/import hooks.
+  exclusiveFilter: (frame) =>
+    frame.tag === 'link' && frame.attribs.rel !== 'stylesheet',
+};
+
+/**
  * Sanitize HTML content with default configuration.
  */
 export function sanitizeHtml(
@@ -157,6 +178,14 @@ export function sanitizeHtml(
 export function sanitizeHtmlStrict(html: string | undefined | null): string {
   if (!html) return '';
   return sanitizeHtmlLib(html, STRICT_CONFIG);
+}
+
+/**
+ * Sanitize portal-admin HTML (see PORTAL_CONFIG).
+ */
+export function sanitizePortalHtml(html: string | undefined | null): string {
+  if (!html) return '';
+  return sanitizeHtmlLib(html, PORTAL_CONFIG);
 }
 
 /**

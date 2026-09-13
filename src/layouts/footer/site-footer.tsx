@@ -15,7 +15,7 @@ import { useMemo, useState } from 'react';
 import Link from '@components/ui/link';
 import { useTranslation } from 'src/app/i18n/client';
 import { useHomeSettings } from '@/hooks/use-home-settings';
-import { sanitizeHtml, sanitizeHtmlStrict } from '@/lib/sanitize-html';
+import { sanitizePortalHtml, sanitizeHtmlStrict } from '@/lib/sanitize-html';
 import { isValidEmail } from '@/lib/email';
 import type {
   FooterColumn,
@@ -320,7 +320,10 @@ export default function SiteFooter({ lang }: SiteFooterProps) {
 
   // Public site renders the published HTML only — never the draft.
   const html = (footer?.footerHtml ?? settings?.footerHtml ?? '').trim();
-  const sanitizedHtml = useMemo(() => (html ? sanitizeHtml(html) : ''), [html]);
+  const sanitizedHtml = useMemo(
+    () => (html ? sanitizePortalHtml(html) : ''),
+    [html],
+  );
 
   const columns = (footer?.columns ?? []).filter(
     (c) => c.title || (c.items && c.items.length > 0) || c.links.length > 0,
@@ -331,7 +334,10 @@ export default function SiteFooter({ lang }: SiteFooterProps) {
   const showNewsletter = !!footer?.showNewsletter;
   const copyrightText = footer?.copyrightText?.trim();
 
-  // Raw-HTML mode wins — render it and nothing else (apart from the wrapper).
+  // Raw-HTML mode replaces the structured columns / socials / newsletter.
+  // The copyright field is independent of that toggle (the CS editor keeps it
+  // outside the Structured/HTML switch and its preview appends it), so it
+  // still renders — only when set: an HTML author gets no auto-generated line.
   if (sanitizedHtml) {
     return (
       <footer
@@ -344,6 +350,9 @@ export default function SiteFooter({ lang }: SiteFooterProps) {
           className="site-footer__html"
           dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
         />
+        {copyrightText && (
+          <div className="site-footer__copyright">{copyrightText}</div>
+        )}
       </footer>
     );
   }
