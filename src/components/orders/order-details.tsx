@@ -62,6 +62,10 @@ export default function OrderDetails({ order, lang }: Props) {
               ? `/${lang}/account/order-detail?cause=${order.cause}&doc_year=${order.doc_year}&doc_number=${order.doc_number}`
               : `/${lang}/account/order-detail?id=${encodeURIComponent(order.id)}`
           }
+          // New tab: the list page owns the date/status filters in local
+          // state, so navigating away and back would reset them.
+          target="_blank"
+          rel="noopener noreferrer"
           className="text-sm text-teal-600 hover:underline"
           aria-label={t('orders-view-details')}
         >

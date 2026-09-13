@@ -1,6 +1,5 @@
 // app/[lang]/account/order-detail/page.tsx
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import OrderDetailClient from './order-detail.client';
 import { useTranslation } from 'src/app/i18n';
 
@@ -40,16 +39,6 @@ export default async function OrderDetailsPage({
       data-lang={lang}
     >
       <div className="mx-auto w-full max-w-5xl px-4">
-        <div className="mb-4">
-          <Link
-            href={`/${lang}/account/orders`}
-            className="text-sm text-teal-600 hover:underline"
-            aria-label={t('order-detail-back')}
-          >
-            ← {t('order-detail-back')}
-          </Link>
-        </div>
-
         <section className="rounded-2xl bg-white p-6 shadow-sm">
           {missing ? (
             <div className="space-y-2 text-sm">

@@ -57,6 +57,9 @@ describe('buildOrderDetailResponse', () => {
     const order = transformOrder(buildOrderDetailResponse(testata, righe));
     expect(order.doc_number).toBe('2');
     expect(order.cause).toBe('OB2B');
+    // StatoTestataOrdine must survive into the detail so the page can show
+    // "Da evadere" / "Evaso" / "In attesa" instead of a hard-coded default.
+    expect(order.status).toBe('NE');
     expect(order.items).toHaveLength(1);
     expect(order.items[0].sku).toBe('CB0105-BWA.W36');
     expect(order.items[0].quantity).toBe(7);
@@ -172,6 +175,7 @@ describe('buildOrderDetailResponseFromDocRows', () => {
     );
     expect(order.cause).toBe('B05');
     expect(order.doc_number).toBe('15199938');
+    expect(order.status).toBe('EV');
     expect(order.items).toHaveLength(1);
     expect(order.items[0].sku).toBe('CB1211-0WA.W42');
     expect(order.items[0].quantity).toBe(3);

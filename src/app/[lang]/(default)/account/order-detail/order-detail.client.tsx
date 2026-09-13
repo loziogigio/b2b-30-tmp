@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useMemo, useState, useCallback } from 'react';
 import { useOrderDetailsQuery } from '@framework/order/fetch-order';
 import { useEnrichedOrderItems } from '@framework/order/use-enriched-order-items';
@@ -14,6 +13,7 @@ import {
   OrderExportSnapshot,
 } from '@components/orders/export/order-export';
 import { formatPriceIt, money } from '@utils/money';
+import { orderStatusLabel } from '@utils/order-status-label';
 
 // ---- tiny helpers ---------------------------------------------------------
 function toDisplayDate(iso?: string, lang?: string) {
@@ -29,32 +29,6 @@ function toDisplayDate(iso?: string, lang?: string) {
     );
   } catch {
     return '—';
-  }
-}
-function getStatusFromOrder(
-  o: any,
-):
-  | 'pending'
-  | 'processing'
-  | 'at-local-facility'
-  | 'out-for-delivery'
-  | 'completed' {
-  const raw = o?.order_status ?? o?.status ?? 'completed';
-  switch (raw) {
-    case 'order-pending':
-    case 'pending':
-      return 'pending';
-    case 'order-processing':
-    case 'processing':
-      return 'processing';
-    case 'order-at-local-facility':
-    case 'at-local-facility':
-      return 'at-local-facility';
-    case 'order-out-for-delivery':
-    case 'out-for-delivery':
-      return 'out-for-delivery';
-    default:
-      return 'completed';
   }
 }
 // --------------------------------------------------------------------------
@@ -129,16 +103,7 @@ export default function OrderDetailClient({ lang, initialParams }: Props) {
       const snapshot: OrderExportSnapshot = {
         orderNumber,
         orderDate: toDisplayDate(order.created_at, lang),
-        status:
-          getStatusFromOrder(order) === 'completed'
-            ? t('order-status-completed')
-            : getStatusFromOrder(order) === 'out-for-delivery'
-              ? t('order-status-out-for-delivery')
-              : getStatusFromOrder(order) === 'at-local-facility'
-                ? t('order-status-at-local-facility')
-                : getStatusFromOrder(order) === 'processing'
-                  ? t('order-status-processing')
-                  : t('order-status-pending'),
+        status: orderStatusLabel(order, t),
         shippingAddress: {
           line1: shippingAddress.street_address,
           city: shippingAddress.city,
@@ -228,18 +193,7 @@ export default function OrderDetailClient({ lang, initialParams }: Props) {
     );
   }
 
-  const status = getStatusFromOrder(order);
-
-  const statusLabel =
-    status === 'completed'
-      ? t('order-status-completed')
-      : status === 'out-for-delivery'
-        ? t('order-status-out-for-delivery')
-        : status === 'at-local-facility'
-          ? t('order-status-at-local-facility')
-          : status === 'processing'
-            ? t('order-status-processing')
-            : t('order-status-pending');
+  const statusLabel = orderStatusLabel(order, t);
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
@@ -357,16 +311,6 @@ export default function OrderDetailClient({ lang, initialParams }: Props) {
       {/* Items table with internal scroll */}
       <div className="px-6 pb-6">
         <OrderItemsTable items={enrichedItems} height={360} lang={lang} />
-      </div>
-
-      {/* Back link */}
-      <div className="border-t px-6 py-4">
-        <Link
-          href={`/${lang}/account/orders`}
-          className="text-sm text-teal-600 hover:underline"
-        >
-          ← {t('order-detail-back')}
-        </Link>
       </div>
     </div>
   );

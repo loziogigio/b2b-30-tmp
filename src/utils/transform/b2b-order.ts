@@ -196,6 +196,9 @@ export function transformOrder(raw: RawOrderResponse): TransformedOrder {
     cause: msg.causale,
     doc_number: msg.numero_documento,
     doc_year: msg.anno,
+    // MyMB StatoTestataOrdine (NE / E / IA …) — the detail page maps it to
+    // the same labels the orders list shows.
+    status: msg.stato || undefined,
     shipping_address: { ...baseAddr },
     billing_address: { ...baseAddr },
     items,
