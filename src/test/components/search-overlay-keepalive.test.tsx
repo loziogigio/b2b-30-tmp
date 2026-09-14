@@ -4,12 +4,14 @@ import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 /**
- * Reopening the search overlay felt slow because its trending carousel was
- * mounted only while `open` was true: every open re-fetched the trending SKUs
- * and re-initialised Swiper. The carousel now mounts on the first open and
- * stays mounted for the life of the overlay, and the recent-search chips are
- * re-read from storage on every open so a kept-alive overlay never shows a
- * stale list.
+ * The search overlay used to show a "recommended products" carousel fed by
+ * the likes/trending service. It flickered: the heading and skeletons were
+ * painted while the PIM lookup for the trending SKUs was in flight, then the
+ * whole block unmounted when PIM returned no products. The section has been
+ * removed outright, so the overlay must never mount that carousel again.
+ *
+ * The recent-search chips are still re-read from storage on every open so a
+ * kept-alive overlay never shows a stale list.
  */
 
 vi.mock('next/navigation', () => ({
@@ -55,24 +57,27 @@ function renderOverlay(open: boolean) {
   return { ...utils, setOpen: (isOpen: boolean) => utils.rerender(ui(isOpen)) };
 }
 
-describe('SearchOverlayB2B keep-alive', () => {
+describe('SearchOverlayB2B recommended products', () => {
   beforeEach(() => {
     localStorage.clear();
   });
 
-  it('does not mount the trending carousel before the first open', () => {
-    renderOverlay(false);
-    expect(screen.queryByTestId('trending-carousel')).toBeNull();
-  });
-
-  it('keeps the trending carousel mounted after the overlay closes', () => {
+  it('never mounts the trending carousel, closed or open', () => {
     const { setOpen } = renderOverlay(false);
+    expect(screen.queryByTestId('trending-carousel')).toBeNull();
 
     setOpen(true);
-    expect(screen.getByTestId('trending-carousel')).toBeInTheDocument();
+    expect(screen.queryByTestId('trending-carousel')).toBeNull();
 
     setOpen(false);
-    expect(screen.getByTestId('trending-carousel')).toBeInTheDocument();
+    setOpen(true);
+    expect(screen.queryByTestId('trending-carousel')).toBeNull();
+  });
+});
+
+describe('SearchOverlayB2B recent searches', () => {
+  beforeEach(() => {
+    localStorage.clear();
   });
 
   it('re-reads the recent searches every time the overlay opens', () => {

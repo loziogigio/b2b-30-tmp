@@ -5,7 +5,6 @@ import { createPortal } from 'react-dom';
 import cn from 'classnames';
 import Container from '@components/ui/container';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import TrendingProductsCarousel from '@components/product/feeds/trending-products-carousel';
 import ProductsCarousel from '@components/product/products-carousel';
 import { fetchPimProductList } from '@framework/product/get-pim-product';
 import { useQuery } from '@tanstack/react-query';
@@ -264,15 +263,6 @@ export default function SearchOverlayB2B({
   // Mobile filter toggle state (hidden by default on mobile)
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  // The trending carousel mounts on the first open and then stays mounted:
-  // remounting it on every open re-fetched the trending SKUs and rebuilt
-  // Swiper, which is what made reopening feel slow. Nothing loads until the
-  // overlay has actually been opened once.
-  const [everOpened, setEverOpened] = useState(open);
-  useEffect(() => {
-    if (open) setEverOpened(true);
-  }, [open]);
-
   // Portal mount: render at document.body so the overlay escapes any
   // ancestor stacking context (e.g. the sticky `z-[100]` header it lives in).
   const [portalNode, setPortalNode] = useState<HTMLElement | null>(null);
@@ -434,7 +424,11 @@ export default function SearchOverlayB2B({
               </div>
             )}
 
-            {/* Right: Trending carousel used as recommended products */}
+            {/* Right: autocomplete results, or the search hint before a query.
+                A "recommended products" trending carousel used to sit below
+                these; it was removed because it painted its heading and
+                skeletons while PIM resolved the trending SKUs, then vanished
+                when PIM returned nothing. */}
             <div
               className={
                 showFiltersSection ? 'xl:col-span-9' : 'xl:col-span-12'
@@ -474,14 +468,6 @@ export default function SearchOverlayB2B({
                     {t('text-search-hint')}
                   </p>
                 </div>
-              )}
-              {everOpened && (
-                <TrendingProductsCarousel
-                  lang={lang}
-                  limitSkus={18}
-                  sectionTitle={t('text-recommended-products')}
-                  carouselBreakpoint={overlayBreakpoints}
-                />
               )}
             </div>
           </div>
