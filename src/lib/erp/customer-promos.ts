@@ -1,5 +1,5 @@
 import type { NextRequest } from 'next/server';
-import { cachedJson } from '@/lib/cache/redis-cache';
+import { cachedJson, delByPrefix } from '@/lib/cache/redis-cache';
 import { getMyMbErpClient } from '@/lib/erp/factory';
 
 const SOFT_TTL_MS = 6 * 60 * 60 * 1000; // mirrors UPDATE_PROMO_IN_SECONDS
@@ -11,7 +11,34 @@ export function entitlementCacheKey(
   customerCode: string,
   addressCode: string,
 ): string {
-  return `promo-entitlement:${tenantId}:${customerCode}:${addressCode}`;
+  return `${entitlementCachePrefix(tenantId, customerCode)}${addressCode}`;
+}
+
+/** Every address key of one customer; the closing colon keeps 5687 off 56870. */
+function entitlementCachePrefix(
+  tenantId: string,
+  customerCode: string,
+): string {
+  return `promo-entitlement:${tenantId}:${customerCode}:`;
+}
+
+/**
+ * Forget the cached entitlement for EVERY address of this customer, so the
+ * next search re-asks the ERP. Called on login: promo headers are attached in
+ * MyMB during the day and a logged-in customer otherwise waits out the soft
+ * TTL (bellieforti 5687, 2026-09-18). Best-effort — never throws, never blocks
+ * the login that triggered it.
+ */
+export async function purgePromoEntitlement(
+  tenantId: string,
+  customerCode: string,
+): Promise<void> {
+  if (!tenantId || !customerCode) return;
+  try {
+    await delByPrefix(entitlementCachePrefix(tenantId, customerCode));
+  } catch (err) {
+    console.warn('[promo-entitlement] purge failed:', (err as Error).message);
+  }
 }
 
 /**

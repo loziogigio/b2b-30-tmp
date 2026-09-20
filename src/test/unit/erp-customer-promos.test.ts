@@ -6,9 +6,13 @@ const mocks = vi.hoisted(() => ({
     async (_k: string, _o: unknown, producer: () => Promise<unknown>) =>
       producer(),
   ),
+  delByPrefix: vi.fn(async (_prefix: string) => undefined),
 }));
 
-vi.mock('@/lib/cache/redis-cache', () => ({ cachedJson: mocks.cachedJson }));
+vi.mock('@/lib/cache/redis-cache', () => ({
+  cachedJson: mocks.cachedJson,
+  delByPrefix: mocks.delByPrefix,
+}));
 vi.mock('@/lib/erp/factory', () => ({
   getMyMbErpClient: vi.fn(async () => ({
     getCustomerPromos: mocks.getCustomerPromos,
@@ -18,6 +22,7 @@ vi.mock('@/lib/erp/factory', () => ({
 import {
   entitlementCacheKey,
   getEntitledPromoCodes,
+  purgePromoEntitlement,
 } from '@/lib/erp/customer-promos';
 
 const ARGS = {
@@ -103,5 +108,33 @@ describe('getEntitledPromoCodes — an unknown must never be cached', () => {
     );
     expect(await getEntitledPromoCodes(ARGS)).toBeNull();
     await expect(producer!()).rejects.toThrow(/unknown/);
+  });
+});
+
+describe('purgePromoEntitlement — a login must drop every address of the customer', () => {
+  beforeEach(() => {
+    mocks.delByPrefix.mockReset();
+    mocks.delByPrefix.mockResolvedValue(undefined);
+  });
+
+  it('deletes by the customer prefix, closed with a colon so 5687 never sweeps 56870', async () => {
+    await purgePromoEntitlement('bellieforti-com', '5687');
+    expect(mocks.delByPrefix).toHaveBeenCalledTimes(1);
+    expect(mocks.delByPrefix).toHaveBeenCalledWith(
+      'promo-entitlement:bellieforti-com:5687:',
+    );
+  });
+
+  it('resolves even when Redis rejects — a cache hiccup must never fail a login', async () => {
+    mocks.delByPrefix.mockRejectedValueOnce(new Error('ECONNREFUSED'));
+    await expect(
+      purgePromoEntitlement('bellieforti-com', '5687'),
+    ).resolves.toBeUndefined();
+  });
+
+  it('does nothing without a complete tenant/customer pair', async () => {
+    await purgePromoEntitlement('', '5687');
+    await purgePromoEntitlement('bellieforti-com', '');
+    expect(mocks.delByPrefix).not.toHaveBeenCalled();
   });
 });

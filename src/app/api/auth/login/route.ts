@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { SSOApiError } from '@/lib/sso-api';
+import { purgePromoEntitlement } from '@/lib/erp/customer-promos';
 import {
   AUTH_COOKIES,
   AUTH_COOKIE_MAX_AGE_SECONDS,
@@ -29,6 +30,13 @@ export async function POST(request: NextRequest) {
       password,
       tenant_id: tenantId,
     });
+
+    // A fresh login is the customer's lever to pick up promo headers attached
+    // in the ERP since the last cache fill. Fire-and-forget: never on the
+    // login's critical path.
+    for (const customer of loginResponse.user.customers ?? []) {
+      void purgePromoEntitlement(tenantId, customer.erp_customer_id);
+    }
 
     // Transform SSO response to match frontend expectations
     // Map user to profile format for backward compatibility

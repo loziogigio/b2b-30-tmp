@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { resolveTenant, isMultiTenant } from '@/lib/tenant';
+import { purgePromoEntitlement } from '@/lib/erp/customer-promos';
 import {
   AUTH_COOKIES,
   AUTH_COOKIE_MAX_AGE_SECONDS,
@@ -189,6 +190,12 @@ export async function GET(request: NextRequest) {
       const redirectUrl = new URL('/it', publicOrigin);
       redirectUrl.searchParams.set('auth_error', 'tenant_mismatch');
       return NextResponse.redirect(redirectUrl);
+    }
+
+    // Same lever as the password login: a fresh session forgets the cached
+    // promo entitlement so the first search re-asks the ERP. Fire-and-forget.
+    for (const customer of tokenData.user?.customers ?? []) {
+      void purgePromoEntitlement(tenantId, customer?.erp_customer_id);
     }
 
     const expiresIn = tokenData.expires_in || 900;
