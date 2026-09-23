@@ -39,6 +39,7 @@ export function resolveCartConfigFromEnv(): CartConfig {
     showHeadNote: asBool(process.env.CART_SHOW_HEAD_NOTE),
     showPickup: asBool(process.env.CART_SHOW_PICKUP, true),
     orderSuccessPages: [],
+    verifyPrices: asBool(process.env.CART_VERIFY_PRICES),
   };
 }
 
@@ -53,6 +54,7 @@ export function mapCartRecord(data: Record<string, unknown>): CartConfig {
     showHeadNote: asBool(data.show_head_note),
     showPickup: asBool(data.show_pickup, true),
     orderSuccessPages: asOrderSuccessPages(data.order_success_pages),
+    verifyPrices: asBool(data.verify_prices),
   };
 }
 

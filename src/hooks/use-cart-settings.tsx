@@ -34,6 +34,7 @@ export function useCartSettings(): {
           // field keeps the historic "always visible" behaviour.
           showPickup: data?.showPickup !== false,
           orderSuccessPages: asOrderSuccessPages(data?.orderSuccessPages),
+          verifyPrices: !!data?.verifyPrices,
         });
       })
       .catch(() => {

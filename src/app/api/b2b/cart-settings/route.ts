@@ -15,6 +15,7 @@ export async function GET(req: NextRequest) {
       showHeadNote: cfg.showHeadNote,
       showPickup: cfg.showPickup,
       orderSuccessPages: cfg.orderSuccessPages,
+      verifyPrices: cfg.verifyPrices,
     });
   } catch {
     return NextResponse.json(DEFAULT_CART_CONFIG);

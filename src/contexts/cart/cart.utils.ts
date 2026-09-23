@@ -29,6 +29,8 @@ export interface CartSummary {
   totalDoc: number; // totale_doc
   showDiscountPrice?: boolean;
   cartName?: string;
+  /** Decimal precision the cart's unit prices are compared at (order.price_decimals). */
+  priceDecimals?: number;
   // keep room for server blobs you may use later
   packaging?: any;
 }

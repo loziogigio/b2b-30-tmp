@@ -23,6 +23,13 @@ export type CartConfig = {
    * the native page. The async ERP-processing path always keeps `/complete-order`.
    */
   orderSuccessPages: OrderSuccessPage[];
+  /**
+   * Re-check every cart line against today's catalog (promotion still valid,
+   * price unchanged) when the cart opens and before sending the order. Mirrors
+   * the Commerce Suite submit gate switched by the same `verify_prices` record
+   * field. Off by default.
+   */
+  verifyPrices: boolean;
 };
 
 /**
@@ -35,6 +42,7 @@ export const DEFAULT_CART_CONFIG: CartConfig = {
   showHeadNote: false,
   showPickup: true,
   orderSuccessPages: [],
+  verifyPrices: false,
 };
 
 /**

@@ -16,6 +16,7 @@ describe('cart-config (static)', () => {
     delete process.env.CART_SHOW_LINE_NOTE;
     delete process.env.CART_SHOW_HEAD_NOTE;
     delete process.env.CART_SHOW_PICKUP;
+    delete process.env.CART_VERIFY_PRICES;
   });
   afterEach(() => {
     process.env = { ...OLD };
@@ -28,6 +29,7 @@ describe('cart-config (static)', () => {
       showHeadNote: false,
       showPickup: true,
       orderSuccessPages: [],
+      verifyPrices: false,
     });
   });
 
@@ -39,6 +41,7 @@ describe('cart-config (static)', () => {
       showHeadNote: true,
       showPickup: true,
       orderSuccessPages: [],
+      verifyPrices: false,
     });
   });
 
@@ -50,6 +53,7 @@ describe('cart-config (static)', () => {
       showHeadNote: false,
       showPickup: true,
       orderSuccessPages: [],
+      verifyPrices: false,
     });
   });
 
@@ -70,6 +74,7 @@ describe('cart-config (static)', () => {
       showHeadNote: false,
       showPickup: false,
       orderSuccessPages: [],
+      verifyPrices: false,
     });
   });
 
@@ -79,6 +84,7 @@ describe('cart-config (static)', () => {
       showHeadNote: false,
       showPickup: true,
       orderSuccessPages: [],
+      verifyPrices: false,
     });
     expect(mapCartRecord({})).toEqual(DEFAULT_CART_CONFIG);
   });
@@ -96,6 +102,15 @@ describe('cart-config (static)', () => {
       { lang: 'it', slug: 'ordine-ricevuto' },
       { lang: 'en', slug: 'order-received' },
     ]);
+  });
+
+  it('reads verify_prices from the record and CART_VERIFY_PRICES from env, off by default', () => {
+    expect(mapCartRecord({}).verifyPrices).toBe(false);
+    expect(mapCartRecord({ verify_prices: true }).verifyPrices).toBe(true);
+    expect(mapCartRecord({ verify_prices: 'true' }).verifyPrices).toBe(true);
+    expect(resolveCartConfigFromEnv().verifyPrices).toBe(false);
+    process.env.CART_VERIFY_PRICES = '1';
+    expect(resolveCartConfigFromEnv().verifyPrices).toBe(true);
   });
 });
 
@@ -154,6 +169,7 @@ describe('cart-config (dynamic)', () => {
       showHeadNote: true,
       showPickup: true,
       orderSuccessPages: [],
+      verifyPrices: false,
     });
   });
 

@@ -229,6 +229,7 @@ export function mapCSOrderToSummary(order: any): CartSummary {
     totalDoc: num(order.order_total, 0),
     showDiscountPrice: Boolean(erpData.show_discount_price),
     cartName: order.cart_name?.trim() || undefined,
+    priceDecimals: num(order.price_decimals, 2),
     packaging: erpData.imballi,
   };
 }
