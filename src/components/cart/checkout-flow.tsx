@@ -25,6 +25,10 @@ import {
   CartAnomaliesProvider,
   useCartAnomalies,
 } from '@/contexts/cart-anomalies.context';
+import {
+  CartPriceCheckProvider,
+  useCartPriceCheck,
+} from '@/contexts/cart-price-check.context';
 import { formatAnomalyFlags } from '@/hooks/use-order-submit';
 
 function formatEUR(n: number) {
@@ -44,8 +48,10 @@ export default function CheckoutFlow(props: {
 }) {
   return (
     <CartAnomaliesProvider>
-      <AnomaliesAutoClearOnItemsChange />
-      <CheckoutFlowInner {...props} />
+      <CartPriceCheckProvider>
+        <AnomaliesAutoClearOnItemsChange />
+        <CheckoutFlowInner {...props} />
+      </CartPriceCheckProvider>
     </CartAnomaliesProvider>
   );
 }
@@ -91,6 +97,7 @@ function AnomaliesAutoClearOnItemsChange() {
 function AnomaliesBanner({ lang }: { lang: string }) {
   const { t } = useTranslation(lang, 'common');
   const { result, clear } = useCartAnomalies();
+  const { fix, fixing, fixFailed } = useCartPriceCheck();
   if (!result || result.anomalies.length === 0) return null;
 
   return (
@@ -128,15 +135,40 @@ function AnomaliesBanner({ lang }: { lang: string }) {
                 );
               })}
             </ul>
+            {fixFailed && (
+              <p className="mt-2 text-xs font-semibold text-red-800">
+                {t('cart-price-check-failed', {
+                  defaultValue: 'Aggiornamento non completato, riprova',
+                })}
+              </p>
+            )}
           </div>
         </div>
-        <button
-          type="button"
-          onClick={clear}
-          className="shrink-0 text-xs font-semibold text-red-700 hover:text-red-900 underline"
-        >
-          {t('text-dismiss', { defaultValue: 'Chiudi' })}
-        </button>
+        <div className="flex shrink-0 flex-col items-end gap-2">
+          {result.source === 'native' && (
+            <button
+              type="button"
+              onClick={() => void fix(result)}
+              disabled={fixing}
+              className="rounded bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-opacity-90 disabled:opacity-50"
+            >
+              {fixing
+                ? t('cart-price-check-updating', {
+                    defaultValue: 'Aggiornamento in corso...',
+                  })
+                : t('cart-price-check-update', {
+                    defaultValue: 'Aggiorna carrello',
+                  })}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={clear}
+            className="text-xs font-semibold text-red-700 hover:text-red-900 underline"
+          >
+            {t('text-dismiss', { defaultValue: 'Chiudi' })}
+          </button>
+        </div>
       </div>
     </div>
   );

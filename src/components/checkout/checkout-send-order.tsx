@@ -9,11 +9,13 @@ import { formatAddress } from '@utils/format-address';
 import { useDeliveryAddress } from '@contexts/address/address.context';
 import { useCart } from '@contexts/cart/cart.context';
 import type { AddressB2B } from '@framework/acccount/types-b2b-account';
+import type { AnomalyResult } from '@/hooks/use-order-submit';
 import { useOrderSubmit } from '@/hooks/use-order-submit';
 import AnomalyModal from './anomaly-modal';
 import DuplicateSubmitModal from './duplicate-submit-modal';
 import OrderAlreadySubmittedModal from './order-already-submitted-modal';
 import { useCartAnomalies } from '@/contexts/cart-anomalies.context';
+import { useCartPriceCheck } from '@/contexts/cart-price-check.context';
 import { minOrderStatus } from '@utils/adapter/cart-adapter';
 
 const money = (n: number) =>
@@ -80,6 +82,12 @@ export default function CheckoutSendOrder({ lang, onSubmit }: Props) {
   } = useOrderSubmit(lang);
   const { setAnomalies: setSharedAnomalies } = useCartAnomalies();
   const { meta } = useCart();
+  const priceCheck = useCartPriceCheck();
+  // A storefront-found result lives here; a server-found one arrives as
+  // `anomalyResult` from useOrderSubmit. Both open the same modal.
+  const [checkResult, setCheckResult] = useState<AnomalyResult | null>(null);
+  const modalResult = anomalyResult ?? checkResult;
+  const checking = priceCheck.status === 'checking';
 
   // Same ERP minimum-order gate as the `time` theme checkout
   // (time-order-summary.tsx) — reuses minOrderStatus() so the arithmetic
@@ -102,6 +110,7 @@ export default function CheckoutSendOrder({ lang, onSubmit }: Props) {
   // context keeps the banner + red rows visible until the user edits items.
   const handleEditManually = () => {
     clearAnomalies();
+    setCheckResult(null);
   };
 
   const selected: Address | undefined = useMemo(() => {
@@ -117,7 +126,9 @@ export default function CheckoutSendOrder({ lang, onSubmit }: Props) {
   const [date] = useState<string>(() => toLocalISODate(nextBusinessDay()));
   const [notes, setNotes] = useState<string>('');
 
-  const canSubmit = Boolean(selected && date && !isSubmitting && !belowMinimum);
+  const canSubmit = Boolean(
+    selected && date && !isSubmitting && !checking && !belowMinimum,
+  );
 
   const submitOpts = {
     delivery_date: date,
@@ -127,10 +138,29 @@ export default function CheckoutSendOrder({ lang, onSubmit }: Props) {
 
   const handleSubmit = async () => {
     if (!canSubmit || !selected) return;
+    if (priceCheck.enabled) {
+      const check = await priceCheck.recheck();
+      if (check.status === 'changed' && check.result) {
+        setCheckResult(check.result);
+        return;
+      }
+    }
     const outcome = await submitOrder(submitOpts);
     if (outcome.type === 'success' || outcome.type === 'processing') {
       onSubmit?.({ address: selected, paymentTerms, date, notes });
     }
+  };
+
+  // Native anomalies are fixed on the storefront and the customer sends again
+  // after reviewing the new prices; ERP (MyMB) anomalies keep the resubmit.
+  const handleAutofix = async (result: AnomalyResult) => {
+    if (result.source === 'native') {
+      await priceCheck.fix(result);
+      clearAnomalies();
+      setCheckResult(null);
+      return;
+    }
+    await resubmitWithAutofix(submitOpts);
   };
 
   return (
@@ -224,7 +254,7 @@ export default function CheckoutSendOrder({ lang, onSubmit }: Props) {
       <div className="flex items-center justify-end gap-3 px-2 pb-2 pt-2">
         <Button
           disabled={!canSubmit}
-          loading={isSubmitting}
+          loading={isSubmitting || checking}
           onClick={handleSubmit}
           className={cn(
             'rounded bg-brand px-4 py-3 text-sm font-semibold text-white',
@@ -235,11 +265,11 @@ export default function CheckoutSendOrder({ lang, onSubmit }: Props) {
         </Button>
       </div>
 
-      {anomalyResult && (
+      {modalResult && (
         <AnomalyModal
-          result={anomalyResult}
-          isSubmitting={isSubmitting}
-          onAutofix={() => resubmitWithAutofix(submitOpts)}
+          result={modalResult}
+          isSubmitting={isSubmitting || priceCheck.fixing}
+          onAutofix={() => void handleAutofix(modalResult)}
           onEdit={handleEditManually}
           onClose={handleEditManually}
         />
