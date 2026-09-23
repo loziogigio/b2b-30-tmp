@@ -1,0 +1,52 @@
+[
+  {
+    "name": "tier price on a unit packaging",
+    "product": {
+      "entity_code": "V1",
+      "status": "published",
+      "pricing": { "list": 10.5, "list_unit": 10.5, "retail": 10.5, "retail_unit": 10.5, "currency": "EUR", "vat_rate": 22 },
+      "packaging_options": [
+        { "code": "CFZ", "qty": 1, "is_default": true, "is_smallest": true, "is_sellable": true,
+          "pricing": { "list": 10.5, "retail": 10.5, "tag_filter": ["pricelist:vend-03"] }, "promotions": [] }
+      ]
+    },
+    "expected_unit_price": 10.5
+  },
+  {
+    "name": "package price divided by the packaging qty",
+    "product": {
+      "entity_code": "V2",
+      "status": "published",
+      "pricing": { "list": 31.995, "list_unit": 5.3325, "currency": "EUR", "vat_rate": 22 },
+      "packaging_options": [
+        { "code": "IMB", "qty": 6, "is_default": true, "is_sellable": true, "pricing": { "list": 31.995 }, "promotions": [] }
+      ]
+    },
+    "expected_unit_price": 5.3325
+  },
+  {
+    "name": "VAT-inclusive price is booked net",
+    "product": {
+      "entity_code": "V3",
+      "status": "published",
+      "pricing": { "list": 12.2, "list_unit": 12.2, "vat_rate": 22, "vat_included": true, "currency": "EUR" },
+      "packaging_options": [
+        { "code": "PZ", "qty": 1, "is_default": true, "is_sellable": true, "pricing": { "list": 12.2 }, "promotions": [] }
+      ]
+    },
+    "expected_unit_price": 10
+  },
+  {
+    "name": "no top-level unit price: first sellable packaging",
+    "product": {
+      "entity_code": "V4",
+      "status": "published",
+      "pricing": { "currency": "EUR", "vat_rate": 22 },
+      "packaging_options": [
+        { "code": "DSP", "qty": 24, "is_sellable": false, "pricing": { "list_unit": 9 }, "promotions": [] },
+        { "code": "PZ", "qty": 1, "is_sellable": true, "pricing": { "list_unit": 8 }, "promotions": [] }
+      ]
+    },
+    "expected_unit_price": 8
+  }
+]
