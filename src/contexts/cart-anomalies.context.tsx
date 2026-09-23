@@ -50,7 +50,9 @@ export function CartAnomaliesProvider({
       const code = erpItem?.erp_data?.oarti
         ? String(erpItem.erp_data.oarti)
         : undefined;
-      if (code) {
+      // Native anomalies are per LINE: a product can sit in the cart as a
+      // listino line and a promo line, and only the stale one must turn red.
+      if (code && result.source !== 'native') {
         (byCode[code] ||= []).push(msg);
       }
       (byRow[a.IdRiga] ||= []).push(msg);

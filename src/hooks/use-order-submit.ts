@@ -5,9 +5,11 @@ import { post as pimPost } from '@framework/utils/httpPIM';
 import { CS_CART } from '@framework/utils/api-endpoints-cs';
 import { ERP_STATIC } from '@framework/utils/static';
 import { useCart } from '@contexts/cart/cart.context';
+import type { Item } from '@contexts/cart/cart.utils';
 import { ensureActiveCart } from '@framework/cart/b2b-cart';
 import { useCartSettings } from '@/hooks/use-cart-settings';
 import { resolveOrderSuccessSlug } from '@/lib/erp/cart-config.types';
+import { formatPriceIt } from '@utils/money';
 
 // ── Anomaly flag → human-readable label ─────────────────────────────────────
 
@@ -21,17 +23,28 @@ export const ANOMALY_FLAG_LABELS: Record<string, string> = {
   IsArticoloNonVendibile: 'Articolo non vendibile',
   IsImballoNonValido: 'Imballo non valido',
   IsArticoloInGruppoEsclusoDallaVendita: 'Articolo escluso dalla vendita',
+  IsPrezzoVariato: 'Prezzo variato',
+  IsScontiVariati: 'Sconti variati',
 };
 
 export function formatAnomalyFlags(anomaly: ErpAnomaly): string {
   const flags = Object.keys(ANOMALY_FLAG_LABELS).filter(
     (k) => (anomaly as any)[k] === true,
   );
-  return (
+  const label =
     flags.map((k) => ANOMALY_FLAG_LABELS[k]).join(', ') ||
     anomaly.Messaggio ||
-    'Anomalia'
-  );
+    'Anomalia';
+  // Native price changes carry both prices: show them so the customer sees
+  // what the cart update will charge before sending.
+  if (
+    anomaly.IsPrezzoVariato === true &&
+    anomaly.unit_price != null &&
+    anomaly.expected_unit_price != null
+  ) {
+    return `${label} (${formatPriceIt(anomaly.unit_price, 2)} € → ${formatPriceIt(anomaly.expected_unit_price, 2)} €)`;
+  }
+  return label;
 }
 
 // ── Types ───────────────────────────────────────────────────────────────────
@@ -68,6 +81,12 @@ export interface AnomalyResult {
    *  existing constructors need no change; useOrderSubmit always populates it. */
   itemErrors?: ErpItemError[];
   errorMessage?: string;
+  /**
+   * 'native' = found by the cart price check (storefront) or the Commerce
+   * Suite price gate — fixed by the storefront ("Aggiorna carrello"), never by
+   * the MyMB resubmit-with-autofix. Absent = ERP (MyMB) anomalies.
+   */
+  source?: 'erp' | 'native';
 }
 
 /**
@@ -115,10 +134,36 @@ export type SubmitOutcome =
   | { type: 'already_submitted'; message?: string }
   | { type: 'error'; message: string };
 
+/** Commerce Suite price-gate refusal code (422). */
+export const CART_PRICES_CHANGED = 'CART_PRICES_CHANGED';
+
+/** Map a price-gate 422 body to the native result the cart screens render. */
+export function priceGateResult(data: any, items: Item[]): AnomalyResult {
+  const anomalies: ErpAnomaly[] = Array.isArray(data?.price_check?.anomalies)
+    ? data.price_check.anomalies
+    : [];
+  const erpItems: ErpItem[] = anomalies.map((a) => {
+    const line = items.find((i) => Number(i.rowId) === Number(a.IdRiga));
+    return {
+      erp_line_number: Number(a.IdRiga),
+      erp_data: {
+        oarti: a.sku || line?.sku || a.entity_code || `Riga ${a.IdRiga}`,
+      },
+    };
+  });
+  return {
+    anomalies,
+    erpItems,
+    itemErrors: [],
+    errorMessage: data?.error,
+    source: 'native',
+  };
+}
+
 // ── Hook ────────────────────────────────────────────────────────────────────
 
 export function useOrderSubmit(lang: string) {
-  const { meta, resetCart } = useCart();
+  const { meta, resetCart, items = [] } = useCart();
   const { settings: cartSettings } = useCartSettings();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [anomalyResult, setAnomalyResult] = useState<AnomalyResult | null>(
@@ -236,6 +281,12 @@ export function useOrderSubmit(lang: string) {
         //   - erp_item_errors → lines the ERP could not export (transient/technical
         //     failure); NOT autofixable — the UI offers a retry, not a price update.
         if (status === 422) {
+          if (data?.code === CART_PRICES_CHANGED) {
+            const result = priceGateResult(data, items);
+            setAnomalyResult(result);
+            return { type: 'anomalies', result };
+          }
+
           const modified = data?.windmill?.modified_data || {};
           const erpData = modified.erp_data || {};
 
@@ -289,7 +340,7 @@ export function useOrderSubmit(lang: string) {
         setIsSubmitting(false);
       }
     },
-    [getOrderId, lang, resetCart, cartSettings.orderSuccessPages],
+    [getOrderId, lang, resetCart, cartSettings.orderSuccessPages, items],
   );
 
   const resubmitWithAutofix = useCallback(
