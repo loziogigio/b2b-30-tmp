@@ -9,7 +9,11 @@ import {
   del as pimDel,
 } from '@framework/utils/httpPIM';
 import { CS_CART } from '@framework/utils/api-endpoints-cs';
-import { ERP_STATIC, setErpStatic, hasValidErpContext } from '@framework/utils/static';
+import {
+  ERP_STATIC,
+  setErpStatic,
+  hasValidErpContext,
+} from '@framework/utils/static';
 import { useCart } from '@contexts/cart/cart.context';
 import {
   mapCSOrderToCart,
@@ -27,6 +31,48 @@ function cartFetch(url: string, body: Record<string, any>) {
   const token = getAuthToken();
   if (token) headers['Authorization'] = `Bearer ${token}`;
   return fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
+}
+
+export interface CartLinePatch {
+  line_number: number;
+  quantity?: number;
+  unit_price?: number;
+  list_price?: number;
+  note?: string;
+}
+
+/** PATCH cart lines (quantity / price / note) — CS batchUpdateItems. */
+export function patchCartLines(orderId: string, items: CartLinePatch[]) {
+  return pimPatch(CS_CART.ITEMS(orderId), { items });
+}
+
+/**
+ * Remove cart lines through the dedicated route (DELETE with a body via the
+ * generic proxy is unreliable). Prefer line numbers; external refs remove by
+ * entity code.
+ */
+export async function removeCartLines(
+  orderId: string,
+  target: { line_numbers: number[] } | { external_refs: string[] },
+) {
+  const res = await cartFetch('/api/b2b/cart/remove-items', {
+    order_id: orderId,
+    ...target,
+  });
+  if (!res.ok) throw new Error(`Remove items failed: ${res.status}`);
+  return res.json();
+}
+
+/** Add one cart line from a storefront booking payload. */
+export function addCartLine(
+  orderId: string,
+  input: AddToCartInput,
+  sourceItem?: Item,
+) {
+  return pimPost(
+    CS_CART.ITEMS(orderId),
+    buildAddItemRequest(input, sourceItem),
+  );
 }
 
 // ----- ensure active cart -----
@@ -142,36 +188,29 @@ export async function addOrUpdateCartItem(
     }
     const lineNumbers = updatable.map((it) => Number(it.rowId));
 
-    // Build remove payload: prefer line_numbers, fall back to external_refs (entity_codes)
-    const removeBody: Record<string, any> = { order_id: orderId };
-    if (lineNumbers.length > 0) {
-      removeBody.line_numbers = lineNumbers;
-    } else {
-      removeBody.external_refs = matches.map((it) => String(it.id));
-    }
-
-    // Use dedicated cart API route (DELETE with body via generic proxy is unreliable)
-    const res = await cartFetch('/api/b2b/cart/remove-items', removeBody);
-    if (!res.ok) throw new Error(`Remove items failed: ${res.status}`);
-    return res.json();
+    return removeCartLines(
+      orderId,
+      lineNumbers.length > 0
+        ? { line_numbers: lineNumbers }
+        : { external_refs: matches.map((it) => String(it.id)) },
+    );
   }
 
   // --- UPDATE if a real (server-assigned) line exists ---
   if (updatable.length > 0) {
     const items = updatable.map((it) => {
-      const patch: Record<string, any> = {
+      const patch: CartLinePatch = {
         line_number: Number(it.rowId),
         quantity: input.quantity,
       };
       if (input.note !== undefined) patch.note = input.note;
       return patch;
     });
-    return pimPatch(CS_CART.ITEMS(orderId), { items });
+    return patchCartLines(orderId, items);
   }
 
   // --- ADD when no server-known line exists yet ---
-  const addBody = buildAddItemRequest(input, sourceItem);
-  return pimPost(CS_CART.ITEMS(orderId), addBody);
+  return addCartLine(orderId, input, sourceItem);
 }
 
 // ----- update line note -----
@@ -182,9 +221,7 @@ export async function updateLineNote(
   summary: CartSummary | null | undefined,
 ) {
   const orderId = summary?.orderId || (await getOrderId());
-  return pimPatch(CS_CART.ITEMS(orderId), {
-    items: [{ line_number: Number(lineNumber), note }],
-  });
+  return patchCartLines(orderId, [{ line_number: Number(lineNumber), note }]);
 }
 
 // ----- hydrator -----
