@@ -3,6 +3,7 @@ import type { ErpPriceData, PromoOffer } from '@utils/transform/erp-prices';
 import type { ErpAnomaly, ErpItem } from '@/hooks/use-order-submit';
 import { buildAddPayload } from '@components/product/add-to-cart';
 import {
+  buildCartPriceData,
   buildListinoPriceData,
   buildPromoPriceData,
 } from '@components/product/b2b-offer-rows';
@@ -94,6 +95,18 @@ function findValidOffer(
 /**
  * What a line should carry today. Null when it cannot be booked any more:
  * its promotion is gone, or the product has no listino for this customer.
+ *
+ * A listino line can be booked through either of two real storefront paths,
+ * and this must accept both:
+ *   - the offer rows' explicit LISTINO row (`buildListinoPriceData`), which
+ *     always strips any flattened promo residue (discount_extra included);
+ *   - a direct add from a card/row/search-result/detail page
+ *     (`buildCartPriceData`), which returns the catalog data UNTOUCHED —
+ *     keeping discount_extra — whenever the product carries no promo.
+ * Both book the same listino net price; only their discount ladders can
+ * differ. Picking only one path would misreport the other path's discount
+ * tiers as a changed discount chain, which is a derivation difference, not a
+ * genuine catalog change.
  */
 export function expectedLine(
   item: Item,
@@ -120,13 +133,23 @@ export function expectedLine(
     };
   }
 
-  const priceData = buildListinoPriceData(base);
-  if (!(Number(priceData.net_price) > 0)) return null;
-  return {
-    kind: 'listino',
+  const listino = buildListinoPriceData(base);
+  if (!(Number(listino.net_price) > 0)) return null;
+
+  // `buildCartPriceData` books the promo (not a listino) when one wins
+  // today — that must never stand in as a listino option, hence the
+  // `is_promo` guard. Both remaining candidates carry the same listino net
+  // price, so trying the card-booking path second never changes the price
+  // comparison, only which discount ladder is reported.
+  const card = buildCartPriceData(base);
+  const options: ExpectedLine[] = (
+    card.is_promo ? [listino] : [listino, card]
+  ).map((priceData) => ({
+    kind: 'listino' as const,
     priceData,
     payload: buildAddPayload({ itemId, qty, priceData }),
-  };
+  }));
+  return options.find((o) => !discountsDiffer(item, o.payload)) ?? options[0];
 }
 
 /**

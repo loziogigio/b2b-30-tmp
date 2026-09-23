@@ -1,9 +1,17 @@
 import { describe, it, expect } from 'vitest';
 import vectors from '../fixtures/listino-unit-price-vectors.json';
-import { diffCartPrices } from '@/lib/cart/price-check';
-import { mapCSLineItemToItem } from '@utils/adapter/cart-adapter';
+import { diffCartPrices, expectedLine } from '@/lib/cart/price-check';
+import {
+  mapCSLineItemToItem,
+  buildAddItemRequest,
+} from '@utils/adapter/cart-adapter';
 import { transformPimProduct } from '@framework/product/get-pim-product';
 import { productToErpPriceData } from '@utils/transform/inline-to-erp';
+import { buildAddPayload } from '@components/product/add-to-cart';
+import {
+  buildCartPriceData,
+  buildListinoPriceData,
+} from '@components/product/b2b-offer-rows';
 import type { ErpPriceData, PromoOffer } from '@utils/transform/erp-prices';
 
 const NOW = new Date('2026-09-23T10:00:00Z');
@@ -70,6 +78,23 @@ const line = (o: Record<string, any> = {}) =>
 
 const check = (items: any[], map: Record<string, ErpPriceData>) =>
   diffCartPrices(items, map, { now: NOW, decimals: 2 });
+
+/**
+ * Round-trips a real booking through the exact pipeline the storefront uses:
+ * ErpPriceData → `buildAddPayload` (AddToCart) → `buildAddItemRequest` (the
+ * CS line-item creation body) → `mapCSLineItemToItem` (how the cart reads a
+ * persisted line back). No hand-built `discounts` — whatever the priceData
+ * actually books is what ends up stored on the line.
+ */
+const bookedLine = (priceData: ErpPriceData, qty = 12) => {
+  const payload = buildAddPayload({
+    itemId: priceData.entity_code,
+    qty,
+    priceData,
+  });
+  const request = buildAddItemRequest(payload as any);
+  return mapCSLineItemToItem({ ...request, line_number: 10 });
+};
 
 describe('diffCartPrices', () => {
   it('accepts a listino line at today’s price', () => {
@@ -153,6 +178,40 @@ describe('diffCartPrices', () => {
       optimistic,
     ];
     expect(check(items, { E1: priceData(7.18) }).anomalies).toEqual([]);
+  });
+
+  describe('a listino line booked via either real storefront path (discount_extra kept)', () => {
+    // Same listino, same tier discount, no promo offers — only the booking
+    // path differs. Real catalogs carry a discount_extra tier without any
+    // promotion; this must never be mistaken for a stale promo derivation.
+    const pd = priceData(7.18, [], { discount_extra: [-5] });
+
+    it('is clean when booked via a direct add (buildCartPriceData, discount_extra untouched)', () => {
+      const item = bookedLine(buildCartPriceData(pd));
+      expect(check([item], { E1: pd }).anomalies).toEqual([]);
+    });
+
+    it('is clean when booked via the offer-row LISTINO path (buildListinoPriceData, discount_extra stripped)', () => {
+      const item = bookedLine(buildListinoPriceData(pd));
+      expect(check([item], { E1: pd }).anomalies).toEqual([]);
+    });
+
+    it('flags only the price when the listino net price moves, keeping the -5 tier as expected', () => {
+      const item = bookedLine(buildCartPriceData(pd));
+      const moved = priceData(9.0, [], { discount_extra: [-5] });
+
+      const { anomalies } = check([item], { E1: moved });
+      expect(anomalies).toEqual([
+        expect.objectContaining({
+          expected_unit_price: 9.0,
+          IsPrezzoVariato: true,
+        }),
+      ]);
+      expect(anomalies[0].IsScontiVariati).toBeUndefined();
+
+      const expected = expectedLine(item, moved, NOW);
+      expect(expected?.payload.discount1).toBe(-5);
+    });
   });
 
   describe('shared listino vectors (same file as the CS gate)', () => {
