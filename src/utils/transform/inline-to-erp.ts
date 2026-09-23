@@ -207,6 +207,9 @@ function toErpPromoOffer(
     promo_standard_price: listNet,
     promo_start_date: toYmd(p.start_date),
     promo_end_date: toYmd(p.end_date),
+    promo_start_at: p.start_date || undefined,
+    promo_end_at: p.end_date || undefined,
+    promo_is_active: p.is_active,
     promo_extra_discounts:
       p.discount_percentage != null ? [Number(p.discount_percentage)] : [],
     promo_gift_qty: 0,

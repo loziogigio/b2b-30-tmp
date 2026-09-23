@@ -82,6 +82,11 @@ export interface PromoOffer {
   promo_standard_price: number;
   promo_start_date: string;
   promo_end_date: string;
+  /** Original validity bounds (ISO) — for the cart price check; display uses promo_*_date. */
+  promo_start_at?: string;
+  promo_end_at?: string;
+  /** false when the catalog disabled the promotion. */
+  promo_is_active?: boolean;
   promo_extra_discounts: number[];
   promo_gift_qty: number;
   promo_gift_sku?: string;
