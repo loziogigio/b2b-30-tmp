@@ -63,16 +63,22 @@ export async function removeCartLines(
   return res.json();
 }
 
+/**
+ * POST a raw booking body to the CS items endpoint. Used directly by
+ * `addCartLine`, and by the fix-plan executor to restore a line whose
+ * replacement failed, from its previously-captured `raw_data`.
+ */
+export function postCartLine(orderId: string, body: Record<string, unknown>) {
+  return pimPost(CS_CART.ITEMS(orderId), body);
+}
+
 /** Add one cart line from a storefront booking payload. */
 export function addCartLine(
   orderId: string,
   input: AddToCartInput,
   sourceItem?: Item,
 ) {
-  return pimPost(
-    CS_CART.ITEMS(orderId),
-    buildAddItemRequest(input, sourceItem),
-  );
+  return postCartLine(orderId, buildAddItemRequest(input, sourceItem));
 }
 
 // ----- ensure active cart -----

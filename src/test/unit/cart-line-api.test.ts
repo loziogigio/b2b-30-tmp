@@ -16,6 +16,7 @@ vi.mock('@/lib/auth', async (orig) => ({
 import {
   addCartLine,
   patchCartLines,
+  postCartLine,
   removeCartLines,
 } from '@framework/cart/b2b-cart';
 
@@ -77,5 +78,13 @@ describe('cart line helpers', () => {
         promo_code: undefined,
       }),
     );
+  });
+
+  it('posts a raw booking body through the CS items endpoint (line restore)', async () => {
+    await postCartLine('O1', { entity_code: 'E1', quantity: 5 });
+    expect(pimPost).toHaveBeenCalledWith('api/b2b/orders/O1/items', {
+      entity_code: 'E1',
+      quantity: 5,
+    });
   });
 });
