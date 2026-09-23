@@ -52,16 +52,19 @@ export interface CartFixPlan {
 }
 
 /**
- * The plan could not be fully applied: a patch line or an add failed after
- * its source line(s) were already removed. `restored` lists the source
- * lines whose original booking was successfully re-posted; `lost` lists
- * lines that could not be restored (no booking body had been captured, or
- * the re-post itself failed) — these need the customer's attention.
+ * The plan could not be fully applied. `restored` lists source lines whose
+ * original booking was successfully re-posted after their replacement
+ * failed; `lost` lists source lines that could not be restored (no booking
+ * body had been captured, or the re-post itself failed); `failed` lists
+ * line numbers whose fix did not apply but needed no restore — e.g. a
+ * price-only patch that failed, leaving the line in the cart at its old
+ * price. Every one of these needs the customer's attention.
  */
 export class CartFixError extends Error {
   constructor(
     public readonly restored: number[],
     public readonly lost: number[],
+    public readonly failed: number[],
   ) {
     super('Aggiornamento non completato');
     this.name = 'CartFixError';
@@ -110,15 +113,70 @@ function sourceItemFor(line: Item, priceData: ErpPriceData): Item {
   };
 }
 
-/** The original booking body Commerce Suite stored for this line (served
- *  back on the order GET as `raw_data`), if any. */
+/**
+ * Fields Commerce Suite's `batchUpdateItems` PATCH can change after a line
+ * is created. `raw_data` is written once, at creation (`createLineItem`),
+ * and never touched again — so a quantity/note/price change that happened
+ * after the line was added is invisible to it. Read straight from the
+ * line's current state instead, whenever it is defined there.
+ */
+const RESTORABLE_CURRENT_FIELDS = [
+  'quantity',
+  'note',
+  'unit_price',
+  'list_price',
+  'packaging_code',
+  'packaging_label',
+  'pack_size',
+  'min_order_quantity',
+] as const;
+
+/** Mirrors Commerce Suite's own `ADD_ITEM_REQUIRED_FIELDS`: a restore body
+ *  missing any of these cannot be posted as an add. */
+const REQUIRED_ADD_FIELDS = [
+  'entity_code',
+  'sku',
+  'quantity',
+  'list_price',
+  'unit_price',
+  'vat_rate',
+  'name',
+] as const;
+
+/**
+ * The booking body to re-post if this line's replacement fails: its
+ * original `raw_data` with the line's CURRENT mutable fields layered on
+ * top (see `RESTORABLE_CURRENT_FIELDS`) — otherwise a line whose quantity
+ * or price changed after it was added would restore the STALE quantity or
+ * price it was created with, silently losing or overcharging the
+ * difference. Returns undefined when the result is missing a Commerce
+ * Suite required add field — e.g. a cart-imported line whose caller-defined
+ * `raw_data` is not a real add body — so the caller reports that line as
+ * lost rather than re-posting a guess.
+ */
 function restoreBodyOf(
   line: Item | undefined,
 ): Record<string, unknown> | undefined {
-  const raw = line?.__cartMeta?.row_raw?.raw_data;
-  return raw && typeof raw === 'object'
-    ? (raw as Record<string, unknown>)
-    : undefined;
+  const row = line?.__cartMeta?.row_raw as Record<string, unknown> | undefined;
+  if (!row) return undefined;
+
+  const current: Record<string, unknown> = {};
+  for (const key of RESTORABLE_CURRENT_FIELDS) {
+    if (row[key] !== undefined) current[key] = row[key];
+  }
+
+  const rawData = row.raw_data;
+  const body: Record<string, unknown> = {
+    ...(rawData && typeof rawData === 'object'
+      ? (rawData as Record<string, unknown>)
+      : {}),
+    ...current,
+  };
+
+  const hasAllRequired = REQUIRED_ADD_FIELDS.every(
+    (field) => body[field] !== undefined,
+  );
+  return hasAllRequired ? body : undefined;
 }
 
 /**
@@ -353,10 +411,14 @@ async function restoreLines(
  * patch line (reported in the response `results[]`, or the whole request
  * throwing) or a failed add re-posts the original booking body of every
  * source line it carries (`op.from`), then execution continues with the
- * rest of the plan. A failed removal simply throws — nothing has changed
- * yet for that op, so there is nothing to restore. If anything could not be
- * fully repaired this way, throws `CartFixError` once the whole plan has
- * run; otherwise resolves normally.
+ * rest of the plan. A failed patch line that carries no source line (a
+ * price-only patch — nothing was removed for it, so there is nothing to
+ * restore) is still recorded, as `failed`, rather than silently ignored —
+ * otherwise the caller would see a clean resolve for a price that never
+ * actually updated. A failed removal simply throws — nothing has changed
+ * yet for that op, so there is nothing to restore. Every op and every PATCH
+ * line must succeed for this to resolve; otherwise it throws `CartFixError`
+ * once the whole plan has run.
  */
 export async function applyCartFixPlan(
   orderId: string,
@@ -368,6 +430,7 @@ export async function applyCartFixPlan(
   const restoreMap = removeOp?.restore ?? {};
   const restored: number[] = [];
   const lost: number[] = [];
+  const failed: number[] = [];
 
   for (const op of plan.ops) {
     if (op.type === 'remove') {
@@ -392,6 +455,8 @@ export async function applyCartFixPlan(
         const sources = op.from[tn];
         if (sources?.length) {
           await restoreLines(orderId, sources, restoreMap, restored, lost);
+        } else {
+          failed.push(tn);
         }
       }
       continue;
@@ -404,7 +469,7 @@ export async function applyCartFixPlan(
     }
   }
 
-  if (restored.length > 0 || lost.length > 0) {
-    throw new CartFixError(restored, lost);
+  if (restored.length > 0 || lost.length > 0 || failed.length > 0) {
+    throw new CartFixError(restored, lost, failed);
   }
 }

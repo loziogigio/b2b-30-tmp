@@ -317,6 +317,55 @@ describe('planPriceFixes', () => {
     );
     expect(plan).toEqual({ ops: [], unfixable: [10, 20] });
   });
+
+  it("builds the remove op's restore body from the line's CURRENT state layered over its stale raw_data", () => {
+    const staleLine = promoLine({
+      quantity: 24,
+      note: 'nuova',
+      raw_data: {
+        entity_code: 'E1',
+        sku: 'S-1',
+        name: 'Articolo',
+        quantity: 12,
+        note: 'vecchia',
+        unit_price: 3.95,
+        list_price: 20,
+        vat_rate: 22,
+      },
+    });
+    const plan = planPriceFixes(
+      [{ IdRiga: 20, IsPromozioneScaduta: true }],
+      [staleLine],
+      { E1: priceData(7.18) },
+      NOW,
+    );
+    const removeOp = plan.ops.find((op) => op.type === 'remove') as any;
+    expect(removeOp.restore[20]).toMatchObject({
+      quantity: 24,
+      note: 'nuova',
+    });
+  });
+
+  it('omits a line from restore when its raw_data is missing a Commerce Suite required add field', () => {
+    const noNameLine = promoLine({
+      raw_data: {
+        entity_code: 'E1',
+        sku: 'S-1', // no `name`
+        quantity: 12,
+        unit_price: 3.95,
+        list_price: 20,
+        vat_rate: 22,
+      },
+    });
+    const plan = planPriceFixes(
+      [{ IdRiga: 20, IsPromozioneScaduta: true }],
+      [noNameLine],
+      { E1: priceData(7.18) },
+      NOW,
+    );
+    const removeOp = plan.ops.find((op) => op.type === 'remove') as any;
+    expect(removeOp.restore).toEqual({});
+  });
 });
 
 describe('applyCartFixPlan', () => {
@@ -384,6 +433,7 @@ describe('applyCartFixPlan', () => {
     expect(err.message).toBe('Aggiornamento non completato');
     expect(err.restored).toEqual([20]);
     expect(err.lost).toEqual([]);
+    expect(err.failed).toEqual([]);
     expect(postCartLine).toHaveBeenCalledWith('O1', {
       entity_code: 'E1',
       quantity: 12,
@@ -423,6 +473,7 @@ describe('applyCartFixPlan', () => {
     expect(err).toBeInstanceOf(CartFixError);
     expect(err.restored).toEqual([30]);
     expect(err.lost).toEqual([]);
+    expect(err.failed).toEqual([]);
     expect(addCartLine).toHaveBeenCalledTimes(2);
     expect(postCartLine).toHaveBeenCalledWith('O1', {
       entity_code: 'E2',
@@ -457,5 +508,110 @@ describe('applyCartFixPlan', () => {
     expect(err).toBeInstanceOf(CartFixError);
     expect(err.restored).toEqual([]);
     expect(err.lost).toEqual([20]);
+    expect(err.failed).toEqual([]);
+  });
+
+  it('reports a line as lost when applying a plan whose source raw_data lacked a required field', async () => {
+    removeCartLines.mockResolvedValue({});
+    addCartLine.mockRejectedValueOnce(new Error('network'));
+
+    const noNameLine = promoLine({
+      raw_data: {
+        entity_code: 'E1',
+        sku: 'S-1', // no `name`
+        quantity: 12,
+        unit_price: 3.95,
+        list_price: 20,
+        vat_rate: 22,
+      },
+    });
+    const plan = planPriceFixes(
+      [{ IdRiga: 20, IsPromozioneScaduta: true }],
+      [noNameLine],
+      { E1: priceData(7.18) },
+      NOW,
+    );
+
+    const err: any = await applyCartFixPlan('O1', plan).catch((e) => e);
+    expect(err).toBeInstanceOf(CartFixError);
+    expect(err.lost).toEqual([20]);
+    expect(err.restored).toEqual([]);
+    expect(err.failed).toEqual([]);
+    expect(postCartLine).not.toHaveBeenCalled();
+  });
+
+  it('reports a price-only patch as failed (not silently swallowed) when the PATCH request throws', async () => {
+    patchCartLines.mockRejectedValue(new Error('network'));
+
+    const plan = {
+      ops: [
+        {
+          type: 'patch' as const,
+          patches: [{ line_number: 10, unit_price: 7.5, list_price: 20 }],
+          from: {},
+        },
+      ],
+      unfixable: [],
+    };
+
+    const err: any = await applyCartFixPlan('O1', plan).catch((e) => e);
+    expect(err).toBeInstanceOf(CartFixError);
+    expect(err.failed).toEqual([10]);
+    expect(err.restored).toEqual([]);
+    expect(err.lost).toEqual([]);
+    expect(postCartLine).not.toHaveBeenCalled();
+  });
+
+  it('reports a price-only patch as failed when its results[] entry says success: false', async () => {
+    patchCartLines.mockResolvedValue({
+      results: [{ line_number: 10, success: false }],
+    });
+
+    const plan = {
+      ops: [
+        {
+          type: 'patch' as const,
+          patches: [{ line_number: 10, unit_price: 7.5, list_price: 20 }],
+          from: {},
+        },
+      ],
+      unfixable: [],
+    };
+
+    const err: any = await applyCartFixPlan('O1', plan).catch((e) => e);
+    expect(err).toBeInstanceOf(CartFixError);
+    expect(err.failed).toEqual([10]);
+    expect(err.restored).toEqual([]);
+    expect(err.lost).toEqual([]);
+  });
+
+  it('only reports the failed line in a mixed patch batch, leaving the successful merge target alone', async () => {
+    patchCartLines.mockResolvedValue({
+      results: [
+        { line_number: 10, success: false },
+        { line_number: 30, success: true },
+      ],
+    });
+
+    const plan = {
+      ops: [
+        {
+          type: 'patch' as const,
+          patches: [
+            { line_number: 10, unit_price: 7.5, list_price: 20 },
+            { line_number: 30, quantity: 17 },
+          ],
+          from: { 30: [40] },
+        },
+      ],
+      unfixable: [],
+    };
+
+    const err: any = await applyCartFixPlan('O1', plan).catch((e) => e);
+    expect(err).toBeInstanceOf(CartFixError);
+    expect(err.failed).toEqual([10]);
+    expect(err.restored).toEqual([]);
+    expect(err.lost).toEqual([]);
+    expect(postCartLine).not.toHaveBeenCalled();
   });
 });
