@@ -45,6 +45,7 @@ const priceCheck = vi.hoisted(() => ({
   fix: vi.fn(),
   fixing: false,
   fixFailed: false,
+  fixLostSkus: [] as string[],
 }));
 vi.mock('@/contexts/cart-price-check.context', () => ({
   useCartPriceCheck: () => priceCheck,
@@ -61,6 +62,10 @@ const NATIVE = {
 beforeEach(() => {
   vi.clearAllMocks();
   priceCheck.enabled = true;
+  priceCheck.status = 'clean';
+  priceCheck.fixing = false;
+  priceCheck.fixFailed = false;
+  priceCheck.fixLostSkus = [];
   submitOrder.mockResolvedValue({ type: 'success' });
   priceCheck.fix.mockResolvedValue(true);
 });
@@ -95,5 +100,28 @@ describe('CheckoutSendOrder — cart price check', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Send Order' }));
     await waitFor(() => expect(submitOrder).toHaveBeenCalledTimes(1));
     expect(priceCheck.recheck).not.toHaveBeenCalled();
+  });
+
+  it('keeps the modal open and shows the failure message when the update fails', async () => {
+    priceCheck.recheck.mockResolvedValue({ status: 'changed', result: NATIVE });
+    priceCheck.fix.mockResolvedValue(false);
+    render(<CheckoutSendOrder lang="it" />);
+    fireEvent.click(screen.getByRole('button', { name: 'Send Order' }));
+    await screen.findByText('Anomalie riscontrate');
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: /Aggiorna carrello con listino variato/i,
+      }),
+    );
+    await waitFor(() => expect(priceCheck.fix).toHaveBeenCalledWith(NATIVE));
+    await screen.findByText('Aggiornamento non completato, riprova');
+    expect(screen.getByText('Anomalie riscontrate')).toBeInTheDocument();
+  });
+
+  it('disables the Send button while a fix is running', () => {
+    priceCheck.fixing = true;
+    render(<CheckoutSendOrder lang="it" />);
+    expect(screen.getByRole('button', { name: 'Send Order' })).toBeDisabled();
   });
 });

@@ -94,11 +94,43 @@ function AnomaliesAutoClearOnItemsChange() {
   return null;
 }
 
-function AnomaliesBanner({ lang }: { lang: string }) {
+export function AnomaliesBanner({ lang }: { lang: string }) {
   const { t } = useTranslation(lang, 'common');
   const { result, clear } = useCartAnomalies();
-  const { fix, fixing, fixFailed } = useCartPriceCheck();
-  if (!result || result.anomalies.length === 0) return null;
+  const { fix, fixing, fixFailed, fixLostSkus } = useCartPriceCheck();
+  const hasAnomalies = Boolean(result) && result!.anomalies.length > 0;
+  // A failed "Aggiorna carrello" must never go unseen: it can happen with no
+  // anomalies left to show it against (the re-check that follows a partial
+  // fix can come back clean when a lost line is simply gone from the cart —
+  // there's nothing left to compare it to), when the reload/re-check itself
+  // fails, or when there was no active order to fix at all.
+  if (!hasAnomalies && !fixFailed) return null;
+
+  const failureNotice = fixFailed && (
+    <>
+      <p className="mt-2 text-xs font-semibold text-red-800">
+        {t('cart-price-check-failed', {
+          defaultValue: 'Aggiornamento non completato, riprova',
+        })}
+      </p>
+      {fixLostSkus.length > 0 && (
+        <p className="mt-1 text-xs font-semibold text-red-800">
+          {t('cart-price-check-lost', {
+            defaultValue: 'Controlla e riaggiungi: {{skus}}',
+            skus: fixLostSkus.join(', '),
+          })}
+        </p>
+      )}
+    </>
+  );
+
+  if (!result || !hasAnomalies) {
+    return (
+      <div className="mb-3 rounded-md border border-red-300 bg-red-50 px-4 py-3">
+        {failureNotice}
+      </div>
+    );
+  }
 
   return (
     <div className="mb-3 rounded-md border border-red-300 bg-red-50 px-4 py-3">
@@ -135,13 +167,7 @@ function AnomaliesBanner({ lang }: { lang: string }) {
                 );
               })}
             </ul>
-            {fixFailed && (
-              <p className="mt-2 text-xs font-semibold text-red-800">
-                {t('cart-price-check-failed', {
-                  defaultValue: 'Aggiornamento non completato, riprova',
-                })}
-              </p>
-            )}
+            {failureNotice}
           </div>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-2">

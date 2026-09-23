@@ -127,7 +127,12 @@ export default function CheckoutSendOrder({ lang, onSubmit }: Props) {
   const [notes, setNotes] = useState<string>('');
 
   const canSubmit = Boolean(
-    selected && date && !isSubmitting && !checking && !belowMinimum,
+    selected &&
+      date &&
+      !isSubmitting &&
+      !checking &&
+      !priceCheck.fixing &&
+      !belowMinimum,
   );
 
   const submitOpts = {
@@ -155,9 +160,20 @@ export default function CheckoutSendOrder({ lang, onSubmit }: Props) {
   // after reviewing the new prices; ERP (MyMB) anomalies keep the resubmit.
   const handleAutofix = async (result: AnomalyResult) => {
     if (result.source === 'native') {
-      await priceCheck.fix(result);
+      const ok = await priceCheck.fix(result);
       clearAnomalies();
-      setCheckResult(null);
+      if (ok) {
+        setCheckResult(null);
+      } else {
+        // Keep the modal open and tell the customer the update didn't fully
+        // apply, instead of silently closing on a failed fix.
+        setCheckResult({
+          ...result,
+          errorMessage: t('cart-price-check-failed', {
+            defaultValue: 'Aggiornamento non completato, riprova',
+          }),
+        });
+      }
       return;
     }
     await resubmitWithAutofix(submitOpts);

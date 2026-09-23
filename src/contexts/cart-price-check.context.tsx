@@ -18,8 +18,16 @@ import { ERP_STATIC } from '@framework/utils/static';
 import type { AnomalyResult } from '@/hooks/use-order-submit';
 import { useCartAnomalies } from '@/contexts/cart-anomalies.context';
 import { fetchCartPriceMap } from '@/lib/cart/fetch-cart-price-map';
-import { diffCartPrices, isCheckableLine } from '@/lib/cart/price-check';
-import { applyCartFixPlan, planPriceFixes } from '@/lib/cart/price-fix-planner';
+import {
+  diffCartPrices,
+  isCheckableLine,
+  lineNumberOf,
+} from '@/lib/cart/price-check';
+import {
+  applyCartFixPlan,
+  planPriceFixes,
+  CartFixError,
+} from '@/lib/cart/price-fix-planner';
 
 export type PriceCheckStatus =
   | 'idle'
@@ -39,6 +47,9 @@ interface CartPriceCheckValue {
   fix: (result: AnomalyResult) => Promise<boolean>;
   fixing: boolean;
   fixFailed: boolean;
+  /** SKUs the fix could not restore (CartFixError.lost) — the customer must
+   *  check and re-add these by hand; empty when nothing was lost. */
+  fixLostSkus: string[];
 }
 
 const DISABLED: CartPriceCheckValue = {
@@ -48,6 +59,7 @@ const DISABLED: CartPriceCheckValue = {
   fix: async () => false,
   fixing: false,
   fixFailed: false,
+  fixLostSkus: [],
 };
 
 const CartPriceCheckContext = createContext<CartPriceCheckValue>(DISABLED);
@@ -77,6 +89,7 @@ export function CartPriceCheckProvider({
   const [status, setStatus] = useState<PriceCheckStatus>('idle');
   const [fixing, setFixing] = useState(false);
   const [fixFailed, setFixFailed] = useState(false);
+  const [fixLostSkus, setFixLostSkus] = useState<string[]>([]);
 
   const itemsRef = useRef<Item[]>(items ?? []);
   itemsRef.current = items ?? [];
@@ -124,16 +137,22 @@ export function CartPriceCheckProvider({
 
   const fix = useCallback(
     async (result: AnomalyResult): Promise<boolean> => {
-      const orderId = meta?.orderId || ERP_STATIC.vinc_order_id;
-      if (!orderId) return false;
-      setFixing(true);
       setFixFailed(false);
+      setFixLostSkus([]);
+      const orderId = meta?.orderId || ERP_STATIC.vinc_order_id;
+      if (!orderId) {
+        // No active cart to apply the fix to — this must still surface as a
+        // failure, or the customer could send an order the fix never ran on.
+        setFixFailed(true);
+        return false;
+      }
+      setFixing(true);
       // Drop the banner first so the auto-clear watcher re-arms on the fresh
       // result instead of wiping it when the reloaded items arrive.
       clear();
+      const lines = itemsRef.current.filter(isCheckableLine);
       let ok = false;
       try {
-        const lines = itemsRef.current.filter(isCheckableLine);
         const priceMap = await fetchCartPriceMap(
           lines.map((i) => String(i.id)),
         );
@@ -148,6 +167,17 @@ export function CartPriceCheckProvider({
       } catch (error) {
         console.error('[cart-price-check] fix failed:', error);
         setFixFailed(true);
+        // CartFixError.lost lines could not be restored to the cart at all —
+        // name the products so the customer can check and re-add them, since
+        // the re-check below may come back clean (nothing left to compare a
+        // MISSING line against) and silently hide the loss.
+        if (error instanceof CartFixError && error.lost.length > 0) {
+          const skus = error.lost
+            .map((n) => lines.find((line) => lineNumberOf(line) === n))
+            .filter((line): line is Item => Boolean(line))
+            .map((line) => line.sku || String(line.id));
+          setFixLostSkus(skus);
+        }
       }
       try {
         const fresh = await fetchCartData();
@@ -176,8 +206,8 @@ export function CartPriceCheckProvider({
   }, [enabled, meta?.orderId, items, recheck]);
 
   const value = useMemo<CartPriceCheckValue>(
-    () => ({ enabled, status, recheck, fix, fixing, fixFailed }),
-    [enabled, status, recheck, fix, fixing, fixFailed],
+    () => ({ enabled, status, recheck, fix, fixing, fixFailed, fixLostSkus }),
+    [enabled, status, recheck, fix, fixing, fixFailed, fixLostSkus],
   );
 
   return (

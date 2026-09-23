@@ -29,7 +29,8 @@ const applyCartFixPlan = vi.hoisted(() => vi.fn());
 const planPriceFixes = vi.hoisted(() =>
   vi.fn(() => ({ ops: [], unfixable: [] })),
 );
-vi.mock('@/lib/cart/price-fix-planner', () => ({
+vi.mock('@/lib/cart/price-fix-planner', async (orig) => ({
+  ...(await orig<typeof import('@/lib/cart/price-fix-planner')>()),
   applyCartFixPlan,
   planPriceFixes,
 }));
@@ -42,6 +43,7 @@ import {
   CartPriceCheckProvider,
   useCartPriceCheck,
 } from '@/contexts/cart-price-check.context';
+import { CartFixError } from '@/lib/cart/price-fix-planner';
 import { mapCSLineItemToItem } from '@utils/adapter/cart-adapter';
 
 const staleLine = () =>
@@ -77,6 +79,7 @@ const renderProvider = () =>
 beforeEach(() => {
   vi.clearAllMocks();
   cart.items = [staleLine()];
+  cart.meta = { orderId: 'O1', priceDecimals: 2 };
   settings.verifyPrices = true;
   source.value = 'inline';
   fetchCartPriceMap.mockResolvedValue({
@@ -153,5 +156,42 @@ describe('CartPriceCheckProvider', () => {
     });
     expect(cart.hydrateFromServer).toHaveBeenCalledWith([], 'replace');
     expect(screen.getByTestId('state').textContent).toBe('clean|none|0');
+  });
+
+  it('reports fixFailed and the lost line SKU when the plan cannot be fully applied', async () => {
+    applyCartFixPlan.mockRejectedValue(new CartFixError([], [10], []));
+    renderProvider();
+    await waitFor(() =>
+      expect(screen.getByTestId('state').textContent).toBe('changed|native|1'),
+    );
+    const result = {
+      anomalies: [{ IdRiga: 10, IsPrezzoVariato: true }],
+      erpItems: [],
+      source: 'native' as const,
+    };
+    await act(async () => {
+      await api.fix(result);
+    });
+    expect(api.fixFailed).toBe(true);
+    expect(api.fixLostSkus).toEqual(['S-1']);
+    expect(api.fixing).toBe(false);
+  });
+
+  it('returns false and marks the fix as failed when there is no active order', async () => {
+    cart.meta = { priceDecimals: 2 };
+    renderProvider();
+    await act(async () => {});
+    const result = {
+      anomalies: [{ IdRiga: 10, IsPrezzoVariato: true }],
+      erpItems: [],
+      source: 'native' as const,
+    };
+    let ok: boolean | undefined;
+    await act(async () => {
+      ok = await api.fix(result);
+    });
+    expect(ok).toBe(false);
+    expect(api.fixFailed).toBe(true);
+    expect(applyCartFixPlan).not.toHaveBeenCalled();
   });
 });
