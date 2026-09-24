@@ -10,6 +10,11 @@ export const CART_CHECK_CHUNK = 100;
  * product pages book them: the same search, with the customer context (so the
  * customer's tier applies), chunked to the search page cap. Products the
  * catalog no longer returns or prices are absent from the map.
+ *
+ * Throws when the search capped a page (it counted more products than it
+ * returned, e.g. a lower page cap than CART_CHECK_CHUNK): the products left
+ * out would otherwise read "no longer sellable". The caller treats the throw
+ * as `unavailable` and fails open.
  */
 export async function fetchCartPriceMap(
   entityCodes: string[],
@@ -29,6 +34,11 @@ export async function fetchCartPriceMap(
   );
   const map: Record<string, ErpPriceData> = {};
   for (const page of pages) {
+    if (Number(page.total) > page.items.length) {
+      throw new Error(
+        `Cart price check: the search returned ${page.items.length} of ${page.total} products (page capped)`,
+      );
+    }
     for (const product of page.items) {
       const pd = productToErpPriceData(product);
       if (pd) map[String(product.id)] = pd;

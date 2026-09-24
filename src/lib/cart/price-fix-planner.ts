@@ -25,10 +25,11 @@ export type CartFixOp =
   | {
       type: 'remove';
       lineNumbers: number[];
-      /** Each removed line's original booking body, keyed by line number —
-       *  captured from Commerce Suite's `raw_data` so the executor can
-       *  re-post it if a later step in the plan fails. Omits lines whose
-       *  body was not available. */
+      /** Each removed line's restore body, keyed by line number: the
+       *  line's current state layered over Commerce Suite's `raw_data`
+       *  (see `restoreBodyOf`), so the executor can re-post it if a later
+       *  step in the plan fails. Omits lines whose body lacks a field
+       *  Commerce Suite requires for an add. */
       restore: Record<number, Record<string, unknown>>;
     }
   | {
@@ -57,12 +58,13 @@ export interface CartFixPlan {
 
 /**
  * The plan could not be fully applied. `restored` lists source lines whose
- * original booking was successfully re-posted after their replacement
- * failed; `lost` lists source lines that could not be restored (no booking
- * body had been captured, or the re-post itself failed); `failed` lists
- * line numbers whose fix did not apply but needed no restore — e.g. a
- * price-only patch that failed, leaving the line in the cart at its old
- * price. Every one of these needs the customer's attention.
+ * restore body (their current state over `raw_data`) was successfully
+ * re-posted after their replacement failed; `lost` lists source lines that
+ * could not be restored (no restore body had been captured, or the re-post
+ * itself failed); `failed` lists line numbers whose fix did not apply but
+ * needed no restore — e.g. a price-only patch that failed, leaving the line
+ * in the cart at its old price. Every one of these needs the customer's
+ * attention.
  */
 export class CartFixError extends Error {
   constructor(
@@ -397,9 +399,10 @@ export function planPriceFixes(
   return { ops, unfixable };
 }
 
-/** Re-post the original booking body of each source line, tracking which
- *  ones were saved (`restored`) vs could not be (`lost`): no captured body,
- *  or the re-post itself failed. */
+/** Re-post the restore body of each source line (its current state over
+ *  `raw_data`, captured by the planner), tracking which ones were saved
+ *  (`restored`) vs could not be (`lost`): no captured body, or the re-post
+ *  itself failed. */
 async function restoreLines(
   orderId: string,
   lineNumbers: number[],
@@ -428,16 +431,16 @@ async function restoreLines(
  * replacing — but that ordering means a later failure could otherwise
  * silently drop the quantity a removed line carried. Instead: a failed
  * patch line (reported in the response `results[]`, or the whole request
- * throwing) or a failed add re-posts the original booking body of every
- * source line it carries (`op.from`), then execution continues with the
- * rest of the plan. A failed patch line that carries no source line (a
- * price-only patch — nothing was removed for it, so there is nothing to
- * restore) is still recorded, as `failed`, rather than silently ignored —
- * otherwise the caller would see a clean resolve for a price that never
- * actually updated. A failed removal simply throws — nothing has changed
- * yet for that op, so there is nothing to restore. Every op and every PATCH
- * line must succeed for this to resolve; otherwise it throws `CartFixError`
- * once the whole plan has run.
+ * throwing) or a failed add re-posts the restore body (the line's current
+ * state over `raw_data`) of every source line it carries (`op.from`), then
+ * execution continues with the rest of the plan. A failed patch line that
+ * carries no source line (a price-only patch — nothing was removed for it,
+ * so there is nothing to restore) is still recorded, as `failed`, rather
+ * than silently ignored — otherwise the caller would see a clean resolve for
+ * a price that never actually updated. A failed removal simply throws —
+ * nothing has changed yet for that op, so there is nothing to restore. Every
+ * op and every PATCH line must succeed for this to resolve; otherwise it
+ * throws `CartFixError` once the whole plan has run.
  */
 export async function applyCartFixPlan(
   orderId: string,

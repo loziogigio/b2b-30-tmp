@@ -43,6 +43,32 @@ describe('fetchCartPriceMap', () => {
   it('dedupes codes and leaves unpriced products out', async () => {
     const map = await fetchCartPriceMap(['E1', 'E1', 'X', '']);
     expect(fetchPimProductList).toHaveBeenCalledTimes(1);
+    expect(fetchPimProductList).toHaveBeenCalledWith({
+      filters: { entity_code: ['E1', 'X'] },
+      limit: 2,
+    });
+    expect(Object.keys(map)).toEqual(['E1']);
+  });
+
+  it('fails when the search capped a page, instead of reading the missing products as not sellable', async () => {
+    fetchPimProductList.mockImplementation(async ({ filters }: any) => ({
+      items: filters.entity_code
+        .slice(0, 1)
+        .map((id: string) => ({ id, priced: true })),
+      total: filters.entity_code.length,
+    }));
+    await expect(fetchCartPriceMap(['E1', 'E2'])).rejects.toThrow(
+      /1 of 2 products/,
+    );
+  });
+
+  it('accepts a page with fewer products than requested when the search found no more', async () => {
+    // E2 is gone from the catalog: the search counts only what it found.
+    fetchPimProductList.mockImplementation(async () => ({
+      items: [{ id: 'E1', priced: true }],
+      total: 1,
+    }));
+    const map = await fetchCartPriceMap(['E1', 'E2']);
     expect(Object.keys(map)).toEqual(['E1']);
   });
 });

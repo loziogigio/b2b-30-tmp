@@ -22,6 +22,7 @@ vi.mock('@/contexts/cart-anomalies.context', () => ({
 
 const submitOrder = vi.hoisted(() => vi.fn());
 const resubmitWithAutofix = vi.hoisted(() => vi.fn());
+const orderSubmit = vi.hoisted(() => ({ anomalyResult: null as any }));
 vi.mock('@/hooks/use-order-submit', async (orig) => ({
   ...(await orig<typeof import('@/hooks/use-order-submit')>()),
   useOrderSubmit: () => ({
@@ -29,7 +30,7 @@ vi.mock('@/hooks/use-order-submit', async (orig) => ({
     resubmitWithAutofix,
     confirmDuplicateSubmit: vi.fn(),
     isSubmitting: false,
-    anomalyResult: null,
+    anomalyResult: orderSubmit.anomalyResult,
     duplicateWarning: null,
     orderAlreadySubmitted: null,
     submitError: null,
@@ -46,6 +47,7 @@ const priceCheck = vi.hoisted(() => ({
   fixing: false,
   fixFailed: false,
   fixLostSkus: [] as string[],
+  fixUnfixableSkus: [] as string[],
 }));
 vi.mock('@/contexts/cart-price-check.context', () => ({
   useCartPriceCheck: () => priceCheck,
@@ -61,6 +63,7 @@ const NATIVE = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  orderSubmit.anomalyResult = null;
   priceCheck.enabled = true;
   priceCheck.status = 'clean';
   priceCheck.fixing = false;
@@ -117,6 +120,24 @@ describe('CheckoutSendOrder — cart price check', () => {
     await waitFor(() => expect(priceCheck.fix).toHaveBeenCalledWith(NATIVE));
     await screen.findByText('Aggiornamento non completato, riprova');
     expect(screen.getByText('Anomalie riscontrate')).toBeInTheDocument();
+  });
+
+  it('routes an ERP (MyMB) result to the resubmit-with-autofix, never to the cart fix', async () => {
+    orderSubmit.anomalyResult = {
+      anomalies: [{ IdRiga: 10, IsPromozioneScaduta: true }],
+      erpItems: [{ erp_line_number: 10, erp_data: { oarti: 'S-1' } }],
+      itemErrors: [],
+    };
+    render(<CheckoutSendOrder lang="it" />);
+    await screen.findByText('Anomalie riscontrate');
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: /Aggiorna carrello con listino variato/i,
+      }),
+    );
+    await waitFor(() => expect(resubmitWithAutofix).toHaveBeenCalledTimes(1));
+    expect(priceCheck.fix).not.toHaveBeenCalled();
   });
 
   it('disables the Send button while a fix is running', () => {
