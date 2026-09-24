@@ -1,0 +1,628 @@
+[
+  {
+    "name": "percent promotion re-priced from the tier packaging's rounded unit price",
+    "tags": ["pricelist:vend-03"],
+    "raw": {
+      "entity_code": "SV-A",
+      "status": "published",
+      "pricing": {
+        "list": 111.53,
+        "retail": 111.53,
+        "currency": "EUR",
+        "vat_rate": 22
+      },
+      "packaging_info": [
+        {
+          "code": "CFZ",
+          "description": "CFZ",
+          "qty": 1,
+          "uom": "PZ",
+          "is_default": true,
+          "is_smallest": true
+        }
+      ],
+      "packaging_options": [
+        {
+          "pkg_id": "1-02",
+          "code": "CFZ",
+          "qty": 1,
+          "uom": "PZ",
+          "is_default": true,
+          "is_smallest": true,
+          "is_sellable": true,
+          "pricing": {
+            "list": 111.53,
+            "retail": 111.53,
+            "currency": "EUR",
+            "vat_rate": 22,
+            "tag_filter": ["pricelist:vend-02"]
+          },
+          "promotions": [
+            {
+              "promo_code": "031",
+              "promo_row": 2,
+              "is_active": true,
+              "promo_type": "STD",
+              "discount_percentage": 5,
+              "promo_price": 105.9535,
+              "min_quantity": 1,
+              "start_date": "2026-09-01T22:00:00.000Z",
+              "end_date": "2026-12-30T23:00:00.000Z"
+            }
+          ]
+        },
+        {
+          "pkg_id": "1-03",
+          "code": "CFZ",
+          "qty": 1,
+          "uom": "PZ",
+          "is_default": true,
+          "is_smallest": true,
+          "is_sellable": true,
+          "pricing": {
+            "list": 105.9449,
+            "retail": 105.9449,
+            "currency": "EUR",
+            "vat_rate": 22,
+            "tag_filter": ["pricelist:vend-03"]
+          },
+          "promotions": [
+            {
+              "promo_code": "031",
+              "promo_row": 2,
+              "is_active": true,
+              "promo_type": "STD",
+              "discount_percentage": 5,
+              "promo_price": 100.647655,
+              "min_quantity": 1,
+              "start_date": "2026-09-01T22:00:00.000Z",
+              "end_date": "2026-12-30T23:00:00.000Z"
+            }
+          ]
+        }
+      ],
+      "promotions": [
+        {
+          "promo_code": "031",
+          "promo_row": 2,
+          "is_active": true,
+          "promo_type": "STD",
+          "discount_percentage": 5,
+          "promo_price": 105.9535,
+          "min_quantity": 1,
+          "start_date": "2026-09-01T22:00:00.000Z",
+          "end_date": "2026-12-30T23:00:00.000Z"
+        }
+      ]
+    },
+    "served": {
+      "entity_code": "SV-A",
+      "status": "published",
+      "pricing": {
+        "list": 105.9449,
+        "retail": 105.9449,
+        "currency": "EUR",
+        "vat_rate": 22,
+        "list_unit": 105.9449,
+        "retail_unit": 105.9449,
+        "tag_filter": ["pricelist:vend-03"]
+      },
+      "packaging_info": [
+        {
+          "code": "CFZ",
+          "description": "CFZ",
+          "qty": 1,
+          "uom": "PZ",
+          "is_default": true,
+          "is_smallest": true
+        }
+      ],
+      "packaging_options": [
+        {
+          "pkg_id": "1-03",
+          "code": "CFZ",
+          "qty": 1,
+          "uom": "PZ",
+          "is_default": true,
+          "is_smallest": true,
+          "is_sellable": true,
+          "pricing": {
+            "list": 105.9449,
+            "retail": 105.9449,
+            "currency": "EUR",
+            "vat_rate": 22,
+            "tag_filter": ["pricelist:vend-03"],
+            "list_unit": 105.94,
+            "retail_unit": 105.94
+          },
+          "promotions": [
+            {
+              "promo_code": "031",
+              "promo_row": 2,
+              "is_active": true,
+              "promo_type": "STD",
+              "discount_percentage": 5,
+              "promo_price": 100.64,
+              "min_quantity": 1,
+              "start_date": "2026-09-01T22:00:00.000Z",
+              "end_date": "2026-12-30T23:00:00.000Z",
+              "text_discount": "-5%"
+            }
+          ]
+        }
+      ],
+      "promotions": [
+        {
+          "promo_code": "031",
+          "promo_row": 2,
+          "is_active": true,
+          "promo_type": "STD",
+          "discount_percentage": 5,
+          "promo_price": 105.9535,
+          "min_quantity": 1,
+          "start_date": "2026-09-01T22:00:00.000Z",
+          "end_date": "2026-12-30T23:00:00.000Z"
+        }
+      ],
+      "promo_code": ["031"],
+      "promo_codes": ["031"],
+      "promo_type": ["STD"],
+      "has_active_promo": true
+    },
+    "expected": {
+      "listino_unit_price": 105.9449,
+      "promos": [
+        {
+          "promo_code": "031",
+          "promo_row": 2,
+          "unit_price": 100.64
+        }
+      ]
+    }
+  },
+  {
+    "name": "product-level promotion projected onto the tier packaging that has none of its own",
+    "tags": ["pricelist:vend-03"],
+    "raw": {
+      "entity_code": "SV-B",
+      "status": "published",
+      "pricing": {
+        "list": 12,
+        "retail": 12,
+        "currency": "EUR",
+        "vat_rate": 22
+      },
+      "packaging_info": [
+        {
+          "code": "CFZ",
+          "description": "CFZ",
+          "qty": 1,
+          "uom": "PZ",
+          "is_default": true,
+          "is_smallest": true
+        }
+      ],
+      "packaging_options": [
+        {
+          "pkg_id": "1-02",
+          "code": "CFZ",
+          "qty": 1,
+          "uom": "PZ",
+          "is_default": true,
+          "is_smallest": true,
+          "is_sellable": true,
+          "pricing": {
+            "list": 12,
+            "retail": 12,
+            "currency": "EUR",
+            "vat_rate": 22,
+            "tag_filter": ["pricelist:vend-02"]
+          },
+          "promotions": []
+        },
+        {
+          "pkg_id": "1-03",
+          "code": "CFZ",
+          "qty": 1,
+          "uom": "PZ",
+          "is_default": true,
+          "is_smallest": true,
+          "is_sellable": true,
+          "pricing": {
+            "list": 10.5,
+            "retail": 10.5,
+            "currency": "EUR",
+            "vat_rate": 22,
+            "tag_filter": ["pricelist:vend-03"]
+          },
+          "promotions": []
+        }
+      ],
+      "promotions": [
+        {
+          "promo_code": "044",
+          "promo_row": 1,
+          "is_active": true,
+          "promo_type": "NET",
+          "promo_price": 8.9,
+          "min_quantity": 1,
+          "start_date": "2026-09-01T22:00:00.000Z",
+          "end_date": "2026-12-30T23:00:00.000Z"
+        }
+      ]
+    },
+    "served": {
+      "entity_code": "SV-B",
+      "status": "published",
+      "pricing": {
+        "list": 10.5,
+        "retail": 10.5,
+        "currency": "EUR",
+        "vat_rate": 22,
+        "list_unit": 10.5,
+        "retail_unit": 10.5,
+        "tag_filter": ["pricelist:vend-03"]
+      },
+      "packaging_info": [
+        {
+          "code": "CFZ",
+          "description": "CFZ",
+          "qty": 1,
+          "uom": "PZ",
+          "is_default": true,
+          "is_smallest": true
+        }
+      ],
+      "packaging_options": [
+        {
+          "pkg_id": "1-03",
+          "code": "CFZ",
+          "qty": 1,
+          "uom": "PZ",
+          "is_default": true,
+          "is_smallest": true,
+          "is_sellable": true,
+          "pricing": {
+            "list": 10.5,
+            "retail": 10.5,
+            "currency": "EUR",
+            "vat_rate": 22,
+            "tag_filter": ["pricelist:vend-03"],
+            "list_unit": 10.5,
+            "retail_unit": 10.5
+          },
+          "promotions": [
+            {
+              "promo_code": "044",
+              "promo_row": 1,
+              "is_active": true,
+              "promo_type": "NET",
+              "promo_price": 8.9,
+              "min_quantity": 1,
+              "start_date": "2026-09-01T22:00:00.000Z",
+              "end_date": "2026-12-30T23:00:00.000Z"
+            }
+          ]
+        }
+      ],
+      "promotions": [
+        {
+          "promo_code": "044",
+          "promo_row": 1,
+          "is_active": true,
+          "promo_type": "NET",
+          "promo_price": 8.9,
+          "min_quantity": 1,
+          "start_date": "2026-09-01T22:00:00.000Z",
+          "end_date": "2026-12-30T23:00:00.000Z"
+        }
+      ],
+      "promo_code": ["044"],
+      "promo_codes": ["044"],
+      "promo_type": ["NET"],
+      "has_active_promo": true
+    },
+    "expected": {
+      "listino_unit_price": 10.5,
+      "promos": [
+        {
+          "promo_code": "044",
+          "promo_row": 1,
+          "unit_price": 8.9
+        }
+      ]
+    }
+  },
+  {
+    "name": "unit price stored on a multi-piece packaging",
+    "tags": ["pricelist:vend-03"],
+    "raw": {
+      "entity_code": "SV-C",
+      "status": "published",
+      "pricing": {
+        "list": 6.1,
+        "retail": 6.1,
+        "currency": "EUR",
+        "vat_rate": 22
+      },
+      "packaging_info": [
+        {
+          "code": "IMB",
+          "description": "IMB",
+          "qty": 4,
+          "uom": "PZ",
+          "is_default": true,
+          "is_smallest": true
+        }
+      ],
+      "packaging_options": [
+        {
+          "pkg_id": "1-03",
+          "code": "IMB",
+          "qty": 4,
+          "uom": "PZ",
+          "is_default": true,
+          "is_smallest": true,
+          "is_sellable": true,
+          "pricing": {
+            "list_unit": 5.3317,
+            "currency": "EUR",
+            "vat_rate": 22,
+            "tag_filter": ["pricelist:vend-03"]
+          },
+          "promotions": []
+        }
+      ]
+    },
+    "served": {
+      "entity_code": "SV-C",
+      "status": "published",
+      "pricing": {
+        "list": 21.33,
+        "retail": 6.1,
+        "currency": "EUR",
+        "vat_rate": 22,
+        "list_unit": 5.3325,
+        "tag_filter": ["pricelist:vend-03"]
+      },
+      "packaging_info": [
+        {
+          "code": "IMB",
+          "description": "IMB",
+          "qty": 4,
+          "uom": "PZ",
+          "is_default": true,
+          "is_smallest": true
+        }
+      ],
+      "packaging_options": [
+        {
+          "pkg_id": "1-03",
+          "code": "IMB",
+          "qty": 4,
+          "uom": "PZ",
+          "is_default": true,
+          "is_smallest": true,
+          "is_sellable": true,
+          "pricing": {
+            "list_unit": 5.3317,
+            "currency": "EUR",
+            "vat_rate": 22,
+            "tag_filter": ["pricelist:vend-03"],
+            "list": 21.33
+          },
+          "promotions": []
+        }
+      ],
+      "promo_code": [],
+      "promo_codes": [],
+      "promo_type": [],
+      "has_active_promo": false
+    },
+    "expected": {
+      "listino_unit_price": 5.3325,
+      "promos": []
+    }
+  },
+  {
+    "name": "plain listino on the customer's tier",
+    "tags": ["pricelist:vend-02"],
+    "raw": {
+      "entity_code": "SV-D",
+      "status": "published",
+      "pricing": {
+        "list": 7.18,
+        "retail": 7.18,
+        "currency": "EUR",
+        "vat_rate": 22
+      },
+      "packaging_info": [
+        {
+          "code": "PZ",
+          "description": "PZ",
+          "qty": 1,
+          "uom": "PZ",
+          "is_default": true,
+          "is_smallest": true
+        }
+      ],
+      "packaging_options": [
+        {
+          "pkg_id": "1-02",
+          "code": "PZ",
+          "qty": 1,
+          "uom": "PZ",
+          "is_default": true,
+          "is_smallest": true,
+          "is_sellable": true,
+          "pricing": {
+            "list": 7.18,
+            "retail": 7.18,
+            "currency": "EUR",
+            "vat_rate": 22,
+            "tag_filter": ["pricelist:vend-02"]
+          },
+          "promotions": []
+        },
+        {
+          "pkg_id": "1-03",
+          "code": "PZ",
+          "qty": 1,
+          "uom": "PZ",
+          "is_default": true,
+          "is_smallest": true,
+          "is_sellable": true,
+          "pricing": {
+            "list": 6.95,
+            "retail": 6.95,
+            "currency": "EUR",
+            "vat_rate": 22,
+            "tag_filter": ["pricelist:vend-03"]
+          },
+          "promotions": []
+        }
+      ]
+    },
+    "served": {
+      "entity_code": "SV-D",
+      "status": "published",
+      "pricing": {
+        "list": 7.18,
+        "retail": 7.18,
+        "currency": "EUR",
+        "vat_rate": 22,
+        "list_unit": 7.18,
+        "retail_unit": 7.18,
+        "tag_filter": ["pricelist:vend-02"]
+      },
+      "packaging_info": [
+        {
+          "code": "PZ",
+          "description": "PZ",
+          "qty": 1,
+          "uom": "PZ",
+          "is_default": true,
+          "is_smallest": true
+        }
+      ],
+      "packaging_options": [
+        {
+          "pkg_id": "1-02",
+          "code": "PZ",
+          "qty": 1,
+          "uom": "PZ",
+          "is_default": true,
+          "is_smallest": true,
+          "is_sellable": true,
+          "pricing": {
+            "list": 7.18,
+            "retail": 7.18,
+            "currency": "EUR",
+            "vat_rate": 22,
+            "tag_filter": ["pricelist:vend-02"],
+            "list_unit": 7.18,
+            "retail_unit": 7.18
+          },
+          "promotions": []
+        }
+      ],
+      "promo_code": [],
+      "promo_codes": [],
+      "promo_type": [],
+      "has_active_promo": false
+    },
+    "expected": {
+      "listino_unit_price": 7.18,
+      "promos": []
+    }
+  },
+  {
+    "name": "no packaging for the customer's tier: not sellable",
+    "tags": ["pricelist:vend-05"],
+    "raw": {
+      "entity_code": "SV-E",
+      "status": "published",
+      "pricing": {
+        "list": 7.18,
+        "retail": 7.18,
+        "currency": "EUR",
+        "vat_rate": 22
+      },
+      "packaging_info": [
+        {
+          "code": "PZ",
+          "description": "PZ",
+          "qty": 1,
+          "uom": "PZ",
+          "is_default": true,
+          "is_smallest": true
+        }
+      ],
+      "packaging_options": [
+        {
+          "pkg_id": "1-02",
+          "code": "PZ",
+          "qty": 1,
+          "uom": "PZ",
+          "is_default": true,
+          "is_smallest": true,
+          "is_sellable": true,
+          "pricing": {
+            "list": 7.18,
+            "retail": 7.18,
+            "currency": "EUR",
+            "vat_rate": 22,
+            "tag_filter": ["pricelist:vend-02"]
+          },
+          "promotions": []
+        },
+        {
+          "pkg_id": "1-03",
+          "code": "PZ",
+          "qty": 1,
+          "uom": "PZ",
+          "is_default": true,
+          "is_smallest": true,
+          "is_sellable": true,
+          "pricing": {
+            "list": 6.95,
+            "retail": 6.95,
+            "currency": "EUR",
+            "vat_rate": 22,
+            "tag_filter": ["pricelist:vend-03"]
+          },
+          "promotions": []
+        }
+      ]
+    },
+    "served": {
+      "entity_code": "SV-E",
+      "status": "published",
+      "pricing": {
+        "list": 7.18,
+        "retail": 7.18,
+        "currency": "EUR",
+        "vat_rate": 22
+      },
+      "packaging_info": [
+        {
+          "code": "PZ",
+          "description": "PZ",
+          "qty": 1,
+          "uom": "PZ",
+          "is_default": true,
+          "is_smallest": true
+        }
+      ],
+      "packaging_options": [],
+      "promo_code": [],
+      "promo_codes": [],
+      "promo_type": [],
+      "has_active_promo": false
+    },
+    "expected": {
+      "listino_unit_price": null,
+      "promos": []
+    }
+  }
+]
