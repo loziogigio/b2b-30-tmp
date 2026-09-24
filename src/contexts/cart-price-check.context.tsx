@@ -50,6 +50,11 @@ interface CartPriceCheckValue {
   /** SKUs the fix could not restore (CartFixError.lost) — the customer must
    *  check and re-add these by hand; empty when nothing was lost. */
   fixLostSkus: string[];
+  /** SKUs of the lines the last fix could not update automatically
+   *  (plan.unfixable) — no longer sellable, or a change the storefront
+   *  cannot apply; the customer must remove the line or ask for help. Kept
+   *  until the next fix, even when the re-check after it comes back clean. */
+  fixUnfixableSkus: string[];
 }
 
 const DISABLED: CartPriceCheckValue = {
@@ -60,7 +65,18 @@ const DISABLED: CartPriceCheckValue = {
   fixing: false,
   fixFailed: false,
   fixLostSkus: [],
+  fixUnfixableSkus: [],
 };
+
+/** The SKUs of the given line numbers, read from the lines the fix started
+ *  from (after the fix they may be gone from the cart). */
+function skusOfLines(lineNumbers: number[], lines: Item[]): string[] {
+  const skus = lineNumbers
+    .map((n) => lines.find((line) => lineNumberOf(line) === n))
+    .filter((line): line is Item => Boolean(line))
+    .map((line) => line.sku || String(line.id));
+  return Array.from(new Set(skus));
+}
 
 const CartPriceCheckContext = createContext<CartPriceCheckValue>(DISABLED);
 
@@ -90,6 +106,7 @@ export function CartPriceCheckProvider({
   const [fixing, setFixing] = useState(false);
   const [fixFailed, setFixFailed] = useState(false);
   const [fixLostSkus, setFixLostSkus] = useState<string[]>([]);
+  const [fixUnfixableSkus, setFixUnfixableSkus] = useState<string[]>([]);
 
   const itemsRef = useRef<Item[]>(items ?? []);
   itemsRef.current = items ?? [];
@@ -139,6 +156,7 @@ export function CartPriceCheckProvider({
     async (result: AnomalyResult): Promise<boolean> => {
       setFixFailed(false);
       setFixLostSkus([]);
+      setFixUnfixableSkus([]);
       const orderId = meta?.orderId || ERP_STATIC.vinc_order_id;
       if (!orderId) {
         // No active cart to apply the fix to — this must still surface as a
@@ -161,7 +179,12 @@ export function CartPriceCheckProvider({
           lines,
           priceMap,
           new Date(),
+          decimals,
         );
+        // Lines the plan leaves alone must be named: a refusal the storefront
+        // cannot reproduce (the re-check below comes back clean) would
+        // otherwise leave the customer stuck with no explanation.
+        setFixUnfixableSkus(skusOfLines(plan.unfixable, lines));
         await applyCartFixPlan(String(orderId), plan);
         ok = true;
       } catch (error) {
@@ -172,11 +195,7 @@ export function CartPriceCheckProvider({
         // the re-check below may come back clean (nothing left to compare a
         // MISSING line against) and silently hide the loss.
         if (error instanceof CartFixError && error.lost.length > 0) {
-          const skus = error.lost
-            .map((n) => lines.find((line) => lineNumberOf(line) === n))
-            .filter((line): line is Item => Boolean(line))
-            .map((line) => line.sku || String(line.id));
-          setFixLostSkus(skus);
+          setFixLostSkus(skusOfLines(error.lost, lines));
         }
       }
       try {
@@ -191,7 +210,14 @@ export function CartPriceCheckProvider({
       }
       return ok;
     },
-    [meta?.orderId, clear, hydrateFromServer, setCartSummary, recheck],
+    [
+      meta?.orderId,
+      decimals,
+      clear,
+      hydrateFromServer,
+      setCartSummary,
+      recheck,
+    ],
   );
 
   // Check once per cart when it opens with at least one saved line.
@@ -206,8 +232,26 @@ export function CartPriceCheckProvider({
   }, [enabled, meta?.orderId, items, recheck]);
 
   const value = useMemo<CartPriceCheckValue>(
-    () => ({ enabled, status, recheck, fix, fixing, fixFailed, fixLostSkus }),
-    [enabled, status, recheck, fix, fixing, fixFailed, fixLostSkus],
+    () => ({
+      enabled,
+      status,
+      recheck,
+      fix,
+      fixing,
+      fixFailed,
+      fixLostSkus,
+      fixUnfixableSkus,
+    }),
+    [
+      enabled,
+      status,
+      recheck,
+      fix,
+      fixing,
+      fixFailed,
+      fixLostSkus,
+      fixUnfixableSkus,
+    ],
   );
 
   return (

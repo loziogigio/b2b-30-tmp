@@ -32,6 +32,7 @@ const priceCheck = vi.hoisted(() => ({
   fixing: false,
   fixFailed: false,
   fixLostSkus: [] as string[],
+  fixUnfixableSkus: [] as string[],
 }));
 vi.mock('@/contexts/cart-price-check.context', () => ({
   useCartPriceCheck: () => priceCheck,
@@ -45,6 +46,7 @@ beforeEach(() => {
   priceCheck.fixing = false;
   priceCheck.fixFailed = false;
   priceCheck.fixLostSkus = [];
+  priceCheck.fixUnfixableSkus = [];
 });
 
 describe('AnomaliesBanner — a failed cart update must never go unseen', () => {
@@ -63,6 +65,39 @@ describe('AnomaliesBanner — a failed cart update must never go unseen', () => 
     expect(screen.getByText('Controlla e riaggiungi: S-1')).toBeInTheDocument();
     // No anomaly list/title was published — this is the failure-only path.
     expect(screen.queryByText(/Anomalie riscontrate/i)).not.toBeInTheDocument();
+  });
+
+  it('names the lines the update could not fix, with no anomalies published', () => {
+    priceCheck.fixUnfixableSkus = ['S-1', 'S-2'];
+    render(<AnomaliesBanner lang="it" />);
+    expect(
+      screen.getByText(
+        "Non aggiornabili automaticamente: S-1, S-2 — rimuovi la riga o contatta l'assistenza",
+      ),
+    ).toBeInTheDocument();
+    // Not a failed update: the failure line stays hidden.
+    expect(
+      screen.queryByText('Aggiornamento non completato, riprova'),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/Anomalie riscontrate/i)).not.toBeInTheDocument();
+  });
+
+  it('names the lines the update could not fix under a published anomaly list', () => {
+    anomalies.result = {
+      anomalies: [{ IdRiga: 10, IsArticoloNonVendibile: true }],
+      erpItems: [{ erp_line_number: 10, erp_data: { oarti: 'S-1' } }],
+      source: 'native' as const,
+    };
+    priceCheck.fixUnfixableSkus = ['S-1'];
+    render(<AnomaliesBanner lang="it" />);
+    expect(
+      screen.getByText('Anomalie riscontrate nel carrello'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Non aggiornabili automaticamente: S-1 — rimuovi la riga o contatta l'assistenza",
+      ),
+    ).toBeInTheDocument();
   });
 
   it('shows the lost-SKU line alongside the existing anomaly banner when a result is also published', () => {

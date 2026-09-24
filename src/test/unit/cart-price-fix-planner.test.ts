@@ -285,6 +285,51 @@ describe('planPriceFixes', () => {
     });
   });
 
+  it('leaves a price change the storefront computes as already applied to the customer', () => {
+    // E.g. the server gate flagged the line, but today's catalog books
+    // exactly the price the line already carries: a patch would change
+    // nothing and the customer would be refused again, silently.
+    const plan = planPriceFixes(
+      [{ IdRiga: 10, IsPrezzoVariato: true }],
+      [line()],
+      { E1: priceData(7.18) },
+      NOW,
+    );
+    expect(plan).toEqual({ ops: [], unfixable: [10] });
+  });
+
+  it('compares the current and the expected price at the given precision', () => {
+    const items = [line({ unit_price: 5.33 })];
+    const map = { E1: priceData(5.3325) };
+    const anomalies = [{ IdRiga: 10, IsPrezzoVariato: true }];
+    // Same price at 2 decimals (the default): nothing the storefront can fix.
+    expect(planPriceFixes(anomalies, items, map, NOW)).toEqual({
+      ops: [],
+      unfixable: [10],
+    });
+    // Different at 4 decimals: patched.
+    expect(planPriceFixes(anomalies, items, map, NOW, 4)).toEqual({
+      ops: [
+        {
+          type: 'patch',
+          patches: [{ line_number: 10, unit_price: 5.3325, list_price: 20 }],
+          from: {},
+        },
+      ],
+      unfixable: [],
+    });
+  });
+
+  it('never patches a line to a price that is not positive', () => {
+    const plan = planPriceFixes(
+      [{ IdRiga: 20, IsPrezzoVariato: true }],
+      [promoLine()],
+      { E1: priceData(7.18, [offer({ promo_net_price: 0 })]) },
+      NOW,
+    );
+    expect(plan).toEqual({ ops: [], unfixable: [20] });
+  });
+
   it('leaves a no-longer-sellable line to the customer', () => {
     const plan = planPriceFixes(
       [{ IdRiga: 10, IsArticoloNonVendibile: true }],

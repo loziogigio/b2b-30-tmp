@@ -51,6 +51,15 @@ const round = (value: number, decimals: number): number => {
   return Math.round(value * factor) / factor;
 };
 
+/** Prices are compared at the order's precision (`price_decimals`, default 2). */
+export const samePrice = (a: number, b: number, decimals: number): boolean =>
+  round(a, decimals) === round(b, decimals);
+
+/** The unit price a line was stored with (Commerce Suite's `unit_price`). */
+export function storedUnitPrice(item: Item): number {
+  return Number(rawLine(item).unit_price ?? item.priceDiscount ?? 0);
+}
+
 /** The six discount slots a line was booked with (CS stores {tier, value}). */
 function storedDiscounts(item: Item): number[] {
   const slots = [0, 0, 0, 0, 0, 0];
@@ -169,9 +178,7 @@ export function diffCartPrices(
     if (!isCheckableLine(item)) continue;
     const lineNumber = lineNumberOf(item)!;
     const code = String(item.id);
-    const unitPrice = Number(
-      rawLine(item).unit_price ?? item.priceDiscount ?? 0,
-    );
+    const unitPrice = storedUnitPrice(item);
     const promo = hasPromo(item.promo_code)
       ? {
           promo_code: String(item.promo_code),
@@ -221,8 +228,7 @@ export function diffCartPrices(
     // A promotion without a positive price cannot be compared (same rule as
     // the Commerce Suite gate).
     const priceChanged =
-      expectedUnit > 0 &&
-      round(expectedUnit, opts.decimals) !== round(unitPrice, opts.decimals);
+      expectedUnit > 0 && !samePrice(expectedUnit, unitPrice, opts.decimals);
     const discountsChanged = discountsDiffer(item, expected.payload);
     if (priceChanged || discountsChanged) {
       report({

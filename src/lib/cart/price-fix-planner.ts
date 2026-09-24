@@ -17,6 +17,8 @@ import {
   hasPromo,
   isCheckableLine,
   lineNumberOf,
+  samePrice,
+  storedUnitPrice,
 } from './price-check';
 
 export type CartFixOp =
@@ -46,8 +48,10 @@ export type CartFixOp =
 
 export interface CartFixPlan {
   ops: CartFixOp[];
-  /** Lines the customer must fix by hand (no longer sellable, or the only
-   *  listino line they could move onto is itself unfixable). */
+  /** Lines the customer must fix by hand: no longer sellable, a price change
+   *  the storefront cannot apply (today's catalog books the price the line
+   *  already carries, or no positive price), or the only listino line they
+   *  could move onto is itself unfixable. */
   unfixable: number[];
 }
 
@@ -198,12 +202,19 @@ function restoreBodyOf(
  * The plan follows the anomalies it is GIVEN, whichever side found them: a
  * promo the server gate declared expired is converted even while the
  * storefront still sees the offer (expiry → nightly sync window).
+ *
+ * A price change is only patched when the storefront can actually apply it:
+ * when today's catalog books a price that is not positive, or the price the
+ * line already carries at `decimals` (the order's precision), a patch would
+ * change nothing and the same refusal would come back. Such a line is
+ * reported `unfixable` so the customer is told, never looped silently.
  */
 export function planPriceFixes(
   anomalies: ErpAnomaly[],
   items: Item[],
   priceMap: Record<string, ErpPriceData>,
   now: Date,
+  decimals = 2,
 ): CartFixPlan {
   const byLine = new Map<number, Item>();
   for (const it of items) {
@@ -264,9 +275,17 @@ export function planPriceFixes(
       anomaly.IsScontiVariati === true ||
       discountsDiffer(line, expected.payload);
     if (!readd) {
+      const unitPrice = Number(expected.payload.price_discount);
+      if (
+        !(unitPrice > 0) ||
+        samePrice(unitPrice, storedUnitPrice(line), decimals)
+      ) {
+        unfixable.push(n); // nothing the storefront can change
+        continue;
+      }
       patches.set(n, {
         ...(patches.get(n) ?? { line_number: n }),
-        unit_price: Number(expected.payload.price_discount),
+        unit_price: unitPrice,
         list_price: Number(expected.payload.price),
       });
       continue;

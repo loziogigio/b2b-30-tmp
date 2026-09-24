@@ -27,7 +27,7 @@ vi.mock('@framework/cart/b2b-cart', async (orig) => ({
 }));
 const applyCartFixPlan = vi.hoisted(() => vi.fn());
 const planPriceFixes = vi.hoisted(() =>
-  vi.fn(() => ({ ops: [], unfixable: [] })),
+  vi.fn((): CartFixPlan => ({ ops: [], unfixable: [] })),
 );
 vi.mock('@/lib/cart/price-fix-planner', async (orig) => ({
   ...(await orig<typeof import('@/lib/cart/price-fix-planner')>()),
@@ -43,7 +43,7 @@ import {
   CartPriceCheckProvider,
   useCartPriceCheck,
 } from '@/contexts/cart-price-check.context';
-import { CartFixError } from '@/lib/cart/price-fix-planner';
+import { CartFixError, type CartFixPlan } from '@/lib/cart/price-fix-planner';
 import { mapCSLineItemToItem } from '@utils/adapter/cart-adapter';
 
 const staleLine = () =>
@@ -149,6 +149,7 @@ describe('CartPriceCheckProvider', () => {
       expect.any(Array),
       expect.any(Object),
       expect.any(Date),
+      2,
     );
     expect(applyCartFixPlan).toHaveBeenCalledWith('O1', {
       ops: [],
@@ -175,6 +176,58 @@ describe('CartPriceCheckProvider', () => {
     expect(api.fixFailed).toBe(true);
     expect(api.fixLostSkus).toEqual(['S-1']);
     expect(api.fixing).toBe(false);
+  });
+
+  it('names the lines the plan could not fix, even when the re-check comes back clean', async () => {
+    // A gate-only refusal the storefront cannot reproduce: the planner has
+    // nothing to change, and the clean re-check must not hide it.
+    planPriceFixes.mockReturnValueOnce({ ops: [], unfixable: [10] });
+    cart.meta = { orderId: 'O1', priceDecimals: 3 };
+    renderProvider();
+    await waitFor(() =>
+      expect(screen.getByTestId('state').textContent).toBe('changed|native|1'),
+    );
+    const result = {
+      anomalies: [{ IdRiga: 10, IsPrezzoVariato: true }],
+      erpItems: [],
+      source: 'native' as const,
+    };
+    let ok: boolean | undefined;
+    await act(async () => {
+      ok = await api.fix(result);
+    });
+    expect(planPriceFixes).toHaveBeenCalledWith(
+      result.anomalies,
+      expect.any(Array),
+      expect.any(Object),
+      expect.any(Date),
+      3,
+    );
+    expect(ok).toBe(true);
+    expect(screen.getByTestId('state').textContent).toBe('clean|none|0');
+    expect(api.fixUnfixableSkus).toEqual(['S-1']);
+    expect(api.fixFailed).toBe(false);
+  });
+
+  it('clears the lines it could not fix when the next fix starts', async () => {
+    planPriceFixes.mockReturnValueOnce({ ops: [], unfixable: [10] });
+    renderProvider();
+    await waitFor(() =>
+      expect(screen.getByTestId('state').textContent).toBe('changed|native|1'),
+    );
+    const result = {
+      anomalies: [{ IdRiga: 10, IsPrezzoVariato: true }],
+      erpItems: [],
+      source: 'native' as const,
+    };
+    await act(async () => {
+      await api.fix(result);
+    });
+    expect(api.fixUnfixableSkus).toEqual(['S-1']);
+    await act(async () => {
+      await api.fix(result);
+    });
+    expect(api.fixUnfixableSkus).toEqual([]);
   });
 
   it('returns false and marks the fix as failed when there is no active order', async () => {

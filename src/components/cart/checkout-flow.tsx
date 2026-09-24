@@ -97,27 +97,42 @@ function AnomaliesAutoClearOnItemsChange() {
 export function AnomaliesBanner({ lang }: { lang: string }) {
   const { t } = useTranslation(lang, 'common');
   const { result, clear } = useCartAnomalies();
-  const { fix, fixing, fixFailed, fixLostSkus } = useCartPriceCheck();
+  const { fix, fixing, fixFailed, fixLostSkus, fixUnfixableSkus } =
+    useCartPriceCheck();
   const hasAnomalies = Boolean(result) && result!.anomalies.length > 0;
+  const hasUnfixable = fixUnfixableSkus.length > 0;
   // A failed "Aggiorna carrello" must never go unseen: it can happen with no
   // anomalies left to show it against (the re-check that follows a partial
   // fix can come back clean when a lost line is simply gone from the cart —
   // there's nothing left to compare it to), when the reload/re-check itself
-  // fails, or when there was no active order to fix at all.
-  if (!hasAnomalies && !fixFailed) return null;
+  // fails, or when there was no active order to fix at all. The same holds
+  // for lines the update could not fix: a refusal the storefront cannot
+  // reproduce leaves no anomaly to show after the re-check.
+  if (!hasAnomalies && !fixFailed && !hasUnfixable) return null;
 
-  const failureNotice = fixFailed && (
+  const fixNotices = (fixFailed || hasUnfixable) && (
     <>
-      <p className="mt-2 text-xs font-semibold text-red-800">
-        {t('cart-price-check-failed', {
-          defaultValue: 'Aggiornamento non completato, riprova',
-        })}
-      </p>
-      {fixLostSkus.length > 0 && (
+      {fixFailed && (
+        <p className="mt-2 text-xs font-semibold text-red-800">
+          {t('cart-price-check-failed', {
+            defaultValue: 'Aggiornamento non completato, riprova',
+          })}
+        </p>
+      )}
+      {fixFailed && fixLostSkus.length > 0 && (
         <p className="mt-1 text-xs font-semibold text-red-800">
           {t('cart-price-check-lost', {
             defaultValue: 'Controlla e riaggiungi: {{skus}}',
             skus: fixLostSkus.join(', '),
+          })}
+        </p>
+      )}
+      {hasUnfixable && (
+        <p className="mt-1 text-xs font-semibold text-red-800">
+          {t('cart-price-check-unfixable', {
+            defaultValue:
+              "Non aggiornabili automaticamente: {{skus}} — rimuovi la riga o contatta l'assistenza",
+            skus: fixUnfixableSkus.join(', '),
           })}
         </p>
       )}
@@ -127,7 +142,7 @@ export function AnomaliesBanner({ lang }: { lang: string }) {
   if (!result || !hasAnomalies) {
     return (
       <div className="mb-3 rounded-md border border-red-300 bg-red-50 px-4 py-3">
-        {failureNotice}
+        {fixNotices}
       </div>
     );
   }
@@ -167,7 +182,7 @@ export function AnomaliesBanner({ lang }: { lang: string }) {
                 );
               })}
             </ul>
-            {failureNotice}
+            {fixNotices}
           </div>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-2">
