@@ -15,7 +15,9 @@ export type ErpStaticState = {
 };
 
 // Persistent key
-const LS_KEY = 'erp-static';
+/** localStorage key of the active customer/address selection (also read by vinc.data). */
+export const ERP_STATIC_STORAGE_KEY = 'erp-static';
+const LS_KEY = ERP_STATIC_STORAGE_KEY;
 
 function loadState(): ErpStaticState | null {
   try {

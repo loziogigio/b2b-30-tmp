@@ -118,6 +118,8 @@ interface PortalCustomScript {
   placement?: string;
   loading_strategy?: string;
   enabled?: boolean;
+  script_id?: string;
+  data_access?: { model?: string; access?: string }[];
 }
 
 const SCRIPT_PLACEMENTS = new Set<ScriptPlacement>(['head', 'body_end']);
@@ -156,6 +158,12 @@ export function mapCustomScripts(
       placement,
       loadingStrategy,
       enabled: s.enabled !== false, // default on
+      ...(typeof s.script_id === 'string' && s.script_id
+        ? { scriptId: s.script_id }
+        : {}),
+      ...(Array.isArray(s.data_access) && s.data_access.length > 0
+        ? { hasDataAccess: true }
+        : {}),
     });
   }
   return out.length > 0 ? out : undefined;

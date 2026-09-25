@@ -259,6 +259,10 @@ export interface CustomScript {
   loadingStrategy: ScriptLoadingStrategy;
   /** Toggle on/off without deleting */
   enabled: boolean;
+  /** Stable CS script id (scr_…). */
+  scriptId?: string;
+  /** True when the script was granted data access in CS; it then gets a vinc.data token. */
+  hasDataAccess?: boolean;
 }
 
 // ============================================================================

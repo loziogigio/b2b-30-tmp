@@ -5,6 +5,7 @@ import {
   safeProxyPath,
   storefrontProxyAccess,
 } from '@/lib/security/storefront-proxy-policy';
+import { STOREFRONT_CHANNEL } from '@/lib/security/storefront-channel';
 import { buildTenantApiHeaders, resolveTenantApiConfig } from '@/lib/tenant';
 import { customerAddressCodes } from '@/lib/profile/session-owner';
 import { getEntitledPromoCodes } from '@/lib/erp/customer-promos';
@@ -193,7 +194,6 @@ const PROMO_HARVEST_ROWS = 50;
 // anonymous searches on this channel, so the channel must be asserted by the
 // server: a caller that omits or rewrites it must not regain guest pricing
 // (hidros V5 follow-up, 2026-09-09).
-const STOREFRONT_CHANNEL = 'b2b';
 
 type TrustedUserContext = {
   token: string;
