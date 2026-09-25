@@ -69,8 +69,28 @@ export function CustomScripts({
             {hasExternal && (
               <script
                 src={s.src}
-                async={s.loadingStrategy === 'async'}
-                defer={s.loadingStrategy === 'defer'}
+                // A data-access script must run after the inline
+                // vinc-portal-data-sdk helper (rendered elsewhere in <head>)
+                // has set up window.vinc. React 19 hoists any <script async
+                // src> straight into the document head ahead of everything
+                // else in the tree, so an async external data script could
+                // run before window.vinc exists. `defer` is never hoisted —
+                // it preserves document order (runs after parsing, so after
+                // the inline helper) and still sets document.currentScript,
+                // which vinc.data.connect needs to find its own tag. Force
+                // defer, never async, for a data-access script regardless of
+                // its configured loadingStrategy; scripts without data
+                // access keep their configured strategy exactly.
+                async={
+                  s.hasDataAccess && s.scriptId
+                    ? false
+                    : s.loadingStrategy === 'async'
+                }
+                defer={
+                  s.hasDataAccess && s.scriptId
+                    ? true
+                    : s.loadingStrategy === 'defer'
+                }
                 {...dataAttrs}
                 suppressHydrationWarning
               />

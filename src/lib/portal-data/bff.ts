@@ -183,25 +183,40 @@ export async function callPortalData(
     throw new BffError(502, 'UPSTREAM_ERROR', 'Portal data is not configured');
   }
   const url = `${creds.csBaseUrl.replace(/\/+$/, '')}/api/b2b/portal-data/${path}?${init.query}`;
-  const res = await fetch(url, {
-    method: init.method,
-    headers: {
-      ...buildTenantApiHeaders(creds, {
-        authorization: `Bearer ${session.token}`,
-      }),
-      [SCRIPT_TOKEN_HEADER]: token,
-    },
-    ...(init.body ? { body: JSON.stringify(init.body) } : {}),
-    cache: 'no-store',
-    redirect: 'manual',
-    signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
-  }).catch(() => null);
-  if (!res)
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: init.method,
+      headers: {
+        ...buildTenantApiHeaders(creds, {
+          authorization: `Bearer ${session.token}`,
+        }),
+        [SCRIPT_TOKEN_HEADER]: token,
+      },
+      ...(init.body ? { body: JSON.stringify(init.body) } : {}),
+      cache: 'no-store',
+      redirect: 'manual',
+      signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS),
+    });
+  } catch (error) {
+    // Log the method, model path and failure reason only — never the query
+    // (customer/address codes) or the token/Bearer credentials.
+    console.warn(
+      `[portal-data] ${init.method} portal-data/${path} failed: ${
+        error instanceof Error ? error.message : 'network error'
+      }`,
+    );
     throw new BffError(
       502,
       'UPSTREAM_ERROR',
       'Portal data service unreachable',
     );
+  }
+  if (res.status >= 500) {
+    console.warn(
+      `[portal-data] ${init.method} portal-data/${path} upstream error: ${res.status}`,
+    );
+  }
   const body = await res.json().catch(() => null);
   return {
     status: res.status,
@@ -261,8 +276,10 @@ export function assertOwned(
             (customer) => customer?.erp_customer_id === relationId,
           );
     if (!owned) {
+      // Context for triage only: the model's relation, never the record data
+      // (which would include the foreign owner id) or any token.
       console.error(
-        '[portal-data] upstream returned a record outside the session',
+        `[portal-data] upstream returned a record outside the session (relation: ${String(relation)})`,
       );
       throw new BffError(502, 'UPSTREAM_ERROR', 'Portal data request failed');
     }

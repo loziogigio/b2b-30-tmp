@@ -37,6 +37,41 @@ describe('CustomScripts data access attributes', () => {
     expect(html).toContain('data-vinc-token="aaa.bbb.ccc"');
     expect(html).not.toContain('scr_bbbbbbbbbbbb');
   });
+  it('forces defer (never async) on an external data-access script regardless of loadingStrategy', () => {
+    const html = renderToStaticMarkup(
+      <CustomScripts
+        placement="head"
+        scripts={[
+          {
+            ...base,
+            loadingStrategy: 'async',
+            label: 'Preventivatore',
+            src: 'https://cdn.test/data.js',
+            scriptId: 'scr_aaaaaaaaaaaa',
+            hasDataAccess: true,
+          },
+        ]}
+      />,
+    );
+    expect(html).toContain('defer=""');
+    expect(html).not.toContain('async');
+  });
+  it('leaves a non-data-access external script on its configured async strategy', () => {
+    const html = renderToStaticMarkup(
+      <CustomScripts
+        placement="head"
+        scripts={[
+          {
+            ...base,
+            loadingStrategy: 'async',
+            label: 'Analytics',
+            src: 'https://cdn.test/analytics.js',
+          },
+        ]}
+      />,
+    );
+    expect(html).toContain('async=""');
+  });
   it('marks guests without a token, and marks both tags of a src + inline script', () => {
     const html = renderToStaticMarkup(
       <CustomScripts

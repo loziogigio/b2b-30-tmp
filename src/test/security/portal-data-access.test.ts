@@ -89,6 +89,13 @@ function expectPrivate(res: Response) {
   expect(res.headers.get('cache-control')).toBe('private, no-store');
   expect(res.headers.get('vary')).toBe('Cookie, Authorization');
 }
+/** A failed-call warning must say what/where, never leak the query or the token/Bearer. */
+function expectSafeFailureWarning(message: string | undefined) {
+  expect(message).toContain('GET');
+  expect(message).toContain('portal-data');
+  expect(message).not.toContain(TOKEN);
+  expect(message).not.toContain('Bearer');
+}
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -113,6 +120,7 @@ beforeEach(() => {
     ),
   );
   vi.spyOn(console, 'error').mockImplementation(() => {});
+  vi.spyOn(console, 'warn').mockImplementation(() => {});
 });
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -122,13 +130,16 @@ afterEach(() => {
 describe('portal-data BFF', () => {
   it('forwards a list with exactly the storefront credentials and maps the result', async () => {
     const res = await list(
-      request('preventivi?customer_code=ERP-A&limit=5&channel=b2c&foo=bar', {
-        headers: {
-          cookie: 'x=1',
-          origin: 'https://shop.test',
-          'sec-fetch-site': 'same-origin',
+      request(
+        'preventivi?customer_code=ERP-A&limit=5&channel=b2c&foo=bar&filter[oggetto][in]=a,b',
+        {
+          headers: {
+            cookie: 'x=1',
+            origin: 'https://shop.test',
+            'sec-fetch-site': 'same-origin',
+          },
         },
-      }),
+      ),
       ctx(),
     );
     expect(res.status).toBe(200);
@@ -154,6 +165,7 @@ describe('portal-data BFF', () => {
       customer_code: 'ERP-A',
       limit: '5',
       channel: 'b2b',
+      'filter[oggetto][in]': 'a,b',
     });
     expect(init.headers).toMatchObject({
       'x-vinc-client': 'storefront',
@@ -317,6 +329,12 @@ describe('portal-data BFF', () => {
     const res = await list(request('preventivi?customer_code=ERP-A'), ctx());
     expect(res.status).toBe(502);
     expect(JSON.stringify(await res.json())).not.toContain('ERP-B');
+    // The ownership-violation log carries the relation for triage, but never
+    // the record data (the foreign owner id) or the script token.
+    const firstWarning = vi.mocked(console.error).mock.calls.at(-1)?.[0];
+    expect(firstWarning).toContain('customer');
+    expect(firstWarning).not.toContain('ERP-B');
+    expect(firstWarning).not.toContain(TOKEN);
     (fetch as any).mockResolvedValueOnce(
       json({
         record: record('other-user'),
@@ -326,6 +344,9 @@ describe('portal-data BFF', () => {
     expect((await read(request(`appunti/${ID}`), ctx('appunti'))).status).toBe(
       502,
     );
+    const secondWarning = vi.mocked(console.error).mock.calls.at(-1)?.[0];
+    expect(secondWarning).toContain('portal_user');
+    expect(secondWarning).not.toContain('other-user');
   });
   it('passes CS errors through and maps failures to 502', async () => {
     (fetch as any).mockResolvedValueOnce(
@@ -377,9 +398,13 @@ describe('portal-data BFF', () => {
     expect(
       (await list(request('preventivi?customer_code=ERP-A'), ctx())).status,
     ).toBe(502);
+    expectSafeFailureWarning(vi.mocked(console.warn).mock.calls.at(-1)?.[0]);
+    expect(vi.mocked(console.warn).mock.calls.at(-1)?.[0]).toContain('500');
     (fetch as any).mockRejectedValueOnce(new Error('down'));
     expect(
       (await list(request('preventivi?customer_code=ERP-A'), ctx())).status,
     ).toBe(502);
+    expectSafeFailureWarning(vi.mocked(console.warn).mock.calls.at(-1)?.[0]);
+    expect(vi.mocked(console.warn).mock.calls.at(-1)?.[0]).toContain('down');
   });
 });
