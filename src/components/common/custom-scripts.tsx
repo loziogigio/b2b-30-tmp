@@ -37,9 +37,12 @@ export function CustomStyles({ css }: { css: string | undefined }) {
 export function CustomScripts({
   scripts,
   placement,
+  tokens,
 }: {
   scripts: CustomScript[] | undefined;
   placement: ScriptPlacement;
+  /** Per-user vinc.data tokens by scriptId (see lib/portal-data/script-tokens). */
+  tokens?: Record<string, string>;
 }) {
   const selected = selectScriptsForPlacement(scripts, placement);
   if (selected.length === 0) return null;
@@ -50,6 +53,17 @@ export function CustomScripts({
         const hasExternal =
           typeof s.src === 'string' && s.src.startsWith('https://');
         const inline = s.inlineCode?.trim();
+        // Only scripts granted data access in CS are marked; vinc.data.connect
+        // reads (and removes) the token from the script's own tag.
+        const dataAttrs =
+          s.hasDataAccess && s.scriptId
+            ? {
+                'data-vinc-script': s.scriptId,
+                ...(tokens?.[s.scriptId]
+                  ? { 'data-vinc-token': tokens[s.scriptId] }
+                  : {}),
+              }
+            : {};
         return (
           <React.Fragment key={`${placement}-${i}-${s.label}`}>
             {hasExternal && (
@@ -57,9 +71,17 @@ export function CustomScripts({
                 src={s.src}
                 async={s.loadingStrategy === 'async'}
                 defer={s.loadingStrategy === 'defer'}
+                {...dataAttrs}
+                suppressHydrationWarning
               />
             )}
-            {inline && <script dangerouslySetInnerHTML={{ __html: inline }} />}
+            {inline && (
+              <script
+                dangerouslySetInnerHTML={{ __html: inline }}
+                {...dataAttrs}
+                suppressHydrationWarning
+              />
+            )}
           </React.Fragment>
         );
       })}

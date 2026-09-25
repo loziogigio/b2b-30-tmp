@@ -9,6 +9,7 @@ import { Metadata, Viewport } from 'next';
 import ToasterProvider from 'src/app/provider/toaster-provider';
 import Providers from 'src/app/provider/provider';
 import { getServerHomeSettings } from '@/lib/home-settings/fetch-server';
+import { getPortalScriptTokens } from '@/lib/portal-data/script-tokens';
 import { CustomScripts, CustomStyles } from '@components/common/custom-scripts';
 import { EliaDrawer } from '@components/elia/elia-drawer';
 import { headers } from 'next/headers';
@@ -248,6 +249,8 @@ export default async function RootLayout({
     logo: '/assets/images/logo-placeholder.svg',
     favicon: '/assets/vinc/favicon.svg',
   };
+  // Per-user tokens for portal scripts with data access (never cached across users).
+  const scriptTokens = await getPortalScriptTokens(homeSettings.customScripts);
 
   return (
     <html
@@ -257,7 +260,11 @@ export default async function RootLayout({
       suppressHydrationWarning={true}
     >
       <head>
-        <CustomScripts scripts={homeSettings.customScripts} placement="head" />
+        <CustomScripts
+          scripts={homeSettings.customScripts}
+          placement="head"
+          tokens={scriptTokens}
+        />
         <CustomStyles css={homeSettings.customCss} />
       </head>
       <body
@@ -307,6 +314,7 @@ export default async function RootLayout({
         <CustomScripts
           scripts={homeSettings.customScripts}
           placement="body_end"
+          tokens={scriptTokens}
         />
       </body>
     </html>
