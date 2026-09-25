@@ -9,8 +9,12 @@ import { Metadata, Viewport } from 'next';
 import ToasterProvider from 'src/app/provider/toaster-provider';
 import Providers from 'src/app/provider/provider';
 import { getServerHomeSettings } from '@/lib/home-settings/fetch-server';
-import { getPortalScriptTokens } from '@/lib/portal-data/script-tokens';
+import {
+  getPortalScriptTokens,
+  scriptsNeedingTokens,
+} from '@/lib/portal-data/script-tokens';
 import { CustomScripts, CustomStyles } from '@components/common/custom-scripts';
+import { PortalDataSdk } from '@components/common/portal-data-sdk';
 import { EliaDrawer } from '@components/elia/elia-drawer';
 import { headers } from 'next/headers';
 import DemoBanner from '@components/demo/demo-banner';
@@ -260,6 +264,9 @@ export default async function RootLayout({
       suppressHydrationWarning={true}
     >
       <head>
+        {scriptsNeedingTokens(homeSettings.customScripts).length > 0 && (
+          <PortalDataSdk />
+        )}
         <CustomScripts
           scripts={homeSettings.customScripts}
           placement="head"
