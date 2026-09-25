@@ -15,6 +15,13 @@ export type ScriptTokenMap = Record<string, string>;
 
 const TTL_MS = 5 * 60 * 1000;
 const EXPIRY_MARGIN_MS = 60 * 1000;
+/**
+ * How long a failed mint (missing creds, CS rejection, network/timeout/JSON
+ * error) is cached. Bounds both the log volume and the CS call rate for a
+ * user CS keeps refusing, without wedging a refreshed token behind it — a
+ * new access token hashes to a different cache key.
+ */
+const FAILURE_TTL_MS = 60 * 1000;
 const MAX_ENTRIES = 2000;
 const cache = new Map<string, { tokens: ScriptTokenMap; expiresAt: number }>();
 
@@ -30,27 +37,46 @@ export function scriptsNeedingTokens(
   );
 }
 
+function storeInCache(
+  key: string,
+  tokens: ScriptTokenMap,
+  expiresAt: number,
+): void {
+  if (cache.size >= MAX_ENTRIES) cache.clear();
+  cache.set(key, { tokens, expiresAt });
+}
+
 /** Never throws: on any failure the page renders without tokens. */
 export async function getPortalScriptTokens(
   scripts: CustomScript[] | undefined,
 ): Promise<ScriptTokenMap> {
   if (scriptsNeedingTokens(scripts).length === 0) return {};
+  // Populated once the hostname/cache key are known, so the catch block can
+  // still identify and cache-fail a request that blew up after that point.
+  let hostname = 'unknown';
+  let key: string | undefined;
   try {
     const accessToken = (await cookies())
       .get(AUTH_COOKIES.ACCESS_TOKEN)
       ?.value?.trim();
     if (!accessToken) return {};
     const headerList = await headers();
-    const hostname =
+    hostname =
       headerList.get('x-tenant-hostname') ||
       headerList.get('host') ||
       'localhost';
-    const key = `${hostname}:${createHash('sha256').update(accessToken).digest('hex')}`;
+    key = `${hostname}:${createHash('sha256').update(accessToken).digest('hex')}`;
     const hit = cache.get(key);
     if (hit && hit.expiresAt > Date.now()) return hit.tokens;
 
     const creds = await resolveCsCredsForHost(hostname);
-    if (!creds.csBaseUrl || !creds.apiKeyId || !creds.apiSecret) return {};
+    if (!creds.csBaseUrl || !creds.apiKeyId || !creds.apiSecret) {
+      console.warn(
+        `[portal-data] script token issuance failed: missing CS credentials for host ${hostname}`,
+      );
+      storeInCache(key, {}, Date.now() + FAILURE_TTL_MS);
+      return {};
+    }
     const res = await fetch(
       `${creds.csBaseUrl.replace(/\/+$/, '')}/api/b2b/portal-data/script-tokens`,
       {
@@ -65,10 +91,10 @@ export async function getPortalScriptTokens(
       },
     );
     if (!res.ok) {
-      if (res.status >= 500)
-        console.warn(
-          `[portal-data] script token issuance failed: HTTP ${res.status}`,
-        );
+      console.warn(
+        `[portal-data] script token issuance failed: HTTP ${res.status} for host ${hostname}`,
+      );
+      storeInCache(key, {}, Date.now() + FAILURE_TTL_MS);
       return {};
     }
     const body = await res.json();
@@ -85,14 +111,14 @@ export async function getPortalScriptTokens(
       if (Number.isFinite(exp))
         expiresAt = Math.min(expiresAt, exp - EXPIRY_MARGIN_MS);
     }
-    if (cache.size >= MAX_ENTRIES) cache.clear();
-    if (expiresAt > Date.now()) cache.set(key, { tokens, expiresAt });
+    if (expiresAt > Date.now()) storeInCache(key, tokens, expiresAt);
     return tokens;
   } catch (error) {
     console.warn(
-      '[portal-data] script token issuance failed:',
+      `[portal-data] script token issuance failed for host ${hostname}:`,
       error instanceof Error ? error.message : error,
     );
+    if (key) storeInCache(key, {}, Date.now() + FAILURE_TTL_MS);
     return {};
   }
 }

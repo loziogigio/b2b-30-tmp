@@ -49,6 +49,12 @@ const tokensResponse = (
     { status: 200, headers: { 'content-type': 'application/json' } },
   );
 
+function loggedWarnings(): string {
+  return (console.warn as any).mock.calls
+    .map((args: unknown[]) => args.join(' '))
+    .join(' | ');
+}
+
 beforeEach(() => {
   __resetPortalScriptTokenCache();
   mocks.cookie.mockImplementation((name: string) =>
@@ -71,6 +77,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 describe('getPortalScriptTokens', () => {
@@ -119,7 +126,45 @@ describe('getPortalScriptTokens', () => {
   it('renders without tokens when CS refuses or fails', async () => {
     (fetch as any).mockResolvedValueOnce(new Response('{}', { status: 401 }));
     expect(await getPortalScriptTokens([dataScript])).toEqual({});
+    // Without this reset, the second call would hit the failure cache the
+    // first (401) response just wrote and never exercise the rejected-fetch
+    // path below.
+    __resetPortalScriptTokenCache();
     (fetch as any).mockRejectedValueOnce(new Error('down'));
     expect(await getPortalScriptTokens([dataScript])).toEqual({});
+  });
+  it('logs the host and status on a non-OK response, never the access token', async () => {
+    (fetch as any).mockResolvedValueOnce(new Response('{}', { status: 401 }));
+    expect(await getPortalScriptTokens([dataScript])).toEqual({});
+    expect(console.warn).toHaveBeenCalled();
+    const logged = loggedWarnings();
+    expect(logged).toContain('401');
+    expect(logged).toContain('b2b.hidros.test');
+    expect(logged).not.toContain('user-token');
+  });
+  it('logs and returns nothing when CS credentials are missing', async () => {
+    mocks.creds.mockResolvedValue({
+      csBaseUrl: '',
+      apiKeyId: '',
+      apiSecret: '',
+    });
+    expect(await getPortalScriptTokens([dataScript])).toEqual({});
+    expect(fetch).not.toHaveBeenCalled();
+    expect(console.warn).toHaveBeenCalled();
+    const logged = loggedWarnings();
+    expect(logged).toContain('b2b.hidros.test');
+    expect(logged).not.toContain('user-token');
+  });
+  it('caches a failed mint for 60 seconds, then retries', async () => {
+    const now = Date.now();
+    (fetch as any).mockResolvedValueOnce(new Response('{}', { status: 401 }));
+    await getPortalScriptTokens([dataScript]);
+    await getPortalScriptTokens([dataScript]);
+    expect(fetch).toHaveBeenCalledTimes(1);
+
+    vi.useFakeTimers();
+    vi.setSystemTime(now + 61_000);
+    await getPortalScriptTokens([dataScript]);
+    expect(fetch).toHaveBeenCalledTimes(2);
   });
 });
