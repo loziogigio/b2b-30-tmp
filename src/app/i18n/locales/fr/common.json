@@ -822,5 +822,10 @@
   "text-agent-code": "Code",
   "text-agent-name": "Agent",
   "text-agent-email": "E-mail",
-  "text-agent-phone": "Téléphone"
+  "text-agent-phone": "Téléphone",
+  "text-no-longer-available": "Plus disponible",
+  "text-products-no-longer-available": "Produits plus disponibles",
+  "text-remove-from-wishlist": "Retirer des favoris",
+  "text-remove-reminder": "Supprimer le rappel",
+  "text-remove-from-compare": "Retirer de la comparaison"
 }

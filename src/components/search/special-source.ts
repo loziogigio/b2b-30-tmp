@@ -1,12 +1,25 @@
 import { getTrendingProductsPage, getUserLikes } from '@framework/likes';
 import { getUserReminders } from '@framework/reminders';
+import type { ListProductSnapshot } from '@framework/types';
 
 export type SpecialSource = 'likes' | 'reminders' | 'trending';
+
+/** The lists a customer saves products into (as opposed to trending). */
+export type SavedListSource = Extract<SpecialSource, 'likes' | 'reminders'>;
 
 export interface SpecialSourceSkuPage {
   skus: string[];
   hasNext: boolean;
   totalCount: number;
+  /** How each saved product looked, by SKU; filled on `includeProduct`. */
+  products: Record<string, ListProductSnapshot>;
+}
+
+/** A saved product the catalog search no longer returns. */
+export interface UnavailableListItem {
+  unavailable: true;
+  sku: string;
+  product?: ListProductSnapshot;
 }
 
 export function getSpecialSource(
@@ -17,6 +30,18 @@ export function getSpecialSource(
     return source;
   }
   return null;
+}
+
+export function isSavedListSource(
+  source: SpecialSource | null,
+): source is SavedListSource {
+  return source === 'likes' || source === 'reminders';
+}
+
+export function isUnavailableListItem(
+  item: unknown,
+): item is UnavailableListItem {
+  return (item as UnavailableListItem | null)?.unavailable === true;
 }
 
 export function canLoadSpecialSource(
@@ -54,34 +79,52 @@ export function buildSkuFilterParams(skus: string[] | undefined) {
   return { 'filters-sku': skus.join(';') };
 }
 
+function productsBySku(
+  entries: { sku?: string; product?: ListProductSnapshot }[],
+): Record<string, ListProductSnapshot> {
+  const products: Record<string, ListProductSnapshot> = {};
+  for (const entry of entries) {
+    if (entry?.sku && entry.product) products[entry.sku] = entry.product;
+  }
+  return products;
+}
+
 export async function fetchSpecialSourceSkuPage({
   source,
   period,
   page,
   pageSize,
+  includeProduct = false,
 }: {
   source: SpecialSource;
   period: string;
   page: number;
   pageSize: number;
+  /** Saved lists only: also fetch how each product looked. */
+  includeProduct?: boolean;
 }): Promise<SpecialSourceSkuPage> {
   if (source === 'likes') {
-    const res = await getUserLikes(page, pageSize);
+    const res = await getUserLikes(page, pageSize, { includeProduct });
+    const likes = res?.likes || [];
     return {
-      skus: (res?.likes || []).map((like: any) => like.sku).filter(Boolean),
+      skus: likes.map((like: any) => like.sku).filter(Boolean),
       hasNext: !!res?.has_next,
       totalCount: res?.total_count ?? 0,
+      products: productsBySku(likes),
     };
   }
 
   if (source === 'reminders') {
-    const res = await getUserReminders(page, pageSize);
+    // Only the reminders still waiting to fire, as the header badge counts.
+    const res = await getUserReminders(page, pageSize, undefined, 'active', {
+      includeProduct,
+    });
+    const reminders = res?.reminders || [];
     return {
-      skus: (res?.reminders || [])
-        .map((reminder: any) => reminder.sku)
-        .filter(Boolean),
+      skus: reminders.map((reminder: any) => reminder.sku).filter(Boolean),
       hasNext: !!res?.has_next,
       totalCount: res?.total_count ?? 0,
+      products: productsBySku(reminders),
     };
   }
 
@@ -90,7 +133,41 @@ export async function fetchSpecialSourceSkuPage({
     skus: (res?.items || []).map((item: any) => item.sku).filter(Boolean),
     hasNext: !!res?.has_next,
     totalCount: res?.total_count ?? 0,
+    products: {},
   };
+}
+
+/**
+ * The search results in saved order, with a placeholder for each saved SKU the
+ * search no longer returns: a product removed from the catalog stays in the
+ * list, greyed out, until the customer removes it. Results that match no saved
+ * SKU are kept after the saved ones.
+ */
+export function withUnavailableItems<T extends { sku?: string }>(
+  skus: string[],
+  items: T[],
+  products: Record<string, ListProductSnapshot>,
+): Array<T | UnavailableListItem> {
+  const bySku = new Map<string, T>();
+  for (const item of items) {
+    const key = item?.sku?.toLowerCase();
+    if (key && !bySku.has(key)) bySku.set(key, item);
+  }
+
+  const placed = new Set<T>();
+  const ordered: Array<T | UnavailableListItem> = [];
+  for (const sku of skus) {
+    const item = bySku.get(sku.toLowerCase());
+    if (!item) {
+      const product = products[sku];
+      ordered.push({ unavailable: true, sku, ...(product ? { product } : {}) });
+    } else if (!placed.has(item)) {
+      placed.add(item);
+      ordered.push(item);
+    }
+  }
+
+  return [...ordered, ...items.filter((item) => !placed.has(item))];
 }
 
 export async function fetchSpecialSourceSkus({

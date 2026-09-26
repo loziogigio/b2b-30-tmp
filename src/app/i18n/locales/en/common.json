@@ -836,5 +836,10 @@
   "text-agent-code": "Code",
   "text-agent-name": "Agent",
   "text-agent-email": "Email",
-  "text-agent-phone": "Phone"
+  "text-agent-phone": "Phone",
+  "text-no-longer-available": "No longer available",
+  "text-products-no-longer-available": "Products no longer available",
+  "text-remove-from-wishlist": "Remove from favorites",
+  "text-remove-reminder": "Remove reminder",
+  "text-remove-from-compare": "Remove from comparison"
 }

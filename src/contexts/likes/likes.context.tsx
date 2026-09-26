@@ -292,16 +292,25 @@ export function LikesProvider(props: React.PropsWithChildren) {
 
   const unlike = React.useCallback(
     async (sku: string) => {
-      if (!isLiked(sku)) return;
-      await removeLike(sku);
+      // The server decides, not the local index: it only holds the likes
+      // loaded so far. A like that is already gone (404) is not an error.
+      let removed = true;
+      try {
+        await removeLike(sku);
+      } catch (error: any) {
+        if (error?.response?.status !== 404) throw error;
+        removed = false;
+      }
       statusBatcherRef.current?.prime({ [sku]: { liked: false } });
       dispatch({ type: 'LIKE_REMOVE', sku });
-      setSummary({
-        totalCount: Math.max(0, (state.summary?.totalCount ?? 1) - 1),
-        updatedAt: new Date().toISOString(),
-      });
+      if (removed) {
+        setSummary({
+          totalCount: Math.max(0, (state.summary?.totalCount ?? 1) - 1),
+          updatedAt: new Date().toISOString(),
+        });
+      }
     },
-    [isLiked, setSummary, state.summary],
+    [setSummary, state.summary],
   );
 
   const clearAll = React.useCallback(async () => {

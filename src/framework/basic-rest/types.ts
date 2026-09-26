@@ -53,6 +53,16 @@ import type {
 } from './types/pim-pricing';
 import type { DynamicBlock } from './types/dynamic-blocks';
 
+/**
+ * How a saved product looked, for lists (favorites, reminders, compare) that
+ * keep showing it greyed out once the catalog search no longer returns it.
+ */
+export type ListProductSnapshot = {
+  /** A language map, or a plain string on records that store one. */
+  name?: string | Record<string, string>;
+  image_url?: string;
+};
+
 export type Product = {
   id: number | string;
   id_parent?: number | string;
