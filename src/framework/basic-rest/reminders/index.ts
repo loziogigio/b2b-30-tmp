@@ -1,4 +1,5 @@
 import { get, post, del } from '@framework/utils/httpPIM';
+import type { ListProductSnapshot } from '@framework/types';
 
 // ============================================
 // TYPES
@@ -47,6 +48,8 @@ export interface UserRemindersItem {
   notified_at?: string | null;
   expires_at?: string | null;
   is_active: boolean;
+  /** Only when requested with `includeProduct`. */
+  product?: ListProductSnapshot;
 }
 
 export interface UserRemindersResponse {
@@ -127,7 +130,8 @@ export async function addReminder(
 export async function removeReminder(
   sku: string,
 ): Promise<{ success?: boolean; message?: string } | void> {
-  return del(`${BASE}`, { data: { sku } });
+  // Query param, not a body: proxies may strip DELETE bodies.
+  return del(`${BASE}?${new URLSearchParams({ sku }).toString()}`);
 }
 
 export async function toggleReminder(
@@ -181,6 +185,7 @@ export async function getUserReminders(
   pageSize = 20,
   userId?: string,
   statusFilter?: 'active' | 'notified' | 'expired' | 'cancelled',
+  options: { includeProduct?: boolean } = {},
 ): Promise<UserRemindersResponse> {
   const params: Record<string, string> = {
     page: String(page),
@@ -188,6 +193,9 @@ export async function getUserReminders(
   };
   if (statusFilter) {
     params.status = statusFilter;
+  }
+  if (options.includeProduct) {
+    params.include_product = 'true';
   }
   const qs = new URLSearchParams(params).toString();
   const res = await get<any>(`${BASE}/user?${qs}`);

@@ -1,4 +1,5 @@
 import { get, post, del } from '@framework/utils/httpPIM';
+import type { ListProductSnapshot } from '@framework/types';
 
 // ============================================
 // TYPES
@@ -32,6 +33,8 @@ export interface UserLikesItem {
   liked_at?: string | null;
   is_active?: boolean;
   is_liked?: boolean;
+  /** Only when requested with `includeProduct`. */
+  product?: ListProductSnapshot;
 }
 
 export interface UserLikesResponse {
@@ -191,10 +194,12 @@ export async function getBulkLikeStatus(
 export async function getUserLikes(
   page = 1,
   pageSize = 20,
+  options: { includeProduct?: boolean } = {},
 ): Promise<UserLikesResponse> {
   const qs = new URLSearchParams({
     page: String(page),
     limit: String(pageSize),
+    ...(options.includeProduct ? { include_product: 'true' } : {}),
   }).toString();
   const res = await get<any>(`${BASE}/user?${qs}`);
   return normalizeUserLikes(unwrap(res), page, pageSize);

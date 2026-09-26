@@ -6,6 +6,7 @@ import { useUI } from '@contexts/ui.context';
 import { createStatusBatcher, type StatusBatcher } from '@/lib/status-batcher';
 import {
   toggleReminder as apiToggleReminder,
+  removeReminder as apiRemoveReminder,
   getBulkReminderStatus as apiGetBulkReminderStatus,
   getUserReminders as apiGetUserReminders,
   clearAllUserReminders as apiClearAllUserReminders,
@@ -355,19 +356,29 @@ export function RemindersProvider(props: React.PropsWithChildren) {
 
   const remove = React.useCallback(
     async (sku: string) => {
-      if (!hasReminder(sku)) return;
-      await apiToggleReminder(sku);
+      // The server decides, not the local index: it only holds the reminders
+      // loaded so far. A toggle would re-create one cancelled elsewhere; a
+      // reminder that is already gone (404) is not an error.
+      let removed = true;
+      try {
+        await apiRemoveReminder(sku);
+      } catch (error: any) {
+        if (error?.response?.status !== 404) throw error;
+        removed = false;
+      }
       statusBatcherRef.current?.prime({
         [sku]: { active: false, createdAt: null },
       });
       dispatch({ type: 'REMINDER_REMOVE', sku });
-      setSummary({
-        totalCount: Math.max(0, (state.summary?.totalCount ?? 1) - 1),
-        activeCount: Math.max(0, (state.summary?.activeCount ?? 1) - 1),
-        updatedAt: new Date().toISOString(),
-      });
+      if (removed) {
+        setSummary({
+          totalCount: Math.max(0, (state.summary?.totalCount ?? 1) - 1),
+          activeCount: Math.max(0, (state.summary?.activeCount ?? 1) - 1),
+          updatedAt: new Date().toISOString(),
+        });
+      }
     },
-    [hasReminder, setSummary, state.summary],
+    [setSummary, state.summary],
   );
 
   const clearAll = React.useCallback(async () => {

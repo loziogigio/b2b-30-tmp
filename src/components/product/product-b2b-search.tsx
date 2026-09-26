@@ -28,8 +28,12 @@ import {
   canLoadSpecialSource,
   fetchSpecialSourceSkuPage,
   getSpecialSource,
+  isSavedListSource,
+  isUnavailableListItem,
   parsePimFiltersFromUrlParams,
+  withUnavailableItems,
 } from '@/components/search/special-source';
+import { UnavailableSavedProduct } from './unavailable-product-card';
 import { useUI } from '@contexts/ui.context';
 import React from 'react';
 
@@ -164,11 +168,17 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
     queryFn: async ({ pageParam = 1 }) => {
       if (!specialSource) return { items: [], nextPage: null };
       const page = Number(pageParam);
+      // A saved list keeps a product the catalog no longer returns, greyed
+      // out. Not while filtering: a favorite outside the filter is not gone.
+      const keepUnavailable =
+        isSavedListSource(specialSource) &&
+        Object.keys(urlFiltersForSpecialQuery).length === 0;
       const skuPage = await fetchSpecialSourceSkuPage({
         source: specialSource,
         period,
         page,
         pageSize: pageSizeParam,
+        includeProduct: keepUnavailable,
       });
       if (!skuPage.skus.length) return { items: [], nextPage: null };
       const result = await fetchPimProductList({
@@ -177,7 +187,13 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
         rows: skuPage.skus.length,
       });
       const nextPage = skuPage.hasNext ? page + 1 : null;
-      return { items: result.items, nextPage };
+      // A cut-off search page can't tell a removed product from one past the cut.
+      const complete = result.total <= result.items.length;
+      const items =
+        keepUnavailable && complete
+          ? withUnavailableItems(skuPage.skus, result.items, skuPage.products)
+          : result.items;
+      return { items, nextPage };
     },
     enabled: isSpecialSource && canLoadCurrentSpecialSource,
     getNextPageParam: (lastPage) => lastPage?.nextPage ?? undefined,
@@ -310,6 +326,22 @@ export const ProductB2BSearch: FC<ProductSearchProps> = ({
           ) : (
             data?.pages?.map((page: any) =>
               page?.items?.map((p: any) => {
+                if (
+                  isUnavailableListItem(p) &&
+                  isSavedListSource(specialSource)
+                ) {
+                  return (
+                    <UnavailableSavedProduct
+                      key={`unavailable-${p.sku}`}
+                      item={p}
+                      source={specialSource}
+                      lang={lang}
+                      layout={isList ? 'list' : 'grid'}
+                      className={isList ? undefined : cardClassName}
+                    />
+                  );
+                }
+
                 // Collapse single-variant groups onto the variant so the card
                 // renders the variant's SKU/pricing directly. Multi-variant
                 // groups stay on the parent (the card opens the variants

@@ -13,7 +13,11 @@ import {
   getUserLikes,
   removeLike,
 } from '@framework/likes';
-import { getBulkReminderStatus, getUserReminders } from '@framework/reminders';
+import {
+  getBulkReminderStatus,
+  getUserReminders,
+  removeReminder,
+} from '@framework/reminders';
 
 const mockedGet = vi.mocked(get);
 const mockedPost = vi.mocked(post);
@@ -46,6 +50,33 @@ describe('likes/reminders API normalization', () => {
     await removeLike('SKU-1');
 
     expect(mockedDel).toHaveBeenCalledWith('api/b2b/likes?sku=SKU-1');
+  });
+
+  it('removes reminders with a proxy-safe sku query param', async () => {
+    mockedDel.mockResolvedValueOnce({ success: true });
+
+    await removeReminder('SKU 1/A');
+
+    expect(mockedDel).toHaveBeenCalledWith('api/b2b/reminders?sku=SKU+1%2FA');
+  });
+
+  it('asks for product snapshots only when requested', async () => {
+    mockedGet.mockResolvedValue({
+      success: true,
+      data: { likes: [], reminders: [] },
+    });
+
+    await getUserLikes(1, 12, { includeProduct: true });
+    await getUserLikes(1, 12);
+    await getUserReminders(1, 12, undefined, 'active', {
+      includeProduct: true,
+    });
+
+    expect(mockedGet.mock.calls.map(([url]) => url)).toEqual([
+      'api/b2b/likes/user?page=1&limit=12&include_product=true',
+      'api/b2b/likes/user?page=1&limit=12',
+      'api/b2b/reminders/user?page=1&limit=12&status=active&include_product=true',
+    ]);
   });
 
   it('normalizes user likes without an is_active flag', async () => {

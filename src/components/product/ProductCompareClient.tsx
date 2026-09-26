@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
+import cn from 'classnames';
 import Container from '@components/ui/container';
 import {
   ProductComparisonTable,
@@ -10,7 +11,7 @@ import {
 import { useCompareList } from '@/contexts/compare/compare.context';
 import { useSearchParams } from 'next/navigation';
 import type { Product } from '@framework/types';
-import { HiOutlineExclamationCircle } from 'react-icons/hi';
+import { HiOutlineExclamationCircle, HiOutlineTrash } from 'react-icons/hi';
 import { useUI } from '@contexts/ui.context';
 import { useHomeSettings } from '@/hooks/use-home-settings';
 import type { ErpPriceData } from '@utils/transform/erp-prices';
@@ -19,6 +20,11 @@ import { usePimProductListQuery } from '@framework/product/get-pim-product';
 import { getAvailabilityDisplay } from '@utils/format-availability';
 import { exportToExcel, exportToPDF } from '@utils/export-comparison';
 import { useTranslation } from 'src/app/i18n/client';
+import { UnavailableProductCard } from './unavailable-product-card';
+import {
+  useCompareSnapshots,
+  type ShownCompareProduct,
+} from '@/contexts/compare/use-compare-snapshots';
 
 interface ProductCompareClientProps {
   lang: string;
@@ -219,12 +225,18 @@ export default function ProductCompareClient({
     [t],
   );
 
-  // Map products to comparison format with ERP prices
-  const products = useMemo(() => {
-    if (!rawProducts?.length) return [];
+  // Map products to comparison format with ERP prices. A listed SKU the
+  // search no longer returns is a product removed from the catalog: it stays
+  // listed, greyed out, until the customer removes it.
+  const { products, shown, unavailableSkus } = useMemo(() => {
+    const result = {
+      products: [] as ComparisonProduct[],
+      shown: [] as ShownCompareProduct[],
+      unavailableSkus: [] as string[],
+    };
+    if (!Array.isArray(rawProducts)) return result;
 
     const map = new Map<string, ComparisonProduct>();
-    const orderedProducts: ComparisonProduct[] = [];
 
     rawProducts.forEach((item) => {
       if (!item) return;
@@ -268,13 +280,28 @@ export default function ProductCompareClient({
     // Match SKUs from compare list (case-insensitive), preserve order
     limitedSkus.forEach((searchSku) => {
       const product = map.get(searchSku.toLowerCase());
-      if (product && !orderedProducts.includes(product)) {
-        orderedProducts.push(product);
+      if (!product) {
+        result.unavailableSkus.push(searchSku);
+      } else if (!result.products.includes(product)) {
+        result.products.push(product);
+        result.shown.push({
+          sku: searchSku,
+          snapshot: {
+            name: { [lang]: product.title },
+            ...(product.imageUrl ? { image_url: product.imageUrl } : {}),
+          },
+        });
       }
     });
 
-    return orderedProducts;
+    return result;
   }, [rawProducts, erpPricesMap, limitedSkus, lang, featureLabels]);
+
+  const snapshots = useCompareSnapshots(skus, shown);
+  const unavailable = useMemo(
+    () => new Set(unavailableSkus),
+    [unavailableSkus],
+  );
 
   const hintText = t('text-product-comparison-hint');
 
@@ -341,9 +368,18 @@ export default function ProductCompareClient({
               key={sku}
               type="button"
               onClick={() => removeSku(sku)}
-              className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:border-rose-200 hover:text-rose-600"
+              title={
+                unavailable.has(sku) ? t('text-no-longer-available') : undefined
+              }
+              className={cn(
+                'inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:border-rose-200 hover:text-rose-600',
+                unavailable.has(sku) && 'line-through opacity-60',
+              )}
             >
               {sku}
+              {unavailable.has(sku) ? (
+                <span className="sr-only">{t('text-no-longer-available')}</span>
+              ) : null}
               <span aria-hidden="true">×</span>
             </button>
           ))}
@@ -370,7 +406,7 @@ export default function ProductCompareClient({
         </div>
       ) : null}
 
-      {!isLoading && !hasProducts ? (
+      {!isLoading && !hasProducts && !unavailableSkus.length ? (
         <div className="rounded-3xl border border-slate-200 bg-white/80 p-10 text-center">
           <p className="text-base font-semibold text-slate-800">
             {t('text-no-products-selected')}
@@ -389,6 +425,27 @@ export default function ProductCompareClient({
           onRemove={removeSku}
           lang={lang}
         />
+      ) : null}
+
+      {unavailableSkus.length ? (
+        <section className="space-y-3">
+          <h2 className="text-base font-semibold text-slate-700">
+            {t('text-products-no-longer-available')}
+          </h2>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            {unavailableSkus.map((sku) => (
+              <UnavailableProductCard
+                key={sku}
+                sku={sku}
+                product={snapshots[sku]}
+                lang={lang}
+                removeLabel={t('text-remove-from-compare')}
+                removeIcon={<HiOutlineTrash className="h-4 w-4" />}
+                onRemove={() => removeSku(sku)}
+              />
+            ))}
+          </div>
+        </section>
       ) : null}
     </Container>
   );
